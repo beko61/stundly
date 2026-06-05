@@ -1,9 +1,4 @@
-﻿{
-  "regions": ["fra1"],
-  "buildCommand": "cd ../.. && npm run build --workspace=@workly/web",
-  "outputDirectory": "apps/web/.next",
-  "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_APP_URL": "https://app.stundly.de"
-  }
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["fra1"]
 }

@@ -6,6 +6,7 @@ import { MonthNav } from "@/components/tracker/MonthNav";
 import { MonthlySummary } from "@/components/tracker/MonthlySummary";
 import { DayEntry } from "@/components/tracker/DayEntry";
 import { PhotoScanModal } from "@/components/tracker/PhotoScanModal";
+import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
 import { useTimeEntries } from "@/hooks/useTimeEntries";
 import { getFeiertage } from "@/lib/utils/feiertage";
 
@@ -138,6 +139,13 @@ export default function TrackerPage() {
     <>
       <MonthNav />
       <MonthlySummary />
+
+      <WelcomeBanner
+        storageKey="workly_tracker_welcome"
+        title="Willkommen bei Workly!"
+        text="Tipp: Klicke unten auf '📅 Monat automatisch befüllen' und dein Monat ist in einer Sekunde fertig. Du kannst danach einzelne Tage anpassen."
+        cta="Los geht's"
+      />
 
       {/* Befüllen buttons */}
       <div style={{ padding: "14px 32px 0", display: "flex", flexDirection: "column", gap: 8, maxWidth: 960, margin: "0 auto" }}>

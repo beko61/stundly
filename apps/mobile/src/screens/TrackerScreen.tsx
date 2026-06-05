@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { DAY_TYPE_LABELS, calculateWorkDuration, formatDuration, DAY_TYPES } from '@workly/shared';
 import { supabase } from '../lib/supabase';
@@ -247,7 +247,7 @@ export function TrackerScreen() {
       {/* Header - gradient yapısı */}
       <View style={styles.headerGradient}>
         <View style={styles.headerTopRow}>
-          <Text style={styles.brand}>WORKLY</Text>
+          <Text style={styles.brand}>STUNDLY</Text>
           <View style={{ flexDirection: 'row', gap: 5 }}>
             {[2025, 2026, 2027, 2028].map(y => (
               <TouchableOpacity key={y} onPress={() => setYear(y)}

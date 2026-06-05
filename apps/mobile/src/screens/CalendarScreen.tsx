@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from '@workly/shared';
 import type { TimeEntry } from '@workly/shared';
@@ -81,7 +81,7 @@ export function CalendarScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.brand}>WORKLY</Text>
+          <Text style={styles.brand}>STUNDLY</Text>
           <View style={{ flexDirection: 'row', gap: 5 }}>
             {[2025, 2026, 2027, 2028].map(y => (
               <TouchableOpacity key={y} onPress={() => setYear(y)}

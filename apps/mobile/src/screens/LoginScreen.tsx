@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { colors } from '../theme/colors';
@@ -21,7 +21,7 @@ export function LoginScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.brand}>WORKLY</Text>
+        <Text style={styles.brand}>STUNDLY</Text>
         <Text style={styles.title}>Willkommen zurück</Text>
         <Text style={styles.subtitle}>Melde dich an, um fortzufahren.</Text>
 

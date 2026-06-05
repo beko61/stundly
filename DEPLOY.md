@@ -1,4 +1,4 @@
-# Workly – Deploy Rehberi
+﻿# Stundly – Deploy Rehberi
 
 ## Web (Vercel)
 
@@ -25,14 +25,14 @@
 2. Products → 3 ürün oluştur (Individual/Team/Business)
 3. Her ürüne Monthly + Yearly fiyat ekle (EUR)
 4. Tax → Stripe Tax aktifleştir (MwSt otomatik)
-5. Webhooks → `https://app.workly.app/api/stripe/webhook` ekle
+5. Webhooks → `https://app.stundly.de/api/stripe/webhook` ekle
    - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 6. Price ID'leri `.env` dosyasına ekle
 
 ## Resend (Email)
 
 1. [resend.com](https://resend.com) → Kayıt ol
-2. Domain → `workly.app` ekle → DNS kayıtlarını ekle
+2. Domain → `stundly.de` ekle → DNS kayıtlarını ekle
 3. API Key oluştur → `.env`'e ekle
 
 ## Mobile (EAS Build)

@@ -1,4 +1,4 @@
-# Workly – Son Kayıt
+﻿# Stundly – Son Kayıt
 
 ## 2026-04-06 – Masaüstü Tasarımına Geçiş Tamamlandı
 
@@ -18,7 +18,7 @@
 ### Önceden Tamamlanmış (Dokunulmadı)
 - ✅ Sidebar.tsx → Zaten 250px sol kenar çubuğu olarak kurulmuş
 - ✅ Dashboard layout → Sidebar + flex content layout zaten mevcut  
-- ✅ MonthNav → Logout sidebar'a taşınmış, tekrarlı WORKLY başlığı kaldırılmış
+- ✅ MonthNav → Logout sidebar'a taşınmış, tekrarlı STUNDLY başlığı kaldırılmış
 
 ### Test
 - ✅ `next build` → Derleme başarılı (8.8s)
@@ -132,7 +132,7 @@
 - ✅ `apps/web/src/middleware.ts` → /onboarding rotaları public yapıldı
 
 ### Oluşturulan Dosyalar
-- ✅ `apps/web/src/app/onboarding/layout.tsx` → ortak onboarding layout (WORKLY brand)
+- ✅ `apps/web/src/app/onboarding/layout.tsx` → ortak onboarding layout (STUNDLY brand)
 - ✅ `apps/web/src/app/onboarding/type/page.tsx` → Tip seçimi (Einzelperson / Unternehmen)
 - ✅ `apps/web/src/app/onboarding/setup/page.tsx`
   - Şirket için: ad, şehir, USt-IdNr., Bundesland
@@ -223,7 +223,7 @@ npx tsc --noEmit → 0 hata ✅
 - [ ] Vercel → fra1 region aktif mi?
 - [ ] Stripe Webhook URL eklendi mi? (`/api/stripe/webhook`)
 - [ ] Stripe Tax aktifleştirildi mi? (MwSt otomatik)
-- [ ] Resend domain doğrulandı mı? (workly.app)
+- [ ] Resend domain doğrulandı mı? (stundly.de)
 - [ ] Impressum ve Datenschutz gerçek verilerle güncellendi mi?
 - [ ] Super Admin rolü Supabase'den manuel atandı mı?
 - [ ] `.env` dosyası Vercel'e eklendi mi?

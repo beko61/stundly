@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -30,7 +30,7 @@ export default function SetupPage() {
     }}>
       <div className="card" style={{ maxWidth: 420, width: "100%", padding: 40, textAlign: "center" }}>
         <div style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 2, marginBottom: 8 }}>
-          WORKLY
+          STUNDLY
         </div>
         <div style={{
           fontSize: 10, fontWeight: 700, letterSpacing: 1,

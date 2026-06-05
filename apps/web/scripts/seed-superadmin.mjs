@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Super Admin hesabı oluşturma script'i
  * Kullanım: node scripts/seed-superadmin.mjs
  */
@@ -21,7 +21,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-const EMAIL = 'admin@workly.de';
+const EMAIL = 'admin@stundly.de';
 const PASSWORD = 'Admin123!';
 const FULL_NAME = 'Super Admin';
 

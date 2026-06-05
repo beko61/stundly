@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -58,7 +58,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className="sidebar-brand">
         <span className="sidebar-logo">W</span>
-        <span className="sidebar-title">WORKLY</span>
+        <span className="sidebar-title">STUNDLY</span>
       </div>
 
       {/* Super admin badge */}
@@ -124,7 +124,7 @@ export function Sidebar() {
         <button onClick={handleLogout} className="sidebar-logout">
           🚪 Abmelden
         </button>
-        <div className="sidebar-version">Workly v0.1.0</div>
+        <div className="sidebar-version">Stundly v0.1.0</div>
       </div>
     </aside>
   );

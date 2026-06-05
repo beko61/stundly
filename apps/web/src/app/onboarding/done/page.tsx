@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -29,7 +29,7 @@ function DoneContent() {
       <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.7, marginBottom: 12 }}>
         {isCompany
           ? "Dein Unternehmen wurde erfolgreich eingerichtet. Du hast 14 Tage kostenlosen Zugang zu allen Team-Funktionen."
-          : "Dein Konto ist fertig eingerichtet. Du hast 14 Tage kostenlosen Zugang zu Workly."}
+          : "Dein Konto ist fertig eingerichtet. Du hast 14 Tage kostenlosen Zugang zu Stundly."}
       </p>
 
       <div style={{

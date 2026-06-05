@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -90,7 +90,7 @@ export default function RegisterPage() {
     <div className="card" style={{ padding: "28px 24px" }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Konto erstellen</h1>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-        Starte dein Workly-Konto.
+        Starte dein Stundly-Konto.
       </p>
 
       <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 16 }}>

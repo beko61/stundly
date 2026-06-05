@@ -1,17 +1,17 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 export default function DatenschutzPage() {
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh", padding: "40px 24px" }}>
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
-        <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, textDecoration: "none" }}>← WORKLY</Link>
+        <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, textDecoration: "none" }}>← STUNDLY</Link>
         <h1 style={{ fontSize: 32, fontWeight: 800, margin: "28px 0 8px" }}>Datenschutzerklärung</h1>
         <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 32 }}>Gemäß DSGVO (Datenschutz-Grundverordnung) · Stand: April 2026</p>
 
         {[
           {
             title: "1. Verantwortlicher",
-            content: "Verantwortlicher für die Datenverarbeitung ist die Workly GmbH, Musterstraße 1, 10115 Berlin. Kontakt: datenschutz@workly.app",
+            content: "Verantwortlicher für die Datenverarbeitung ist die Stundly GmbH, Musterstraße 1, 10115 Berlin. Kontakt: datenschutz@stundly.de",
           },
           {
             title: "2. Welche Daten wir erheben",
@@ -19,7 +19,7 @@ export default function DatenschutzPage() {
           },
           {
             title: "3. Zweck der Datenverarbeitung",
-            content: "Die Daten werden ausschließlich zur Bereitstellung des Workly-Dienstes verwendet:\n• Authentifizierung und Kontoverwaltung\n• Speicherung und Anzeige Ihrer Arbeitszeitdaten\n• Berechnungen (Lohn, Überstunden)\n• PDF-Erstellung und -Export\n• Kundensupport",
+            content: "Die Daten werden ausschließlich zur Bereitstellung des Stundly-Dienstes verwendet:\n• Authentifizierung und Kontoverwaltung\n• Speicherung und Anzeige Ihrer Arbeitszeitdaten\n• Berechnungen (Lohn, Überstunden)\n• PDF-Erstellung und -Export\n• Kundensupport",
           },
           {
             title: "4. Rechtsgrundlage",
@@ -31,7 +31,7 @@ export default function DatenschutzPage() {
           },
           {
             title: "6. Ihre Rechte (Art. 15–22 DSGVO)",
-            content: "Sie haben folgende Rechte:\n• Auskunft (Art. 15) – Welche Daten wir über Sie haben\n• Berichtigung (Art. 16) – Korrektur falscher Daten\n• Löschung (Art. 17) – Recht auf Vergessenwerden\n• Einschränkung (Art. 18) – Verarbeitungseinschränkung\n• Datenübertragbarkeit (Art. 20) – Export Ihrer Daten\n• Widerspruch (Art. 21) – Gegen bestimmte Verarbeitungen\n\nZur Ausübung Ihrer Rechte: datenschutz@workly.app",
+            content: "Sie haben folgende Rechte:\n• Auskunft (Art. 15) – Welche Daten wir über Sie haben\n• Berichtigung (Art. 16) – Korrektur falscher Daten\n• Löschung (Art. 17) – Recht auf Vergessenwerden\n• Einschränkung (Art. 18) – Verarbeitungseinschränkung\n• Datenübertragbarkeit (Art. 20) – Export Ihrer Daten\n• Widerspruch (Art. 21) – Gegen bestimmte Verarbeitungen\n\nZur Ausübung Ihrer Rechte: datenschutz@stundly.de",
           },
           {
             title: "7. Datenlöschung",
@@ -43,7 +43,7 @@ export default function DatenschutzPage() {
           },
           {
             title: "9. Cookies",
-            content: "Workly verwendet nur technisch notwendige Cookies (Session-Cookie für die Authentifizierung). Wir verwenden keine Tracking- oder Werbe-Cookies. Es gibt keine Analyse-Tools (Google Analytics o.Ä.).",
+            content: "Stundly verwendet nur technisch notwendige Cookies (Session-Cookie für die Authentifizierung). Wir verwenden keine Tracking- oder Werbe-Cookies. Es gibt keine Analyse-Tools (Google Analytics o.Ä.).",
           },
           {
             title: "10. Beschwerderecht",

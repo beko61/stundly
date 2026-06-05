@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { calculateMonthlySalary, formatDuration } from '@workly/shared';
 import type { TimeEntry, SalarySettings } from '@workly/shared';
@@ -105,7 +105,7 @@ export function SalaryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.brand}>WORKLY</Text>
+          <Text style={styles.brand}>STUNDLY</Text>
           <View style={{ flexDirection: 'row', gap: 5 }}>
             {[2025, 2026, 2027, 2028].map(y => (
               <TouchableOpacity key={y} onPress={() => setYear(y)}

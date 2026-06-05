@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 const plans = [
   {
@@ -79,7 +79,7 @@ export default function PricingPage() {
         padding: "0 24px", height: 60,
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3, textDecoration: "none" }}>WORKLY</Link>
+        <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3, textDecoration: "none" }}>STUNDLY</Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link href="/login" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Anmelden</Link>
           <Link href="/register" className="btn btn-primary" style={{ padding: "8px 16px", fontSize: 13 }}>

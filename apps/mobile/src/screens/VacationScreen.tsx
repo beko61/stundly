@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { calculateWorkDuration, DAY_TYPES } from '@workly/shared';
 import { supabase } from '../lib/supabase';
@@ -111,7 +111,7 @@ export function VacationScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.brand}>WORKLY</Text>
+        <Text style={styles.brand}>STUNDLY</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
           <Text style={styles.headerTitle}>Urlaubsanträge</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(true)}>

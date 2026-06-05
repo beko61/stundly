@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 const RAW_NUMBER = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "";
 const NUMBER = RAW_NUMBER.replace(/\D/g, "");
-const MESSAGE = encodeURIComponent("Hallo, ich brauche Hilfe mit Workly");
+const MESSAGE = encodeURIComponent("Hallo, ich brauche Hilfe mit Stundly");
 
 export function SupportButton() {
   if (!NUMBER) return null;

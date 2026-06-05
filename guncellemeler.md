@@ -1,4 +1,4 @@
-# Workly – Güncellemeler & Yol Haritası
+﻿# Stundly – Güncellemeler & Yol Haritası
 
 Son güncelleme: 2026-04-06
 
@@ -85,7 +85,7 @@ Son güncelleme: 2026-04-06
 ### 🟢 İyileştirme
 - [ ] **Dil tutarlılığı** → UI'da Türkçe/Almanca karışıklığı var, tek dile çek
 - [ ] **Mobile EAS build** → Production APK/IPA
-- [ ] **Domain** → workly.app veya workly.de
+- [ ] **Domain** → stundly.de veya stundly.de
 - [ ] **Super Admin → Gelir grafiği** → Aylık MRR/ARR trend
 - [ ] **Kullanıcı aktivite logları** → Admin panelde audit log görüntüleme
 - [ ] **Şifre sıfırlama** → "Şifremi unuttum" akışı yok

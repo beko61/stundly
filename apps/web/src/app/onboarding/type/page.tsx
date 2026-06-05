@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 
@@ -36,7 +36,7 @@ export default function OnboardingTypePage() {
       </div>
 
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
-        Wie möchtest du Workly nutzen?
+        Wie möchtest du Stundly nutzen?
       </h1>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 28 }}>
         Wähle die passende Option für dich aus.

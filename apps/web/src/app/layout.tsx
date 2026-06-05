@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { CookieBanner } from "@/components/ui/CookieBanner";
@@ -6,7 +6,7 @@ import { SupportButton } from "@/components/ui/SupportButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Workly – Arbeitszeiterfassung",
+  title: "Stundly – Arbeitszeiterfassung",
   description: "Smart Work & Time Tracking Platform",
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent" },

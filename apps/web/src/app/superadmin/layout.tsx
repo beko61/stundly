@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
@@ -28,7 +28,7 @@ export default async function SuperAdminLayout({ children }: { children: React.R
         position: "sticky", top: 0, height: "100vh",
       }}>
         <div style={{ padding: "0 20px 20px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2 }}>WORKLY</div>
+          <div style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2 }}>STUNDLY</div>
           <div style={{
             marginTop: 8, fontSize: 10, fontWeight: 700, letterSpacing: 1,
             background: "color-mix(in srgb, var(--red) 15%, transparent)",

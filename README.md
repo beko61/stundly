@@ -1,4 +1,4 @@
-# Workly – Arbeitszeiterfassung
+﻿# Stundly – Arbeitszeiterfassung
 
 Smart Work & Time Tracking Platform
 

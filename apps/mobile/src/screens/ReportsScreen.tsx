@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share } from 'react-native';
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from '@workly/shared';
 import type { TimeEntry } from '@workly/shared';
@@ -91,7 +91,7 @@ export function ReportsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={styles.brand}>WORKLY</Text>
+          <Text style={styles.brand}>STUNDLY</Text>
           <TouchableOpacity onPress={exportCSV} style={styles.csvBtn}>
             <Text style={{ color: colors.green, fontSize: 11, fontWeight: '700' }}>⬇ CSV Export</Text>
           </TouchableOpacity>

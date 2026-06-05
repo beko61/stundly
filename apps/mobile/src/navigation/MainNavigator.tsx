@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -24,7 +24,7 @@ function MoreScreen({ navigation }: any) {
   return (
     <View style={styles.moreContainer}>
       <View style={styles.moreHeader}>
-        <Text style={styles.brand}>WORKLY</Text>
+        <Text style={styles.brand}>STUNDLY</Text>
         <Text style={styles.moreTitle}>Weitere Funktionen</Text>
       </View>
       <View style={{ padding: 16, gap: 10 }}>

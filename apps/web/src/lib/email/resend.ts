@@ -1,8 +1,8 @@
-import { Resend } from "resend";
+﻿import { Resend } from "resend";
 
 export const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 
-const FROM = "Workly <noreply@workly.app>";
+const FROM = "Stundly <noreply@stundly.de>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 // Çalışan davet maili
@@ -25,10 +25,10 @@ export async function sendInvitationEmail({
   return resend.emails.send({
     from: FROM,
     to,
-    subject: `Einladung zu ${companyName} auf Workly`,
+    subject: `Einladung zu ${companyName} auf Stundly`,
     html: `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f13; color: #e8e8f0; padding: 40px 32px; border-radius: 16px;">
-        <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">WORKLY</div>
+        <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">STUNDLY</div>
 
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 12px;">
           Sie wurden eingeladen 🎉
@@ -67,10 +67,10 @@ export async function sendWelcomeEmail({
   return resend.emails.send({
     from: FROM,
     to,
-    subject: "Willkommen bei Workly!",
+    subject: "Willkommen bei Stundly!",
     html: `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f13; color: #e8e8f0; padding: 40px 32px; border-radius: 16px;">
-        <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">WORKLY</div>
+        <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">STUNDLY</div>
 
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 12px;">Willkommen, ${name}! 👋</h1>
         <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
@@ -93,7 +93,7 @@ export async function sendWelcomeEmail({
         </a>
 
         <p style="color: #6b6b80; font-size: 11px; margin-top: 32px; border-top: 1px solid #2e2e3d; padding-top: 16px;">
-          Workly · DSGVO-konform · Daten in Deutschland (EU) ·
+          Stundly · DSGVO-konform · Daten in Deutschland (EU) ·
           <a href="${APP_URL}/datenschutz" style="color: #c084fc;">Datenschutz</a> ·
           <a href="${APP_URL}/impressum" style="color: #c084fc;">Impressum</a>
         </p>
@@ -119,10 +119,10 @@ export async function sendSubscriptionConfirmationEmail({
   return resend.emails.send({
     from: FROM,
     to,
-    subject: `Ihr Workly ${planName}-Abonnement ist aktiv`,
+    subject: `Ihr Stundly ${planName}-Abonnement ist aktiv`,
     html: `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f13; color: #e8e8f0; padding: 40px 32px; border-radius: 16px;">
-        <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">WORKLY</div>
+        <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">STUNDLY</div>
 
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 12px;">✅ Abonnement aktiv</h1>
         <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">

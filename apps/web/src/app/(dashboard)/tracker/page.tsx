@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useEffect, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
@@ -141,8 +141,8 @@ export default function TrackerPage() {
       <MonthlySummary />
 
       <WelcomeBanner
-        storageKey="workly_tracker_welcome"
-        title="Willkommen bei Workly!"
+        storageKey="stundly_tracker_welcome"
+        title="Willkommen bei Stundly!"
         text="Tipp: Klicke unten auf '📅 Monat automatisch befüllen' und dein Monat ist in einer Sekunde fertig. Du kannst danach einzelne Tage anpassen."
         cta="Los geht's"
       />

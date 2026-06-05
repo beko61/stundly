@@ -1,4 +1,4 @@
-export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
+﻿export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
@@ -16,7 +16,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
             color: "var(--accent2)", fontSize: 13, fontWeight: 700,
             letterSpacing: "0.12em", textTransform: "uppercase"
           }}>
-            WORKLY
+            STUNDLY
           </span>
         </div>
         {children}

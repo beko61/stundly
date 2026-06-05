@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const STORAGE_KEY = "workly_cookie_consent";
+const STORAGE_KEY = "stundly_cookie_consent";
 
 export function CookieBanner() {
   const [show, setShow] = useState(false);
@@ -62,7 +62,7 @@ export function CookieBanner() {
         >
           <strong style={{ display: "block", marginBottom: 4 }}>🍪 Cookies & Datenschutz</strong>
           Wir verwenden technisch notwendige Cookies (Login, Spracheinstellung) und optional
-          Analyse-Cookies, um Workly zu verbessern. Du kannst deine Auswahl jederzeit ändern.{" "}
+          Analyse-Cookies, um Stundly zu verbessern. Du kannst deine Auswahl jederzeit ändern.{" "}
           <Link
             href="/datenschutz"
             style={{ color: "var(--accent2)", textDecoration: "underline" }}

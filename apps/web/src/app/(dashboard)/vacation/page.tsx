@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -220,7 +220,7 @@ export default function VacationPage() {
     }
     doc.setFontSize(10);
     doc.setTextColor(196, 132, 252);
-    const companyLine = p?.company_name ? `WORKLY — ${p.company_name}` : "WORKLY";
+    const companyLine = p?.company_name ? `STUNDLY — ${p.company_name}` : "STUNDLY";
     doc.text(companyLine, 20, 16);
     doc.setFontSize(20);
     doc.setTextColor(255, 255, 255);
@@ -281,7 +281,7 @@ export default function VacationPage() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(107, 107, 128);
-    doc.text(`Erstellt am ${heute} · Workly v0.1.0`, 20, 285);
+    doc.text(`Erstellt am ${heute} · Stundly v0.1.0`, 20, 285);
 
     const fname = `${p?.nachname ?? "Urlaub"}_${startDate}_${endDate}`.replace(/\s/g, "_");
     doc.save(`Urlaubsantrag_${fname}.pdf`);

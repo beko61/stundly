@@ -1,10 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 export default function ImpressumPage() {
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh", padding: "40px 24px" }}>
       <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, textDecoration: "none" }}>← WORKLY</Link>
+        <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, textDecoration: "none" }}>← STUNDLY</Link>
 
         <h1 style={{ fontSize: 32, fontWeight: 800, margin: "28px 0 32px" }}>Impressum</h1>
 
@@ -15,7 +15,7 @@ export default function ImpressumPage() {
 
           <h2 style={{ color: "var(--text)", fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Angaben gemäß § 5 TMG</h2>
           <p>
-            <strong style={{ color: "var(--text)" }}>Workly GmbH</strong><br />
+            <strong style={{ color: "var(--text)" }}>Stundly GmbH</strong><br />
             Musterstraße 1<br />
             10115 Berlin<br />
             Deutschland
@@ -26,7 +26,7 @@ export default function ImpressumPage() {
 
           <h2 style={{ color: "var(--text)", fontWeight: 700, fontSize: 16, margin: "24px 0 12px" }}>Kontakt</h2>
           <p>
-            E-Mail: info@workly.app<br />
+            E-Mail: info@stundly.de<br />
             Tel.: +49 (0) 30 000 000 00
           </p>
 

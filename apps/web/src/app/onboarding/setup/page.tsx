@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -135,7 +135,7 @@ function SetupForm() {
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 28 }}>
         {isCompany
           ? "Gib die Grunddaten deines Unternehmens ein."
-          : "Ein paar Angaben, damit Workly optimal für dich funktioniert."}
+          : "Ein paar Angaben, damit Stundly optimal für dich funktioniert."}
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 const features = [
   { icon: "⏱️", title: "Arbeitszeiterfassung", desc: "Start, Ende, Pausen – automatische Berechnung inklusive Überstunden und Nachtschichten." },
@@ -43,10 +43,10 @@ const plans = [
 ];
 
 const faqs = [
-  { q: "Ist Workly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
+  { q: "Ist Stundly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
   { q: "Muss ich eine Kreditkarte angeben?", a: "Nein. Die 14-tägige Testphase ist vollständig kostenlos und ohne Zahlungsdaten." },
-  { q: "Kann ich Workly für Almanya (ArbZG) nutzen?", a: "Ja. Workly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
-  { q: "Gibt es eine mobile App?", a: "Ja. Workly ist für iOS und Android verfügbar und funktioniert auch offline." },
+  { q: "Kann ich Stundly für Almanya (ArbZG) nutzen?", a: "Ja. Stundly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
+  { q: "Gibt es eine mobile App?", a: "Ja. Stundly ist für iOS und Android verfügbar und funktioniert auch offline." },
 ];
 
 export default function LandingPage() {
@@ -61,7 +61,7 @@ export default function LandingPage() {
         padding: "0 24px", height: 60,
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <span style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3 }}>WORKLY</span>
+        <span style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3 }}>STUNDLY</span>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Preise</Link>
           <Link href="/login" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Anmelden</Link>
@@ -94,7 +94,7 @@ export default function LandingPage() {
           </h1>
 
           <p style={{ fontSize: 18, color: "var(--muted)", lineHeight: 1.7, marginBottom: 40, maxWidth: 520, margin: "0 auto 40px" }}>
-            Workly ist die moderne Zeiterfassungssoftware für Einzelpersonen und Unternehmen – DSGVO-konform, ArbZG-ready, mobil nutzbar.
+            Stundly ist die moderne Zeiterfassungssoftware für Einzelpersonen und Unternehmen – DSGVO-konform, ArbZG-ready, mobil nutzbar.
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -146,7 +146,7 @@ export default function LandingPage() {
             Konform mit deutschem Recht
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 40 }}>
-            Workly wurde speziell für den deutschen und europäischen Markt entwickelt.
+            Stundly wurde speziell für den deutschen und europäischen Markt entwickelt.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             {[
@@ -263,13 +263,13 @@ export default function LandingPage() {
         display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16,
         maxWidth: 1100, margin: "0 auto",
       }}>
-        <span style={{ color: "var(--accent2)", fontWeight: 800, letterSpacing: 2 }}>WORKLY</span>
+        <span style={{ color: "var(--accent2)", fontWeight: 800, letterSpacing: 2 }}>STUNDLY</span>
         <div style={{ display: "flex", gap: 24 }}>
           <Link href="/impressum" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Impressum</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
           <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Preise</Link>
         </div>
-        <span style={{ color: "var(--muted)", fontSize: 12 }}>© 2026 Workly · Alle Preise zzgl. MwSt.</span>
+        <span style={{ color: "var(--muted)", fontSize: 12 }}>© 2026 Stundly · Alle Preise zzgl. MwSt.</span>
       </footer>
     </div>
   );

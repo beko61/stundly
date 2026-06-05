@@ -42,11 +42,11 @@ export default async function JoinPage({ params }: Props) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: 24 }}>
       <div className="card" style={{ maxWidth: 420, width: "100%", padding: "40px 32px", textAlign: "center" }}>
-        <div style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, marginBottom: 28 }}>WORKLY</div>
+        <div style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, marginBottom: 28 }}>STUNDLY</div>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>
         <h1 style={{ fontWeight: 800, fontSize: 22, marginBottom: 8 }}>Einladung erhalten</h1>
         <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
-          Sie wurden eingeladen, <strong style={{ color: "var(--text)" }}>{companyName}</strong> auf Workly beizutreten.
+          Sie wurden eingeladen, <strong style={{ color: "var(--text)" }}>{companyName}</strong> auf Stundly beizutreten.
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

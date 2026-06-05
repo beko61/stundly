@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { colors } from '../theme/colors';
@@ -81,7 +81,7 @@ export function ProfileScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.brand}>WORKLY</Text>
+        <Text style={styles.brand}>STUNDLY</Text>
         <Text style={styles.headerTitle}>Einstellungen</Text>
       </View>
 
@@ -136,7 +136,7 @@ export function ProfileScreen() {
           <Text style={{ color: colors.red, fontWeight: '700', fontSize: 14 }}>🚪 Abmelden</Text>
         </TouchableOpacity>
 
-        <Text style={{ textAlign: 'center', fontSize: 10, color: colors.muted, paddingTop: 4 }}>Workly Mobile v1.0.0</Text>
+        <Text style={{ textAlign: 'center', fontSize: 10, color: colors.muted, paddingTop: 4 }}>Stundly Mobile v1.0.0</Text>
       </ScrollView>
     </View>
   );

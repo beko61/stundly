@@ -1,9 +1,20 @@
 ﻿import { Resend } from "resend";
 
-export const resend = new Resend(process.env.RESEND_API_KEY ?? "");
-
 const FROM = "Stundly <noreply@stundly.de>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) {
+      throw new Error("RESEND_API_KEY ist nicht konfiguriert");
+    }
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
+export const resend = { get emails() { return getResend().emails; } };
 
 // Çalışan davet maili
 export async function sendInvitationEmail({
@@ -22,7 +33,7 @@ export async function sendInvitationEmail({
   const inviteUrl = `${APP_URL}/join/${token}`;
   const roleLabel = role === "company_admin" ? "Administrator" : "Mitarbeiter";
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Einladung zu ${companyName} auf Stundly`,
@@ -64,7 +75,7 @@ export async function sendWelcomeEmail({
 }) {
   const isCompany = plan === "company";
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: "Willkommen bei Stundly!",
@@ -116,7 +127,7 @@ export async function sendSubscriptionConfirmationEmail({
   periodEnd: string;
   amount: string;
 }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Ihr Stundly ${planName}-Abonnement ist aktiv`,

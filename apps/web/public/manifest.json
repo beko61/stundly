@@ -1,0 +1,48 @@
+{
+  "name": "Stundly — Arbeitszeiterfassung",
+  "short_name": "Stundly",
+  "description": "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform, made in Germany.",
+  "start_url": "/tracker",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0f13",
+  "theme_color": "#7c6af7",
+  "lang": "de",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Heute eintragen",
+      "short_name": "Heute",
+      "description": "Heutige Arbeitszeit erfassen",
+      "url": "/tracker"
+    },
+    {
+      "name": "Lohn ansehen",
+      "short_name": "Lohn",
+      "description": "Aktuelle Lohnberechnung",
+      "url": "/salary"
+    }
+  ]
+}

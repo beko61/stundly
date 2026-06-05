@@ -1,0 +1,127 @@
+{
+  "nav": {
+    "tracker":  "Tracker",
+    "calendar": "Kalender",
+    "salary":   "Gehalt",
+    "vacation": "Urlaub",
+    "reports":  "Berichte",
+    "settings": "Einstellungen"
+  },
+  "auth": {
+    "login":           "Anmelden",
+    "register":        "Registrieren",
+    "logout":          "Abmelden",
+    "email":           "E-Mail",
+    "password":        "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "fullName":        "Vollständiger Name",
+    "loginTitle":      "Willkommen zurück",
+    "registerTitle":   "Konto erstellen",
+    "noAccount":       "Noch kein Konto?",
+    "hasAccount":      "Bereits ein Konto?"
+  },
+  "dayTypes": {
+    "arbeiten":  "Arbeiten",
+    "urlaub":    "Urlaub",
+    "krank":     "Krank",
+    "notdienst": "Notdienst",
+    "feiertag":  "Feiertag",
+    "frei":      "Frei"
+  },
+  "tracker": {
+    "title":       "Arbeitszeiterfassung",
+    "addEntry":    "Eintrag hinzufügen",
+    "editEntry":   "Eintrag bearbeiten",
+    "deleteEntry": "Eintrag löschen",
+    "startTime":   "Beginn",
+    "endTime":     "Ende",
+    "break":       "Pause (min)",
+    "note":        "Notiz",
+    "nightShift":  "Nachtschicht",
+    "type":        "Typ",
+    "save":        "Speichern",
+    "cancel":      "Abbrechen",
+    "today":       "Heute",
+    "totalHours":  "Gesamtstunden",
+    "targetHours": "Sollstunden",
+    "overtime":    "Überstunden",
+    "workDays":    "Arbeitstage"
+  },
+  "salary": {
+    "title":           "Gehaltsberechnung",
+    "hourlyRate":      "Stundenlohn (€)",
+    "monthlyTarget":   "Monatliche Sollstunden",
+    "overtimeRate":    "Überstundenaufschlag (×)",
+    "nightBonus":      "Nachtzuschlag (€/h)",
+    "notdienstBonus":  "Notdienst-Bonus (€/Tag)",
+    "basePay":         "Grundgehalt",
+    "overtimePay":     "Überstundenvergütung",
+    "nightShiftBonus": "Nachtzuschlag",
+    "totalGross":      "Bruttogehalt gesamt",
+    "estimate":        "Schätzung"
+  },
+  "vacation": {
+    "title":      "Urlaubsantrag",
+    "startDate":  "Von",
+    "endDate":    "Bis",
+    "days":       "Tage",
+    "reason":     "Grund (optional)",
+    "signature":  "Unterschrift",
+    "submit":     "Antrag stellen",
+    "status": {
+      "pending":  "Ausstehend",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt"
+    }
+  },
+  "calendar": {
+    "title":       "Kalender",
+    "monthView":   "Monatsansicht",
+    "yearView":    "Jahresansicht"
+  },
+  "reports": {
+    "title":          "Berichte",
+    "monthlyReport":  "Monatsbericht",
+    "export":         "Exportieren",
+    "download":       "Herunterladen"
+  },
+  "common": {
+    "loading":  "Laden...",
+    "error":    "Fehler",
+    "success":  "Erfolgreich",
+    "delete":   "Löschen",
+    "edit":     "Bearbeiten",
+    "close":    "Schließen",
+    "confirm":  "Bestätigen",
+    "back":     "Zurück",
+    "next":     "Weiter",
+    "search":   "Suchen",
+    "filter":   "Filtern",
+    "noData":   "Keine Daten vorhanden"
+  },
+  "months": {
+    "1":  "Januar",
+    "2":  "Februar",
+    "3":  "März",
+    "4":  "April",
+    "5":  "Mai",
+    "6":  "Juni",
+    "7":  "Juli",
+    "8":  "August",
+    "9":  "September",
+    "10": "Oktober",
+    "11": "November",
+    "12": "Dezember"
+  },
+  "weekdays": {
+    "short": {
+      "0": "So",
+      "1": "Mo",
+      "2": "Di",
+      "3": "Mi",
+      "4": "Do",
+      "5": "Fr",
+      "6": "Sa"
+    }
+  }
+}

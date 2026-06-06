@@ -2,9 +2,24 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { calculateMonthlySalary, formatDuration } from "@workly/shared";
-import type { TimeEntry, SalarySettings } from "@workly/shared";
+import { calculateMonthlySalary, formatDuration, calcNettoFromBrutto } from "@workly/shared";
+import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
+
+const STEUERKLASSEN: { value: Steuerklasse; label: string; hint: string }[] = [
+  { value: "I",   label: "I",   hint: "Ledig" },
+  { value: "II",  label: "II",  hint: "Alleinerz." },
+  { value: "III", label: "III", hint: "Verh. (höher)" },
+  { value: "IV",  label: "IV",  hint: "Verh. (gleich)" },
+  { value: "V",   label: "V",   hint: "Verh. (niedr.)" },
+  { value: "VI",  label: "VI",  hint: "2. Job" },
+];
+
+const KIRCHENSTEUER_OPTIONS: { value: KirchensteuerRate; label: string }[] = [
+  { value: 0,    label: "Keine" },
+  { value: 0.08, label: "8% (BW, BY)" },
+  { value: 0.09, label: "9% (übrige)" },
+];
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_S   = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -27,6 +42,11 @@ const DEFAULT_SETTINGS: SalarySettings = {
   night_shift_bonus:        3,
   notdienst_bonus:          50,
   monthly_target_hours:     174,
+  steuerklasse:             "I",
+  kirchensteuer:            0,
+  hat_kinder:               false,
+  tax_mode:                 "auto",
+  manuell_abzug:            0,
 };
 
 function loadLocalSettings(): SalarySettings {
@@ -87,6 +107,11 @@ export default function SalaryPage() {
           night_shift_bonus:        Number(data.night_shift_bonus),
           notdienst_bonus:          Number(data.notdienst_bonus),
           monthly_target_hours:     Number(data.monthly_target_hours),
+          steuerklasse:             (data.steuerklasse as Steuerklasse | null) ?? "I",
+          kirchensteuer:            (Number(data.kirchensteuer ?? 0) as KirchensteuerRate),
+          hat_kinder:               Boolean(data.hat_kinder ?? false),
+          tax_mode:                 (data.tax_mode as TaxMode | null) ?? "auto",
+          manuell_abzug:            Number(data.manuell_abzug ?? 0),
         };
         setSettings(loaded);
         localStorage.setItem(LS_KEY, JSON.stringify(loaded));
@@ -114,6 +139,11 @@ export default function SalaryPage() {
           night_shift_bonus:        settings.night_shift_bonus,
           notdienst_bonus:          settings.notdienst_bonus,
           monthly_target_hours:     settings.monthly_target_hours,
+          steuerklasse:             settings.steuerklasse ?? "I",
+          kirchensteuer:            settings.kirchensteuer ?? 0,
+          hat_kinder:               settings.hat_kinder ?? false,
+          tax_mode:                 settings.tax_mode ?? "auto",
+          manuell_abzug:            settings.manuell_abzug ?? 0,
         };
         if (settingsRowId.current) {
           await supabase.from("salary_settings").update(payload).eq("id", settingsRowId.current);
@@ -160,6 +190,18 @@ export default function SalaryPage() {
   }, [year, month]);
 
   const breakdown = useMemo(() => calculateMonthlySalary(entries, settings), [entries, settings]);
+
+  // Otomatik Netto-Berechnung (Almanya 2024)
+  const nettoCalc = useMemo(() => calcNettoFromBrutto({
+    monthBrutto:   breakdown.total_gross,
+    steuerklasse:  settings.steuerklasse  ?? "I",
+    kirchensteuer: settings.kirchensteuer ?? 0,
+    hatKinder:     settings.hat_kinder    ?? false,
+    taxMode:       settings.tax_mode      ?? "auto",
+    manuellAbzug:  settings.manuell_abzug ?? 0,
+  }), [breakdown.total_gross, settings.steuerklasse, settings.kirchensteuer,
+       settings.hat_kinder, settings.tax_mode, settings.manuell_abzug]);
+
   const fmtEur    = (n: number) => `€ ${n.toFixed(2)}`;
 
   // Yearly totals from records
@@ -258,13 +300,158 @@ export default function SalaryPage() {
           </div>
         </div>
 
+        {/* ── Steuer-Einstellungen ── */}
+        <div className="card">
+          <div className="label" style={{ marginBottom: 12 }}>🇩🇪 Steuer & Abzüge</div>
+
+          {/* Steuerklasse — visual buttons */}
+          <div style={{ marginBottom: 14 }}>
+            <label className="label" style={{ marginBottom: 6 }}>Steuerklasse</label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
+              {STEUERKLASSEN.map(({ value, label, hint }) => {
+                const active = (settings.steuerklasse ?? "I") === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSettings(s => ({ ...s, steuerklasse: value }))}
+                    title={hint}
+                    style={{
+                      padding: "10px 4px",
+                      background: active ? "var(--accent)" : "var(--surface2)",
+                      border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                      borderRadius: 8,
+                      color: active ? "white" : "var(--muted)",
+                      fontFamily: "'Syne',sans-serif",
+                      fontWeight: 800,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    <div>{label}</div>
+                    <div style={{ fontSize: 8, fontWeight: 600, opacity: 0.8, marginTop: 2 }}>{hint}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Row 2: Kirchensteuer + Kind */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div>
+              <label className="label">Kirchensteuer</label>
+              <select
+                className="input"
+                value={String(settings.kirchensteuer ?? 0)}
+                onChange={(e) => setSettings(s => ({ ...s, kirchensteuer: Number(e.target.value) as KirchensteuerRate }))}
+                style={{ appearance: "none" }}
+              >
+                {KIRCHENSTEUER_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Kind im Haushalt</label>
+              <button
+                type="button"
+                onClick={() => setSettings(s => ({ ...s, hat_kinder: !s.hat_kinder }))}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  background: settings.hat_kinder ? "var(--green)" : "var(--surface2)",
+                  border: `1px solid ${settings.hat_kinder ? "var(--green)" : "var(--border)"}`,
+                  borderRadius: 10,
+                  color: settings.hat_kinder ? "white" : "var(--muted)",
+                  fontFamily: "'Syne',sans-serif",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                {settings.hat_kinder ? "✓ Ja (PV 1,7%)" : "Nein (PV 2,35%)"}
+              </button>
+            </div>
+          </div>
+
+          {/* Manual mode */}
+          <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: settings.tax_mode === "manual" ? 10 : 0 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>Manueller Modus</div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>Fester % statt echte Berechnung</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettings(s => ({ ...s, tax_mode: s.tax_mode === "manual" ? "auto" : "manual" }))}
+                style={{
+                  padding: "6px 14px",
+                  background: settings.tax_mode === "manual" ? "var(--accent)" : "var(--surface)",
+                  border: `1px solid ${settings.tax_mode === "manual" ? "var(--accent)" : "var(--border)"}`,
+                  borderRadius: 999,
+                  color: settings.tax_mode === "manual" ? "white" : "var(--muted)",
+                  fontFamily: "'Syne',sans-serif",
+                  fontWeight: 700,
+                  fontSize: 11,
+                  cursor: "pointer",
+                }}
+              >
+                {settings.tax_mode === "manual" ? "AN" : "AUS"}
+              </button>
+            </div>
+            {settings.tax_mode === "manual" && (
+              <div>
+                <label className="label">Abzug in %</label>
+                <input
+                  className="input"
+                  type="number" step="0.1" min="0" max="100"
+                  value={settings.manuell_abzug ?? 0}
+                  onChange={(e) => setSettings(s => ({ ...s, manuell_abzug: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            )}
+          </div>
+
+          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 10, lineHeight: 1.5 }}>
+            ℹ️ Lohnsteuer-Schätzung nach EStG §32a 2024. Genauigkeit ±5% bei mittlerem/hohem Brutto.
+            Für genaue Werte bitte echte Gehaltsabrechnung verwenden.
+          </div>
+        </div>
+
         {/* ── Monatsberechnung ── */}
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0" }}>Laden...</div>
         ) : (
           <>
+            {/* HERO — Brutto → Netto */}
             <div className="card purple">
-              <div className="label" style={{ marginBottom: 12 }}>💰 Gehaltsberechnung — {MONTHS[month-1]}</div>
+              <div className="label" style={{ marginBottom: 12 }}>💰 {MONTHS[month-1]} — Schätzung</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 10 }}>
+                <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 12%, transparent)", borderRadius: 12, padding: "12px 8px" }}>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>BRUTTO</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--green)" }}>
+                    {fmtEur(breakdown.total_gross)}
+                  </div>
+                </div>
+                <div style={{ fontSize: 22, color: "var(--muted)" }}>→</div>
+                <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 12, padding: "12px 8px" }}>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>NETTO</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--accent2)" }}>
+                    {fmtEur(nettoCalc.netto)}
+                  </div>
+                </div>
+              </div>
+              <div style={{ textAlign: "center", fontSize: 11, color: "var(--muted)" }}>
+                Abzüge gesamt: <strong style={{ color: "var(--red)" }}>{fmtEur(nettoCalc.abzuege.gesamt)}</strong>
+                {nettoCalc.abzuege.manuell && <> (manuell {nettoCalc.abzuege.manuellProzent}%)</>}
+              </div>
+            </div>
+
+            {/* Verdienst breakdown */}
+            <div className="card">
+              <div className="label" style={{ marginBottom: 10 }}>📊 Verdienst-Aufschlüsselung</div>
               {[
                 { label: "Gearbeitete Stunden",   value: formatDuration(Math.round(breakdown.worked_hours * 60)) },
                 { label: "Grundgehalt",           value: fmtEur(breakdown.base_pay) },
@@ -272,18 +459,47 @@ export default function SalaryPage() {
                 { label: "Nachtzuschlag",         value: fmtEur(breakdown.night_shift_bonus) },
                 { label: "Notdienst-Bonus",       value: fmtEur(breakdown.notdienst_bonus) },
               ].map(({ label, value }) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
                   <span style={{ fontSize: 13, color: "var(--muted)" }}>{label}</span>
                   <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13 }}>{value}</span>
                 </div>
               ))}
-              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, alignItems: "center" }}>
-                <span style={{ fontWeight: 700 }}>Brutto Gesamt (berechnet)</span>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--accent2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>Brutto Gesamt</span>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>
                   {fmtEur(breakdown.total_gross)}
                 </span>
               </div>
             </div>
+
+            {/* Abzüge breakdown — only in auto mode */}
+            {!nettoCalc.abzuege.manuell && breakdown.total_gross > 0 && (
+              <div className="card red">
+                <div className="label" style={{ marginBottom: 10 }}>🧾 Abzüge im Detail</div>
+                {[
+                  { label: "Lohnsteuer",          value: nettoCalc.abzuege.lohnsteuer },
+                  { label: "Solidaritätszuschlag", value: nettoCalc.abzuege.soli },
+                  { label: "Kirchensteuer",       value: nettoCalc.abzuege.kirchensteuer },
+                  { label: "Rentenversicherung (RV)", value: nettoCalc.abzuege.rv },
+                  { label: "Arbeitslosenversicherung (AV)", value: nettoCalc.abzuege.av },
+                  { label: "Krankenversicherung (KV)", value: nettoCalc.abzuege.kv },
+                  { label: "Pflegeversicherung (PV)", value: nettoCalc.abzuege.pv },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>{label}</span>
+                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: value > 0 ? "var(--red)" : "var(--muted)" }}>
+                      − {fmtEur(value)}
+                    </span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>Summe Abzüge</span>
+                  <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: "var(--red)" }}>
+                    − {fmtEur(nettoCalc.abzuege.gesamt)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* ── Monatsabrechnung eintragen ── */}
             <div className="card">

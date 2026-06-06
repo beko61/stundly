@@ -142,6 +142,10 @@ export interface TimeEntry {
   updated_at: string;
 }
 
+export type Steuerklasse = "I" | "II" | "III" | "IV" | "V" | "VI";
+export type KirchensteuerRate = 0 | 0.08 | 0.09;
+export type TaxMode = "auto" | "manual";
+
 export interface SalarySettings {
   id: string;
   user_id: string;
@@ -151,6 +155,17 @@ export interface SalarySettings {
   notdienst_bonus: number;
   monthly_target_hours: number;
   valid_from: string;
+
+  /** Steuerklasse (default 'I'). Lohnsteuer-Berechnung'a göre değişir. */
+  steuerklasse?: Steuerklasse;
+  /** Kirchensteuer (0 = Keine, 0.08 = BW/BY, 0.09 = übrige Bundesländer). */
+  kirchensteuer?: KirchensteuerRate;
+  /** Kind im Haushalt — Pflegeversicherung farkı (1.7% mit, 2.35% ohne). */
+  hat_kinder?: boolean;
+  /** "auto" = gerçek vergi hesabı, "manual" = sabit % düşür. */
+  tax_mode?: TaxMode;
+  /** taxMode "manual" ise yüzde abzug (0-100). */
+  manuell_abzug?: number;
 }
 
 export interface DailyLog {

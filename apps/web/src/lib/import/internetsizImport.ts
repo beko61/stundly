@@ -33,8 +33,12 @@ export interface InternetsizNd {
   start?:    string;
   end?:      string;
   hours?:    string;
+  /** Old format: "Kunde — Adresse" combined with em-dash */
   note?:     string;
+  /** Newer format: separate kunde field (rarely used) */
   kunde?:    string;
+  problem?:  string;
+  ergebnis?: string;
   erledigt?: boolean;
 }
 
@@ -62,7 +66,10 @@ export interface StundlyNotdienstInsert {
   start_time:  string;
   end_time:    string;
   kunde:       string | null;
+  adresse:     string | null;
   note:        string | null;
+  problem:     string | null;
+  ergebnis:    string | null;
   erledigt:    boolean;
 }
 
@@ -172,17 +179,50 @@ export function parseInternetsizExport(raw: string): ImportPayload {
   }
 
   // ── notdienst_entries (userNotdienst) ──
+  // Internetsiz HTML format: nd.note = "Kunde — Adresse" (em-dash separator)
+  // We split this back into separate kunde + adresse fields for Stundly schema.
   for (const [date, raw] of Object.entries(data.userNotdienst ?? {})) {
     if (!isValidDate(date)) continue;
     const arr = Array.isArray(raw) ? raw : [raw];
     for (const nd of arr) {
       if (!nd?.start || !nd?.end) continue;
+
+      // Split note "Kunde — Adresse" → kunde + adresse
+      let kunde:   string | null = nd.kunde?.trim() || null;
+      let adresse: string | null = null;
+      let plainNote: string | null = null;
+
+      const noteStr = (nd.note || "").trim();
+      if (noteStr) {
+        // Try multiple separators (em-dash variants used by internetsiz HTML)
+        const seps = [" — ", " – ", " - "];
+        let split: string[] | null = null;
+        for (const sep of seps) {
+          const idx = noteStr.indexOf(sep);
+          if (idx > 0) {
+            split = [noteStr.substring(0, idx).trim(), noteStr.substring(idx + sep.length).trim()];
+            break;
+          }
+        }
+        if (split && split.length === 2 && split[0] && split[1]) {
+          if (!kunde) kunde = split[0]!;
+          adresse = split[1]!;
+        } else {
+          // No separator → entire note goes to kunde (if empty) or note field
+          if (!kunde) kunde = noteStr;
+          else plainNote = noteStr;
+        }
+      }
+
       notdienst.push({
         date,
         start_time: nd.start,
         end_time:   nd.end,
-        kunde:      nd.kunde && nd.kunde.trim() ? nd.kunde : null,
-        note:       nd.note && nd.note.trim() ? nd.note : null,
+        kunde,
+        adresse,
+        note:       plainNote,
+        problem:    nd.problem?.trim() || null,
+        ergebnis:   nd.ergebnis?.trim() || null,
         erledigt:   Boolean(nd.erledigt),
       });
     }

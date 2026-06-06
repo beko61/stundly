@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/ui/Sidebar";
+import { BottomNav } from "@/components/ui/BottomNav";
 
 export default async function DashboardLayout({
   children,
@@ -18,6 +19,9 @@ export default async function DashboardLayout({
       <main className="dashboard-content">
         {children}
       </main>
+      <div className="mobile-bottom-nav">
+        <BottomNav />
+      </div>
     </div>
   );
 }

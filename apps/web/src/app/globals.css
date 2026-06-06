@@ -393,6 +393,71 @@ body {
   padding: 0 24px;
 }
 
+/* ═══════════════════════════════════════════════
+   MOBILE (< 768px) — Bottom nav, no sidebar
+   ═══════════════════════════════════════════════ */
+.mobile-bottom-nav { display: none; }
+
+@media (max-width: 767px) {
+  /* Hide sidebar on mobile, show bottom nav */
+  .sidebar { display: none !important; }
+  .mobile-bottom-nav { display: block; }
+
+  /* Reset content margin (no sidebar) + leave room for bottom nav */
+  .dashboard-content {
+    margin-left: 0;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+    min-height: 100vh;
+  }
+
+  /* Tighter page paddings on mobile */
+  .page-wrapper {
+    padding: 0 12px;
+  }
+
+  .page-header {
+    padding: 16px 16px 12px;
+  }
+
+  .page-header h1 {
+    font-size: 18px;
+  }
+
+  /* Modal: bottom sheet style on mobile */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-sheet {
+    max-width: 100%;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 92vh;
+  }
+
+  /* Card tighter on mobile */
+  .card {
+    padding: 12px;
+  }
+
+  /* Larger tap targets */
+  .btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  /* Inputs more readable on mobile (prevents iOS zoom on focus) */
+  .input {
+    font-size: 16px;
+    padding: 12px 14px;
+  }
+
+  /* Cookie banner: full-width sticky bottom */
+  /* (Banner uses fixed bottom already, ensure no horizontal overflow) */
+}
+
 .page-header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   padding: 28px 32px 22px;

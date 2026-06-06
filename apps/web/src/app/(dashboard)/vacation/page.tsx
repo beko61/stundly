@@ -322,7 +322,7 @@ export default function VacationPage() {
       </div>
 
       {/* ── Vacation Charts ── */}
-      <div style={{ padding: "16px 32px 0", maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ padding: "16px 16px 0", maxWidth: 960, margin: "0 auto" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
 
           {/* Chart 1 – Jahresurlaub */}
@@ -426,7 +426,7 @@ export default function VacationPage() {
         )}
       </div>
 
-      <div style={{ padding: "14px 32px", paddingBottom: 40, maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ padding: "14px 16px", paddingBottom: 40, maxWidth: 960, margin: "0 auto" }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0" }}>Laden...</div>
         ) : requests.length === 0 ? (

@@ -32,7 +32,7 @@ export function WelcomeBanner({ storageKey, title, text, cta = "Verstanden" }: P
       role="region"
       aria-label={title}
       style={{
-        margin: "14px 32px 0",
+        margin: "14px 12px 0",
         maxWidth: 960,
         marginLeft: "auto",
         marginRight: "auto",

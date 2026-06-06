@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -156,7 +156,7 @@ export default function CalendarPage() {
           color="var(--orange)" label={formatDuration(Math.round(yearly.totalNd))} sub="Notdienst" />
       </div>
 
-      <div style={{ padding:"16px 32px 40px", maxWidth: 1000, margin: "0 auto" }}>
+      <div style={{ padding:"16px 16px 40px", maxWidth: 1000, margin: "0 auto" }}>
         {loading ? (
           <div style={{ textAlign:"center", color:"var(--muted)", padding:"40px 0" }}>Laden...</div>
         ) : view==="year" ? (

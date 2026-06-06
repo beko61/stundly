@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -239,7 +239,7 @@ export default function SalaryPage() {
         </div>
       </div>
 
-      <div style={{ padding: "20px 32px 40px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ padding: "20px 16px 40px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 960, margin: "0 auto" }}>
 
         {/* ── Settings ── */}
         <div className="card">

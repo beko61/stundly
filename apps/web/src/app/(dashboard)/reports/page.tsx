@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -146,7 +146,7 @@ export default function ReportsPage() {
         )}
       </div>
 
-      <div style={{ padding:"16px 32px 40px", maxWidth: 1000, margin: "0 auto" }}>
+      <div style={{ padding:"16px 16px 40px", maxWidth: 1000, margin: "0 auto" }}>
         {loading ? (
           <div style={{ textAlign:"center", color:"var(--muted)", padding:"40px 0" }}>Laden...</div>
         ) : (

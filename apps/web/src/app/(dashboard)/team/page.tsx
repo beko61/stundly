@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -110,7 +110,7 @@ export default function TeamPage() {
   const pendingCount = invitations.length;
 
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 32px" }}>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 16px" }}>
       {/* Başlık */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Mein Team</h1>

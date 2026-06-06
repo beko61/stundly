@@ -148,7 +148,7 @@ export default function TrackerPage() {
       />
 
       {/* Befüllen buttons */}
-      <div style={{ padding: "14px 32px 0", display: "flex", flexDirection: "column", gap: 8, maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ padding: "14px 16px 0", display: "flex", flexDirection: "column", gap: 8, maxWidth: 960, margin: "0 auto" }}>
         {/* Monat befüllen */}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button
@@ -200,7 +200,7 @@ export default function TrackerPage() {
         </div>
       </div>
 
-      <div style={{ padding: "14px 32px 0", maxWidth: 960, margin: "0 auto" }}>
+      <div style={{ padding: "14px 16px 0", maxWidth: 960, margin: "0 auto" }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0", fontSize: 14 }}>
             Laden...

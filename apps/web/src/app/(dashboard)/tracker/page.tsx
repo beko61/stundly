@@ -9,6 +9,9 @@ import { PhotoScanModal } from "@/components/tracker/PhotoScanModal";
 import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
 import { useTimeEntries } from "@/hooks/useTimeEntries";
 import { getFeiertage } from "@/lib/utils/feiertage";
+import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
+import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
+import { createClient } from "@/lib/supabase/client";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 
@@ -21,6 +24,7 @@ export default function TrackerPage() {
   const [yearFilling,   setYearFilling]   = useState(false);
   const [yearFillCount, setYearFillCount] = useState<number | null>(null);
   const [bundesland,    setBundesland]    = useState("NI");
+  const [pdfLoading,    setPdfLoading]    = useState(false);
 
   // Load bundesland from profile for correct public holidays
   useEffect(() => {
@@ -54,6 +58,56 @@ export default function TrackerPage() {
       return { dateStr, dow, entry: entryMap.get(dateStr) ?? null };
     });
   }, [entries, year, month]);
+
+  /** Aylık PDF rapor üret */
+  async function handleMonthlyPDF() {
+    setPdfLoading(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { setPdfLoading(false); return; }
+      const userId = session.user.id;
+
+      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+
+      const [{ data: nd }, { data: prof }] = await Promise.all([
+        supabase.from("notdienst_entries")
+          .select("date, start_time, end_time, bezahlt, kunde, note")
+          .eq("user_id", userId).gte("date", startDate).lte("date", endDate),
+        supabase.from("profiles")
+          .select("vorname, nachname, personal_nr, company_name, logo_data")
+          .eq("user_id", userId).maybeSingle(),
+      ]);
+
+      const notdienst: NotdienstEntry[] = (nd ?? []).map((n) => ({
+        date:       n.date as string,
+        start_time: n.start_time as string,
+        end_time:   n.end_time as string,
+        erledigt:   Boolean((n as { bezahlt?: boolean }).bezahlt),
+        kunde:      (n as { kunde?: string | null }).kunde ?? null,
+        note:       (n as { note?: string | null }).note ?? null,
+      }));
+
+      const profile: ProfileInfo = {
+        company_name: (prof?.company_name as string | null) ?? "Stundly",
+        logo_data:    (prof?.logo_data as string | null) ?? null,
+      };
+      if (prof?.vorname)     profile.vorname     = prof.vorname as string;
+      if (prof?.nachname)    profile.nachname    = prof.nachname as string;
+      if (prof?.personal_nr) profile.personal_nr = prof.personal_nr as string;
+
+      await generateMonthlyReportPDF({
+        year, month, entries, notdienst, feiertage, profile,
+      });
+    } catch (err) {
+      console.error("PDF Error:", err);
+      window.alert("PDF konnte nicht erstellt werden: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   /** Boş iş günlerini standart saatlerle doldur */
   async function handleBulkFill() {
@@ -172,6 +226,24 @@ export default function TrackerPage() {
               {bulkCount > 0 ? `✅ ${bulkCount} Tage` : "Nichts zu befüllen"}
             </span>
           )}
+        </div>
+
+        {/* Monatsbericht PDF */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={() => void handleMonthlyPDF()}
+            disabled={pdfLoading || bulkFilling || yearFilling || loading}
+            style={{
+              flex: 1, padding: "9px 12px",
+              background: "var(--surface)", border: "1px dashed var(--accent2)",
+              borderRadius: 10, cursor: pdfLoading ? "wait" : "pointer",
+              color: "var(--accent2)", fontFamily: "'Syne',sans-serif",
+              fontSize: 12, fontWeight: 700,
+              opacity: pdfLoading ? 0.7 : 1,
+            }}
+          >
+            {pdfLoading ? "📄 PDF wird erstellt..." : `📄 Monatsbericht ${MONTHS[month - 1]} als PDF`}
+          </button>
         </div>
 
         {/* Ganzes Jahr befüllen */}

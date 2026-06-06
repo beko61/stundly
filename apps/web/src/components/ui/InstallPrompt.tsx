@@ -17,8 +17,10 @@ function detectPlatform(): Platform {
   const ua = window.navigator.userAgent;
   const isIOS = /iPhone|iPad|iPod/i.test(ua);
   const isAndroid = /Android/i.test(ua);
+  // Also show on narrow viewports (mobile Chrome desktop mode, narrow tablets)
+  const isNarrow = window.innerWidth <= 900;
   if (isIOS) return "ios-safari";
-  if (isAndroid) return "android-chrome";
+  if (isAndroid || isNarrow) return "android-chrome";
   return "other";
 }
 

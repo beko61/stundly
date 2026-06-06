@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import { BUNDESLAENDER } from "@/lib/utils/feiertage";
+import { parseInternetsizExport } from "@/lib/import/internetsizImport";
+import type { ImportPayload } from "@/lib/import/internetsizImport";
 
 interface Profile {
   vorname:        string;
@@ -33,6 +35,77 @@ export default function SettingsPage() {
   const [saved,    setSaved]    = useState(false);
   const [sigSaved, setSigSaved] = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
+
+  // ── Import (von alter App / internettesiz HTML) ──
+  const [importPreview, setImportPreview] = useState<ImportPayload | null>(null);
+  const [importError,   setImportError]   = useState<string | null>(null);
+  const [importing,     setImporting]     = useState(false);
+  const [importResult,  setImportResult]  = useState<string | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    setImportError(null);
+    setImportPreview(null);
+    setImportResult(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const raw = ev.target?.result;
+      if (typeof raw !== "string") { setImportError("Datei konnte nicht gelesen werden."); return; }
+      try {
+        const payload = parseInternetsizExport(raw);
+        setImportPreview(payload);
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : String(err));
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleImportConfirm() {
+    if (!importPreview) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Nicht angemeldet.");
+      const userId = session.user.id;
+
+      // 1) time_entries — batch upsert (onConflict on user_id + date)
+      let teInserted = 0;
+      const teBatchSize = 200;
+      const teRows = importPreview.timeEntries.map(e => ({ ...e, user_id: userId }));
+      for (let i = 0; i < teRows.length; i += teBatchSize) {
+        const batch = teRows.slice(i, i + teBatchSize);
+        const { error } = await supabase
+          .from("time_entries")
+          .upsert(batch, { onConflict: "user_id,date" });
+        if (error) throw new Error(`time_entries Batch ${i}: ${error.message}`);
+        teInserted += batch.length;
+      }
+
+      // 2) notdienst_entries — plain insert (allows multiple per day)
+      let ndInserted = 0;
+      const ndBatchSize = 200;
+      const ndRows = importPreview.notdienst.map(n => ({ ...n, user_id: userId }));
+      for (let i = 0; i < ndRows.length; i += ndBatchSize) {
+        const batch = ndRows.slice(i, i + ndBatchSize);
+        const { error } = await supabase.from("notdienst_entries").insert(batch);
+        if (error) throw new Error(`notdienst_entries Batch ${i}: ${error.message}`);
+        ndInserted += batch.length;
+      }
+
+      setImportResult(`✅ Erfolgreich importiert: ${teInserted} Tage, ${ndInserted} Notdienst-Einträge.`);
+      setImportPreview(null);
+      if (importFileRef.current) importFileRef.current.value = "";
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setImporting(false);
+    }
+  }
 
   useEffect(() => { void load(); }, []);
 
@@ -273,6 +346,121 @@ export default function SettingsPage() {
           {saved ? "✅ Gespeichert!" : saving ? "Speichern..." : "💾 Einstellungen speichern"}
         </button>
 
+        {/* ── Import aus alter App ── */}
+        <div className="card">
+          <div className="label" style={{ marginBottom: 8 }}>📥 Daten importieren</div>
+          <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 12 }}>
+            Übernimm deine Daten aus der alten Offline-App
+            (<code style={{ background: "var(--surface2)", padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>arbeitszeit_backup_*.json</code>).
+            Tage werden zusammengeführt (existierende Tage bleiben erhalten und werden aktualisiert),
+            Notdienst-Einträge werden hinzugefügt.
+          </p>
+
+          <label style={{
+            display: "flex", alignItems: "center", gap: 10,
+            border: "2px dashed var(--border)", borderRadius: 10,
+            padding: "12px 14px", cursor: "pointer",
+          }}>
+            <span style={{ fontSize: 20 }}>📁</span>
+            <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>
+              JSON-Datei wählen…
+            </span>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept="application/json,.json"
+              style={{ display: "none" }}
+              onChange={handleImportFile}
+            />
+          </label>
+
+          {importError && (
+            <div style={{
+              marginTop: 12,
+              background: "color-mix(in srgb, var(--red) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
+              color: "var(--red)",
+              borderRadius: 8, padding: "10px 12px", fontSize: 12,
+            }}>
+              ❌ {importError}
+            </div>
+          )}
+
+          {importResult && (
+            <div style={{
+              marginTop: 12,
+              background: "color-mix(in srgb, var(--green) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)",
+              color: "var(--green)",
+              borderRadius: 8, padding: "10px 12px", fontSize: 12,
+            }}>
+              {importResult}
+            </div>
+          )}
+
+          {importPreview && (
+            <div style={{
+              marginTop: 14,
+              background: "var(--surface2)",
+              borderRadius: 10,
+              padding: 14,
+            }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>
+                Vorschau
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                <div style={{ textAlign: "center", background: "var(--surface)", borderRadius: 8, padding: "8px 6px" }}>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>TAGE</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--accent2)" }}>{importPreview.preview.totalDays}</div>
+                </div>
+                <div style={{ textAlign: "center", background: "var(--surface)", borderRadius: 8, padding: "8px 6px" }}>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>NOTDIENST</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--orange)" }}>{importPreview.preview.totalNd}</div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>
+                Zeitraum: <strong style={{ color: "var(--text)" }}>{importPreview.preview.earliestDate ?? "—"}</strong> bis <strong style={{ color: "var(--text)" }}>{importPreview.preview.latestDate ?? "—"}</strong>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, marginBottom: 14 }}>
+                {(Object.entries(importPreview.preview.byDayType) as [string, number][]).map(([t, count]) => (
+                  count > 0 ? (
+                    <div key={t} style={{ background: "var(--surface)", borderRadius: 6, padding: "5px 8px", fontSize: 10 }}>
+                      <span style={{ color: "var(--muted)" }}>{t}: </span>
+                      <strong style={{ color: "var(--text)" }}>{count}</strong>
+                    </div>
+                  ) : null
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => { setImportPreview(null); if (importFileRef.current) importFileRef.current.value = ""; }}
+                  style={{
+                    flex: 1, padding: "10px 12px",
+                    background: "transparent", border: "1px solid var(--border)",
+                    borderRadius: 8, color: "var(--muted)",
+                    fontFamily: "'Syne',sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleImportConfirm()}
+                  disabled={importing}
+                  className="btn btn-primary"
+                  style={{ flex: 2, padding: "10px 12px", fontSize: 12 }}
+                >
+                  {importing ? "Importiere..." : `✓ ${importPreview.preview.totalDays + importPreview.preview.totalNd} Einträge importieren`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
       </div>
     </>

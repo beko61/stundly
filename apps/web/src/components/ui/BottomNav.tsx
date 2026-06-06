@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/tracker",  label: "Tracker",  icon: "⏱" },
-  { href: "/calendar", label: "Kalender", icon: "📅" },
-  { href: "/salary",   label: "Gehalt",   icon: "💰" },
+  { href: "/tracker",  label: "Zeit",     icon: "⏱" },
+  { href: "/calendar", label: "Tage",     icon: "📅" },
+  { href: "/salary",   label: "Lohn",     icon: "💰" },
   { href: "/vacation", label: "Urlaub",   icon: "🏖" },
   { href: "/settings", label: "Profil",   icon: "⚙️" },
 ];
@@ -53,8 +53,15 @@ export function BottomNav() {
               letterSpacing:  "0.05em",
             }}
           >
-            <span style={{ fontSize: 16, lineHeight: 1 }}>{item.icon}</span>
-            <span style={{ fontSize: 10, fontWeight: 700 }}>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "100%",
+            }}>
               {item.label}
             </span>
           </Link>

@@ -223,18 +223,12 @@ export default function TrackerPage() {
         )}
       </div>
 
-      {/* Floating Scan Button */}
+      {/* Floating Scan Button — above BottomNav on mobile */}
       <button
         onClick={() => setScanOpen(true)}
-        style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 150,
-          width: 52, height: 52, borderRadius: "50%",
-          background: "var(--accent)", border: "none",
-          color: "white", fontSize: 22, cursor: "pointer",
-          boxShadow: "0 4px 16px rgba(124,106,247,0.5)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}
+        className="floating-scan"
         title="Stundenzettel scannen"
+        aria-label="Stundenzettel scannen"
       >
         📷
       </button>

@@ -420,6 +420,34 @@ body {
   padding: 0 24px;
 }
 
+/* Floating action button (scan, etc.) */
+.floating-scan {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 150;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124,106,247,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  /* Lift floating button above BottomNav (height ~70px + safe area) */
+  .floating-scan {
+    bottom: calc(90px + env(safe-area-inset-bottom));
+    right: 16px;
+  }
+}
+
 /* ═══════════════════════════════════════════════
    MOBILE (< 768px) — Bottom nav, no sidebar
    ═══════════════════════════════════════════════ */

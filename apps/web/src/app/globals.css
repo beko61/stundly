@@ -60,11 +60,22 @@ body {
   .summary-wrapper > * {
     min-width: 0;
   }
-  /* Long German words: hyphenate (Arbeits-zeit, Urlaubs-antrag) instead of mid-word break */
-  body { hyphens: auto; -webkit-hyphens: auto; }
-  h1, h2, h3, h4, p, span, label, button, a { overflow-wrap: break-word; word-break: normal; }
+  /* Long German words: hyphenate ONLY paragraphs, NEVER headlines/buttons */
+  p { hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
+  h1, h2, h3, h4, h5, h6, button, a, label, .btn {
+    hyphens: none;
+    -webkit-hyphens: none;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
   /* Only URLs/emails get aggressive break */
   a[href^="http"], code { overflow-wrap: anywhere; }
+  /* Mobile typography scale-down for inline-styled landing */
+  h1 { font-size: clamp(28px, 7vw, 56px) !important; }
+  h2 { font-size: clamp(22px, 5.5vw, 32px) !important; }
+  h3 { font-size: clamp(16px, 4vw, 20px) !important; }
+  /* Sections with large desktop paddings → tighter on mobile */
+  section { padding-left: 16px !important; padding-right: 16px !important; }
   /* Summary wrapper tighter on mobile */
   .summary-wrapper { padding: 12px 12px 0 !important; }
 }

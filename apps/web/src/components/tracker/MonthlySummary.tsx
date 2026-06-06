@@ -9,6 +9,15 @@ import { createClient } from "@/lib/supabase/client";
 const TARGET_HOURS_MONTH = 174;
 const URLAUB_DEFAULT     = 30; // yıllık urlaub kontingenti (TODO: kullanıcı ayarına bağla)
 
+// Standart günlük saatler (Hannover Vorlage): Mo-Do 8:15h, Fr 6:15h, weekend 0
+// → Urlaub/Krank/Feiertag günleri bu kadar hedefe sayılır (önceki bug: hep 8h sayılıyordu)
+function getDayStdMins(dateStr: string): number {
+  const dow = new Date(dateStr).getDay();   // 0 Sun, 6 Sat
+  if (dow === 0 || dow === 6) return 0;
+  if (dow === 5) return 6 * 60 + 15;        // Fr → 6:15
+  return 8 * 60 + 15;                       // Mo-Do → 8:15
+}
+
 interface NdEntry { date: string; start_time: string; end_time: string; erledigt?: boolean; }
 
 function minsToTime(min: number): string {
@@ -73,16 +82,26 @@ export function MonthlySummary() {
         case DAY_TYPES.URLAUB: urlaubDays++; break;
       }
 
-      if (!e.start_time || !e.end_time) {
-        // Bezahlte Abwesenheit → 8h hedefe sayılır
-        if (e.day_type === DAY_TYPES.KRANK) { workedMin += 8 * 60; krankMin += 8 * 60; }
-        if (e.day_type === DAY_TYPES.URLAUB) { workedMin += 8 * 60; urlaubMin += 8 * 60; }
-        if (e.day_type === DAY_TYPES.FEIERTAG) workedMin += 8 * 60;
+      // Bezahlte Abwesenheit (Urlaub/Krank/Feiertag): IMMER Sollstunden,
+      // unabhängig davon ob versehentlich Zeiten gespeichert sind.
+      // (Fr Urlaub = 6:15h, Mo-Do Urlaub = 8:15h)
+      if (
+        e.day_type === DAY_TYPES.KRANK ||
+        e.day_type === DAY_TYPES.URLAUB ||
+        e.day_type === DAY_TYPES.FEIERTAG
+      ) {
+        const stdMin = getDayStdMins(e.date);
+        workedMin += stdMin;
+        if (e.day_type === DAY_TYPES.KRANK)  krankMin  += stdMin;
+        if (e.day_type === DAY_TYPES.URLAUB) urlaubMin += stdMin;
         continue;
       }
+
       if (e.day_type === DAY_TYPES.NOTDIENST) continue;
       if (e.day_type === DAY_TYPES.FREI)      continue;
+      if (!e.start_time || !e.end_time)       continue;
 
+      // Sadece ARBEITEN gerçek saatler kullanır
       const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
       workedMin += net_minutes;
     }

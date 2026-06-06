@@ -13,6 +13,18 @@ export interface SalaryBreakdown {
 }
 
 /**
+ * Günün gerçek Sollstunden (dakika cinsinden).
+ * Default Hannover vorlage: Mo-Do 8:15h (495), Fr 6:15h (375), weekend 0.
+ * Urlaub/Krank/Feiertag günleri bu kadar hedefe sayılır.
+ */
+function getDayStdMinutes(dateStr: string): number {
+  const dow = new Date(dateStr).getDay();
+  if (dow === 0 || dow === 6) return 0;
+  if (dow === 5) return 6 * 60 + 15;
+  return 8 * 60 + 15;
+}
+
+/**
  * Calculate full salary breakdown for a list of time entries in a month.
  */
 export function calculateMonthlySalary(
@@ -28,20 +40,24 @@ export function calculateMonthlySalary(
   for (const entry of entries) {
     if (entry.day_type === DAY_TYPES.NOTDIENST) {
       notdienstDays++;
-    }
-
-    if (!entry.start_time || !entry.end_time) {
-      // Paid absence days count as 8h toward target (German labor law).
-      // Urlaub is managed via vacation_requests, not time_entries, so excluded here.
-      if (
-        entry.day_type === DAY_TYPES.KRANK ||
-        entry.day_type === DAY_TYPES.FEIERTAG
-      ) {
-        regularMinutes += 8 * 60;
-      }
       continue;
     }
 
+    // Bezahlte Abwesenheit: IMMER Sollstunden, auch wenn Zeiten gespeichert sind
+    // (Fr = 6:15h, Mo-Do = 8:15h). Bisheriger Bug: 8h konstant.
+    if (
+      entry.day_type === DAY_TYPES.KRANK    ||
+      entry.day_type === DAY_TYPES.FEIERTAG ||
+      entry.day_type === DAY_TYPES.URLAUB
+    ) {
+      regularMinutes += getDayStdMinutes(entry.date);
+      continue;
+    }
+
+    if (entry.day_type === DAY_TYPES.FREI) continue;
+    if (!entry.start_time || !entry.end_time) continue;
+
+    // Sadece ARBEITEN gerçek saatler kullanır
     const { net_minutes } = calculateWorkDuration(
       entry.start_time,
       entry.end_time,

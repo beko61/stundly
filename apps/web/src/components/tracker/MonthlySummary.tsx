@@ -2,61 +2,27 @@
 
 import { useMemo, useEffect, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
-import { formatDuration, DAY_TYPES } from "@workly/shared";
+import { DAY_TYPES } from "@workly/shared";
 import { calculateWorkDuration } from "@workly/shared";
 import { createClient } from "@/lib/supabase/client";
 
 const TARGET_HOURS_MONTH = 174;
+const URLAUB_DEFAULT     = 30; // yıllık urlaub kontingenti (TODO: kullanıcı ayarına bağla)
 
 interface NdEntry { date: string; start_time: string; end_time: string; erledigt?: boolean; }
 
-// ── Pie / Donut chart ──────────────────────────────────────────────────────
-
-interface Slice { value: number; color: string; label: string; }
-
-function DonutChart({ slices, cx = 60, cy = 60, r = 48, stroke = 14 }: {
-  slices: Slice[]; cx?: number; cy?: number; r?: number; stroke?: number;
-}) {
-  const total = slices.reduce((s, sl) => s + sl.value, 0);
-  if (total === 0) return (
-    <svg width={cx * 2} height={cy * 2}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--surface2)" strokeWidth={stroke} />
-      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
-        style={{ fill: "var(--muted)", fontSize: 10, fontFamily: "'DM Mono',monospace" }}>—</text>
-    </svg>
-  );
-
-  const circ = 2 * Math.PI * r;
-  let offset = 0;
-
-  return (
-    <svg width={cx * 2} height={cy * 2} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--surface2)" strokeWidth={stroke} />
-      {slices.filter(sl => sl.value > 0).map((sl, i) => {
-        const dash = (sl.value / total) * circ;
-        const gap  = circ - dash;
-        const el = (
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none"
-            stroke={sl.color} strokeWidth={stroke}
-            strokeDasharray={`${dash} ${gap}`}
-            strokeDashoffset={-offset}
-            strokeLinecap="butt"
-          />
-        );
-        offset += dash;
-        return el;
-      })}
-    </svg>
-  );
+function minsToTime(min: number): string {
+  const sign = min < 0 ? "-" : "";
+  const abs = Math.abs(min);
+  return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
 }
-
-// ── Component ──────────────────────────────────────────────────────────────
 
 export function MonthlySummary() {
   const { entries, year, month, ndVersion } = useTrackerStore();
   const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
+  const [yearUrlaub, setYearUrlaub] = useState(0); // tüm yılın Urlaub gün sayısı
 
-  // Load notdienst_entries for the month (for accurate hour counting)
+  // Notdienst bu ay
   useEffect(() => {
     async function loadNd() {
       const supabase = createClient();
@@ -76,202 +42,202 @@ export function MonthlySummary() {
     void loadNd();
   }, [year, month, ndVersion]);
 
+  // Tüm yılın Urlaub günlerini say (Urlaubskonto için)
+  useEffect(() => {
+    async function loadYearUrlaub() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await supabase
+        .from("time_entries")
+        .select("date")
+        .eq("user_id", session.user.id)
+        .eq("day_type", "urlaub")
+        .gte("date", `${year}-01-01`)
+        .lte("date", `${year}-12-31`);
+      setYearUrlaub(data?.length ?? 0);
+    }
+    void loadYearUrlaub();
+  }, [year, entries]);
+
   const stats = useMemo(() => {
     let workedMin    = 0;
     let krankDays    = 0;
-    let feiertagDays = 0;
-    let freiDays     = 0;
-    let arbeitenDays = 0;
-
-    // Dates that have notdienst sub-entries (weekends + weekdays)
-    const notdienstDates = new Set(ndEntries.map(nd => nd.date));
-    const notdienstDays  = notdienstDates.size;
+    let urlaubDays   = 0;
+    let urlaubMin    = 0;
+    let krankMin     = 0;
 
     for (const e of entries) {
       switch (e.day_type) {
-        case DAY_TYPES.KRANK:    krankDays++;    break;
-        case DAY_TYPES.FEIERTAG: feiertagDays++; break;
-        case DAY_TYPES.FREI:     freiDays++;     break;
-        case DAY_TYPES.ARBEITEN: arbeitenDays++; break;
+        case DAY_TYPES.KRANK:  krankDays++;  break;
+        case DAY_TYPES.URLAUB: urlaubDays++; break;
       }
 
       if (!e.start_time || !e.end_time) {
-        // Paid absences: count as 8h toward target (German law)
-        if (e.day_type === DAY_TYPES.KRANK || e.day_type === DAY_TYPES.FEIERTAG)
-          workedMin += 8 * 60;
+        // Bezahlte Abwesenheit → 8h hedefe sayılır
+        if (e.day_type === DAY_TYPES.KRANK) { workedMin += 8 * 60; krankMin += 8 * 60; }
+        if (e.day_type === DAY_TYPES.URLAUB) { workedMin += 8 * 60; urlaubMin += 8 * 60; }
+        if (e.day_type === DAY_TYPES.FEIERTAG) workedMin += 8 * 60;
         continue;
       }
-      if (e.day_type === DAY_TYPES.NOTDIENST) continue; // counted separately below
-      if (e.day_type === DAY_TYPES.FREI) continue;
+      if (e.day_type === DAY_TYPES.NOTDIENST) continue;
+      if (e.day_type === DAY_TYPES.FREI)      continue;
 
       const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
       workedMin += net_minutes;
     }
 
-    // Notdienst hours from sub-entries (accurate, includes weekends)
     const notdienstMin = ndEntries.reduce((sum, nd) => {
       if (!nd.start_time || !nd.end_time) return sum;
       return sum + calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
     }, 0);
 
-    const ndPaid   = ndEntries.filter(nd => nd.erledigt).length;
-    const ndOffen  = ndEntries.length - ndPaid;
+    const ndPaid  = ndEntries.filter(nd => nd.erledigt).length;
+    const ndOffen = ndEntries.length - ndPaid;
+    const ndCount = ndEntries.length;
 
-    const targetMin   = TARGET_HOURS_MONTH * 60;
-    const diffMin     = workedMin - targetMin;                             // regular work vs target
-    const ueberstunden = Math.max(0, workedMin - targetMin);               // only positive surplus
+    const targetMin = TARGET_HOURS_MONTH * 60;
+    // Differenz = gerçek çalışılan + notdienst - hedef (notdienst dahil)
+    const diffMin = workedMin + notdienstMin - targetMin;
 
     return {
-      workedMin, notdienstMin, notdienstDays,
-      krankDays, feiertagDays, freiDays, arbeitenDays,
-      diffMin, ueberstunden,
-      ndPaid, ndOffen, ndCount: ndEntries.length,
+      workedMin, notdienstMin, ndPaid, ndOffen, ndCount,
+      krankDays, urlaubDays, urlaubMin, krankMin,
+      diffMin, targetMin,
     };
   }, [entries, ndEntries]);
 
-  const workedH = Math.round(stats.workedMin / 60 * 10) / 10;
-  const workedPct = Math.min(100, (stats.workedMin / (TARGET_HOURS_MONTH * 60)) * 100);
-  const fmt = (min: number) => formatDuration(Math.round(Math.abs(min)));
+  const urlaubKonto = Math.max(0, URLAUB_DEFAULT - yearUrlaub);
 
-  const piSlices: Slice[] = [
-    { value: stats.arbeitenDays,  color: "var(--green)",  label: "Arbeiten"  },
-    { value: stats.notdienstDays, color: "var(--orange)", label: "Notdienst" },
-    { value: stats.krankDays,     color: "var(--red)",    label: "Krank"     },
-    { value: stats.feiertagDays,  color: "var(--yellow)", label: "Feiertag"  },
-    { value: stats.freiDays,      color: "var(--muted)",  label: "Frei"      },
-  ];
+  // ── Kart bileşeni ──
+  function Card({ title, icon, color, big, mid, sub }: {
+    title: string; icon?: string; color: string; big: string; mid?: string; sub?: string;
+  }) {
+    return (
+      <div style={{
+        background: `color-mix(in srgb, ${color} 10%, var(--surface))`,
+        border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+        borderRadius: 12,
+        padding: "10px 12px",
+        minWidth: 120,
+        flex: "1 1 130px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+      }}>
+        <div style={{
+          fontSize: 9, fontWeight: 700, color, textTransform: "uppercase",
+          letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
+        }}>
+          {icon && <span style={{ fontSize: 12 }}>{icon}</span>} {title}
+        </div>
+        <div style={{
+          fontFamily: "'DM Mono',monospace", fontSize: 17, fontWeight: 700, color,
+          lineHeight: 1.1, marginTop: 2,
+        }}>
+          {big}
+        </div>
+        {mid && (
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+            {mid}
+          </div>
+        )}
+        {sub && (
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+            {sub}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const diffColor = stats.diffMin >= 0 ? "var(--green)" : "var(--red)";
 
   return (
     <div className="summary-wrapper">
-      {/* ── Main card ── */}
       <div style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 18,
-        padding: 16,
-        display: "flex",
-        gap: 16,
-        alignItems: "center",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+        gap: 8,
       }}>
+        {/* 1. Differenz (Notdienst dahil) */}
+        <Card
+          title="Differenz"
+          icon="📊"
+          color={diffColor}
+          big={`${stats.diffMin >= 0 ? "+" : ""}${minsToTime(stats.diffMin)}`}
+          mid={stats.diffMin >= 0 ? "Überstunden" : "unter Soll"}
+          sub="inkl. Notdienst"
+        />
 
-        {/* Donut left */}
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <DonutChart slices={piSlices} />
-          {/* Center label */}
-          <div style={{
-            position: "absolute", inset: 0,
-            display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center",
-            pointerEvents: "none",
-          }}>
-            <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>
-              {workedH}h
-            </span>
-            <span style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>
-              /{TARGET_HOURS_MONTH}h
-            </span>
+        {/* 2. Gearbeitet */}
+        <Card
+          title="Gearbeitet"
+          icon="⏱"
+          color="var(--blue)"
+          big={minsToTime(stats.workedMin)}
+          mid={`von ${minsToTime(stats.targetMin)} Std`}
+        />
+
+        {/* 3. Urlaub + Krank kombine */}
+        <div style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          padding: "10px 12px",
+          minWidth: 120,
+          flex: "1 1 130px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 8,
+        }}>
+          <div style={{ borderRight: "1px solid var(--border)", paddingRight: 6 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "var(--blue)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              🏖 Urlaub
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--blue)", lineHeight: 1.1, marginTop: 2 }}>
+              {stats.urlaubDays} T
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 1 }}>
+              {minsToTime(stats.urlaubMin)} Std
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "var(--red)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              🤒 Krank
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--red)", lineHeight: 1.1, marginTop: 2 }}>
+              {stats.krankDays} T
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 1 }}>
+              {minsToTime(stats.krankMin)} Std
+            </div>
           </div>
         </div>
 
-        {/* Right side */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        {/* 4. Notdienst */}
+        <Card
+          title="Notdienst"
+          icon="🚨"
+          color="var(--orange)"
+          big={`${stats.ndCount}×`}
+          mid={`${minsToTime(stats.notdienstMin)} Std`}
+          sub={
+            stats.ndCount === 0
+              ? "—"
+              : `✅${stats.ndPaid}  ❌${stats.ndOffen}`
+          }
+        />
 
-          {/* Progress bar */}
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-              <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Gearbeitet
-              </span>
-              <span style={{
-                fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700,
-                color: stats.diffMin >= 0 ? "var(--green)" : "var(--red)",
-              }}>
-                {stats.diffMin >= 0 ? "+" : "-"}{fmt(stats.diffMin)}
-              </span>
-            </div>
-            <div style={{ background: "var(--surface2)", borderRadius: 4, height: 6, overflow: "hidden" }}>
-              <div style={{
-                width: `${workedPct}%`, height: "100%", borderRadius: 4,
-                background: stats.diffMin >= 0 ? "var(--green)" : "var(--red)",
-                transition: "width 0.5s",
-              }} />
-            </div>
-          </div>
-
-          {/* Stats grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            {/* Notdienst */}
-            <div style={{
-              background: "color-mix(in srgb, var(--orange) 8%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--orange) 25%, transparent)",
-              borderRadius: 10, padding: "8px 10px",
-            }}>
-              <div style={{ fontSize: 9, color: "var(--orange)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>
-                Notdienst
-              </div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, color: "var(--orange)", lineHeight: 1 }}>
-                {stats.ndCount}× · {fmt(stats.notdienstMin)}
-              </div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 2, display: "flex", gap: 8 }}>
-                {stats.ndPaid > 0 && <span style={{ color: "var(--green)" }}>✅{stats.ndPaid}</span>}
-                {stats.ndOffen > 0 && <span style={{ color: "var(--red)" }}>❌{stats.ndOffen}</span>}
-                {stats.ndCount === 0 && <span>—</span>}
-              </div>
-            </div>
-
-            {/* Überstunden */}
-            <div style={{
-              background: stats.ueberstunden > 0
-                ? "color-mix(in srgb, var(--accent2) 8%, transparent)"
-                : "color-mix(in srgb, var(--muted) 8%, transparent)",
-              border: `1px solid ${stats.ueberstunden > 0
-                ? "color-mix(in srgb, var(--accent2) 25%, transparent)"
-                : "color-mix(in srgb, var(--muted) 25%, transparent)"}`,
-              borderRadius: 10, padding: "8px 10px",
-            }}>
-              <div style={{ fontSize: 9, color: stats.ueberstunden > 0 ? "var(--accent2)" : "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>
-                Überstunden
-              </div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, color: stats.ueberstunden > 0 ? "var(--accent2)" : "var(--muted)", lineHeight: 1 }}>
-                +{fmt(stats.ueberstunden)}
-              </div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
-                über Soll
-              </div>
-            </div>
-
-            {/* Krank */}
-            {stats.krankDays > 0 && (
-              <div style={{
-                background: "color-mix(in srgb, var(--red) 8%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--red) 25%, transparent)",
-                borderRadius: 10, padding: "8px 10px",
-              }}>
-                <div style={{ fontSize: 9, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>
-                  Krank
-                </div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, color: "var(--red)", lineHeight: 1 }}>
-                  {stats.krankDays}T
-                </div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
-                  {stats.krankDays * 8}h
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-            {piSlices.filter(s => s.value > 0).map(s => (
-              <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <div style={{ width: 7, height: 7, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700 }}>
-                  {s.label} {s.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* 5. Urlaubskonto */}
+        <Card
+          title="Urlaubskonto"
+          icon="🌴"
+          color="var(--accent2)"
+          big={`${urlaubKonto} Tage`}
+          mid={`von ${URLAUB_DEFAULT} genommen`}
+          sub={`${yearUrlaub} verbraucht ${year}`}
+        />
       </div>
     </div>
   );

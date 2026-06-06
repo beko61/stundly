@@ -466,21 +466,28 @@ body {
 }
 
 /* ═══════════════════════════════════════════════
-   MOBILE (< 768px) — Bottom nav, no sidebar
+   ALWAYS bottom nav (mobile-first, also on desktop)
    ═══════════════════════════════════════════════ */
-.mobile-bottom-nav { display: none; }
+.sidebar { display: none !important; }
+.mobile-bottom-nav { display: block; }
+.dashboard-content {
+  margin-left: 0 !important;
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  min-height: 100vh;
+}
+
+/* Bottom nav: wider on desktop, max-width centered */
+@media (min-width: 768px) {
+  .mobile-bottom-nav > nav {
+    max-width: 720px;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 0 0;
+  }
+}
 
 @media (max-width: 767px) {
-  /* Hide sidebar on mobile, show bottom nav */
-  .sidebar { display: none !important; }
-  .mobile-bottom-nav { display: block; }
-
-  /* Reset content margin (no sidebar) + leave room for bottom nav */
-  .dashboard-content {
-    margin-left: 0;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom));
-    min-height: 100vh;
-  }
 
   /* Tighter page paddings on mobile */
   .page-wrapper {

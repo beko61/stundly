@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateMonthlySalary, formatDuration } from "@workly/shared";
 import type { TimeEntry, SalarySettings } from "@workly/shared";
+import { YearPicker } from "@/components/ui/YearPicker";
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_S   = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -220,17 +221,7 @@ export default function SalaryPage() {
       <div className="page-header">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <h1 style={{ fontSize: 22, fontWeight: 800 }}>Gehaltsübersicht</h1>
-          <div style={{ display: "flex", gap: 5 }}>
-            {[2025,2026,2027,2028].map(y => (
-              <button key={y} onClick={() => setYear(y)} style={{
-                background: y===year ? "var(--accent)" : "var(--surface2)",
-                border: `1px solid ${y===year ? "var(--accent)" : "var(--border)"}`,
-                color: y===year ? "white" : "var(--muted)",
-                padding: "5px 8px", borderRadius: 8, cursor: "pointer",
-                fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700,
-              }}>{y}</button>
-            ))}
-          </div>
+          <YearPicker value={year} onChange={setYear} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={prevMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 38, height: 38, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>

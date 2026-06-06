@@ -2,7 +2,7 @@
   "name": "Stundly — Arbeitszeiterfassung",
   "short_name": "Stundly",
   "description": "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform, made in Germany.",
-  "start_url": "/tracker",
+  "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

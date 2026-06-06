@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 import { useTrackerStore } from "@/store/trackerStore";
+import { YearPicker } from "@/components/ui/YearPicker";
 
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const TARGET_H     = 174;
@@ -111,17 +112,7 @@ export default function CalendarPage() {
       <div className="page-header">
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
           <h1 style={{ fontSize: 22, fontWeight: 800 }}>Jahreskalender</h1>
-          <div style={{ display:"flex", gap:5 }}>
-            {[2025,2026,2027,2028].map(y => (
-              <button key={y} onClick={() => setYear(y)} style={{
-                background:y===year?"var(--accent)":"var(--surface2)",
-                border:`1px solid ${y===year?"var(--accent)":"var(--border)"}`,
-                color:y===year?"white":"var(--muted)",
-                padding:"5px 8px", borderRadius:8, cursor:"pointer",
-                fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700,
-              }}>{y}</button>
-            ))}
-          </div>
+          <YearPicker value={year} onChange={setYear} />
         </div>
         <div style={{ display:"flex", gap:8 }}>
           {(["year","stats"] as const).map(v => (

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
+import { YearPicker } from "@/components/ui/YearPicker";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -131,17 +132,7 @@ export default function ReportsPage() {
         ) : (
           <div>
             <label className="label">Jahr</label>
-            <div style={{ display:"flex", gap:6 }}>
-              {[2025,2026,2027,2028].map(y=>(
-                <button key={y} onClick={()=>setYear(y)} style={{
-                  flex:1, padding:"7px", borderRadius:8, cursor:"pointer",
-                  background:y===year?"var(--accent)":"var(--surface2)",
-                  border:`1px solid ${y===year?"var(--accent)":"var(--border)"}`,
-                  color:y===year?"white":"var(--muted)",
-                  fontFamily:"'Syne',sans-serif", fontSize:12, fontWeight:700,
-                }}>{y}</button>
-              ))}
-            </div>
+            <YearPicker value={year} onChange={setYear} />
           </div>
         )}
       </div>

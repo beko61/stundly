@@ -14,9 +14,9 @@ interface Props {
   onClose: () => void;
 }
 
-// Urlaub is managed exclusively on the vacation page
-const DAY_TYPE_OPTIONS = (Object.entries(DAY_TYPE_LABELS) as [DayType, string][])
-  .filter(([type]) => type !== DAY_TYPES.URLAUB);
+// Tüm Tagestypen: Arbeiten / Urlaub / Krank / Notdienst / Feiertag / Frei
+// (Urlaubsantrag mit PDF wird zusätzlich auf der Vacation-Seite verwaltet)
+const DAY_TYPE_OPTIONS = Object.entries(DAY_TYPE_LABELS) as [DayType, string][];
 
 /** Mo–Do: 07:45–17:00  Fr: 07:45–14:30  Sa/So/Feiertag: frei */
 function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: string) {
@@ -55,18 +55,18 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, onCreate, onU
   const [error,        setError]        = useState<string | null>(null);
 
   const needsTime  = dayType === DAY_TYPES.ARBEITEN || dayType === DAY_TYPES.NOTDIENST;
-  const autoTime   = dayType === DAY_TYPES.KRANK || dayType === DAY_TYPES.FEIERTAG;
 
   async function handleSave() {
     setSaving(true);
     setError(null);
 
+    // Urlaub/Krank/Feiertag: keine Zeiten in DB (Berechnung nutzt Sollstunden Mo-Do 8:15 / Fr 6:15)
     const payload = {
       date,
       day_type:       dayType,
-      start_time:     needsTime ? startTime : autoTime ? "08:00" : null,
-      end_time:       needsTime ? endTime   : autoTime ? "17:00" : null,
-      break_minutes:  needsTime ? breakMinutes : autoTime ? 60 : 0,
+      start_time:     needsTime ? startTime : null,
+      end_time:       needsTime ? endTime   : null,
+      break_minutes:  needsTime ? breakMinutes : 0,
       is_night_shift: isNightShift,
       note:           note || null,
       tags:           [] as string[],

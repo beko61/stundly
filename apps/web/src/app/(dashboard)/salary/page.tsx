@@ -163,6 +163,9 @@ export default function SalaryPage() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [settings, settingsLoaded]);
 
+  // ALL entries for the year (for monthly auto-netto chart)
+  const [yearEntries, setYearEntries] = useState<TimeEntry[]>([]);
+
   // Load time entries + monthly records
   useEffect(() => {
     async function load() {
@@ -174,20 +177,50 @@ export default function SalaryPage() {
 
       const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
       const endDate   = new Date(year, month, 0).toISOString().split("T")[0]!;
+      const yearStart = `${year}-01-01`;
+      const yearEnd   = `${year}-12-31`;
 
-      const [{ data: te }, { data: rec }] = await Promise.all([
+      const [{ data: te }, { data: rec }, { data: yte }] = await Promise.all([
         supabase.from("time_entries").select("*")
           .eq("user_id", user.id).gte("date", startDate).lte("date", endDate),
         supabase.from("salary_records").select("*")
           .eq("user_id", user.id).eq("year", year).order("month"),
+        supabase.from("time_entries").select("*")
+          .eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd),
       ]);
 
       if (te)  setEntries(te as TimeEntry[]);
       if (rec) setRecords(rec as MonthRecord[]);
+      if (yte) setYearEntries(yte as TimeEntry[]);
       setLoading(false);
     }
     void load();
   }, [year, month]);
+
+  // Auto-calc: 12 ay brutto + netto serisi (time_entries'ten)
+  const yearlyAuto = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      const monthEntries = yearEntries.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() + 1 === m && d.getFullYear() === year;
+      });
+      const bd = calculateMonthlySalary(monthEntries, settings);
+      const nc = calcNettoFromBrutto({
+        monthBrutto:   bd.total_gross,
+        steuerklasse:  settings.steuerklasse  ?? "I",
+        kirchensteuer: settings.kirchensteuer ?? 0,
+        hatKinder:     settings.hat_kinder    ?? false,
+        taxMode:       settings.tax_mode      ?? "auto",
+        manuellAbzug:  settings.manuell_abzug ?? 0,
+      });
+      return { month: m, brutto: bd.total_gross, netto: nc.netto };
+    });
+  }, [yearEntries, year, settings]);
+
+  const yearlyAutoMax = Math.max(...yearlyAuto.map(a => a.brutto), 1);
+  const yearlyAutoBruttoTotal = yearlyAuto.reduce((s, a) => s + a.brutto, 0);
+  const yearlyAutoNettoTotal  = yearlyAuto.reduce((s, a) => s + a.netto, 0);
 
   const breakdown = useMemo(() => calculateMonthlySalary(entries, settings), [entries, settings]);
 
@@ -544,9 +577,74 @@ export default function SalaryPage() {
               )}
             </div>
 
-            {/* ── Jahresübersicht ── */}
+            {/* ── Auto-Jahresübersicht (Stundly berechnet) ── */}
+            <div className="card purple">
+              <div className="label" style={{ marginBottom: 8 }}>🤖 Jahres-Schätzung {year} (automatisch)</div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                {[
+                  { label: "Brutto/Jahr",  val: `€ ${yearlyAutoBruttoTotal.toFixed(0)}`, color: "var(--green)" },
+                  { label: "Netto/Jahr",   val: `€ ${yearlyAutoNettoTotal.toFixed(0)}`,  color: "var(--accent2)"  },
+                  { label: "Ø Netto/Mon", val: `€ ${(yearlyAutoNettoTotal/12).toFixed(0)}`, color: "var(--blue)" },
+                ].map(c => (
+                  <div key={c.label} style={{ textAlign: "center", background: "var(--surface2)", borderRadius: 10, padding: "10px 6px" }}>
+                    <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: c.color }}>{c.val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {yearlyAutoBruttoTotal === 0 ? (
+                <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", padding: "12px 0" }}>
+                  Noch keine Zeiteinträge für {year}.
+                </div>
+              ) : (
+                Array.from({ length: 12 }, (_, i) => {
+                  const a = yearlyAuto[i]!;
+                  const bPct = Math.round((a.brutto / yearlyAutoMax) * 100);
+                  const nPct = Math.round((a.netto  / yearlyAutoMax) * 100);
+                  const isEmpty = a.brutto === 0;
+                  return (
+                    <div key={a.month} style={{ marginBottom: 7, opacity: isEmpty ? 0.3 : 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+                        <span style={{ color: a.month === month ? "var(--accent2)" : "var(--muted)", fontWeight: 700, width: 28 }}>{MONTHS_S[i]}</span>
+                        {isEmpty ? (
+                          <span style={{ fontSize: 10, color: "var(--muted)" }}>—</span>
+                        ) : (
+                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+                            B: €{a.brutto.toFixed(0)} · N: €{a.netto.toFixed(0)}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ position: "relative", height: 8, background: "var(--surface2)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${bPct}%`, background: "var(--green)", borderRadius: 4, transition: "width 0.4s" }} />
+                        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${nPct}%`, background: "var(--accent2)", borderRadius: 4, opacity: 0.7, transition: "width 0.4s" }} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+
+              {yearlyAutoBruttoTotal > 0 && (
+                <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+                  {[["var(--green)","Brutto"],["var(--accent2)","Netto"]].map(([c,l]) => (
+                    <div key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 8, height: 8, background: c, borderRadius: 2 }} />
+                      <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>{l}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 8, lineHeight: 1.4 }}>
+                ℹ️ Basierend auf Zeiteinträgen × Stundenlohn × Steuereinstellungen.
+                Schätzung — die echte Lohnabrechnung kann ±5% abweichen.
+              </div>
+            </div>
+
+            {/* ── Manuelle Jahresübersicht (Abrechnungen) ── */}
             <div className="card">
-              <div className="label" style={{ marginBottom: 6 }}>📊 Jahresübersicht {year}</div>
+              <div className="label" style={{ marginBottom: 6 }}>📊 Echte Abrechnungen {year}</div>
 
               {/* Totals */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>

@@ -53,3 +53,7 @@ Desktop.ini
 # supabase
 supabase/.branches
 supabase/.temp
+
+# generated audit / reports
+audit.json
+lighthouse-report.*

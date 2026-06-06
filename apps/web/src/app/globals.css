@@ -60,8 +60,11 @@ body {
   .summary-wrapper > * {
     min-width: 0;
   }
-  /* Long words / URLs wrap */
-  body, p, span, div { overflow-wrap: anywhere; word-break: break-word; }
+  /* Long German words: hyphenate (Arbeits-zeit, Urlaubs-antrag) instead of mid-word break */
+  body { hyphens: auto; -webkit-hyphens: auto; }
+  h1, h2, h3, h4, p, span, label, button, a { overflow-wrap: break-word; word-break: normal; }
+  /* Only URLs/emails get aggressive break */
+  a[href^="http"], code { overflow-wrap: anywhere; }
   /* Summary wrapper tighter on mobile */
   .summary-wrapper { padding: 12px 12px 0 !important; }
 }

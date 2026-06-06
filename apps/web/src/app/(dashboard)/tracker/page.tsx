@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
 import { MonthNav } from "@/components/tracker/MonthNav";
 import { MonthlySummary } from "@/components/tracker/MonthlySummary";
+import { NotdienstWeekly } from "@/components/tracker/NotdienstWeekly";
 import { DayEntry } from "@/components/tracker/DayEntry";
 import { PhotoScanModal } from "@/components/tracker/PhotoScanModal";
 import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
@@ -74,7 +75,7 @@ export default function TrackerPage() {
 
       const [{ data: nd }, { data: prof }] = await Promise.all([
         supabase.from("notdienst_entries")
-          .select("date, start_time, end_time, bezahlt, kunde, note")
+          .select("date, start_time, end_time, erledigt, kunde, note")
           .eq("user_id", userId).gte("date", startDate).lte("date", endDate),
         supabase.from("profiles")
           .select("vorname, nachname, personal_nr, company_name, logo_data")
@@ -85,7 +86,7 @@ export default function TrackerPage() {
         date:       n.date as string,
         start_time: n.start_time as string,
         end_time:   n.end_time as string,
-        erledigt:   Boolean((n as { bezahlt?: boolean }).bezahlt),
+        erledigt:   Boolean((n as { erledigt?: boolean }).erledigt),
         kunde:      (n as { kunde?: string | null }).kunde ?? null,
         note:       (n as { note?: string | null }).note ?? null,
       }));
@@ -193,6 +194,7 @@ export default function TrackerPage() {
     <>
       <MonthNav />
       <MonthlySummary />
+      <NotdienstWeekly />
 
       <WelcomeBanner
         storageKey="stundly_tracker_welcome"

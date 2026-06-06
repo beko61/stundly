@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const TARGET_HOURS_MONTH = 174;
 
-interface NdEntry { date: string; start_time: string; end_time: string; }
+interface NdEntry { date: string; start_time: string; end_time: string; erledigt?: boolean; }
 
 // ── Pie / Donut chart ──────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ export function MonthlySummary() {
       const endDate     = `${year}-${String(month).padStart(2,"0")}-${String(daysInMonth).padStart(2,"0")}`;
       const { data } = await supabase
         .from("notdienst_entries")
-        .select("date, start_time, end_time")
+        .select("date, start_time, end_time, erledigt")
         .eq("user_id", session.user.id)
         .gte("date", startDate)
         .lte("date", endDate);
@@ -114,6 +114,9 @@ export function MonthlySummary() {
       return sum + calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
     }, 0);
 
+    const ndPaid   = ndEntries.filter(nd => nd.erledigt).length;
+    const ndOffen  = ndEntries.length - ndPaid;
+
     const targetMin   = TARGET_HOURS_MONTH * 60;
     const diffMin     = workedMin - targetMin;                             // regular work vs target
     const ueberstunden = Math.max(0, workedMin - targetMin);               // only positive surplus
@@ -122,6 +125,7 @@ export function MonthlySummary() {
       workedMin, notdienstMin, notdienstDays,
       krankDays, feiertagDays, freiDays, arbeitenDays,
       diffMin, ueberstunden,
+      ndPaid, ndOffen, ndCount: ndEntries.length,
     };
   }, [entries, ndEntries]);
 
@@ -206,10 +210,12 @@ export function MonthlySummary() {
                 Notdienst
               </div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, color: "var(--orange)", lineHeight: 1 }}>
-                {stats.notdienstDays}×
+                {stats.ndCount}× · {fmt(stats.notdienstMin)}
               </div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
-                {fmt(stats.notdienstMin)} Std
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 2, display: "flex", gap: 8 }}>
+                {stats.ndPaid > 0 && <span style={{ color: "var(--green)" }}>✅{stats.ndPaid}</span>}
+                {stats.ndOffen > 0 && <span style={{ color: "var(--red)" }}>❌{stats.ndOffen}</span>}
+                {stats.ndCount === 0 && <span>—</span>}
               </div>
             </div>
 

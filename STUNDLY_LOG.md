@@ -97,6 +97,12 @@ d468920 Initial commit: Workly SaaS — Almanya odakli Arbeitszeiterfassung plat
 - [ ] Birebir WhatsApp onboarding desteği (Stundly'e WhatsApp numarası eklenince)
 - [ ] Testimonial topla
 
+### 🔵 Teknik borç (Faz 1 sonrası)
+
+- [ ] **ESLint CLI migration** — `next lint` deprecated; proper ESLint 9 + typescript-eslint plugin kurulumu
+- [ ] **Vitest config fix** — `@workly/shared` testleri CI'da fail oluyor (tsconfig paths çözümlenmiyor)
+- [ ] **CI workflow geri aç** — lint + test geri eklenecek
+
 ### 🟢 FAZ 4: Para trafik (2 ay)
 
 - [ ] Google Ads test bütçesi €100 (Arbeitszeiterfassung kostenlos)

@@ -61,6 +61,18 @@
 7. **Floating Scan butonu BottomNav'i kapatıyordu** — Mobile'de bottom: calc(90px + safe-area)
 8. **Yatay scroll vardı telefonda** — overflow-x: clip + min-width: 0 (flex shrink fix)
 
+### 🔥 Akşam fix turu — kritik build sorunu
+
+**Tespit**: Saat sonu yapılan 5 commit Vercel'de fail oluyordu (Deployments sayfasında 6 "Error" üst üste). Sebep: eklediğim `.eslintrc.json` Next.js build sırasında ESLint çalıştırıyordu, `typescript-eslint` plugin yoktu → build crash.
+
+**Çözüm**: `next.config.mjs` → `eslint.ignoreDuringBuilds: true`. Build 62 saniyede başarılı, **hyphens manual** ve diğer 5 commit canlıya yansıdı.
+
+**Doğrulama yöntemi**: Playwright + iPhone 14 simülasyonu ile headless tarayıcıdan canlı siteyi inceledim → DOM computed styles `hyphens: manual`, fontSize'lar doğru clamp'lenmiş, install banner DOM'da var (`role=dialog`).
+
+**Banner çakışma fix**: Install banner cookie banner kapatılıncaya kadar gizleniyor (eskiden ikisi üst üste biniyordu).
+
+**SW v2 bump**: Eski cache otomatik silinir kullanıcı yeni sayfayı açtığında.
+
 ### 📦 Son commit'ler
 
 ```

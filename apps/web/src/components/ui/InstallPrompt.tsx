@@ -56,6 +56,15 @@ export function InstallPrompt() {
       }
     } catch {}
 
+    // Don't compete with cookie banner — wait until user resolves cookies first
+    const checkCookieConsent = () => {
+      try {
+        return localStorage.getItem("stundly_cookie_consent");
+      } catch {
+        return null;
+      }
+    };
+
     const p = detectPlatform();
     setPlatform(p);
 
@@ -69,8 +78,17 @@ export function InstallPrompt() {
     };
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Show banner after a small delay so it doesn't interrupt first paint
-    const t = setTimeout(() => setShow(true), 1500);
+    // Poll for cookie consent before showing install banner
+    const showWhenReady = () => {
+      if (checkCookieConsent()) {
+        setShow(true);
+      } else {
+        // Retry every 500ms until cookie banner is resolved
+        setTimeout(showWhenReady, 500);
+      }
+    };
+    // First check after 2.5s (let user see content + maybe dismiss cookies)
+    const t = setTimeout(showWhenReady, 2500);
 
     return () => {
       clearTimeout(t);

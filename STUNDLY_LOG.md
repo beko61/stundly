@@ -61,6 +61,29 @@
 7. **Floating Scan butonu BottomNav'i kapatıyordu** — Mobile'de bottom: calc(90px + safe-area)
 8. **Yatay scroll vardı telefonda** — overflow-x: clip + min-width: 0 (flex shrink fix)
 
+### 🗓️ 2026-06-07 — internetsiz HTML entegrasyonu (Bölüm 1+2+3)
+
+**Hedef**: `internettesiz kullanim.html`'in son sürümündeki gelişmiş özellikleri Stundly'ye port.
+
+**Bölüm 1 — Vergi & Netto** (en kritik):
+- `taxCalc.ts` (shared/utils) — 6 fonksiyon TypeScript port: `estGrundtabelle`, `calcSV`, `calcVorsorgePauschale`, `calcLohnsteuerMonat` (I-VI), `calcSoliMonat`, `calcNettoFromBrutto`
+- EStG §32a 2024 + SV oranları (RV 9.3%, AV 1.3%, KV 8.15%, PV 1.7%/2.35%) + Soli Freigrenze/Milderungszone
+- `SalarySettings` genişletildi: steuerklasse, kirchensteuer, hat_kinder, tax_mode, manuell_abzug
+- `012_salary_tax_settings.sql` — idempotent migration
+- Salary UI: 6 görsel buton Steuerklasse + Kirchensteuer + Kind toggle + Manuel mod switch
+- Brutto→Netto hero kart + Abzüge breakdown (LSt, Soli, KS, RV, AV, KV, PV)
+
+**Bölüm 2 — Monatsbericht PDF**:
+- `lib/pdf/monthlyReportPdf.ts` — 350+ satır jsPDF port
+- Tracker'a "📄 Monatsbericht ... als PDF" butonu
+- İçerik: Header (logo+firma+adres), MONATSBERICHT başlık, ZUSAMMENFASSUNG (5 satır), TAGESÜBERSICHT (hafta sonu zebra), NOTDIENST-DETAILS (renkli JA/NEIN), UNTERSCHRIFT
+
+**Bölüm 3 — Otomatik yıllık netto bar grafik**:
+- Salary sayfasında yeni "🤖 Jahres-Schätzung" kartı
+- time_entries × Steuereinstellungen → 12 ay otomatik brutto + netto
+- Bar grafik (yeşil brutto + mor netto), aylık değerler, yıllık toplam + Ø netto/ay
+- Manuel "Echte Abrechnungen" ile yan yana (kullanıcı gerçek bordrosunu da kayıt edebilir)
+
 ### 🔥 Akşam fix turu — kritik build sorunu
 
 **Tespit**: Saat sonu yapılan 5 commit Vercel'de fail oluyordu (Deployments sayfasında 6 "Error" üst üste). Sebep: eklediğim `.eslintrc.json` Next.js build sırasında ESLint çalıştırıyordu, `typescript-eslint` plugin yoktu → build crash.

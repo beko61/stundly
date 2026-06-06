@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { CookieBanner } from "@/components/ui/CookieBanner";
 import { SupportButton } from "@/components/ui/SupportButton";
+import { RegisterSW } from "@/components/ui/RegisterSW";
 import "./globals.css";
 
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
@@ -76,6 +77,7 @@ export default async function RootLayout({
           {children}
           <SupportButton />
           <CookieBanner />
+          <RegisterSW />
         </NextIntlClientProvider>
       </body>
     </html>

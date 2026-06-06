@@ -49,15 +49,33 @@ export function MonthNav() {
         </h1>
 
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          {YEARS.map((y) => (
-            <button key={y} onClick={() => setMonth(y, month)} style={{
-              background:  y === year ? "var(--accent)"   : "var(--surface2)",
-              border:      `1px solid ${y === year ? "var(--accent)" : "var(--border)"}`,
-              color:       y === year ? "white"           : "var(--muted)",
-              padding:     "6px 10px", borderRadius: 8, cursor: "pointer",
-              fontFamily: "'Syne',sans-serif", fontSize: 12, fontWeight: 700,
-            }}>{y}</button>
-          ))}
+          <select
+            value={year}
+            onChange={(e) => setMonth(Number(e.target.value), month)}
+            aria-label="Jahr auswählen"
+            style={{
+              background: "var(--accent)",
+              border: "1px solid var(--accent)",
+              color: "white",
+              padding: "6px 28px 6px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontFamily: "'Syne',sans-serif",
+              fontSize: 13,
+              fontWeight: 700,
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 10px center",
+              backgroundSize: "10px",
+            }}
+          >
+            {YEARS.map((y) => (
+              <option key={y} value={y} style={{ background: "var(--surface)", color: "var(--text)" }}>{y}</option>
+            ))}
+          </select>
 
           {!isCurrentMonth && (
             <button onClick={goToday} style={{

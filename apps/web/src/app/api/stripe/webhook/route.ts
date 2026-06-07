@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { sendSubscriptionConfirmationEmail } from "@/lib/email/resend";
 import type Stripe from "stripe";
 
 function getAdminClient() {
@@ -108,6 +109,38 @@ async function handleCheckoutCompleted(supabase: any, session: Stripe.Checkout.S
     await supabase.from("profiles").update({ plan }).eq("company_id", companyId);
   } else if (userId) {
     await supabase.from("profiles").update({ plan }).eq("user_id", userId);
+  }
+
+  // ── Confirmation email — sessizce yut, kritik akışı bozma ──
+  try {
+    let toEmail: string | null = session.customer_details?.email ?? null;
+    let name: string = session.customer_details?.name ?? "Kunde";
+
+    // company veya user profil bilgisi
+    if (!toEmail || name === "Kunde") {
+      if (userId) {
+        const { data: prof } = await supabase.from("profiles")
+          .select("email, vorname, full_name").eq("user_id", userId).maybeSingle();
+        if (!toEmail) toEmail = prof?.email as string | null;
+        if (name === "Kunde") name = (prof?.vorname as string | null) ?? (prof?.full_name as string | null) ?? "Kunde";
+      } else if (companyId) {
+        const { data: prof } = await supabase.from("profiles")
+          .select("email, vorname, full_name").eq("company_id", companyId).eq("role", "company_admin").limit(1).maybeSingle();
+        if (!toEmail) toEmail = prof?.email as string | null;
+        if (name === "Kunde") name = (prof?.vorname as string | null) ?? (prof?.full_name as string | null) ?? "Kunde";
+      }
+    }
+
+    const priceObj = stripeSub.items.data[0]?.price as unknown as { unit_amount?: number; recurring?: { interval?: string } };
+    const amount = priceObj?.unit_amount ? (priceObj.unit_amount / 100).toFixed(2) : "0.00";
+    const planName = plan === "team" ? "Team" : plan === "business" ? "Business" : "Individual";
+    const periodEnd = new Date(stripeSub.current_period_end * 1000).toLocaleDateString("de-DE");
+
+    if (toEmail) {
+      await sendSubscriptionConfirmationEmail({ to: toEmail, name, planName, periodEnd, amount });
+    }
+  } catch (err) {
+    console.error("subscription email failed:", err);
   }
 }
 

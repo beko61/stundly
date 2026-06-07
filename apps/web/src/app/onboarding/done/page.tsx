@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function DoneContent() {
@@ -8,6 +8,18 @@ function DoneContent() {
   const params = useSearchParams();
   const type = params.get("type") ?? "individual";
   const isCompany = type === "company";
+  const welcomeSent = useRef(false);
+
+  // Welcome maili tetikle (RESEND_API_KEY varsa, yoksa sessiz başarısız)
+  useEffect(() => {
+    if (welcomeSent.current) return;
+    welcomeSent.current = true;
+    void fetch("/api/email/welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: isCompany ? "company" : "individual" }),
+    }).catch(() => { /* sessizce yut */ });
+  }, [isCompany]);
 
   return (
     <div className="card" style={{ padding: "40px 24px", textAlign: "center" }}>
@@ -60,7 +72,7 @@ function DoneContent() {
 
       <button
         className="btn btn-primary"
-        onClick={() => router.push(isCompany ? "/company/dashboard" : "/tracker")}
+        onClick={() => router.push(isCompany ? "/company/dashboard" : "/dashboard")}
         style={{ width: "100%", fontSize: 16, padding: "14px" }}
       >
         {isCompany ? "Zum Admin-Panel" : "Jetzt starten"}

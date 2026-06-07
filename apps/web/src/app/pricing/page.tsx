@@ -24,40 +24,40 @@ interface Plan {
 const PLANS: Plan[] = [
   {
     id: "trial",
-    name: "Kostenlos",
-    desc: "Zum Ausprobieren",
+    name: "Kostenlos testen",
+    desc: "14 Tage gratis · keine Kreditkarte",
     monthlyPrice: 0,
     yearlyPrice:  0,
     isTrial: true,
-    features: ["1 Benutzer", "Alle Grundfunktionen", "PDF Export", "Mobile App", "Keine Kreditkarte"],
+    features: ["1 Benutzer", "Alle Grundfunktionen", "PDF Export", "Mobile App", "Volle 14 Tage"],
     cta: "Jetzt starten",
   },
   {
     id: "individual",
     name: "Einzelperson",
     desc: "Für Freelancer & Selbstständige",
-    monthlyPrice: 9.99,
-    yearlyPrice:  8.25,         // 99/12 ≈ 8.25, "2 Monate gratis"
-    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "PDF Monatsbericht", "Urlaubsantrag", "Mobile App"],
+    monthlyPrice: 5.99,
+    yearlyPrice:  4.92,         // 59/12 ≈ 4.92, ~17% Ersparnis (2 Monate gratis)
+    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
     cta: "14 Tage gratis testen",
   },
   {
     id: "team",
     name: "Team",
-    desc: "Für Unternehmen bis 10 MA",
-    monthlyPrice: 29.99,
-    yearlyPrice:  24.92,        // 299/12 ≈ 24.92
+    desc: "Für Handwerk-Betriebe bis 10 MA",
+    monthlyPrice: 19.99,
+    yearlyPrice:  16.58,        // 199/12 ≈ 16.58
     highlight: true,
     badge: "BELIEBTESTE WAHL",
-    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "KI-Funktionen", "ArbZG-Warnungen", "Prioritäts-Support"],
+    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
     cta: "14 Tage gratis testen",
   },
   {
     id: "business",
     name: "Unternehmen",
     desc: "Für größere Betriebe",
-    monthlyPrice: 79.99,
-    yearlyPrice:  66.58,        // 799/12 ≈ 66.58
+    monthlyPrice: 49.99,
+    yearlyPrice:  41.58,        // 499/12 ≈ 41.58
     features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
     cta: "14 Tage gratis testen",
   },
@@ -133,13 +133,37 @@ export default function PricingPage() {
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "60px 24px" }}>
         {/* Title */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 800, marginBottom: 12 }}>
             Einfache, transparente Preise
           </h1>
           <p style={{ color: "var(--muted)", fontSize: 15 }}>
             14 Tage kostenlos testen · keine Kreditkarte erforderlich · jederzeit kündbar
           </p>
+        </div>
+
+        {/* Beta-Tester banner */}
+        <div style={{
+          maxWidth: 720,
+          margin: "0 auto 32px",
+          background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent) 0%, color-mix(in srgb, var(--accent2) 18%, transparent) 100%)",
+          border: "1px solid color-mix(in srgb, var(--accent2) 40%, transparent)",
+          borderRadius: 14,
+          padding: "16px 22px",
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          flexWrap: "wrap",
+        }}>
+          <div style={{ fontSize: 28 }}>🎁</div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", marginBottom: 2 }}>
+              Beta-Tester-Aktion: 30% Rabatt für immer
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>
+              Nur für die ersten 20 Kunden. Code <strong style={{ color: "var(--accent2)" }}>BETA30</strong> beim Checkout eingeben.
+            </div>
+          </div>
         </div>
 
         {/* Interval toggle */}

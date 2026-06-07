@@ -60,6 +60,8 @@ export async function createCheckoutSession({
     // Kleinunternehmer-Regelung (§ 19 UStG): keine MwSt — Stripe Tax deaktiviert
     tax_id_collection: { enabled: false },
     automatic_tax: { enabled: false },
+    // Beta-Tester / Promo-Codes (z.B. BETA30) am Checkout eingebbar
+    allow_promotion_codes: true,
     metadata: {
       company_id: companyId ?? "",
       user_id: userId ?? "",

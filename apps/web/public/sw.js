@@ -2,7 +2,7 @@
 // Minimum SW: makes the app installable on Chrome / Android.
 // Strategy: network-first (always fresh), fallback to cache only when offline.
 
-const VERSION = 'stundly-v2';
+const VERSION = 'stundly-v3';
 
 self.addEventListener('install', (event) => {
   // Activate immediately on first install

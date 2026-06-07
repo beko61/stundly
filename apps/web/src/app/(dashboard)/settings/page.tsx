@@ -188,6 +188,114 @@ export default function SettingsPage() {
     window.location.href = "/login";
   }
 
+  // ── Vollständiger Backup (internetsiz HTML format) ──
+  // Schreibt eine JSON-Datei, die über das Import-Feld oben wieder
+  // eingelesen werden kann. Format identisch zur alten Offline-App.
+  const [backupBusy, setBackupBusy] = useState(false);
+  async function handleBackup() {
+    setBackupBusy(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { setBackupBusy(false); return; }
+      const uid = session.user.id;
+
+      const [{ data: te }, { data: nd }, { data: salary }, { data: vac }, { data: records }] = await Promise.all([
+        supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift, note").eq("user_id", uid),
+        supabase.from("notdienst_entries").select("date, start_time, end_time, kunde, adresse, problem, ergebnis, note, erledigt").eq("user_id", uid),
+        supabase.from("salary_settings").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("vacation_requests").select("*").eq("user_id", uid),
+        supabase.from("salary_records").select("*").eq("user_id", uid),
+      ]);
+
+      // ── time_entries → internetsiz userData ──
+      const userData: Record<string, { status: string; start?: string; end?: string; pause?: string; hours?: string }> = {};
+      const userNotes: Record<string, string> = {};
+      const statusCap: Record<string, string> = {
+        arbeiten: "Arbeiten", urlaub: "Urlaub", krank: "Krank",
+        feiertag: "Feiertag", frei: "Frei", notdienst: "Notdienst",
+      };
+      function minsToHHMM(min: number): string {
+        const h = Math.floor(Math.abs(min) / 60);
+        const m = Math.abs(min) % 60;
+        return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+      }
+      function calcNet(start: string, end: string, pauseMin: number): number {
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        const startM = (sh ?? 0) * 60 + (sm ?? 0);
+        const endM   = (eh ?? 0) * 60 + (em ?? 0);
+        const tot = endM < startM ? (24*60 - startM + endM) : (endM - startM);
+        return Math.max(0, tot - pauseMin);
+      }
+
+      for (const e of te ?? []) {
+        userData[e.date as string] = {
+          status: statusCap[e.day_type as string] ?? "Frei",
+          start:  (e.start_time as string | null) ?? "",
+          end:    (e.end_time   as string | null) ?? "",
+          pause:  minsToHHMM(Number(e.break_minutes ?? 0)),
+          hours:  e.start_time && e.end_time
+            ? minsToHHMM(calcNet(e.start_time as string, e.end_time as string, Number(e.break_minutes ?? 0)))
+            : "",
+        };
+        if (e.note) userNotes[e.date as string] = String(e.note);
+      }
+
+      // ── notdienst_entries → internetsiz userNotdienst (Array pro Datum) ──
+      interface NdOut { start: string; end: string; hours: string; note: string; erledigt: boolean; kunde?: string; problem?: string; ergebnis?: string }
+      const userNotdienst: Record<string, NdOut[]> = {};
+      for (const n of nd ?? []) {
+        const start = (n.start_time as string | null) ?? "";
+        const end   = (n.end_time   as string | null) ?? "";
+        const hours = start && end ? minsToHHMM(calcNet(start, end, 0)) : "";
+        // note rekonstrukt: "Kunde — Adresse" (em-dash), Fallback Kunde alleine
+        const kunde   = (n.kunde   as string | null) ?? "";
+        const adresse = (n.adresse as string | null) ?? "";
+        const noteCombined = kunde && adresse ? `${kunde} — ${adresse}` : (kunde || adresse || "");
+        const entry: NdOut = {
+          start, end, hours,
+          note: noteCombined || ((n.note as string | null) ?? ""),
+          erledigt: Boolean(n.erledigt),
+        };
+        if (kunde) entry.kunde = kunde;
+        const problem  = (n.problem  as string | null) ?? "";
+        const ergebnis = (n.ergebnis as string | null) ?? "";
+        if (problem)  entry.problem  = problem;
+        if (ergebnis) entry.ergebnis = ergebnis;
+        const d = n.date as string;
+        if (!userNotdienst[d]) userNotdienst[d] = [];
+        userNotdienst[d].push(entry);
+      }
+
+      const payload = {
+        // Internetsiz HTML uyumlu alanlar (Import edilebilir):
+        userData,
+        userNotdienst,
+        userNotes,
+        // Ek Stundly verileri (bilgi amaçlı, Import bunları kullanmaz):
+        salarySettings: salary ?? null,
+        vacationRequests: vac ?? [],
+        salaryRecords: records ?? [],
+        // Meta
+        exportDate: new Date().toISOString(),
+        source: "stundly",
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `stundly_backup_${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Backup error:", err);
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
   if (loading) return (
     <div style={{ textAlign: "center", padding: "80px 0", color: "var(--muted)" }}>Laden...</div>
   );
@@ -345,6 +453,25 @@ export default function SettingsPage() {
         >
           {saved ? "✅ Gespeichert!" : saving ? "Speichern..." : "💾 Einstellungen speichern"}
         </button>
+
+        {/* ── Vollständige Sicherung herunterladen ── */}
+        <div className="card">
+          <div className="label" style={{ marginBottom: 8 }}>💾 Sicherung herunterladen</div>
+          <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 12 }}>
+            Lade alle deine Daten als JSON-Datei herunter:
+            Arbeitszeiten, Urlaub, Krank, Notdienst (mit Kunde/Adresse), Feiertage, Lohneinstellungen.
+            Die Datei kann später wieder über das Import-Feld unten eingelesen werden.
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleBackup()}
+            disabled={backupBusy}
+            className="btn btn-primary"
+            style={{ width: "100%", padding: "12px" }}
+          >
+            {backupBusy ? "Erstelle Sicherung..." : "⬇ stundly_backup_…json herunterladen"}
+          </button>
+        </div>
 
         {/* ── Import aus alter App ── */}
         <div className="card">

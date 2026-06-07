@@ -72,6 +72,23 @@ function calcWorkdays(start: string, end: string): number {
   return count;
 }
 
+/** Date range içindeki hafta içi günlerin ISO date listesi (YYYY-MM-DD). */
+function workdayDates(start: string, end: string): string[] {
+  if (!start || !end) return [];
+  const out: string[] = [];
+  const cur = new Date(start);
+  const endD = new Date(end);
+  while (cur <= endD) {
+    const d = cur.getDay();
+    if (d !== 0 && d !== 6) {
+      const iso = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`;
+      out.push(iso);
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
 function fmtDate(iso: string): string {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
@@ -162,15 +179,35 @@ export default function VacationPage() {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
+    const userId = session.user.id;
 
+    // 1) Antrag in vacation_requests speichern
     await supabase.from("vacation_requests").insert({
-      user_id:    session.user.id,
+      user_id:    userId,
       start_date: startDate,
       end_date:   endDate,
       days_count: days,
       reason:     bemerkung || null,
       status:     "pending",
     });
+
+    // 2) Sync to time_entries: jeden Werktag als Urlaub markieren
+    //    (Wochenenden ausgenommen, Feiertage werden bei Bedarf später überschrieben)
+    const dates = workdayDates(startDate, endDate);
+    if (dates.length > 0) {
+      const rows = dates.map(date => ({
+        user_id:        userId,
+        date,
+        day_type:       "urlaub" as const,
+        start_time:     null,
+        end_time:       null,
+        break_minutes:  0,
+        is_night_shift: false,
+        note:           bemerkung || null,
+        tags:           [] as string[],
+      }));
+      await supabase.from("time_entries").upsert(rows, { onConflict: "user_id,date" });
+    }
 
     setSaving(false);
     setShowForm(false);
@@ -179,7 +216,27 @@ export default function VacationPage() {
 
   async function handleDelete(id: string) {
     const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    // Find the request before deletion to know which dates to clean up
+    const toDelete = requests.find(r => r.id === id);
+
     await supabase.from("vacation_requests").delete().eq("id", id);
+
+    // Sync: time_entries'teki Urlaub markierungen löschen
+    if (toDelete && userId) {
+      const dates = workdayDates(toDelete.start_date, toDelete.end_date);
+      if (dates.length > 0) {
+        await supabase
+          .from("time_entries")
+          .delete()
+          .eq("user_id", userId)
+          .eq("day_type", "urlaub")
+          .in("date", dates);
+      }
+    }
+
     setRequests(prev => {
       const updated = prev.filter(r => r.id !== id);
       const year = new Date().getFullYear();

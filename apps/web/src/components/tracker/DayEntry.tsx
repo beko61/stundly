@@ -173,9 +173,36 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
                       </div>
                     )}
                   </div>
-                  <span style={{ color:nd.erledigt?"var(--green)":"var(--muted)", fontSize:14 }}>
-                    {nd.erledigt?"✅":"⏳"}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={async (ev) => {
+                      ev.stopPropagation();
+                      const supabase = createClient();
+                      const newValue = !nd.erledigt;
+                      const { data, error } = await supabase
+                        .from("notdienst_entries")
+                        .update({ erledigt: newValue })
+                        .eq("id", nd.id)
+                        .select()
+                        .single();
+                      if (!error && data) {
+                        setNdEntries(prev => prev.map(e => e.id === nd.id ? (data as NotdienstEntry) : e));
+                        incrementNdVersion();
+                      }
+                    }}
+                    title={nd.erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: nd.erledigt ? "var(--green)" : "var(--muted)",
+                      fontSize: 16,
+                      cursor: "pointer",
+                      padding: "4px 6px",
+                      borderRadius: 6,
+                    }}
+                  >
+                    {nd.erledigt ? "✅" : "⏳"}
+                  </button>
                 </div>
               );
             })}

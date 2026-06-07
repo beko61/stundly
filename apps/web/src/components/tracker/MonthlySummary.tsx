@@ -6,8 +6,8 @@ import { DAY_TYPES } from "@workly/shared";
 import { calculateWorkDuration } from "@workly/shared";
 import { createClient } from "@/lib/supabase/client";
 
-const TARGET_HOURS_MONTH = 174;
-const URLAUB_DEFAULT     = 30; // yıllık urlaub kontingenti (TODO: kullanıcı ayarına bağla)
+const TARGET_HOURS_DEFAULT = 174;
+const URLAUB_DEFAULT       = 30; // yıllık urlaub kontingenti
 
 // Standart günlük saatler (Hannover Vorlage): Mo-Do 8:15h, Fr 6:15h, weekend 0
 // → Urlaub/Krank/Feiertag günleri bu kadar hedefe sayılır (önceki bug: hep 8h sayılıyordu)
@@ -30,6 +30,45 @@ export function MonthlySummary() {
   const { entries, year, month, ndVersion } = useTrackerStore();
   const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
   const [yearUrlaub, setYearUrlaub] = useState(0); // tüm yılın Urlaub gün sayısı
+  const [targetHours, setTargetHours] = useState(TARGET_HOURS_DEFAULT);
+
+  // Settings'ten Sollstunden oku (Settings değişince güncellenmesi için ndVersion'a benzer trigger gerekir,
+  // ama useEffect [year,month] zaten her ay değişiminde tetikler. Live update için 'storage' event kullan.)
+  useEffect(() => {
+    async function loadSettings() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await supabase
+        .from("salary_settings")
+        .select("monthly_target_hours")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.monthly_target_hours) setTargetHours(Number(data.monthly_target_hours));
+    }
+    void loadSettings();
+    // Listen for localStorage changes (Salary page writes to it on save)
+    const handler = (e: StorageEvent) => {
+      if (e.key === "workly_salary_settings_v2" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue) as { monthly_target_hours?: number };
+          if (parsed.monthly_target_hours) setTargetHours(Number(parsed.monthly_target_hours));
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", handler);
+    // Also check on mount from localStorage (same-tab updates)
+    try {
+      const raw = localStorage.getItem("workly_salary_settings_v2");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { monthly_target_hours?: number };
+        if (parsed.monthly_target_hours) setTargetHours(Number(parsed.monthly_target_hours));
+      }
+    } catch {}
+    return () => window.removeEventListener("storage", handler);
+  }, [year, month]);
 
   // Notdienst bu ay
   useEffect(() => {
@@ -115,7 +154,7 @@ export function MonthlySummary() {
     const ndOffen = ndEntries.length - ndPaid;
     const ndCount = ndEntries.length;
 
-    const targetMin = TARGET_HOURS_MONTH * 60;
+    const targetMin = targetHours * 60;
     // Differenz = gerçek çalışılan + notdienst - hedef (notdienst dahil)
     const diffMin = workedMin + notdienstMin - targetMin;
 
@@ -124,7 +163,7 @@ export function MonthlySummary() {
       krankDays, urlaubDays, urlaubMin, krankMin,
       diffMin, targetMin,
     };
-  }, [entries, ndEntries]);
+  }, [entries, ndEntries, targetHours]);
 
   const urlaubKonto = Math.max(0, URLAUB_DEFAULT - yearUrlaub);
 

@@ -73,15 +73,20 @@ export function calculateMonthlySalary(
 
   const totalWorkedMinutes = regularMinutes + nightShiftMinutes;
   const overWorkedMinutes  = Math.max(0, totalWorkedMinutes - targetMinutes);
-  const normalMinutes      = totalWorkedMinutes - overWorkedMinutes;
 
+  // Festgehalt-Logik (Almanya KOBİ standardı):
+  // - Aylık brutto = Sollstunden × Stundenlohn (sözleşmedeki sabit maaş)
+  // - Eğer Mehrarbeit yapılırsa (worked > soll): zuschlag eklenir
+  // - Eğer worked < soll: yine tam maaş ödenir (ay tamamlanacak varsayım, Urlaub/Krank Sollstunden'i karşılar)
+  const targetHours   = settings.monthly_target_hours;
   const workedHours   = minutesToHours(totalWorkedMinutes);
-  const normalHours   = minutesToHours(normalMinutes);
   const overtimeHours = minutesToHours(overWorkedMinutes);
   const nightHours    = minutesToHours(nightShiftMinutes);
 
-  const base_pay        = normalHours * settings.hourly_rate;
-  const overtime_pay    = overtimeHours * settings.hourly_rate * settings.overtime_rate_multiplier;
+  // Base pay: garantili Festgehalt (Soll-Stunden × Rate)
+  const base_pay        = targetHours * settings.hourly_rate;
+  // Mehrarbeit ek tutar (multiplier - 1, çünkü baz zaten ödendi)
+  const overtime_pay    = overtimeHours * settings.hourly_rate * (settings.overtime_rate_multiplier - 1);
   const night_bonus     = nightHours * settings.night_shift_bonus;
   const notdienst_bonus = notdienstDays * settings.notdienst_bonus;
 

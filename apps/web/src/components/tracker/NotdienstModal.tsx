@@ -38,14 +38,30 @@ const PRESETS: [string, string, string][] = [
   ["08:00","16:00","Sa/So 08–16"],
 ];
 
+// Default times for a NEW notdienst: round current time down to :00,
+// end = +1h. Better UX than always 17:00–18:00.
+function defaultStart(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes() < 30 ? 0 : 30).padStart(2, "0")}`;
+}
+function defaultEnd(start: string): string {
+  const [h, m] = start.split(":").map(Number);
+  const total = ((h || 0) + 1) * 60 + (m || 0);
+  const eh = Math.floor(total / 60) % 24;
+  const em = total % 60;
+  return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+}
+
 export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props) {
-  const [start,    setStart]    = useState(entry?.start_time ?? "17:00");
-  const [end,      setEnd]      = useState(entry?.end_time   ?? "18:00");
+  const initStart = entry?.start_time ?? defaultStart();
+  const [start,    setStart]    = useState(initStart);
+  const [end,      setEnd]      = useState(entry?.end_time   ?? defaultEnd(initStart));
   const [kunde,    setKunde]    = useState(entry?.kunde      ?? "");
   const [adresse,  setAdresse]  = useState(entry?.adresse    ?? "");
   const [problem,  setProblem]  = useState(entry?.problem    ?? "");
   const [ergebnis, setErgebnis] = useState(entry?.ergebnis   ?? "");
   const [note,     setNote]     = useState(entry?.note       ?? "");
+  const [erledigt, setErledigt] = useState<boolean>(entry?.erledigt ?? false);
   const [saving,   setSaving]   = useState(false);
 
   const duration = start && end
@@ -74,7 +90,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
       adresse:    adresse  || null,
       problem:    problem  || null,
       ergebnis:   ergebnis || null,
-      erledigt:   entry?.erledigt ?? false,
+      erledigt,
     };
 
     if (entry) {
@@ -206,6 +222,59 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             <label className="label">Notiz (optional)</label>
             <input className="input" type="text" value={note} onChange={e => setNote(e.target.value)}
               placeholder="Kurze Notiz..." />
+          </div>
+
+          {/* Bezahlt-Toggle (Lohn wird oft erst nächsten Monat ausgezahlt) */}
+          <div style={{
+            background: erledigt
+              ? "color-mix(in srgb, var(--green) 12%, transparent)"
+              : "color-mix(in srgb, var(--orange) 10%, transparent)",
+            border: `1px solid ${erledigt
+              ? "color-mix(in srgb, var(--green) 35%, transparent)"
+              : "color-mix(in srgb, var(--orange) 30%, transparent)"}`,
+            borderRadius: 12,
+            padding: "12px 14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: erledigt ? "var(--green)" : "var(--orange)" }}>
+                {erledigt ? "✅ Bezahlt" : "⏳ Noch offen"}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                Notdienst wird oft erst nächsten Monat ausgezahlt — hier markieren wenn das Geld da ist.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErledigt(v => !v)}
+              style={{
+                position: "relative",
+                width: 50,
+                height: 28,
+                borderRadius: 14,
+                background: erledigt ? "var(--green)" : "var(--surface2)",
+                border: `1px solid ${erledigt ? "var(--green)" : "var(--border)"}`,
+                cursor: "pointer",
+                flexShrink: 0,
+                padding: 0,
+              }}
+              aria-label={erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
+            >
+              <span style={{
+                position: "absolute",
+                top: 2,
+                left: erledigt ? 24 : 2,
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: "white",
+                transition: "left 0.18s",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+              }} />
+            </button>
           </div>
 
           {/* Speichern */}

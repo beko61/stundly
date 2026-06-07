@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration } from "@workly/shared";
 import { getFeiertage } from "@/lib/utils/feiertage";
 
-const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT = 30;
-const SALARY_LS_KEY = "workly_salary_settings_v2"; // same key Salary page writes
+const SALARY_LS_KEY = "workly_salary_settings_v2";
 
 function getDayStdMins(dateStr: string): number {
   const dow = new Date(dateStr).getDay();
@@ -50,6 +51,7 @@ interface SalarySettings {
   overtime_rate_multiplier: number;
   night_shift_bonus: number;
   notdienst_bonus: number;
+  urlaub_anspruch: number;
 }
 
 const DEFAULT_SETTINGS: SalarySettings = {
@@ -58,9 +60,9 @@ const DEFAULT_SETTINGS: SalarySettings = {
   overtime_rate_multiplier: 1.25,
   night_shift_bonus: 0,
   notdienst_bonus: 0,
+  urlaub_anspruch: 30,
 };
 
-/** Salary page writes the same shape to localStorage on every change. We trust it as the freshest source. */
 function readLocalSalarySettings(): Partial<SalarySettings> | null {
   try {
     const raw = localStorage.getItem(SALARY_LS_KEY);
@@ -79,29 +81,135 @@ function mergeSettings(base: SalarySettings, patch: Partial<SalarySettings> | nu
     overtime_rate_multiplier: Number(patch.overtime_rate_multiplier ?? base.overtime_rate_multiplier),
     night_shift_bonus:        Number(patch.night_shift_bonus        ?? base.night_shift_bonus),
     notdienst_bonus:          Number(patch.notdienst_bonus          ?? base.notdienst_bonus),
+    urlaub_anspruch:          Number(patch.urlaub_anspruch          ?? base.urlaub_anspruch),
   };
 }
 
+/** Calculate worked minutes + Notdienst minutes from arbitrary entries. */
+function calcMonthMinutes(entries: TimeEntry[], ndEntries: NdEntry[]) {
+  let workedMin = 0;
+  let urlaubDays = 0, krankDays = 0, feiertagDays = 0, arbeitstageCount = 0;
+  for (const e of entries) {
+    if (e.day_type === "urlaub")   urlaubDays++;
+    if (e.day_type === "krank")    krankDays++;
+    if (e.day_type === "feiertag") feiertagDays++;
+    if (e.day_type === "arbeiten") arbeitstageCount++;
+    if (e.day_type === "urlaub" || e.day_type === "krank" || e.day_type === "feiertag") {
+      workedMin += getDayStdMins(e.date);
+      continue;
+    }
+    if (e.day_type === "notdienst" || e.day_type === "frei") continue;
+    if (!e.start_time || !e.end_time) continue;
+    workedMin += calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes;
+  }
+  const ndMin = ndEntries.reduce((s, n) => {
+    if (!n.start_time || !n.end_time) return s;
+    return s + calculateWorkDuration(n.start_time, n.end_time, 0).net_minutes;
+  }, 0);
+  return { workedMin, ndMin, ndCount: ndEntries.length,
+    ndPaid: ndEntries.filter(n => n.erledigt).length,
+    urlaubDays, krankDays, feiertagDays, arbeitstageCount };
+}
+
+function calcBrutto(workedMin: number, ndMin: number, ndCount: number, s: SalarySettings): number {
+  const targetHours = s.monthly_target_hours;
+  const workedHours = (workedMin + ndMin) / 60;
+  const overtimeHours = Math.max(0, workedHours - targetHours);
+  const basePay     = targetHours * s.hourly_rate;
+  const overtimePay = overtimeHours * s.hourly_rate * (s.overtime_rate_multiplier - 1);
+  const ndBonus     = ndCount * s.notdienst_bonus;
+  return basePay + overtimePay + ndBonus;
+}
+
 export default function DashboardPage() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth() + 1;
+  const today      = new Date();
+  const todayYear  = today.getFullYear();
+  const todayMonth = today.getMonth() + 1;
+
+  // ── Selected month state (ay seçici için) ──
+  const [selectedYear,  setSelectedYear]  = useState(todayYear);
+  const [selectedMonth, setSelectedMonth] = useState(todayMonth);
 
   const [name, setName] = useState("");
   const [bundesland, setBundesland] = useState("NI");
+
+  // Selected month data
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [last7, setLast7] = useState<TimeEntry[]>([]);
   const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
-  const [yearUrlaub, setYearUrlaub] = useState(0);
+
+  // Year-wide data (for trend chart + yearly card)
+  const [yearEntries, setYearEntries] = useState<TimeEntry[]>([]);
+  const [yearNd, setYearNd] = useState<NdEntry[]>([]);
+
+  // Last 7 days (always relative to today, regardless of selected month)
+  const [last7, setLast7] = useState<TimeEntry[]>([]);
+
   const [settings, setSettings] = useState<SalarySettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void loadAll();
-  }, []);
+  // ── Load on selectedMonth change ──
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) { setLoading(false); return; }
+    const uid = session.user.id;
 
-  // Live-sync salary settings: Salary page writes to localStorage and
-  // emits a 'storage' event (other tabs) or we re-read on visibilitychange.
+    const startMonth = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const endMonth   = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+
+    const yearStart  = `${selectedYear}-01-01`;
+    const yearEnd    = `${selectedYear}-12-31`;
+
+    const last7Start = new Date(today);
+    last7Start.setDate(last7Start.getDate() - 6);
+    const last7StartStr = last7Start.toISOString().split("T")[0]!;
+    const todayStr      = today.toISOString().split("T")[0]!;
+
+    const [profileRes, settingsRes, monthRes, ndRes, yearRes, yearNdRes, last7Res] = await Promise.all([
+      supabase.from("profiles").select("vorname, bundesland").eq("user_id", uid).maybeSingle(),
+      supabase.from("salary_settings")
+        .select("hourly_rate, monthly_target_hours, overtime_rate_multiplier, night_shift_bonus, notdienst_bonus, urlaub_anspruch")
+        .eq("user_id", uid).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
+        .eq("user_id", uid).gte("date", startMonth).lte("date", endMonth),
+      supabase.from("notdienst_entries").select("date, start_time, end_time, erledigt")
+        .eq("user_id", uid).gte("date", startMonth).lte("date", endMonth),
+      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
+        .eq("user_id", uid).gte("date", yearStart).lte("date", yearEnd),
+      supabase.from("notdienst_entries").select("date, start_time, end_time, erledigt")
+        .eq("user_id", uid).gte("date", yearStart).lte("date", yearEnd),
+      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
+        .eq("user_id", uid).gte("date", last7StartStr).lte("date", todayStr),
+    ]);
+
+    setName(profileRes.data?.vorname ?? session.user.email?.split("@")[0] ?? "");
+    if (profileRes.data?.bundesland) setBundesland(profileRes.data.bundesland as string);
+    if (settingsRes.data) {
+      const fromSupabase: SalarySettings = {
+        hourly_rate:              Number(settingsRes.data.hourly_rate)              || DEFAULT_SETTINGS.hourly_rate,
+        monthly_target_hours:     Number(settingsRes.data.monthly_target_hours)     || DEFAULT_SETTINGS.monthly_target_hours,
+        overtime_rate_multiplier: Number(settingsRes.data.overtime_rate_multiplier) || DEFAULT_SETTINGS.overtime_rate_multiplier,
+        night_shift_bonus:        Number(settingsRes.data.night_shift_bonus)        || 0,
+        notdienst_bonus:          Number(settingsRes.data.notdienst_bonus)          || 0,
+        urlaub_anspruch:          Number(settingsRes.data.urlaub_anspruch)          || DEFAULT_SETTINGS.urlaub_anspruch,
+      };
+      setSettings(mergeSettings(fromSupabase, readLocalSalarySettings()));
+    }
+    setEntries((monthRes.data  ?? []) as TimeEntry[]);
+    setNdEntries((ndRes.data   ?? []) as NdEntry[]);
+    setYearEntries((yearRes.data ?? []) as TimeEntry[]);
+    setYearNd((yearNdRes.data  ?? []) as NdEntry[]);
+    setLast7((last7Res.data    ?? []) as TimeEntry[]);
+    setLoading(false);
+    // intentionally exclude `today` (re-renders only on real day-change which is fine)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonth]);
+
+  useEffect(() => { void loadAll(); }, [loadAll]);
+
+  // Live-sync salary settings from Salary page (localStorage + 'storage' + visibility)
   useEffect(() => {
     function applyLocal() {
       const patch = readLocalSalarySettings();
@@ -113,7 +221,7 @@ export default function DashboardPage() {
     function onVisible() {
       if (document.visibilityState === "visible") applyLocal();
     }
-    applyLocal(); // immediate read on mount (covers same-tab navigation)
+    applyLocal();
     window.addEventListener("storage", onStorage);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -122,99 +230,16 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function loadAll() {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) { setLoading(false); return; }
-    const uid = session.user.id;
-
-    const startMonth = `${year}-${String(month).padStart(2, "0")}-01`;
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const endMonth = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-
-    const last7Start = new Date(today);
-    last7Start.setDate(last7Start.getDate() - 6);
-    const last7StartStr = last7Start.toISOString().split("T")[0]!;
-    const todayStr = today.toISOString().split("T")[0]!;
-
-    const [profileRes, settingsRes, monthRes, last7Res, ndRes, yearUrlaubRes] = await Promise.all([
-      supabase.from("profiles").select("vorname, bundesland").eq("user_id", uid).maybeSingle(),
-      supabase.from("salary_settings")
-        .select("hourly_rate, monthly_target_hours, overtime_rate_multiplier, night_shift_bonus, notdienst_bonus")
-        .eq("user_id", uid).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
-        .eq("user_id", uid).gte("date", startMonth).lte("date", endMonth),
-      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
-        .eq("user_id", uid).gte("date", last7StartStr).lte("date", todayStr),
-      supabase.from("notdienst_entries").select("date, start_time, end_time, erledigt")
-        .eq("user_id", uid).gte("date", startMonth).lte("date", endMonth),
-      supabase.from("time_entries").select("date").eq("user_id", uid).eq("day_type", "urlaub")
-        .gte("date", `${year}-01-01`).lte("date", `${year}-12-31`),
-    ]);
-
-    setName(profileRes.data?.vorname ?? session.user.email?.split("@")[0] ?? "");
-    if (profileRes.data?.bundesland) setBundesland(profileRes.data.bundesland as string);
-    if (settingsRes.data) {
-      const fromSupabase: SalarySettings = {
-        hourly_rate: Number(settingsRes.data.hourly_rate) || DEFAULT_SETTINGS.hourly_rate,
-        monthly_target_hours: Number(settingsRes.data.monthly_target_hours) || DEFAULT_SETTINGS.monthly_target_hours,
-        overtime_rate_multiplier: Number(settingsRes.data.overtime_rate_multiplier) || DEFAULT_SETTINGS.overtime_rate_multiplier,
-        night_shift_bonus: Number(settingsRes.data.night_shift_bonus) || 0,
-        notdienst_bonus: Number(settingsRes.data.notdienst_bonus) || 0,
-      };
-      // Local cache (written by Salary page on every keystroke, debounce 600ms)
-      // beats Supabase if newer — covers the case where the user just edited
-      // a value and immediately navigated to Dashboard.
-      setSettings(mergeSettings(fromSupabase, readLocalSalarySettings()));
-    }
-    setEntries((monthRes.data ?? []) as TimeEntry[]);
-    setLast7((last7Res.data ?? []) as TimeEntry[]);
-    setNdEntries((ndRes.data ?? []) as NdEntry[]);
-    setYearUrlaub(yearUrlaubRes.data?.length ?? 0);
-    setLoading(false);
-  }
-
-  // ── Berechnungen ──
+  // ── Monthly stats (selected month) ──
   const stats = useMemo(() => {
-    let workedMin = 0;
-    let urlaubDays = 0;
-    let krankDays = 0;
-
-    for (const e of entries) {
-      if (e.day_type === "urlaub") urlaubDays++;
-      if (e.day_type === "krank") krankDays++;
-      if (e.day_type === "urlaub" || e.day_type === "krank" || e.day_type === "feiertag") {
-        workedMin += getDayStdMins(e.date);
-        continue;
-      }
-      if (e.day_type === "notdienst" || e.day_type === "frei") continue;
-      if (!e.start_time || !e.end_time) continue;
-      const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
-      workedMin += net_minutes;
-    }
-
-    const ndMin = ndEntries.reduce((s, n) => {
-      if (!n.start_time || !n.end_time) return s;
-      return s + calculateWorkDuration(n.start_time, n.end_time, 0).net_minutes;
-    }, 0);
-    const ndCount = ndEntries.length;
-    const ndPaid = ndEntries.filter(n => n.erledigt).length;
-
+    const m = calcMonthMinutes(entries, ndEntries);
     const targetMin = settings.monthly_target_hours * 60;
-    const diffMin = workedMin + ndMin - targetMin;
-
-    const targetHours = settings.monthly_target_hours;
-    const workedHours = (workedMin + ndMin) / 60;
-    const overtimeHours = Math.max(0, workedHours - targetHours);
-    const basePay = targetHours * settings.hourly_rate;
-    const overtimePay = overtimeHours * settings.hourly_rate * (settings.overtime_rate_multiplier - 1);
-    const ndBonus = ndCount * settings.notdienst_bonus;
-    const brutto = basePay + overtimePay + ndBonus;
-
-    return { workedMin, ndMin, ndCount, ndPaid, urlaubDays, krankDays, diffMin, targetMin, brutto };
+    const diffMin = m.workedMin + m.ndMin - targetMin;
+    const brutto = calcBrutto(m.workedMin, m.ndMin, m.ndCount, settings);
+    return { ...m, diffMin, targetMin, brutto };
   }, [entries, ndEntries, settings]);
 
-  // ── Last 7 days bars ──
+  // ── Last 7 days bars (always relative to today) ──
   const days7 = useMemo(() => {
     const map = new Map(last7.map(e => [e.date, e]));
     const arr: { dateStr: string; label: string; minutes: number; isWeekend: boolean }[] = [];
@@ -240,13 +265,50 @@ export default function DashboardPage() {
       });
     }
     return arr;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [last7]);
 
   const maxMin = Math.max(...days7.map(d => d.minutes), 60);
 
-  // ── Yaklaşan Feiertag ──
+  // ── 12-month trend (selected year) ──
+  const monthlyBreakdown = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      const monthEntries = yearEntries.filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === selectedYear && (d.getMonth() + 1) === m;
+      });
+      const monthNd = yearNd.filter(n => {
+        const d = new Date(n.date);
+        return d.getFullYear() === selectedYear && (d.getMonth() + 1) === m;
+      });
+      const stats = calcMonthMinutes(monthEntries, monthNd);
+      const brutto = calcBrutto(stats.workedMin, stats.ndMin, stats.ndCount, settings);
+      return { month: m, label: MONTHS_SHORT[i]!, ...stats, brutto };
+    });
+  }, [yearEntries, yearNd, selectedYear, settings]);
+
+  const yearlyMaxBrutto = Math.max(...monthlyBreakdown.map(m => m.brutto), 1);
+
+  // ── Yearly totals ──
+  const yearly = useMemo(() => {
+    let workedMin = 0, ndMin = 0, ndCount = 0, urlaub = 0, krank = 0, arbeitstage = 0;
+    let bruttoTotal = 0;
+    for (const m of monthlyBreakdown) {
+      workedMin   += m.workedMin;
+      ndMin       += m.ndMin;
+      ndCount     += m.ndCount;
+      urlaub      += m.urlaubDays;
+      krank       += m.krankDays;
+      arbeitstage += m.arbeitstageCount;
+      bruttoTotal += m.brutto;
+    }
+    return { workedMin, ndMin, ndCount, urlaub, krank, arbeitstage, bruttoTotal };
+  }, [monthlyBreakdown]);
+
+  // ── Next holiday ──
   const nextHoliday = useMemo(() => {
-    const feiertage = getFeiertage(year, bundesland);
+    const feiertage = getFeiertage(todayYear, bundesland);
     const todayStr = today.toISOString().split("T")[0]!;
     const upcoming = Object.entries(feiertage)
       .filter(([date]) => date >= todayStr)
@@ -255,11 +317,23 @@ export default function DashboardPage() {
     const d = new Date(upcoming[0]!);
     const daysAway = Math.ceil((d.getTime() - today.getTime()) / 86400000);
     return { name: upcoming[1]!, date: d, daysAway };
-  }, [year, bundesland]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayYear, bundesland]);
 
-  const urlaubKonto = Math.max(0, URLAUB_DEFAULT - yearUrlaub);
+  const urlaubAnspruch = settings.urlaub_anspruch || URLAUB_DEFAULT;
+  const urlaubKonto    = Math.max(0, urlaubAnspruch - yearly.urlaub);
   const greeting = today.getHours() < 11 ? "Guten Morgen" : today.getHours() < 18 ? "Hallo" : "Guten Abend";
   const diffColor = stats.diffMin >= 0 ? "var(--green)" : "var(--red)";
+
+  // Month navigation
+  function shiftMonth(delta: number) {
+    let y = selectedYear, m = selectedMonth + delta;
+    if (m < 1)  { m = 12; y--; }
+    if (m > 12) { m = 1;  y++; }
+    setSelectedYear(y);
+    setSelectedMonth(m);
+  }
+  const isCurrentMonth = selectedYear === todayYear && selectedMonth === todayMonth;
 
   if (loading) return <div style={{ textAlign: "center", padding: 80, color: "var(--muted)" }}>Laden…</div>;
 
@@ -268,10 +342,27 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div className="dash-greet">
         <h1>{greeting}{name ? `, ${name}` : ""} 👋</h1>
-        <p>Hier ist deine Übersicht für {MONTHS[month - 1]} {year}.</p>
+        <p>Hier ist deine Übersicht.</p>
       </div>
 
-      {/* Hero row: Differenz + Brutto */}
+      {/* Month picker */}
+      <div className="dash-month-picker">
+        <button onClick={() => shiftMonth(-1)} className="dash-month-arrow" aria-label="Vorheriger Monat">‹</button>
+        <div className="dash-month-current">
+          <span className="dash-month-label">{MONTHS[selectedMonth - 1]} {selectedYear}</span>
+          {!isCurrentMonth && (
+            <button
+              onClick={() => { setSelectedYear(todayYear); setSelectedMonth(todayMonth); }}
+              className="dash-month-today"
+            >
+              Heute
+            </button>
+          )}
+        </div>
+        <button onClick={() => shiftMonth(1)} className="dash-month-arrow" aria-label="Nächster Monat">›</button>
+      </div>
+
+      {/* Hero row: Differenz + Brutto (selected month) */}
       <div className="dash-hero">
         <div className="dash-hero-card">
           <span className="label" style={{ color: diffColor }}>📊 Stundensaldo (inkl. Notdienst)</span>
@@ -289,7 +380,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI grid */}
+      {/* KPI grid (selected month) */}
       <div className="dash-kpi-grid">
         <div className="dash-kpi">
           <span className="kpi-icon">⏱</span>
@@ -307,7 +398,7 @@ export default function DashboardPage() {
           <span className="kpi-icon">🏖</span>
           <span className="kpi-label">Urlaub übrig</span>
           <span className="kpi-value" style={{ color: "var(--blue)" }}>{urlaubKonto}</span>
-          <span className="kpi-sub">von {URLAUB_DEFAULT} Tagen</span>
+          <span className="kpi-sub">von {urlaubAnspruch} Tagen</span>
         </div>
         <div className="dash-kpi">
           <span className="kpi-icon">🎉</span>
@@ -321,10 +412,82 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Body: chart + quick actions */}
+      {/* Yearly summary card */}
+      <div className="dash-panel">
+        <div className="dash-panel-title">
+          🗓 Jahresübersicht {selectedYear}
+        </div>
+        <div className="dash-year-grid">
+          <div className="dash-year-stat">
+            <span className="kpi-label">Geleistet (gesamt)</span>
+            <span className="kpi-value" style={{ color: "var(--green)" }}>
+              {minsToTime(yearly.workedMin + yearly.ndMin)}
+            </span>
+            <span className="kpi-sub">{yearly.arbeitstage} Arbeitstage</span>
+          </div>
+          <div className="dash-year-stat">
+            <span className="kpi-label">Brutto-Lohn Jahr</span>
+            <span className="kpi-value" style={{ color: "var(--accent2)" }}>{eur(yearly.bruttoTotal)}</span>
+            <span className="kpi-sub">Ø {eur(yearly.bruttoTotal / 12)} / Monat</span>
+          </div>
+          <div className="dash-year-stat">
+            <span className="kpi-label">Urlaub genommen</span>
+            <span className="kpi-value" style={{ color: "var(--blue)" }}>
+              {yearly.urlaub} / {urlaubAnspruch}
+            </span>
+            <span className="kpi-sub">{urlaubKonto} Tage frei</span>
+          </div>
+          <div className="dash-year-stat">
+            <span className="kpi-label">Notdienst Jahr</span>
+            <span className="kpi-value" style={{ color: "var(--orange)" }}>{yearly.ndCount}×</span>
+            <span className="kpi-sub">{minsToTime(yearly.ndMin)} Std</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 12-month trend chart */}
+      <div className="dash-panel">
+        <div className="dash-panel-title">📈 Monatliche Brutto-Entwicklung {selectedYear}</div>
+        <div className="dash-bars dash-bars-12">
+          {monthlyBreakdown.map((m) => {
+            const isSelected = m.month === selectedMonth;
+            return (
+              <button
+                key={m.month}
+                type="button"
+                onClick={() => setSelectedMonth(m.month)}
+                className={`dash-bar-btn ${isSelected ? "selected" : ""}`}
+                title={`${MONTHS[m.month - 1]}: ${minsToTime(m.workedMin + m.ndMin)} · ${eur(m.brutto)}`}
+              >
+                <div
+                  className="dash-bar"
+                  style={{ height: `${Math.max(4, (m.brutto / yearlyMaxBrutto) * 100)}%` }}
+                />
+              </button>
+            );
+          })}
+        </div>
+        <div className="dash-bar-labels">
+          {monthlyBreakdown.map(m => (
+            <div
+              key={m.month}
+              className="dash-bar-label"
+              style={m.month === selectedMonth ? { color: "var(--accent2)" } : undefined}
+            >
+              {m.label}
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 14, fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
+          <span>Klick auf einen Monat zum Wechseln</span>
+          <span>Gesamt {eur(yearly.bruttoTotal)}</span>
+        </div>
+      </div>
+
+      {/* Body: 7-day chart + quick actions */}
       <div className="dash-body">
         <div className="dash-panel">
-          <div className="dash-panel-title">📈 Letzte 7 Tage</div>
+          <div className="dash-panel-title">📅 Letzte 7 Tage</div>
           <div className="dash-bars">
             {days7.map((d) => (
               <div

@@ -917,3 +917,106 @@ body {
   margin-left: auto;
   color: var(--muted);
 }
+
+/* Month picker */
+.dash-month-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  width: fit-content;
+}
+.dash-month-arrow {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.dash-month-arrow:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+.dash-month-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  min-width: 180px;
+}
+.dash-month-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.dash-month-today {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent2);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.dash-month-today:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Year stats grid (inside .dash-panel) */
+.dash-year-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (min-width: 768px) {
+  .dash-year-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.dash-year-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 12-month bar chart (clickable bars) */
+.dash-bars-12 {
+  height: 110px;
+  gap: 4px;
+}
+.dash-bar-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  cursor: pointer;
+  position: relative;
+  height: 100%;
+}
+.dash-bar-btn .dash-bar {
+  flex: 1;
+  background: linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 60%, transparent) 100%);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.dash-bar-btn:hover .dash-bar { opacity: 0.85; }
+.dash-bar-btn.selected .dash-bar {
+  background: linear-gradient(180deg, var(--accent2) 0%, color-mix(in srgb, var(--accent2) 60%, transparent) 100%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent2) 30%, transparent);
+}

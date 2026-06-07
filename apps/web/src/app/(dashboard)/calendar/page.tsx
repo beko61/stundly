@@ -10,7 +10,8 @@ import { YearPicker } from "@/components/ui/YearPicker";
 
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const TARGET_H     = 174;
-const VAC_TOTAL    = 30;
+const VAC_TOTAL_DEFAULT = 30;
+const SALARY_LS_KEY     = "workly_salary_settings_v2";
 
 function calcMonthStats(entries: TimeEntry[]) {
   let workedMin = 0, ndMin = 0, ndCount = 0;
@@ -65,6 +66,35 @@ export default function CalendarPage() {
   const [view,       setView]       = useState<"year" | "stats">("year");
   const { setMonth: setTrackerMonth } = useTrackerStore();
   const router = useRouter();
+  const [vacTotal, setVacTotal] = useState(VAC_TOTAL_DEFAULT);
+
+  // Urlaubsanspruch aus Supabase / localStorage (Salary-Seite schreibt beides)
+  useEffect(() => {
+    function applyLocal() {
+      try {
+        const raw = localStorage.getItem(SALARY_LS_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as { urlaub_anspruch?: number };
+        if (parsed.urlaub_anspruch && parsed.urlaub_anspruch > 0) setVacTotal(parsed.urlaub_anspruch);
+      } catch { /* ignore */ }
+    }
+    async function loadFromSupabase() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await supabase.from("salary_settings")
+        .select("urlaub_anspruch").eq("user_id", session.user.id)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (data?.urlaub_anspruch) setVacTotal(Number(data.urlaub_anspruch));
+    }
+    applyLocal();
+    void loadFromSupabase();
+    const onStorage = (e: StorageEvent) => { if (e.key === SALARY_LS_KEY) applyLocal(); };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const VAC_TOTAL = vacTotal;
 
   useEffect(() => {
     async function load() {

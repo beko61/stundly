@@ -166,6 +166,8 @@ export interface SalarySettings {
   tax_mode?: TaxMode;
   /** taxMode "manual" ise yüzde abzug (0-100). */
   manuell_abzug?: number;
+  /** Jährlicher Urlaubsanspruch in Tagen (default 30). */
+  urlaub_anspruch?: number;
 }
 
 export interface DailyLog {

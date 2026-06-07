@@ -47,6 +47,7 @@ const DEFAULT_SETTINGS: SalarySettings = {
   hat_kinder:               false,
   tax_mode:                 "auto",
   manuell_abzug:            0,
+  urlaub_anspruch:          30,
 };
 
 function loadLocalSettings(): SalarySettings {
@@ -112,6 +113,7 @@ export default function SalaryPage() {
           hat_kinder:               Boolean(data.hat_kinder ?? false),
           tax_mode:                 (data.tax_mode as TaxMode | null) ?? "auto",
           manuell_abzug:            Number(data.manuell_abzug ?? 0),
+          urlaub_anspruch:          Number(data.urlaub_anspruch ?? 30),
         };
         setSettings(loaded);
         localStorage.setItem(LS_KEY, JSON.stringify(loaded));
@@ -144,6 +146,7 @@ export default function SalaryPage() {
           hat_kinder:               settings.hat_kinder ?? false,
           tax_mode:                 settings.tax_mode ?? "auto",
           manuell_abzug:            settings.manuell_abzug ?? 0,
+          urlaub_anspruch:          settings.urlaub_anspruch ?? 30,
         };
         if (settingsRowId.current) {
           await supabase.from("salary_settings").update(payload).eq("id", settingsRowId.current);
@@ -320,6 +323,7 @@ export default function SalaryPage() {
               { key: "overtime_rate_multiplier", label: "Überstunden ×" },
               { key: "night_shift_bonus",        label: "Nachtzuschlag €/h" },
               { key: "notdienst_bonus",          label: "Notdienst €/Tag" },
+              { key: "urlaub_anspruch",          label: "Urlaubsanspruch / Jahr" },
             ] as { key: keyof SalarySettings; label: string }[]).map(({ key, label }) => (
               <div key={key}>
                 <label className="label">{label}</label>

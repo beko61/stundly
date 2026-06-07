@@ -17,6 +17,12 @@
 > "Stundly devam ediyoruz. STUNDLY_LOG.md'ye göre **Resend kurulumu** ile başlayalım."
 > *(Veya yeni bir bug varsa bildir → ilgili dosyalar STUNDLY_LOG'da yer alıyor.)*
 
+**Son değişiklik (2026-06-07 gece): Masaüstü Dashboard tamamen yenilendi.**
+- Yeni `/dashboard` route (Übersicht): 2 hero kart + 4 KPI + 7 gün bar grafik + quick actions
+- Sidebar 240px, gruplu nav (Übersicht / Erfassung / Auswertung / Konto)
+- Login redirect `/tracker` → `/dashboard`
+- Eski globals.css bug'ı düzeltildi (Sidebar masaüstünde de gizliydi)
+
 **Repo**: `C:\Users\bktas\Desktop\Claude\workly` (git: github.com/beko61/stundly, main branch)
 **GitHub**: https://github.com/beko61/stundly
 **Vercel**: bktasyusuf-1630's project "stundly" — fra1 region — auto-deploy on git push
@@ -109,6 +115,26 @@ Kullanıcı testten sonra raporladı: "Lohn yanlış hesaplıyor, Settings↔Tra
 - Açıklama: "Notdienst wird oft erst nächsten Monat ausgezahlt"
 
 **Commit**: `09b175a fix: 4 critical UX bugs - (1) Lohn Festgehalt logic (2) live Sollstunden sync (3) Vacation auto-sync (4) Notdienst current-time defaults + bezahlt toggle`
+
+### 🗓️ 2026-06-07 (gece) — Masaüstü Dashboard refactor
+
+**Araştırma**: 2026 SaaS dashboard trendi (Linear / Vercel / Notion / Toggl): 240px sidebar + 4-6 KPI hero strip + grid kart düzeni + border-only (gölgesiz). F-pattern: en kritik metrik sol üst, primary KPIs üst satır, progressive disclosure.
+
+**Çözülen kritik bug**: `globals.css:471` global olarak `.sidebar { display: none !important; }` set ediyordu — masaüstünde bile Sidebar gizliydi, tüm cihazlar bottom-nav kullanıyordu. Responsive media query'lere ayrıldı: mobile (<768px) bottom-nav, desktop (≥768px) sidebar.
+
+**Yeni dosyalar / değişiklikler**:
+- `apps/web/src/app/(dashboard)/dashboard/page.tsx` — Yeni `/dashboard` route. Üst: greeting + ay. Hero (2): Stundensaldo (Diff) + Brutto-Lohn. KPI grid (4): Geleistet / Notdienst / Urlaub übrig / Nächster Feiertag. Body (2): son 7 gün bar grafik + 4 quick action linki (Tracker, Salary, Vacation, Calendar). Tüm veri Supabase'ten Promise.all ile paralel çekilir.
+- `apps/web/src/app/globals.css` — Sidebar: 250→240px, gradient→düz surface, link min-height 36px (Linear standard), active state pill highlight (sol kenarda 3px accent çizgi). Page-header gradient kaldırıldı (#1a1a2e→#0f3460 çirkin görünüyordu, sade `var(--bg)`). Yeni `dash-*` stilleri: wrapper, hero, kpi-grid, body, panel, bars, actions.
+- `apps/web/src/components/ui/Sidebar.tsx` — Komple yeniden yazıldı. 4 grup başlığı (Übersicht / Erfassung / Auswertung / Konto). Footer user kartında email + ilk harf avatar.
+- `apps/web/src/components/ui/BottomNav.tsx` — Calendar→Dashboard "Start" olarak değişti (Kalender Sidebar'da, mobile'de Settings'ten erişilebiliyor).
+- `apps/web/src/middleware.ts` — Tüm `/tracker` redirect'leri `/dashboard`'a güncellendi.
+- `apps/web/src/app/(auth)/login/page.tsx` — Login sonrası `/dashboard`'a yönlendir.
+
+**Sonuç**: Masaüstü artık gerçek dashboard hissi veriyor — sol sidebar (gruplu nav + avatar + logout) + sağda Übersicht (hero kartlar + KPI'lar + 7 gün grafik + quick actions). Linear/Vercel border-only estetik. Mobile davranışı değişmedi (bottom-nav korundu).
+
+### 🗓️ 2026-06-07 (akşam) — Mobile Abmelden butonu
+
+`apps/web/src/app/(dashboard)/settings/page.tsx`: `handleLogout` fonksiyonu vardı ama hiçbir butona bağlı değildi. Sidebar'da (masaüstü) "🚪 Abmelden" zaten vardı, ama mobilde sidebar gizli olduğu için kullanıcı çıkış yapamıyordu. Settings sayfasının en altına (Import kartından sonra) tam genişlikte kırmızı kenarlıklı "🚪 Abmelden" butonu eklendi → mobilde Profil sekmesinden çıkış mümkün.
 
 ### 🗓️ 2026-06-07 (öğlen) — internetsiz HTML entegrasyonu Bölüm 5: DayEntry'de Urlaub butonu
 

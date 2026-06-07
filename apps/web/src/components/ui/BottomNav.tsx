@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/tracker",  label: "Zeit",     icon: "⏱" },
-  { href: "/calendar", label: "Tage",     icon: "📅" },
-  { href: "/salary",   label: "Lohn",     icon: "💰" },
-  { href: "/vacation", label: "Urlaub",   icon: "🏖" },
-  { href: "/settings", label: "Profil",   icon: "⚙️" },
+  { href: "/dashboard", label: "Start",  icon: "🏠" },
+  { href: "/tracker",   label: "Zeit",   icon: "⏱" },
+  { href: "/salary",    label: "Lohn",   icon: "💰" },
+  { href: "/vacation",  label: "Urlaub", icon: "🏖" },
+  { href: "/settings",  label: "Profil", icon: "⚙️" },
 ];
 
 export function BottomNav() {

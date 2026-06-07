@@ -462,6 +462,27 @@ export default function SettingsPage() {
           )}
         </div>
 
+        {/* ── Abmelden ── */}
+        <button
+          onClick={handleLogout}
+          style={{
+            width: "100%",
+            padding: "14px",
+            marginTop: 8,
+            borderRadius: 12,
+            border: "1px solid var(--red)",
+            background: "transparent",
+            color: "var(--red)",
+            fontFamily: "'Syne',sans-serif",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+            letterSpacing: "0.05em",
+          }}
+        >
+          🚪 Abmelden
+        </button>
+
       </div>
     </>
   );

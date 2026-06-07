@@ -41,9 +41,9 @@ export default function LoginPage() {
     if (role === "super_admin") {
       router.push("/superadmin");
     } else if (role === "company_admin") {
-      router.push("/tracker");
+      router.push("/dashboard");
     } else {
-      router.push("/tracker");
+      router.push("/dashboard");
     }
 
     router.refresh();

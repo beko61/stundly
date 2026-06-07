@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
 
   // Giriş yapmış → login/register'a gitmeye çalışırsa yönlendir
   if (user && (pathname === "/login" || pathname === "/register")) {
-    return NextResponse.redirect(new URL("/tracker", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // Rol koruması — giriş yapmışsa profile'ı çek
@@ -62,11 +62,11 @@ export async function middleware(request: NextRequest) {
       const role = profile?.role ?? "individual";
 
       if (isSuperAdminPath && role !== "super_admin") {
-        return NextResponse.redirect(new URL("/tracker", request.url));
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
 
       if (isCompanyPath && role !== "company_admin" && role !== "super_admin") {
-        return NextResponse.redirect(new URL("/tracker", request.url));
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
   }

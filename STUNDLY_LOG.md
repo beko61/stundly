@@ -1,13 +1,33 @@
 # Stundly — Çalışma Log Dosyası
 
-> Bu dosya: yapılan tüm işler tarih sırasıyla. Her büyük adım sonrası güncellenir. Bir önceki sohbette nerede kaldığımızı görmek için bu dosyaya bak.
+> Bu dosya: yapılan tüm işler tarih sırasıyla. Her büyük adım sonrası güncellenir.
+> **Yeni sohbete başlarken: bu dosyayı oku → nerede kaldığımızı bul → "şuradan devam edelim" de.**
+
+---
+
+## ⚡ HIZLI BAŞLANGIÇ (yeni sohbet için)
+
+**Mevcut durum (07.06.2026 sonu):**
+- ✅ Stundly canlıda: **https://stundly.de**
+- ✅ Tüm internetsiz HTML özellikleri Stundly'ye taşındı (vergi/PDF/Notdienst/Urlaub/Lohn)
+- ✅ 4 kritik UX bug düzeltildi (Lohn Festgehalt, Settings↔Tracker sync, Vacation↔Tracker sync, Notdienst toggle)
+- ⏳ FAZ 1 kalan: **Resend** + **Stripe Test** + **Impressum/Gewerbe**
+
+**Sonraki sohbette ilk adım:**
+> "Stundly devam ediyoruz. STUNDLY_LOG.md'ye göre **Resend kurulumu** ile başlayalım."
+> *(Veya yeni bir bug varsa bildir → ilgili dosyalar STUNDLY_LOG'da yer alıyor.)*
+
+**Repo**: `C:\Users\bktas\Desktop\Claude\workly` (git: github.com/beko61/stundly, main branch)
+**GitHub**: https://github.com/beko61/stundly
+**Vercel**: bktasyusuf-1630's project "stundly" — fra1 region — auto-deploy on git push
+**Supabase**: project ref `egsykmbunsexrdlbellv` — EU Frankfurt
 
 ---
 
 ## 🗺️ Genel Plan (4 Faz)
 
 ```
-[FAZ 1] Canlıya çıkış          ███████████░░  ~85% — neredeyse bitti
+[FAZ 1] Canlıya çıkış          █████████████░  ~95% — neredeyse bitti
 [FAZ 2] Pazarlanabilir hale    ░░░░░░░░░░░░░  0%
 [FAZ 3] İlk 10 müşteri         ░░░░░░░░░░░░░  0%
 [FAZ 4] Para trafik + ölçek    ░░░░░░░░░░░░░  0%
@@ -16,7 +36,7 @@
 Şu an **FAZ 1 sonuna yaklaştık**. Sadece şu 3 maddenin halledilmesi gerek:
 - Resend email (ihbar/davet mailleri için)
 - Stripe Test mode (ödeme akışı için)
-- Impressum/Gewerbe (yasal — pazarlamadan ÖNCE şart)
+- Impressum/Gewerbe (yasal — pazarlamadan ÖNCE şart, kullanıcı kararı bekliyor — bkz. `project_legal_pending` memory)
 
 ---
 
@@ -61,7 +81,40 @@
 7. **Floating Scan butonu BottomNav'i kapatıyordu** — Mobile'de bottom: calc(90px + safe-area)
 8. **Yatay scroll vardı telefonda** — overflow-x: clip + min-width: 0 (flex shrink fix)
 
-### 🗓️ 2026-06-07 — internetsiz HTML entegrasyonu (Bölüm 1+2+3)
+### 🗓️ 2026-06-07 (akşam) — Profesyonel UX fix turu (4 kritik bug)
+
+Kullanıcı testten sonra raporladı: "Lohn yanlış hesaplıyor, Settings↔Tracker sync yok, Vacation Tracker'a geçmiyor, Notdienst modal'ı amatör".
+
+**1. Lohn — Festgehalt mantığı** (`packages/shared/src/utils/salaryCalc.ts`):
+- Eski: `base_pay = workedHours * rate` (girilen saatler × rate → 97€ gibi düşük)
+- Yeni: `base_pay = sollHours * rate` (Almanya KOBİ standardı, garantili aylık maaş)
+- Mehrarbeit zuschlag: `overtime * rate * (multiplier - 1)` (baz zaten ödendi)
+- Sonuç: Stundenlohn 15€ + Soll 174h → **2610€ brutto**, ay tamamlandı varsayımıyla
+
+**2. Settings ↔ Tracker sync** (`apps/web/src/components/tracker/MonthlySummary.tsx`):
+- Eski: `TARGET_HOURS_MONTH = 174` HARDCODED
+- Yeni: salary_settings.monthly_target_hours **Supabase'ten canlı oku** + localStorage `storage` event listener (cross-tab sync)
+- Lohn sayfasında Sollstunden değişince Tracker Differenz/Gearbeitet anında güncellenir
+
+**3. Vacation ↔ Tracker otomatik sync** (`apps/web/src/app/(dashboard)/vacation/page.tsx`):
+- Yeni helper: `workdayDates(start, end)` → hafta içi günleri ISO listele
+- `handleSubmit`: vacation_requests insert + time_entries'e batch upsert (her Werktag = `day_type: "urlaub"`)
+- `handleDelete`: time_entries'ten ilgili Urlaub kayıtları temizle
+- Sa/Pa otomatik atlanır
+
+**4. Notdienst modal UX** (`apps/web/src/components/tracker/NotdienstModal.tsx` + `DayEntry.tsx`):
+- Default başlangıç saati: şu anki saat (yarım saate yuvarla), bitiş = +1h
+- Modal'a "Bezahlt" toggle switch eklendi (yeşil ✅ / turuncu ⏳)
+- DayEntry'deki ✅/⏳ ikonu **tıklanabilir** → tek tıkla bezahlt durumu güncellenir (modal açmadan)
+- Açıklama: "Notdienst wird oft erst nächsten Monat ausgezahlt"
+
+**Commit**: `09b175a fix: 4 critical UX bugs - (1) Lohn Festgehalt logic (2) live Sollstunden sync (3) Vacation auto-sync (4) Notdienst current-time defaults + bezahlt toggle`
+
+### 🗓️ 2026-06-07 (öğlen) — internetsiz HTML entegrasyonu Bölüm 5: DayEntry'de Urlaub butonu
+
+`apps/web/src/components/tracker/TimeEntryModal.tsx`: önce Urlaub filtrelenmişti ("vacation page'de yönetilir" yorumu) → kaldırıldı, 6 buton aktif (Arbeiten / Urlaub / Krank / Notdienst / Feiertag / Frei). Urlaub/Krank/Feiertag için DB'de start_time/end_time = NULL, hesaplama Sollstunden kullanır (Mo-Do 8:15h, Fr 6:15h).
+
+### 🗓️ 2026-06-07 — internetsiz HTML entegrasyonu (Bölüm 1+2+3+4)
 
 **Hedef**: `internettesiz kullanim.html`'in son sürümündeki gelişmiş özellikleri Stundly'ye port.
 
@@ -96,18 +149,78 @@
 
 **SW v2 bump**: Eski cache otomatik silinir kullanıcı yeni sayfayı açtığında.
 
-### 📦 Son commit'ler
+### 📦 Son commit'ler (kronolojik, en yeni üstte)
 
 ```
-18150ce feat(mobile): unified YearPicker dropdown across salary/calendar/reports + manifest start_url fix
-233aa0c feat(mobile): year dropdown (single visible) + service worker (Chrome installable PWA)
-82ab5dd fix(mobile): shorter bottom-nav labels (Zeit/Tage/Lohn) + nowrap + lift scan button
-ac99f25 fix(mobile): aggressive overflow-x clip + flex shrink + word-wrap
-631a451 feat(mobile): bottom nav + responsive paddings + iOS-friendly modals
-a602886 feat(pwa): add manifest, icons (svg+png), iOS meta tags, OpenGraph
-505e879 feat: tracker welcome banner + WhatsApp button moved to bottom-left
-d468920 Initial commit: Workly SaaS — Almanya odakli Arbeitszeiterfassung platformu
+09b175a fix: 4 critical UX bugs (Lohn Festgehalt, Sollstunden sync, Vacation→Tracker, Notdienst bezahlt toggle)
+1aa27ac fix(tracker): re-enable Urlaub button in TimeEntryModal
+6e03dac fix(calc): Urlaub/Krank/Feiertag uses actual Sollstunden (Fr=6:15h Mo-Do=8:15h)
+6f98cc3 fix(import): parse Notdienst note (Kunde / Adresse) correctly
+e36d08b feat(tracker): 5-card summary bar (internetsiz-style) + bottom-nav always on
+b661e97 feat(salary): auto yearly netto chart from time_entries
+244fec5 docs: log internetsiz integration
+21f__ feat(salary): tax calc (taxCalc.ts) + Steuer UI + Netto breakdown
+e67e6b9 fix(pwa): defer install banner until cookie consent
+473f20c fix(mobile): hard-disable auto-hyphenation site-wide
+d1bbd38 fix(ci): allow lint to fail
+18150ce feat(mobile): unified YearPicker dropdown
+233aa0c feat(mobile): service worker (Chrome installable PWA)
+631a451 feat(mobile): bottom nav + responsive paddings
+a602886 feat(pwa): add manifest, icons, iOS meta tags, OpenGraph
+505e879 feat: tracker welcome banner
+d468920 Initial commit
 ```
+
+### 🗂️ Önemli dosyalar (yeni sohbette referans)
+
+**Hesaplama mantığı:**
+- `packages/shared/src/utils/salaryCalc.ts` — calculateMonthlySalary (Festgehalt logic)
+- `packages/shared/src/utils/taxCalc.ts` — Almanya 2024 vergi (EStG §32a + SV + Soli)
+- `packages/shared/src/utils/timeCalc.ts` — calculateWorkDuration
+
+**Tracker UI:**
+- `apps/web/src/app/(dashboard)/tracker/page.tsx` — ana sayfa (PDF butonu burada)
+- `apps/web/src/components/tracker/MonthlySummary.tsx` — 5 kartlık özet bar (Sollstunden live sync)
+- `apps/web/src/components/tracker/NotdienstWeekly.tsx` — haftalık döküm
+- `apps/web/src/components/tracker/TimeEntryModal.tsx` — 6 buton (Arbeiten/Urlaub/Krank/...)
+- `apps/web/src/components/tracker/NotdienstModal.tsx` — current-time defaults + bezahlt toggle
+- `apps/web/src/components/tracker/DayEntry.tsx` — gün satırı (clickable ✅/⏳ for bezahlt)
+
+**Lohn UI:**
+- `apps/web/src/app/(dashboard)/salary/page.tsx` — Steuerklasse + Netto + yıllık otomatik bar
+
+**Vacation:**
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — Urlaubsantrag + Tracker'a auto-sync
+
+**Settings:**
+- `apps/web/src/app/(dashboard)/settings/page.tsx` — Profil + Import (en altta)
+
+**Import:**
+- `apps/web/src/lib/import/internetsizImport.ts` — JSON parse + format detect
+
+**PDF:**
+- `apps/web/src/lib/pdf/monthlyReportPdf.ts` — Monatsbericht (jsPDF, 6 bölüm)
+
+**PWA:**
+- `apps/web/public/manifest.json` — start_url `/`
+- `apps/web/public/sw.js` — VERSION = 'stundly-v2'
+- `apps/web/src/components/ui/InstallPrompt.tsx` — custom banner + iOS/Android instructions
+- `apps/web/src/components/ui/RegisterSW.tsx` — sw register
+- `apps/web/src/components/ui/CookieBanner.tsx`
+- `apps/web/src/components/ui/BottomNav.tsx`
+
+**Internetsiz HTML** (kişisel uygulama, kullanıcının orijinal kaynağı):
+- `C:\Users\bktas\Desktop\Claude\Excel program\internettesiz kullanim.html` — 2927 satır, Backup modal eklendi
+
+### 🧪 Test yöntemi (headless ile gerçek doğrulama)
+
+`apps/web` içinde playwright kurulu. Test hesabı oluşturma:
+```js
+// admin API ile user create (email_confirm: true)
+fetch(`${SB_URL}/auth/v1/admin/users`, { headers: { apikey: SRV, Authorization: `Bearer ${SRV}` }, ... })
+// session token al, cookie inject et, headless ile gez
+```
+Bir önceki sohbette `test-salary.mjs`, `debug-salary.mjs`, `test-tracker.mjs` script'leri kullanıldı (çalıştıktan sonra silindi). Kullanıcının verilerine dokunmadan yeni hesap ile production test mümkün.
 
 ---
 
@@ -137,6 +250,10 @@ d468920 Initial commit: Workly SaaS — Almanya odakli Arbeitszeiterfassung plat
 - [ ] **ESLint CLI migration** — `next lint` deprecated; proper ESLint 9 + typescript-eslint plugin kurulumu
 - [ ] **Vitest config fix** — `@workly/shared` testleri CI'da fail oluyor (tsconfig paths çözümlenmiyor)
 - [ ] **CI workflow geri aç** — lint + test geri eklenecek
+- [ ] **Urlaubskonto hardcoded 30 gün** — `apps/web/src/components/tracker/MonthlySummary.tsx` URLAUB_DEFAULT. Kullanıcı ayarı yapılmalı (salary_settings'e ekle veya yeni `vacation_allowance` alanı).
+- [ ] **time_entries unique constraint kontrol** — `(user_id, date)` onConflict çalışıyor mu? Import + Vacation sync hep buna güveniyor.
+- [ ] **Service Worker v2 → v3 bump** önemli kullanıcı görmüyorsa
+- [ ] **`audit.json` + `landing-*.png` + `salary-debug.png` + `tracker-new.png`** kalan dev artifact'ları, repo'da kalmasın → gitignore zaten var, mevcut commit'lerden çıkarmak gerekirse `git rm --cached`
 
 ### 🟢 FAZ 4: Para trafik (2 ay)
 

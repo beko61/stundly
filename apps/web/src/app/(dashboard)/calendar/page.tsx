@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
@@ -63,6 +64,7 @@ export default function CalendarPage() {
   const [loading,    setLoading]    = useState(true);
   const [view,       setView]       = useState<"year" | "stats">("year");
   const { setMonth: setTrackerMonth } = useTrackerStore();
+  const router = useRouter();
 
   useEffect(() => {
     async function load() {
@@ -170,7 +172,7 @@ export default function CalendarPage() {
               const hasData  = total>0 || s.urlaub>0 || s.krank>0;
               return (
                 <div key={i}
-                  onClick={() => { setTrackerMonth(year, s.month); window.location.href="/tracker"; }}
+                  onClick={() => { setTrackerMonth(year, s.month); router.push("/tracker"); }}
                   style={{
                     background:isActive?"#1e1b38":"var(--surface)",
                     border:`1px solid ${isActive?"var(--accent)":"var(--border)"}`,

@@ -9,6 +9,7 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT = 30;
+const SALARY_LS_KEY = "workly_salary_settings_v2"; // same key Salary page writes
 
 function getDayStdMins(dateStr: string): number {
   const dow = new Date(dateStr).getDay();
@@ -59,6 +60,28 @@ const DEFAULT_SETTINGS: SalarySettings = {
   notdienst_bonus: 0,
 };
 
+/** Salary page writes the same shape to localStorage on every change. We trust it as the freshest source. */
+function readLocalSalarySettings(): Partial<SalarySettings> | null {
+  try {
+    const raw = localStorage.getItem(SALARY_LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Partial<SalarySettings>;
+  } catch {
+    return null;
+  }
+}
+
+function mergeSettings(base: SalarySettings, patch: Partial<SalarySettings> | null | undefined): SalarySettings {
+  if (!patch) return base;
+  return {
+    hourly_rate:              Number(patch.hourly_rate              ?? base.hourly_rate),
+    monthly_target_hours:     Number(patch.monthly_target_hours     ?? base.monthly_target_hours),
+    overtime_rate_multiplier: Number(patch.overtime_rate_multiplier ?? base.overtime_rate_multiplier),
+    night_shift_bonus:        Number(patch.night_shift_bonus        ?? base.night_shift_bonus),
+    notdienst_bonus:          Number(patch.notdienst_bonus          ?? base.notdienst_bonus),
+  };
+}
+
 export default function DashboardPage() {
   const today = new Date();
   const year = today.getFullYear();
@@ -75,6 +98,28 @@ export default function DashboardPage() {
 
   useEffect(() => {
     void loadAll();
+  }, []);
+
+  // Live-sync salary settings: Salary page writes to localStorage and
+  // emits a 'storage' event (other tabs) or we re-read on visibilitychange.
+  useEffect(() => {
+    function applyLocal() {
+      const patch = readLocalSalarySettings();
+      if (patch) setSettings(prev => mergeSettings(prev, patch));
+    }
+    function onStorage(e: StorageEvent) {
+      if (e.key === SALARY_LS_KEY && e.newValue) applyLocal();
+    }
+    function onVisible() {
+      if (document.visibilityState === "visible") applyLocal();
+    }
+    applyLocal(); // immediate read on mount (covers same-tab navigation)
+    window.addEventListener("storage", onStorage);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   async function loadAll() {
@@ -110,13 +155,17 @@ export default function DashboardPage() {
     setName(profileRes.data?.vorname ?? session.user.email?.split("@")[0] ?? "");
     if (profileRes.data?.bundesland) setBundesland(profileRes.data.bundesland as string);
     if (settingsRes.data) {
-      setSettings({
+      const fromSupabase: SalarySettings = {
         hourly_rate: Number(settingsRes.data.hourly_rate) || DEFAULT_SETTINGS.hourly_rate,
         monthly_target_hours: Number(settingsRes.data.monthly_target_hours) || DEFAULT_SETTINGS.monthly_target_hours,
         overtime_rate_multiplier: Number(settingsRes.data.overtime_rate_multiplier) || DEFAULT_SETTINGS.overtime_rate_multiplier,
         night_shift_bonus: Number(settingsRes.data.night_shift_bonus) || 0,
         notdienst_bonus: Number(settingsRes.data.notdienst_bonus) || 0,
-      });
+      };
+      // Local cache (written by Salary page on every keystroke, debounce 600ms)
+      // beats Supabase if newer — covers the case where the user just edited
+      // a value and immediately navigated to Dashboard.
+      setSettings(mergeSettings(fromSupabase, readLocalSalarySettings()));
     }
     setEntries((monthRes.data ?? []) as TimeEntry[]);
     setLast7((last7Res.data ?? []) as TimeEntry[]);

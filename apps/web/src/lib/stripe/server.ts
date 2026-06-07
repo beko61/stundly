@@ -57,8 +57,9 @@ export async function createCheckoutSession({
         user_id: userId ?? "",
       },
     },
-    tax_id_collection: { enabled: true },
-    automatic_tax: { enabled: true },
+    // Kleinunternehmer-Regelung (§ 19 UStG): keine MwSt — Stripe Tax deaktiviert
+    tax_id_collection: { enabled: false },
+    automatic_tax: { enabled: false },
     metadata: {
       company_id: companyId ?? "",
       user_id: userId ?? "",

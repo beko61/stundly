@@ -37,16 +37,26 @@ export async function POST(req: NextRequest) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const session = await createCheckoutSession({
-    priceId,
-    customerId: sub?.stripe_customer_id ?? undefined,
-    companyId: profile?.company_id ?? undefined,
-    userId: user.id,
-    billingInterval: interval,
-    successUrl: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${appUrl}/pricing`,
-    customerEmail: user.email,
-  });
-
-  return NextResponse.json({ url: session.url });
+  try {
+    const session = await createCheckoutSession({
+      priceId,
+      customerId: sub?.stripe_customer_id ?? undefined,
+      companyId: profile?.company_id ?? undefined,
+      userId: user.id,
+      billingInterval: interval,
+      successUrl: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${appUrl}/pricing`,
+      customerEmail: user.email,
+    });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    // Stripe SDK Fehler bekommen oft eine type=invalid_request_error mit aussagekräftiger Nachricht
+    const message = err instanceof Error ? err.message : "Stripe API Fehler";
+    const stripeType = (err as { type?: string })?.type;
+    console.error("stripe/checkout failed:", { plan, interval, priceId: priceId.slice(0, 12) + "…", message, stripeType });
+    return NextResponse.json(
+      { error: message, type: stripeType ?? "unknown", priceIdPrefix: priceId.slice(0, 12) + "…" },
+      { status: 500 }
+    );
+  }
 }

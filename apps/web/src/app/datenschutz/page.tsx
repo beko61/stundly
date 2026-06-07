@@ -11,7 +11,7 @@ export default function DatenschutzPage() {
         {[
           {
             title: "1. Verantwortlicher",
-            content: "Verantwortlicher für die Datenverarbeitung ist die Stundly GmbH, Musterstraße 1, 10115 Berlin. Kontakt: datenschutz@stundly.de",
+            content: "Verantwortlicher für die Datenverarbeitung ist Yusuf Bektas, Tiergarten 122, 30559 Hannover. Kontakt: datenschutz@stundly.de",
           },
           {
             title: "2. Welche Daten wir erheben",

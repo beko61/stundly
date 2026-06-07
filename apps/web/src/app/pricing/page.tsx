@@ -1,76 +1,119 @@
-﻿import Link from "next/link";
+"use client";
 
-const plans = [
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+type PlanId  = "individual" | "team" | "business";
+type Interval = "monthly" | "yearly";
+
+interface Plan {
+  id: PlanId | "trial";
+  name: string;
+  desc: string;
+  monthlyPrice: number | null;   // null = trial (free)
+  yearlyPrice:  number | null;   // ay başına, yıllık fatura
+  features: string[];
+  cta: string;
+  highlight?: boolean;
+  badge?: string | null;
+  isTrial?: boolean;
+}
+
+const PLANS: Plan[] = [
   {
     id: "trial",
     name: "Kostenlos",
-    price: "0",
-    period: "14 Tage",
     desc: "Zum Ausprobieren",
-    features: ["1 Benutzer", "Alle Grundfunktionen", "PDF Export", "Mobile App", "Kein Kreditkarte"],
+    monthlyPrice: 0,
+    yearlyPrice:  0,
+    isTrial: true,
+    features: ["1 Benutzer", "Alle Grundfunktionen", "PDF Export", "Mobile App", "Keine Kreditkarte"],
     cta: "Jetzt starten",
-    href: "/register",
-    highlight: false,
-    badge: null,
   },
   {
     id: "individual",
     name: "Einzelperson",
-    price: "9,99",
-    priceYearly: "99,00",
-    period: "/ Monat",
     desc: "Für Freelancer & Selbstständige",
-    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohnberechnung", "PDF Export", "Urlaubsantrag", "Mobile App (iOS & Android)"],
+    monthlyPrice: 9.99,
+    yearlyPrice:  8.25,         // 99/12 ≈ 8.25, "2 Monate gratis"
+    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "PDF Monatsbericht", "Urlaubsantrag", "Mobile App"],
     cta: "14 Tage gratis testen",
-    href: "/register",
-    highlight: false,
-    badge: null,
   },
   {
     id: "team",
     name: "Team",
-    price: "29,99",
-    priceYearly: "299,00",
-    period: "/ Monat",
     desc: "Für Unternehmen bis 10 MA",
-    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "KI-Funktionen", "ArbZG-Warnungen", "Prioritäts-Support"],
-    cta: "14 Tage gratis testen",
-    href: "/register",
+    monthlyPrice: 29.99,
+    yearlyPrice:  24.92,        // 299/12 ≈ 24.92
     highlight: true,
     badge: "BELIEBTESTE WAHL",
+    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "KI-Funktionen", "ArbZG-Warnungen", "Prioritäts-Support"],
+    cta: "14 Tage gratis testen",
   },
   {
     id: "business",
     name: "Unternehmen",
-    price: "79,99",
-    priceYearly: "799,00",
-    period: "/ Monat",
     desc: "Für größere Betriebe",
-    features: ["Unbegrenzte Mitarbeiter", "Alle Team-Funktionen", "API-Zugang", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
-    cta: "Kontakt aufnehmen",
-    href: "/register",
-    highlight: false,
-    badge: null,
+    monthlyPrice: 79.99,
+    yearlyPrice:  66.58,        // 799/12 ≈ 66.58
+    features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
+    cta: "14 Tage gratis testen",
   },
 ];
 
-const comparisonRows = [
-  { feature: "Benutzer", trial: "1", individual: "1", team: "Bis 10", business: "Unbegrenzt" },
-  { feature: "Arbeitszeiterfassung", trial: "✓", individual: "✓", team: "✓", business: "✓" },
-  { feature: "Lohnberechnung", trial: "✓", individual: "✓", team: "✓", business: "✓" },
-  { feature: "PDF Export", trial: "✓", individual: "✓", team: "✓", business: "✓" },
-  { feature: "Mobile App", trial: "✓", individual: "✓", team: "✓", business: "✓" },
-  { feature: "Admin-Panel", trial: "–", individual: "–", team: "✓", business: "✓" },
-  { feature: "Mitarbeiter einladen", trial: "–", individual: "–", team: "✓", business: "✓" },
-  { feature: "KI-Funktionen", trial: "–", individual: "–", team: "✓", business: "✓" },
-  { feature: "API-Zugang", trial: "–", individual: "–", team: "–", business: "✓" },
-  { feature: "Prioritäts-Support", trial: "–", individual: "–", team: "✓", business: "✓" },
+const COMPARISON_ROWS = [
+  { feature: "Benutzer",              trial: "1",   individual: "1",   team: "Bis 10", business: "Bis 50" },
+  { feature: "Arbeitszeiterfassung",  trial: "✓",  individual: "✓",  team: "✓",     business: "✓" },
+  { feature: "Lohn- & Steuerberechnung", trial: "✓", individual: "✓", team: "✓",   business: "✓" },
+  { feature: "PDF Export",            trial: "✓",  individual: "✓",  team: "✓",     business: "✓" },
+  { feature: "Mobile App / PWA",      trial: "✓",  individual: "✓",  team: "✓",     business: "✓" },
+  { feature: "Admin-Panel",           trial: "–",  individual: "–",  team: "✓",     business: "✓" },
+  { feature: "Mitarbeiter einladen",  trial: "–",  individual: "–",  team: "✓",     business: "✓" },
+  { feature: "KI-Funktionen",         trial: "–",  individual: "–",  team: "✓",     business: "✓" },
+  { feature: "API-Zugang",            trial: "–",  individual: "–",  team: "–",     business: "✓" },
+  { feature: "Prioritäts-Support",    trial: "–",  individual: "–",  team: "✓",     business: "✓" },
 ];
 
 export default function PricingPage() {
+  const router = useRouter();
+  const [interval, setInterval] = useState<Interval>("monthly");
+  const [loading, setLoading]   = useState<PlanId | null>(null);
+  const [error, setError]       = useState<string | null>(null);
+
+  async function handleCheckout(plan: PlanId) {
+    setError(null);
+    setLoading(plan);
+
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      router.push(`/register?next=/pricing`);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, interval }),
+      });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        setError(data.error ?? "Checkout konnte nicht gestartet werden. Stripe ist möglicherweise noch nicht konfiguriert.");
+        setLoading(null);
+        return;
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
+      setLoading(null);
+    }
+  }
+
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif", minHeight: "100vh" }}>
-
       {/* NAV */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
@@ -89,61 +132,140 @@ export default function PricingPage() {
       </nav>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "60px 24px" }}>
-        <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <h1 style={{ fontSize: 40, fontWeight: 800, marginBottom: 12 }}>Einfache, transparente Preise</h1>
-          <p style={{ color: "var(--muted)", fontSize: 16 }}>Alle Preise zzgl. 19% MwSt. · Monatlich kündbar · 14 Tage kostenlos testen</p>
+        {/* Title */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 800, marginBottom: 12 }}>
+            Einfache, transparente Preise
+          </h1>
+          <p style={{ color: "var(--muted)", fontSize: 15 }}>
+            14 Tage kostenlos testen · keine Kreditkarte erforderlich · jederzeit kündbar
+          </p>
         </div>
 
-        {/* Plan Kartları */}
+        {/* Interval toggle */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+          <div style={{
+            display: "inline-flex", background: "var(--surface)",
+            border: "1px solid var(--border)", borderRadius: 12, padding: 4,
+          }}>
+            {(["monthly", "yearly"] as Interval[]).map((iv) => (
+              <button
+                key={iv}
+                onClick={() => setInterval(iv)}
+                style={{
+                  padding: "10px 22px", borderRadius: 8, border: "none",
+                  background: interval === iv ? "var(--accent)" : "transparent",
+                  color: interval === iv ? "white" : "var(--muted)",
+                  fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                {iv === "monthly" ? "Monatlich" : "Jährlich"}
+                {iv === "yearly" && (
+                  <span style={{
+                    marginLeft: 8, background: "var(--green)", color: "white",
+                    padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 800,
+                  }}>
+                    2 Monate gratis
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Error banner */}
+        {error && (
+          <div style={{
+            maxWidth: 600, margin: "0 auto 24px", padding: "12px 16px",
+            background: "color-mix(in srgb, var(--red) 12%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
+            color: "var(--red)", borderRadius: 10, fontSize: 13, textAlign: "center",
+          }}>
+            ❌ {error}
+          </div>
+        )}
+
+        {/* Plan kartları */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 80 }}>
-          {plans.map((plan) => (
-            <div key={plan.id} className="card" style={{
-              padding: "28px 22px",
-              border: plan.highlight ? "2px solid var(--accent2)" : "1px solid var(--border)",
-              position: "relative",
-            }}>
-              {plan.badge && (
-                <div style={{
-                  position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)",
-                  background: "var(--accent2)", color: "#fff",
-                  fontSize: 10, fontWeight: 700, padding: "4px 14px", borderRadius: 20, whiteSpace: "nowrap",
-                }}>
-                  {plan.badge}
-                </div>
-              )}
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>{plan.desc}</div>
-              <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>{plan.name}</div>
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 34, fontWeight: 800, color: plan.highlight ? "var(--accent2)" : "var(--text)" }}>
-                  €{plan.price}
-                </span>
-                <span style={{ color: "var(--muted)", fontSize: 13 }}>{plan.period}</span>
-                {plan.priceYearly && (
-                  <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>
-                    €{plan.priceYearly} / Jahr (2 Monate gratis)
+          {PLANS.map((plan) => {
+            const price = interval === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
+            const yearlyTotal = plan.yearlyPrice ? (plan.yearlyPrice * 12).toFixed(0) : null;
+            const isLoading = plan.id !== "trial" && loading === plan.id;
+            return (
+              <div key={plan.id} className="card" style={{
+                padding: "28px 22px",
+                border: plan.highlight ? "2px solid var(--accent2)" : "1px solid var(--border)",
+                position: "relative",
+              }}>
+                {plan.badge && (
+                  <div style={{
+                    position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)",
+                    background: "var(--accent2)", color: "#fff",
+                    fontSize: 10, fontWeight: 700, padding: "4px 14px", borderRadius: 20, whiteSpace: "nowrap",
+                  }}>
+                    {plan.badge}
                   </div>
                 )}
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>{plan.desc}</div>
+                <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>{plan.name}</div>
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{
+                    fontSize: 34, fontWeight: 800,
+                    color: plan.highlight ? "var(--accent2)" : "var(--text)",
+                  }}>
+                    {plan.isTrial ? "€0" : `€${price?.toFixed(2)}`}
+                  </span>
+                  <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                    {plan.isTrial ? " / 14 Tage" : " / Monat"}
+                  </span>
+                  {!plan.isTrial && interval === "yearly" && yearlyTotal && (
+                    <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>
+                      Jährlich €{yearlyTotal} (2 Monate gratis)
+                    </div>
+                  )}
+                </div>
+
+                <ul style={{ listStyle: "none", marginBottom: 24 }}>
+                  {plan.features.map((f) => (
+                    <li key={f} style={{ fontSize: 12, color: "var(--muted)", padding: "4px 0", display: "flex", gap: 8 }}>
+                      <span style={{ color: "var(--green)", flexShrink: 0 }}>✓</span> {f}
+                    </li>
+                  ))}
+                </ul>
+
+                {plan.isTrial ? (
+                  <Link
+                    href="/register"
+                    style={{
+                      display: "block", textAlign: "center", textDecoration: "none",
+                      background: "var(--surface2)", color: "var(--text)",
+                      border: "1px solid var(--border)",
+                      padding: "11px", borderRadius: 10, fontWeight: 700, fontSize: 13,
+                    }}
+                  >
+                    {plan.cta}
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => void handleCheckout(plan.id as PlanId)}
+                    disabled={isLoading}
+                    style={{
+                      width: "100%", border: "none", cursor: isLoading ? "wait" : "pointer",
+                      background: plan.highlight ? "var(--accent)" : "var(--surface2)",
+                      color: plan.highlight ? "#fff" : "var(--text)",
+                      borderColor: plan.highlight ? "transparent" : "var(--border)",
+                      borderWidth: 1, borderStyle: "solid",
+                      padding: "11px", borderRadius: 10, fontWeight: 700, fontSize: 13,
+                      fontFamily: "'Syne', sans-serif",
+                    }}
+                  >
+                    {isLoading ? "Lädt..." : plan.cta}
+                  </button>
+                )}
               </div>
-
-              <ul style={{ listStyle: "none", marginBottom: 24 }}>
-                {plan.features.map((f) => (
-                  <li key={f} style={{ fontSize: 12, color: "var(--muted)", padding: "4px 0", display: "flex", gap: 8 }}>
-                    <span style={{ color: "var(--green)", flexShrink: 0 }}>✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-
-              <Link href={plan.href} style={{
-                display: "block", textAlign: "center", textDecoration: "none",
-                background: plan.highlight ? "var(--accent)" : "var(--surface2)",
-                color: plan.highlight ? "#fff" : "var(--text)",
-                border: plan.highlight ? "none" : "1px solid var(--border)",
-                padding: "11px", borderRadius: 10, fontWeight: 700, fontSize: 13,
-              }}>
-                {plan.cta}
-              </Link>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Karşılaştırma Tablosu */}
@@ -159,7 +281,7 @@ export default function PricingPage() {
               </tr>
             </thead>
             <tbody>
-              {comparisonRows.map((row, i) => (
+              {COMPARISON_ROWS.map((row, i) => (
                 <tr key={row.feature} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
                   <td style={{ padding: "12px 16px", color: "var(--text)" }}>{row.feature}</td>
                   {[row.trial, row.individual, row.team, row.business].map((val, j) => (
@@ -172,10 +294,15 @@ export default function PricingPage() {
         </div>
 
         {/* Footer not */}
-        <p style={{ textAlign: "center", marginTop: 48, color: "var(--muted)", fontSize: 13 }}>
-          Alle Preise netto zzgl. 19% MwSt. (Deutschland). EU-Unternehmen mit gültiger USt-IdNr. erhalten Rechnungen ohne MwSt. (Reverse Charge).{" "}
-          <Link href="/impressum" style={{ color: "var(--accent2)" }}>Impressum</Link> ·{" "}
-          <Link href="/datenschutz" style={{ color: "var(--accent2)" }}>Datenschutz</Link>
+        <p style={{ textAlign: "center", marginTop: 48, color: "var(--muted)", fontSize: 13, lineHeight: 1.8 }}>
+          Alle Preise gemäß § 19 UStG ohne Umsatzsteuer (Kleinunternehmer-Regelung).
+          Zahlung über Stripe (SEPA, Kreditkarte). DSGVO-konform · EU-Server in Frankfurt.
+          <br />
+          Mit der Buchung akzeptierst du unsere{" "}
+          <Link href="/agb" style={{ color: "var(--accent2)" }}>AGB</Link> und{" "}
+          <Link href="/datenschutz" style={{ color: "var(--accent2)" }}>Datenschutzerklärung</Link>.
+          <br />
+          <Link href="/impressum" style={{ color: "var(--accent2)" }}>Impressum</Link>
         </p>
       </div>
     </div>

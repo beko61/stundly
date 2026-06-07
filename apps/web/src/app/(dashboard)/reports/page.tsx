@@ -27,33 +27,12 @@ function calcStats(entries: TimeEntry[]) {
   return { workedMin, ndMin, diffMin: workedMin-(STANDARD_HOURS*60), urlaub, krank, feiertag, arbeiten, notdienst };
 }
 
-interface NdRow {
-  date: string;
-  start_time: string | null;
-  end_time: string | null;
-  kunde: string | null;
-  adresse: string | null;
-  problem: string | null;
-  ergebnis: string | null;
-  note: string | null;
-  erledigt: boolean | null;
-}
-
-/** Sollstunden für bezahlte Abwesenheit (Urlaub/Krank/Feiertag): Mo-Do 8:15h, Fr 6:15h, weekend 0 */
-function getDayStdMins(dateStr: string): number {
-  const dow = new Date(dateStr).getDay();
-  if (dow === 0 || dow === 6) return 0;
-  if (dow === 5) return 6 * 60 + 15;
-  return 8 * 60 + 15;
-}
-
 export default function ReportsPage() {
   const now = new Date();
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth()+1);
   const [mode, setMode]   = useState<"month"|"year">("month");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [ndEntries, setNdEntries] = useState<NdRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -70,15 +49,9 @@ export default function ReportsPage() {
         ? new Date(year, month, 0).toISOString().split("T")[0]!
         : `${year}-12-31`;
 
-      const [{ data: te }, { data: nd }] = await Promise.all([
-        supabase.from("time_entries").select("*")
-          .eq("user_id", session.user.id).gte("date", start).lte("date", end),
-        supabase.from("notdienst_entries")
-          .select("date, start_time, end_time, kunde, adresse, problem, ergebnis, note, erledigt")
-          .eq("user_id", session.user.id).gte("date", start).lte("date", end),
-      ]);
-      if (te) setEntries(te as TimeEntry[]);
-      if (nd) setNdEntries(nd as NdRow[]);
+      const { data } = await supabase.from("time_entries").select("*")
+        .eq("user_id", session.user.id).gte("date", start).lte("date", end);
+      if (data) setEntries(data as TimeEntry[]);
       setLoading(false);
     }
     void load();
@@ -100,61 +73,23 @@ export default function ReportsPage() {
   const sign = (min: number) => min>=0?"+":"-";
 
   function exportCSV() {
-    // Header: time_entries fields + Notdienst-spezifische Felder
-    const rows: string[][] = [[
-      "Datum","Tag","Typ","Start","Ende","Pause (min)","Stunden",
-      "Kunde","Adresse","Problem","Ergebnis","Bezahlt","Notiz",
-    ]];
-
-    // T\u00fcm time_entries (s\u0131ral\u0131)
-    for (const e of [...entries].sort((a,b)=>a.date.localeCompare(b.date))) {
+    const rows = [["Datum","Tag","Typ","Start","Ende","Pause","Stunden","Notiz"]];
+    for (const e of entries) {
       const d = new Date(e.date);
       const dow = ["So","Mo","Di","Mi","Do","Fr","Sa"][d.getDay()]!;
-
-      // Saat hesab\u0131: paid-absence g\u00fcnleri Sollstunden, normal g\u00fcnler net s\u00fcre
-      let dur = "";
-      if (e.day_type === "urlaub" || e.day_type === "krank" || e.day_type === "feiertag") {
-        dur = fmt(getDayStdMins(e.date));
-      } else if (e.start_time && e.end_time) {
-        dur = fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes);
-      }
-
-      rows.push([
-        e.date, dow, e.day_type,
-        e.start_time ?? "", e.end_time ?? "",
-        String(e.break_minutes ?? 0), dur,
-        "", "", "", "", "",   // Notdienst-Spalten leer f\u00fcr time_entries
-        e.note ?? "",
-      ]);
-    }
-
-    // Notdienst-Eintr\u00e4ge (ayr\u0131 tablo) \u2014 kendi sat\u0131rlar\u0131 olarak
-    for (const nd of [...ndEntries].sort((a,b)=>a.date.localeCompare(b.date))) {
-      const d = new Date(nd.date);
-      const dow = ["So","Mo","Di","Mi","Do","Fr","Sa"][d.getDay()]!;
-      const dur = (nd.start_time && nd.end_time)
-        ? fmt(calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes)
+      const dur = e.start_time&&e.end_time
+        ? fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes)
         : "";
-      rows.push([
-        nd.date, dow, "notdienst",
-        nd.start_time ?? "", nd.end_time ?? "",
-        "0", dur,
-        nd.kunde ?? "", nd.adresse ?? "",
-        nd.problem ?? "", nd.ergebnis ?? "",
-        nd.erledigt ? "ja" : "nein",
-        nd.note ?? "",
-      ]);
+      rows.push([e.date, dow, e.day_type, e.start_time??"-", e.end_time??"-",
+        String(e.break_minutes), dur, e.note??""]);
     }
-
-    // CSV escape (Anf\u00fchrungszeichen verdoppeln, in Quotes wrappen)
-    const esc = (v: string) => `"${(v ?? "").replace(/"/g, '""')}"`;
-    const csv = rows.map(r => r.map(esc).join(";")).join("\r\n"); // ';' = Excel-DE friendly
+    const csv = rows.map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
     const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     const suffix = mode === "month" ? "_" + String(month).padStart(2, "0") : "";
-    a.download = `stundly_${year}${suffix}.csv`;
+    a.download = `workly_${year}${suffix}.csv`;
     a.click();
   }
 

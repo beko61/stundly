@@ -13,12 +13,10 @@ export async function GET() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const [profile, timeEntries, notdienst, salarySettings, salaryRecords, vacations, logs] = await Promise.all([
+  const [profile, timeEntries, salarySettings, vacations, logs] = await Promise.all([
     admin.from("profiles").select("*").eq("user_id", user.id).single(),
     admin.from("time_entries").select("*").eq("user_id", user.id),
-    admin.from("notdienst_entries").select("*").eq("user_id", user.id),
     admin.from("salary_settings").select("*").eq("user_id", user.id),
-    admin.from("salary_records").select("*").eq("user_id", user.id),
     admin.from("vacation_requests").select("*").eq("user_id", user.id),
     admin.from("daily_logs").select("*").eq("user_id", user.id),
   ]);
@@ -29,9 +27,7 @@ export async function GET() {
     email: user.email,
     profile: profile.data,
     time_entries: timeEntries.data ?? [],
-    notdienst_entries: notdienst.data ?? [],
     salary_settings: salarySettings.data ?? [],
-    salary_records: salaryRecords.data ?? [],
     vacation_requests: vacations.data ?? [],
     daily_logs: logs.data ?? [],
   };

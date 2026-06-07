@@ -267,9 +267,10 @@ export default function LandingPage() {
         <div style={{ display: "flex", gap: 24 }}>
           <Link href="/impressum" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Impressum</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
+          <Link href="/agb" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AGB</Link>
           <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Preise</Link>
         </div>
-        <span style={{ color: "var(--muted)", fontSize: 12 }}>© 2026 Stundly · Alle Preise zzgl. MwSt.</span>
+        <span style={{ color: "var(--muted)", fontSize: 12 }}>© 2026 Stundly · gemäß § 19 UStG keine MwSt.</span>
       </footer>
     </div>
   );

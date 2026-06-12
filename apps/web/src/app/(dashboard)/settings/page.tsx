@@ -16,6 +16,10 @@ interface Profile {
   vorgesetzter:   string;
   email:          string;
   company_name:   string;
+  firma_strasse:  string;
+  firma_plz:      string;
+  firma_ort:      string;
+  firma_telefon:  string;
   logo_data:      string | null;
   bundesland:     string;
   signature_data: string | null;
@@ -24,7 +28,9 @@ interface Profile {
 const EMPTY: Profile = {
   vorname: "", nachname: "", personal_nr: "", eintrittsdatum: "",
   abteilung: "", vorgesetzter: "", email: "",
-  company_name: "", logo_data: null, bundesland: "NI",
+  company_name: "",
+  firma_strasse: "", firma_plz: "", firma_ort: "", firma_telefon: "",
+  logo_data: null, bundesland: "NI",
   signature_data: null,
 };
 
@@ -115,7 +121,7 @@ export default function SettingsPage() {
     if (!session?.user) return;
     const { data } = await supabase
       .from("profiles")
-      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,bundesland,signature_data")
+      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,bundesland,signature_data")
       .eq("user_id", session.user.id)
       .single();
     if (data) {
@@ -128,6 +134,10 @@ export default function SettingsPage() {
         vorgesetzter:   data.vorgesetzter   ?? "",
         email:          data.email          ?? session.user.email ?? "",
         company_name:   data.company_name   ?? "",
+        firma_strasse:  data.firma_strasse  ?? "",
+        firma_plz:      data.firma_plz      ?? "",
+        firma_ort:      data.firma_ort      ?? "",
+        firma_telefon:  data.firma_telefon  ?? "",
         logo_data:      data.logo_data      ?? null,
         bundesland:     data.bundesland     ?? "NI",
         signature_data: data.signature_data ?? null,
@@ -260,11 +270,41 @@ export default function SettingsPage() {
 
         {/* ── Firmendaten ── */}
         <div className="card">
-          <div className="label" style={{ marginBottom: 12, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          <div className="label" style={{ marginBottom: 6, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>
             🏢 Firmendaten
           </div>
+          <p style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
+            Diese Angaben erscheinen im Briefkopf deiner Urlaubsanträge und Monatsberichte (PDF).
+          </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {field("Firmenname", "company_name", { placeholder: "z.B. Muster GmbH" })}
+            {field("Firmenname", "company_name", { placeholder: "z.B. Mustermann Sanitär GmbH" })}
+
+            {/* Adresse — 3 Felder in einer Zeile (Straße, PLZ, Ort) */}
+            <div>
+              <label className="label">Firmenadresse</label>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1.5fr", gap: 8 }}>
+                <input
+                  className="input"
+                  placeholder="Musterstraße 1"
+                  value={profile.firma_strasse}
+                  onChange={e => set("firma_strasse", e.target.value)}
+                />
+                <input
+                  className="input"
+                  placeholder="10115"
+                  value={profile.firma_plz}
+                  onChange={e => set("firma_plz", e.target.value)}
+                />
+                <input
+                  className="input"
+                  placeholder="Berlin"
+                  value={profile.firma_ort}
+                  onChange={e => set("firma_ort", e.target.value)}
+                />
+              </div>
+            </div>
+
+            {field("Firma Telefon (optional)", "firma_telefon", { placeholder: "z.B. 030 12345678" })}
 
             {/* Bundesland selector */}
             <div>
@@ -326,18 +366,18 @@ export default function SettingsPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div className="settings-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {field("Vorname",  "vorname",  { placeholder: "Yusuf" })}
-              {field("Nachname", "nachname", { placeholder: "Bektas" })}
+              {field("Vorname",  "vorname",  { placeholder: "z.B. Max" })}
+              {field("Nachname", "nachname", { placeholder: "z.B. Mustermann" })}
             </div>
             <div className="settings-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {field("Personal-Nr.", "personal_nr",    { placeholder: "0034" })}
-              {field("Eintrittsdatum", "eintrittsdatum", { placeholder: "19.10.2022" })}
+              {field("Personal-Nr.", "personal_nr",    { placeholder: "z.B. 12345" })}
+              {field("Eintrittsdatum", "eintrittsdatum", { placeholder: "TT.MM.JJJJ" })}
             </div>
             <div className="settings-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {field("Abteilung",    "abteilung",    { placeholder: "Montageteil" })}
-              {field("Vorgesetzte/r","vorgesetzter", { placeholder: "Aydin Bektas" })}
+              {field("Abteilung",    "abteilung",    { placeholder: "z.B. Installation" })}
+              {field("Vorgesetzte/r","vorgesetzter", { placeholder: "z.B. Erika Mustermann" })}
             </div>
-            {field("E-Mail", "email", { placeholder: "name@example.de", type: "email" })}
+            {field("E-Mail", "email", { placeholder: "name@firma.de", type: "email" })}
           </div>
         </div>
 

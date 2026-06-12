@@ -14,14 +14,17 @@ export interface SalaryBreakdown {
 
 /**
  * Günün gerçek Sollstunden (dakika cinsinden).
- * Default Hannover vorlage: Mo-Do 8:15h (495), Fr 6:15h (375), weekend 0.
- * Urlaub/Krank/Feiertag günleri bu kadar hedefe sayılır.
+ *
+ * VEREINFACHTES MODELL (07.06.2026):
+ *   Urlaub / Krank / Feiertag werden auf jedem Werktag (Mo-Fr) wie ein
+ *   Standard-Arbeitstag 08:00–17:00 mit 1h Pause = 8h netto gezählt.
+ *   Sa/So zählen 0. Damit ist die Differenz für den Nutzer leicht
+ *   nachvollziehbar (jeder Urlaub-Tag = 8h, kein Mo-Do/Fr-Sonderfall).
  */
 function getDayStdMinutes(dateStr: string): number {
   const dow = new Date(dateStr).getDay();
   if (dow === 0 || dow === 6) return 0;
-  if (dow === 5) return 6 * 60 + 15;
-  return 8 * 60 + 15;
+  return 8 * 60;
 }
 
 /**

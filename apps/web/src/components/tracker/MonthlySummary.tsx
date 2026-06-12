@@ -9,13 +9,12 @@ import { createClient } from "@/lib/supabase/client";
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT       = 30; // yıllık urlaub kontingenti
 
-// Standart günlük saatler (Hannover Vorlage): Mo-Do 8:15h, Fr 6:15h, weekend 0
-// → Urlaub/Krank/Feiertag günleri bu kadar hedefe sayılır (önceki bug: hep 8h sayılıyordu)
+// VEREINFACHT (07.06.2026): Mo-Fr = 8h, Sa/So = 0.
+// Urlaub/Krank/Feiertag werden auf jedem Werktag wie 08:00–17:00 / 1h Pause = 8h gezählt.
 function getDayStdMins(dateStr: string): number {
-  const dow = new Date(dateStr).getDay();   // 0 Sun, 6 Sat
+  const dow = new Date(dateStr).getDay();
   if (dow === 0 || dow === 6) return 0;
-  if (dow === 5) return 6 * 60 + 15;        // Fr → 6:15
-  return 8 * 60 + 15;                       // Mo-Do → 8:15
+  return 8 * 60;
 }
 
 interface NdEntry { date: string; start_time: string; end_time: string; erledigt?: boolean; }

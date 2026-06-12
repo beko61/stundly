@@ -12,16 +12,18 @@ const WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag
 
 /**
  * Sollstunden für bezahlte Abwesenheit (Urlaub/Krank/Feiertag) in Minuten.
- * Mo-Do 8:15h · Fr 6:15h · Sa/So 0
- * Wird in DayEntry angezeigt, damit der Nutzer sieht, dass der Tag mit
- * exakt diesen Stunden in die Differenz und den Lohn einfließt.
+ *
+ * VEREINFACHT (07.06.2026): Mo-Fr immer 8h (08:00–17:00 / 1h Pause),
+ * Sa/So 0. So weiß der Nutzer ohne Nachdenken: jeder Urlaub-Tag = 8h.
  */
 function getDayStdMins(dateStr: string): number {
   const dow = new Date(dateStr).getDay();
   if (dow === 0 || dow === 6) return 0;
-  if (dow === 5) return 6 * 60 + 15;
-  return 8 * 60 + 15;
+  return 8 * 60;
 }
+
+/** Standard-Zeitstempel für Urlaub/Krank/Feiertag-Tage (nur Anzeige, in DB bleibt NULL). */
+const STANDARD_TIMES = { start: "08:00", end: "17:00", pauseMin: 60 };
 
 /** Status-Typen, die mit Sollstunden gerechnet werden (ohne echte Zeitstempel) */
 const PAID_ABSENCE: DayType[] = [DAY_TYPES.URLAUB, DAY_TYPES.KRANK, DAY_TYPES.FEIERTAG];
@@ -178,19 +180,27 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
           </div>
         )}
 
-        {/* Non-time status types — Urlaub / Krank / Feiertag mit Sollstunden-Anzeige */}
+        {/* Urlaub / Krank / Feiertag — voller Zeitstreifen wie Arbeiten (08:00–17:00, 1h Pause, 8h netto) */}
         {entry && !entry.start_time && entry.day_type !== DAY_TYPES.FREI && (
           <div style={{ padding:"0 14px 10px", display:"flex", gap:6, flexWrap:"wrap" }}>
-            <div className="time-chip" style={{ borderColor:STATUS_COLOR[entry.day_type] }}>
-              <span style={{ color:STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:700 }}>
-                {STATUS_ICON[entry.day_type]} {entry.day_type.charAt(0).toUpperCase()+entry.day_type.slice(1)}
-              </span>
-            </div>
-            {isPaidAbsence && (
-              <div className="time-chip" style={{ borderColor:STATUS_COLOR[entry.day_type] }} title="Wird mit diesen Stunden in Differenz und Lohn gerechnet">
-                <span style={{ color:"var(--muted)", fontSize:10 }}>Sollstd.</span>
+            {isPaidAbsence ? (
+              <>
+                {[
+                  { label:"Start", val: STANDARD_TIMES.start },
+                  { label:"Pause", val: "01:00" },
+                  { label:"Ende",  val: STANDARD_TIMES.end },
+                  { label:"Std",   val: netHours ?? "08:00" },
+                ].map(({ label, val }) => (
+                  <div key={label} className="time-chip" style={{ borderColor: STATUS_COLOR[entry.day_type] }}>
+                    <span style={{ color:"var(--muted)", fontSize:10 }}>{label}</span>
+                    <span style={{ color: STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:600 }}>{val}</span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="time-chip" style={{ borderColor:STATUS_COLOR[entry.day_type] }}>
                 <span style={{ color:STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:700 }}>
-                  {netHours}
+                  {STATUS_ICON[entry.day_type]} {entry.day_type.charAt(0).toUpperCase()+entry.day_type.slice(1)}
                 </span>
               </div>
             )}

@@ -12,11 +12,11 @@ const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT = 30;
 const SALARY_LS_KEY = "workly_salary_settings_v2";
 
+// Mo-Fr = 8h, Sa/So = 0. Urlaub/Krank/Feiertag immer 8h auf Werktagen.
 function getDayStdMins(dateStr: string): number {
   const dow = new Date(dateStr).getDay();
   if (dow === 0 || dow === 6) return 0;
-  if (dow === 5) return 6 * 60 + 15;
-  return 8 * 60 + 15;
+  return 8 * 60;
 }
 
 function minsToTime(min: number): string {

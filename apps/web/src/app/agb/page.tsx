@@ -22,9 +22,9 @@ const SECTIONS: { title: string; content: string }[] = [
       "Der Anbieter bemüht sich um eine Verfügbarkeit von 99% im Jahresmittel. Davon ausgenommen sind Zeiten geplanter Wartung (vorherige Ankündigung) sowie Ausfälle durch höhere Gewalt, Angriffe Dritter oder Probleme bei Subdienstleistern (z.B. Supabase, Vercel, Stripe). Während der kostenlosen Testphase besteht kein Verfügbarkeitsanspruch.",
   },
   {
-    title: "§5 Kostenlose Testphase",
+    title: "§5 Kostenlose Testphase / Beta-Phase",
     content:
-      "Neu registrierte Kunden erhalten eine kostenlose Testphase von 14 Tagen mit Zugang zu allen Funktionen. Eine Zahlungsmethode ist während der Testphase nicht erforderlich. Nach Ablauf der Testphase endet der Zugang automatisch, sofern der Kunde keinen kostenpflichtigen Plan abschließt.",
+      "Stundly befindet sich aktuell in der Beta-Phase. Alle neu registrierten Kunden erhalten während dieser Phase bis einschließlich 07.09.2026 kostenlosen Zugang zu sämtlichen Funktionen. Eine Zahlungsmethode ist während der Beta-Phase nicht erforderlich. Nach Ende der Beta-Phase startet eine optionale 14-tägige Testphase für kostenpflichtige Pläne. Ohne aktive Buchung endet der Zugang nach Beta-Ende — vorhandene Daten bleiben jedoch 30 Tage lang abrufbar.",
   },
   {
     title: "§6 Preise und Zahlung",

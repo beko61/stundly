@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createCheckoutSession, PRICE_IDS } from "@/lib/stripe/server";
+import { isBetaActive, BETA_END_DATE_LABEL } from "@/lib/beta";
 
 export async function POST(req: NextRequest) {
+  // Beta-Phase: Zahlungen sind komplett deaktiviert.
+  if (isBetaActive()) {
+    return NextResponse.json(
+      {
+        error: `Stundly ist während der Beta-Phase bis ${BETA_END_DATE_LABEL} komplett kostenlos. Eine Buchung ist erst ab dem Beta-Ende möglich.`,
+        beta: true,
+      },
+      { status: 403 }
+    );
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

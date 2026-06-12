@@ -63,7 +63,7 @@ export async function sendInvitationEmail({
   });
 }
 
-// Hoşgeldin maili (kayıt sonrası)
+// Hoşgeldin maili (kayıt sonrası) — Beta-Phase Variant
 export async function sendWelcomeEmail({
   to,
   name,
@@ -74,34 +74,63 @@ export async function sendWelcomeEmail({
   plan: "individual" | "company";
 }) {
   const isCompany = plan === "company";
+  const { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } = await import("../beta");
+  const isBeta = BETA_MODE;
+  const daysLeft = betaDaysRemaining();
 
   return getResend().emails.send({
     from: FROM,
     to,
-    subject: "Willkommen bei Stundly!",
+    subject: isBeta
+      ? "🎁 Willkommen bei Stundly – 3 Monate komplett kostenlos!"
+      : "Willkommen bei Stundly!",
     html: `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f13; color: #e8e8f0; padding: 40px 32px; border-radius: 16px;">
         <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">STUNDLY</div>
 
         <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 12px;">Willkommen, ${name}! 👋</h1>
+
+        ${isBeta ? `
+        <div style="background: linear-gradient(135deg, rgba(124,106,247,0.18), rgba(192,132,252,0.18)); border: 1px solid rgba(192,132,252,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
+          <p style="font-size: 13px; font-weight: 800; color: #c084fc; letter-spacing: 1px; margin: 0 0 8px;">🎁 BETA-TESTER</p>
+          <p style="color: #e8e8f0; font-size: 14px; line-height: 1.7; margin: 0;">
+            Du bekommst <strong>alle Funktionen 3 Monate komplett kostenlos</strong> — bis zum
+            <strong>${BETA_END_DATE_LABEL}</strong> (noch ${daysLeft} Tage).
+            Keine Kreditkarte, keine versteckten Kosten.
+          </p>
+        </div>
+        <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
+          Als Dankeschön für deinen Beta-Test bekommst du nach der Beta <strong style="color: #c084fc;">50% lebenslangen Rabatt</strong>
+          auf den Plan deiner Wahl.
+        </p>
+        ` : `
         <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
           Ihr Konto ist jetzt aktiv. Sie haben <strong style="color: #c084fc;">14 Tage kostenlos</strong> Zugang zu allen Funktionen.
         </p>
+        `}
 
         ${isCompany ? `
         <div style="background: #18181f; border: 1px solid #2e2e3d; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
-          <p style="font-weight: 700; margin-bottom: 8px; font-size: 14px;">Nächste Schritte für Ihr Unternehmen:</p>
+          <p style="font-weight: 700; margin-bottom: 8px; font-size: 14px;">Nächste Schritte für dein Unternehmen:</p>
           <ul style="color: #6b6b80; font-size: 13px; line-height: 2; padding-left: 16px;">
             <li>Mitarbeiter ins Admin-Panel einladen</li>
             <li>Arbeitszeitregeln konfigurieren</li>
-            <li>Mobile App herunterladen</li>
+            <li>Mobile App auf dem Handy installieren (PWA)</li>
           </ul>
         </div>
         ` : ""}
 
-        <a href="${APP_URL}/tracker" style="display: inline-block; background: #7c6af7; color: #fff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 15px;">
-          Jetzt loslegen →
+        <a href="${APP_URL}/dashboard" style="display: inline-block; background: #7c6af7; color: #fff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 15px;">
+          Zum Dashboard →
         </a>
+
+        ${isBeta ? `
+        <p style="color: #6b6b80; font-size: 12px; margin-top: 28px; line-height: 1.6;">
+          💬 Du hast eine Idee oder einen Fehler gefunden? Antworte einfach auf diese Mail —
+          ich freue mich über jedes Feedback.<br>
+          <em>— Yusuf Bektas, Gründer</em>
+        </p>
+        ` : ""}
 
         <p style="color: #6b6b80; font-size: 11px; margin-top: 32px; border-top: 1px solid #2e2e3d; padding-top: 16px;">
           Stundly · DSGVO-konform · Daten in Deutschland (EU) ·

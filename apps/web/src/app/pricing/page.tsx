@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
 
 type PlanId  = "individual" | "team" | "business";
 type Interval = "monthly" | "yearly";
@@ -132,6 +133,101 @@ export default function PricingPage() {
       </nav>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "60px 24px" }}>
+        {/* BETA-Modus: Plan-Auswahl ist während der 3-monatigen Beta-Phase ausgeblendet. */}
+        {BETA_MODE && (
+          <div style={{ maxWidth: 720, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 36 }}>
+              <div style={{
+                display: "inline-block",
+                background: "color-mix(in srgb, var(--accent2) 18%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent2) 40%, transparent)",
+                color: "var(--accent2)",
+                padding: "6px 16px",
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom: 24,
+              }}>
+                🎁 Beta-Phase
+              </div>
+              <h1 style={{ fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, marginBottom: 16, lineHeight: 1.15 }}>
+                3 Monate <span style={{ color: "var(--accent2)" }}>100% kostenlos</span>
+              </h1>
+              <p style={{ color: "var(--text)", fontSize: 17, lineHeight: 1.7, marginBottom: 8 }}>
+                Stundly ist gerade neu gestartet — und du bekommst <strong>alle Funktionen</strong> bis
+                zum <strong>{BETA_END_DATE_LABEL}</strong> komplett gratis.
+              </p>
+              <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 32 }}>
+                Keine Kreditkarte. Keine versteckten Kosten. Noch {betaDaysRemaining()} Tage übrig.
+              </p>
+            </div>
+
+            <div className="card" style={{ padding: "32px 28px", marginBottom: 28 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 18 }}>
+                Was du während der Beta bekommst:
+              </h2>
+              <ul style={{ listStyle: "none", padding: 0, marginBottom: 24 }}>
+                {[
+                  "Unbegrenzte Arbeitszeiterfassung",
+                  "Notdienst-Verwaltung mit Kunden & Adressen",
+                  "Lohn- & Steuerberechnung (Netto/Brutto, alle Steuerklassen)",
+                  "PDF Monatsbericht — fertig zum Versenden",
+                  "Urlaubsantrag & Kalender",
+                  "JSON / CSV Datenexport",
+                  "Mobile App (PWA) — auf jedem Handy installierbar",
+                  "DSGVO-konform · EU-Server in Frankfurt",
+                ].map((f) => (
+                  <li key={f} style={{ fontSize: 14, padding: "8px 0", display: "flex", gap: 10, color: "var(--text)" }}>
+                    <span style={{ color: "var(--green)", fontWeight: 800, flexShrink: 0 }}>✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/register"
+                className="btn btn-primary"
+                style={{ width: "100%", padding: "16px", fontSize: 16, display: "block", textAlign: "center", textDecoration: "none" }}
+              >
+                Jetzt kostenlos starten →
+              </Link>
+              <p style={{ textAlign: "center", fontSize: 11, color: "var(--muted)", marginTop: 14 }}>
+                In 30 Sekunden registriert · kein Setup nötig
+              </p>
+            </div>
+
+            <div style={{
+              background: "color-mix(in srgb, var(--accent) 8%, var(--surface))",
+              border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
+              borderRadius: 14,
+              padding: "18px 22px",
+              marginBottom: 32,
+              fontSize: 13,
+              color: "var(--text)",
+              lineHeight: 1.7,
+            }}>
+              <strong style={{ color: "var(--accent2)" }}>💡 Was passiert nach der Beta?</strong>
+              <br />
+              Am {BETA_END_DATE_LABEL} starten die regulären Pläne. Beta-Tester (du!) erhalten
+              <strong> 50% lebenslangen Rabatt</strong> als Dankeschön. Du entscheidest dann, ob
+              du weitermachen möchtest — niemand bucht dir automatisch etwas ab.
+            </div>
+
+            <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", lineHeight: 1.8 }}>
+              Mit der Nutzung akzeptierst du unsere{" "}
+              <Link href="/agb" style={{ color: "var(--accent2)" }}>AGB</Link>{" und "}
+              <Link href="/datenschutz" style={{ color: "var(--accent2)" }}>Datenschutzerklärung</Link>.
+              <br />
+              <Link href="/impressum" style={{ color: "var(--accent2)" }}>Impressum</Link>
+            </div>
+          </div>
+        )}
+
+        {/* Normale Pricing (nach Beta-Ende). Bleibt im Code für späteren Wechsel. */}
+        {!BETA_MODE && (
+        <>
         {/* Title */}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 800, marginBottom: 12 }}>
@@ -328,6 +424,8 @@ export default function PricingPage() {
           <br />
           <Link href="/impressum" style={{ color: "var(--accent2)" }}>Impressum</Link>
         </p>
+        </>
+        )}
       </div>
     </div>
   );

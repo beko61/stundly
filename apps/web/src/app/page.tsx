@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
 
 const features = [
   { icon: "⏱️", title: "Arbeitszeiterfassung", desc: "Start, Ende, Pausen – automatische Berechnung inklusive Überstunden und Nachtschichten." },
@@ -53,6 +54,21 @@ export default function LandingPage() {
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif" }}>
 
+      {/* BETA-Streifen — ganz oben, durchgehend */}
+      {BETA_MODE && (
+        <div style={{
+          background: "linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent) 0%, color-mix(in srgb, var(--accent2) 60%, transparent) 100%)",
+          color: "white",
+          textAlign: "center",
+          padding: "9px 24px",
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: "0.04em",
+        }}>
+          🎁 BETA: 3 Monate komplett kostenlos — alle Funktionen freigeschaltet bis {BETA_END_DATE_LABEL} (noch {betaDaysRemaining()} Tage)
+        </div>
+      )}
+
       {/* NAV */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
@@ -63,7 +79,9 @@ export default function LandingPage() {
       }}>
         <span style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3 }}>STUNDLY</span>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Preise</Link>
+          {!BETA_MODE && (
+            <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Preise</Link>
+          )}
           <Link href="/login" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Anmelden</Link>
           <Link href="/register" className="btn btn-primary" style={{ padding: "8px 16px", fontSize: 13 }}>
             Kostenlos starten
@@ -99,13 +117,13 @@ export default function LandingPage() {
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 28px" }}>
-              14 Tage gratis testen
+              {BETA_MODE ? "3 Monate gratis starten" : "14 Tage gratis testen"}
             </Link>
-            <Link href="/pricing" className="btn" style={{
+            <Link href={BETA_MODE ? "#features" : "/pricing"} className="btn" style={{
               fontSize: 16, padding: "14px 28px",
               background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)",
             }}>
-              Preise ansehen
+              {BETA_MODE ? "Features ansehen" : "Preise ansehen"}
             </Link>
           </div>
 
@@ -168,11 +186,37 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* PRICING */}
+      {/* PRICING — während Beta-Phase komplett ausgeblendet */}
+      {BETA_MODE ? (
+        <section style={{ padding: "60px 24px 80px", maxWidth: 760, margin: "0 auto", textAlign: "center" }}>
+          <div style={{
+            background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent2) 16%, transparent) 100%)",
+            border: "1px solid color-mix(in srgb, var(--accent2) 40%, transparent)",
+            borderRadius: 18,
+            padding: "44px 36px",
+          }}>
+            <div style={{ fontSize: 44, marginBottom: 16 }}>🎁</div>
+            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>
+              Beta-Phase: 3 Monate komplett kostenlos
+            </h2>
+            <p style={{ color: "var(--text)", fontSize: 15, lineHeight: 1.7, marginBottom: 22 }}>
+              Stundly ist gerade neu gestartet. Bis zum <strong>{BETA_END_DATE_LABEL}</strong> bekommst
+              du <strong>alle Funktionen</strong> ohne Einschränkung — keine Kreditkarte, keine
+              versteckten Kosten.
+            </p>
+            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 28 }}>
+              Beta-Tester erhalten danach <strong style={{ color: "var(--accent2)" }}>50% lebenslangen Rabatt</strong> als Dankeschön.
+            </p>
+            <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 32px", display: "inline-block" }}>
+              Jetzt kostenlos starten →
+            </Link>
+          </div>
+        </section>
+      ) : (
       <section id="pricing" style={{ padding: "80px 24px", maxWidth: 1100, margin: "0 auto" }}>
         <h2 style={{ textAlign: "center", fontSize: 32, fontWeight: 800, marginBottom: 12 }}>Einfache Preise</h2>
         <p style={{ textAlign: "center", color: "var(--muted)", marginBottom: 16, fontSize: 15 }}>
-          Alle Preise zzgl. 19% MwSt. · Monatlich kündbar
+          Gemäß § 19 UStG ohne Umsatzsteuer · Monatlich kündbar
         </p>
         <p style={{ textAlign: "center", color: "var(--accent2)", fontWeight: 700, fontSize: 13, marginBottom: 52 }}>
           14 Tage kostenlos testen – keine Kreditkarte erforderlich
@@ -225,6 +269,7 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* FAQ */}
       <section style={{ padding: "80px 24px", maxWidth: 700, margin: "0 auto" }}>
@@ -268,7 +313,9 @@ export default function LandingPage() {
           <Link href="/impressum" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Impressum</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
           <Link href="/agb" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AGB</Link>
-          <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Preise</Link>
+          {!BETA_MODE && (
+            <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Preise</Link>
+          )}
         </div>
         <span style={{ color: "var(--muted)", fontSize: 12 }}>© 2026 Stundly · gemäß § 19 UStG keine MwSt.</span>
       </footer>

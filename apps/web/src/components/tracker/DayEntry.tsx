@@ -10,6 +10,22 @@ import { useTrackerStore } from "@/store/trackerStore";
 
 const WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 
+/**
+ * Sollstunden für bezahlte Abwesenheit (Urlaub/Krank/Feiertag) in Minuten.
+ * Mo-Do 8:15h · Fr 6:15h · Sa/So 0
+ * Wird in DayEntry angezeigt, damit der Nutzer sieht, dass der Tag mit
+ * exakt diesen Stunden in die Differenz und den Lohn einfließt.
+ */
+function getDayStdMins(dateStr: string): number {
+  const dow = new Date(dateStr).getDay();
+  if (dow === 0 || dow === 6) return 0;
+  if (dow === 5) return 6 * 60 + 15;
+  return 8 * 60 + 15;
+}
+
+/** Status-Typen, die mit Sollstunden gerechnet werden (ohne echte Zeitstempel) */
+const PAID_ABSENCE: DayType[] = [DAY_TYPES.URLAUB, DAY_TYPES.KRANK, DAY_TYPES.FEIERTAG];
+
 const STATUS_COLOR: Record<DayType, string> = {
   arbeiten:"var(--green)", urlaub:"var(--blue)", krank:"var(--red)",
   notdienst:"var(--orange)", feiertag:"var(--yellow)", frei:"var(--muted)",
@@ -54,7 +70,18 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
   const workDuration = entry?.start_time && entry?.end_time
     ? calculateWorkDuration(entry.start_time, entry.end_time, entry.break_minutes)
     : null;
-  const netHours = workDuration ? formatDuration(workDuration.net_minutes) : null;
+
+  // Saat değeri:
+  //  - Arbeiten / echte Zeitstempel → tatsächlich gearbeitete Std
+  //  - Urlaub / Krank / Feiertag (NULL Zeiten) → Sollstunden (8:15 / 6:15)
+  //  - Andere → null
+  const isPaidAbsence = !!entry && PAID_ABSENCE.includes(entry.day_type);
+  const netHours = workDuration
+    ? formatDuration(workDuration.net_minutes)
+    : isPaidAbsence
+      ? formatDuration(getDayStdMins(date))
+      : null;
+  const netColor = entry ? STATUS_COLOR[entry.day_type] : "var(--text)";
 
   const isFeiertag = !!feiertag && !entry;
   const borderStyle: React.CSSProperties = entry
@@ -99,7 +126,12 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
 
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             {netHours && (
-              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:14, fontWeight:500 }}>{netHours}</span>
+              <span
+                style={{ fontFamily:"'DM Mono',monospace", fontSize:14, fontWeight:600, color: netColor }}
+                title={isPaidAbsence ? "Sollstunden — zählt zur Differenz" : "Tatsächlich gearbeitet"}
+              >
+                {netHours}
+              </span>
             )}
             {entry && (
               <button style={{ background:"none", border:"none", color:"var(--muted)", fontSize:18, cursor:"pointer", padding:"2px 4px" }}
@@ -135,14 +167,27 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
           </div>
         )}
 
-        {/* Non-time status types */}
+        {/* Non-time status types — Urlaub / Krank / Feiertag mit Sollstunden-Anzeige */}
         {entry && !entry.start_time && entry.day_type !== DAY_TYPES.FREI && (
-          <div style={{ padding:"0 14px 10px" }}>
+          <div style={{ padding:"0 14px 10px", display:"flex", gap:6, flexWrap:"wrap" }}>
             <div className="time-chip" style={{ borderColor:STATUS_COLOR[entry.day_type] }}>
               <span style={{ color:STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:700 }}>
                 {STATUS_ICON[entry.day_type]} {entry.day_type.charAt(0).toUpperCase()+entry.day_type.slice(1)}
               </span>
             </div>
+            {isPaidAbsence && (
+              <div className="time-chip" style={{ borderColor:STATUS_COLOR[entry.day_type] }} title="Wird mit diesen Stunden in Differenz und Lohn gerechnet">
+                <span style={{ color:"var(--muted)", fontSize:10 }}>Sollstd.</span>
+                <span style={{ color:STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:700 }}>
+                  {netHours}
+                </span>
+              </div>
+            )}
+            {entry.note && (
+              <div className="time-chip">
+                <span style={{ color:"var(--muted)", fontSize:10 }}>📝 {entry.note}</span>
+              </div>
+            )}
           </div>
         )}
 

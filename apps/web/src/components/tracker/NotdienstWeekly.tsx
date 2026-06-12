@@ -5,6 +5,7 @@ import { useTrackerStore } from "@/store/trackerStore";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration } from "@workly/shared";
 import { notdienstBelongsToMonth, notdienstLoadRange, weekMondayOf } from "@/lib/utils/weekMonth";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 interface NdRow {
   date: string;
@@ -170,7 +171,21 @@ export function NotdienstWeekly() {
           gap: 10,
         }}
       >
-        <span>🚨 Notdienst — Wochenübersicht</span>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>
+          🚨 Notdienst — Wochenübersicht
+          <InfoTooltip title="So liest sich diese Tabelle" color="var(--orange)">
+            <strong>KW</strong>: Kalenderwoche. Eine Woche wird dem Monat
+            zugeordnet, in dem ihr Montag liegt — auch wenn Notdienste am
+            Wochenende in den Folgemonat fallen.
+            {"\n\n"}
+            <strong>Nd-Std</strong>: Anzahl Einsätze · Summe der
+            Notdienst-Stunden in dieser Woche.
+            {"\n\n"}
+            <strong>Überstd</strong>: Wochenüberstunden = (Geleistete Arbeit −
+            Sollstunden 40h) + Notdienst-Stunden. Positiv = Plus für dich,
+            negativ = Minus.
+          </InfoTooltip>
+        </span>
         <span style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
           <span style={{ color: "var(--orange)", fontWeight: 700 }}>{totals.ndCount}×</span>
           <span style={{ color: "var(--orange)" }}>{minsToTime(totals.ndMins)}</span>

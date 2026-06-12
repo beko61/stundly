@@ -6,6 +6,7 @@ import { DAY_TYPES } from "@workly/shared";
 import { calculateWorkDuration } from "@workly/shared";
 import { createClient } from "@/lib/supabase/client";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT       = 30; // yıllık urlaub kontingenti
@@ -191,8 +192,9 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   const urlaubKonto = Math.max(0, URLAUB_DEFAULT - yearUrlaub);
 
   // ── Kart bileşeni ──
-  function Card({ title, icon, color, big, mid, sub }: {
+  function Card({ title, icon, color, big, mid, sub, info }: {
     title: string; icon?: string; color: string; big: string; mid?: string; sub?: string;
+    info?: { title?: string; body: React.ReactNode };
   }) {
     return (
       <div style={{
@@ -211,6 +213,11 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
         }}>
           {icon && <span style={{ fontSize: 12 }}>{icon}</span>} {title}
+          {info && (
+            info.title
+              ? <InfoTooltip title={info.title} color={color}>{info.body}</InfoTooltip>
+              : <InfoTooltip color={color}>{info.body}</InfoTooltip>
+          )}
         </div>
         <div style={{
           fontFamily: "'DM Mono',monospace", fontSize: 17, fontWeight: 700, color,
@@ -303,6 +310,28 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           color="var(--orange)"
           big={`${stats.ndCount}×`}
           mid={`${minsToTime(stats.notdienstMin)} Std`}
+          info={{
+            title: "Notdienst — so wird gezählt",
+            body: (
+              <>
+                <strong>Wann?</strong> Außerhalb der regulären Arbeitszeit
+                (Abend / Nacht / Wochenende), eingetragen mit „+ Notdienst hinzufügen“
+                am jeweiligen Tag.
+                {"\n\n"}
+                <strong>Monatszuordnung:</strong> Eine Notdienst-Woche zählt
+                immer zu dem Monat, in dem ihr Montag liegt. Beispiel: KW vom
+                28. Apr (Mo) bis 4. Mai (So) → komplett April.
+                {"\n\n"}
+                <strong>Bezahlt-Status:</strong> ✅ erledigt / ⏳ offen — Tippe
+                im Tag auf das Symbol, um umzuschalten. Notdienst wird oft erst
+                im Folgemonat ausgezahlt.
+                {"\n\n"}
+                <strong>Lohn:</strong> Notdienst-Stunden fließen in die
+                Differenz und werden mit deinem Notdienst-Bonus (€/Tag)
+                aus den Lohn-Einstellungen vergütet.
+              </>
+            ),
+          }}
           sub={
             stats.ndCount === 0
               ? "—"

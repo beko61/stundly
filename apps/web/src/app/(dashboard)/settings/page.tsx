@@ -188,6 +188,50 @@ export default function SettingsPage() {
     window.location.href = "/login";
   }
 
+  // ── Daten zurücksetzen (alle Zeiteinträge / Notdienst / Urlaub / Lohnaufzeichnungen) ──
+  const [resetOpen, setResetOpen]     = useState(false);
+  const [resetText, setResetText]     = useState("");
+  const [resetBusy, setResetBusy]     = useState(false);
+  const [resetError, setResetError]   = useState<string | null>(null);
+  const [resetResult, setResetResult] = useState<string | null>(null);
+
+  async function handleResetData() {
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      const res = await fetch("/api/account/reset-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: resetText }),
+      });
+      const data = await res.json() as {
+        success?: boolean;
+        deleted?: Record<string, number>;
+        total?: number;
+        error?: string;
+      };
+      if (!res.ok || !data.success) {
+        setResetError(data.error ?? "Unbekannter Fehler");
+        setResetBusy(false);
+        return;
+      }
+      setResetResult(
+        `✅ ${data.total} Datensätze gelöscht (Zeiteinträge: ${data.deleted?.time_entries ?? 0}, ` +
+        `Notdienst: ${data.deleted?.notdienst_entries ?? 0}, ` +
+        `Urlaub: ${data.deleted?.vacation_requests ?? 0}, ` +
+        `Lohnaufzeichnungen: ${data.deleted?.salary_records ?? 0}).`
+      );
+      setResetOpen(false);
+      setResetText("");
+      // 2 sn sonra sayfa yenilensin ki Tracker / Dashboard taze veriyle çalışsın
+      setTimeout(() => window.location.reload(), 2500);
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : "Fehler");
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
   if (loading) return (
     <div style={{ textAlign: "center", padding: "80px 0", color: "var(--muted)" }}>Laden...</div>
   );
@@ -461,6 +505,118 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* ── Daten zurücksetzen ── */}
+        <div className="card" style={{ borderColor: "color-mix(in srgb, var(--red) 30%, transparent)" }}>
+          <div className="label" style={{ marginBottom: 8, color: "var(--red)" }}>🗑 Daten zurücksetzen</div>
+          <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 12 }}>
+            Löscht <strong style={{ color: "var(--text)" }}>alle</strong> deine Zeiteinträge,
+            Notdienst-Einträge, Urlaubsanträge und Lohnaufzeichnungen. Profil, Lohn-Einstellungen
+            und dein Konto bleiben erhalten.
+            <br />
+            <strong style={{ color: "var(--red)" }}>Diese Aktion kann nicht rückgängig gemacht werden.</strong>
+          </p>
+          {resetResult && (
+            <div style={{
+              marginBottom: 12, padding: "10px 12px",
+              background: "color-mix(in srgb, var(--green) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)",
+              color: "var(--green)", borderRadius: 8, fontSize: 12,
+            }}>
+              {resetResult}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => { setResetOpen(true); setResetError(null); setResetText(""); }}
+            style={{
+              width: "100%", padding: "12px",
+              background: "transparent",
+              border: "1px solid var(--red)",
+              color: "var(--red)",
+              borderRadius: 10,
+              fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Alle Daten zurücksetzen…
+          </button>
+        </div>
+
+        {/* Modal: Bestätigung */}
+        {resetOpen && (
+          <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget && !resetBusy) setResetOpen(false); }}>
+            <div className="modal-sheet" style={{ maxWidth: 480 }}>
+              <div style={{ fontSize: 36, textAlign: "center", marginBottom: 12 }}>⚠️</div>
+              <h2 style={{ fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 12 }}>
+                Wirklich alle Daten löschen?
+              </h2>
+              <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.7, marginBottom: 18, textAlign: "center" }}>
+                Alle Zeiteinträge, Notdienst-Einträge, Urlaubsanträge und Lohnaufzeichnungen
+                werden <strong style={{ color: "var(--red)" }}>unwiderruflich</strong> gelöscht.
+                <br />
+                Dein Profil, Lohn-Einstellungen und dein Konto bleiben bestehen.
+              </p>
+              <p style={{ fontSize: 12, color: "var(--text)", fontWeight: 700, marginBottom: 6 }}>
+                Tippe <code style={{ background: "var(--surface2)", padding: "2px 8px", borderRadius: 4, color: "var(--red)" }}>LÖSCHEN</code> ein, um fortzufahren:
+              </p>
+              <input
+                className="input"
+                value={resetText}
+                onChange={(e) => setResetText(e.target.value)}
+                placeholder="LÖSCHEN"
+                autoComplete="off"
+                spellCheck={false}
+                style={{ marginBottom: 12 }}
+              />
+              {resetError && (
+                <div style={{
+                  marginBottom: 12, padding: "10px 12px",
+                  background: "color-mix(in srgb, var(--red) 12%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
+                  color: "var(--red)", borderRadius: 8, fontSize: 12,
+                }}>
+                  ❌ {resetError}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setResetOpen(false)}
+                  disabled={resetBusy}
+                  style={{
+                    flex: 1, padding: "12px",
+                    background: "transparent",
+                    border: "1px solid var(--border)",
+                    color: "var(--muted)",
+                    borderRadius: 10,
+                    fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                    cursor: resetBusy ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleResetData()}
+                  disabled={resetBusy || resetText !== "LÖSCHEN"}
+                  style={{
+                    flex: 1, padding: "12px",
+                    background: resetText === "LÖSCHEN" ? "var(--red)" : "color-mix(in srgb, var(--red) 30%, transparent)",
+                    border: "1px solid var(--red)",
+                    color: "white",
+                    borderRadius: 10,
+                    fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                    cursor: (resetBusy || resetText !== "LÖSCHEN") ? "not-allowed" : "pointer",
+                    opacity: (resetBusy || resetText !== "LÖSCHEN") ? 0.6 : 1,
+                  }}
+                >
+                  {resetBusy ? "Löscht..." : "Endgültig löschen"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Abmelden ── */}
         <button

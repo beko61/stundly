@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration } from "@workly/shared";
 import { getFeiertage } from "@/lib/utils/feiertage";
+import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -181,6 +182,9 @@ export default function DashboardPage() {
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
     const endMonth   = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
 
+    // Notdienst için aktif ay aralığını 7 gün uzat (hafta taşması için)
+    const ndRange = notdienstLoadRange(selectedYear, selectedMonth);
+
     const yearStart  = `${selectedYear}-01-01`;
     const yearEnd    = `${selectedYear}-12-31`;
 
@@ -196,12 +200,14 @@ export default function DashboardPage() {
         .eq("user_id", uid).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
         .eq("user_id", uid).gte("date", startMonth).lte("date", endMonth),
+      // Notdienst: ayın 1'i → ayın son günü + 7 (sonra hafta filtresine alınır)
       supabase.from("notdienst_entries").select("date, start_time, end_time, erledigt")
-        .eq("user_id", uid).gte("date", startMonth).lte("date", endMonth),
+        .eq("user_id", uid).gte("date", ndRange.start).lte("date", ndRange.end),
       supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
         .eq("user_id", uid).gte("date", yearStart).lte("date", yearEnd),
+      // Yıllık Notdienst: tüm yıl + 7 gün (sonraki yılın ilk haftasına taşan günler için)
       supabase.from("notdienst_entries").select("date, start_time, end_time, erledigt")
-        .eq("user_id", uid).gte("date", yearStart).lte("date", yearEnd),
+        .eq("user_id", uid).gte("date", yearStart).lte("date", `${selectedYear + 1}-01-07`),
       supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
         .eq("user_id", uid).gte("date", last7StartStr).lte("date", todayStr),
     ]);
@@ -220,7 +226,10 @@ export default function DashboardPage() {
       setSettings(mergeSettings(fromSupabase, readLocalSalarySettings()));
     }
     setEntries((monthRes.data  ?? []) as TimeEntry[]);
-    setNdEntries((ndRes.data   ?? []) as NdEntry[]);
+    // Notdienst: sadece haftası bu aya düşenleri tut
+    setNdEntries(((ndRes.data ?? []) as NdEntry[]).filter(nd =>
+      notdienstBelongsToMonth(nd.date, selectedYear, selectedMonth)
+    ));
     setYearEntries((yearRes.data ?? []) as TimeEntry[]);
     setYearNd((yearNdRes.data  ?? []) as NdEntry[]);
     setLast7((last7Res.data    ?? []) as TimeEntry[]);
@@ -309,10 +318,8 @@ export default function DashboardPage() {
         const d = new Date(e.date);
         return d.getFullYear() === selectedYear && (d.getMonth() + 1) === m;
       });
-      const monthNd = yearNd.filter(n => {
-        const d = new Date(n.date);
-        return d.getFullYear() === selectedYear && (d.getMonth() + 1) === m;
-      });
+      // Notdienst: haftasının Pazartesi'si bu aya düşenler (taşan günler dahil)
+      const monthNd = yearNd.filter(n => notdienstBelongsToMonth(n.date, selectedYear, m));
       const monthFeiertage = Object.keys(yearFeiertage).filter(d => d.startsWith(monthPrefix));
       const stats = calcMonthMinutes(monthEntries, monthNd, monthFeiertage);
       const brutto = calcBrutto(stats.workedMin, stats.ndMin, stats.ndCount, settings);

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration } from "@workly/shared";
+import { notdienstBelongsToMonth, notdienstLoadRange, weekMondayOf } from "@/lib/utils/weekMonth";
 
 interface NdRow {
   date: string;
@@ -32,11 +33,10 @@ function isoWeek(dateStr: string): number {
   return Math.ceil(((t.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
-// Standart günlük saatler (Hannover varsayılan): Mo-Do 8:15, Fr 6:15
+// Standart günlük saatler (07.06.2026'dan beri sabit): Mo-Fr 8h, Sa/So 0
 function getDayStdMins(dow: number): number {
   if (dow === 0 || dow === 6) return 0;
-  if (dow === 5) return 6 * 60 + 15;
-  return 8 * 60 + 15;
+  return 8 * 60;
 }
 
 function minsToTime(min: number): string {
@@ -58,36 +58,55 @@ export function NotdienstWeekly() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-      const startDate   = `${year}-${String(month).padStart(2, "0")}-01`;
-      const daysInMonth = new Date(year, month, 0).getDate();
-      const endDate     = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+      // Genişletilmiş aralık (ayın 1'i → ayın son günü + 7) — sonra haftaya göre filtre
+      const { start, end } = notdienstLoadRange(year, month);
       const { data } = await supabase
         .from("notdienst_entries")
         .select("date, start_time, end_time, erledigt")
         .eq("user_id", session.user.id)
-        .gte("date", startDate)
-        .lte("date", endDate);
-      if (data) setNdRows(data as NdRow[]);
+        .gte("date", start)
+        .lte("date", end);
+      if (!data) return;
+      const filtered = (data as NdRow[]).filter(nd =>
+        notdienstBelongsToMonth(nd.date, year, month)
+      );
+      setNdRows(filtered);
     }
     void load();
   }, [year, month, ndVersion]);
 
-  // Group by Kalenderwoche
+  // Group by Kalenderwoche — hafta-Pazartesi'si bu aya düşen tüm haftaları kapsa.
+  // Notdienst tarihi başka ayda olsa bile, haftanın Pazartesi'si bu ayda ise hafta dahil.
   const weeks = useMemo(() => {
     const byKw = new Map<number, WeekStat>();
-    const daysInMonth = new Date(year, month, 0).getDate();
 
-    // Initialize weeks from arbeit + notdienst
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      const kw = isoWeek(dateStr);
-      const dow = new Date(year, month - 1, d).getDay();
+    // 1) Notdienst'ler haftaları belirler — her unique KW için ilk Pazartesi'yi hesapla
+    //    ve haftanın TÜM 5 işgünü için Sollstunden ekle (taşan günler dahil)
+    const kwToMonday = new Map<number, Date>();
+    for (const nd of ndRows) {
+      const kw = isoWeek(nd.date);
+      if (!kwToMonday.has(kw)) kwToMonday.set(kw, weekMondayOf(nd.date));
       const cur = byKw.get(kw) ?? { kw, ndCount: 0, ndMins: 0, workedMins: 0, sollMins: 0 };
-      if (dow !== 0 && dow !== 6) cur.sollMins += getDayStdMins(dow);
+      if (nd.start_time && nd.end_time) {
+        cur.ndCount++;
+        cur.ndMins += calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
+      }
       byKw.set(kw, cur);
     }
 
-    // Add worked minutes from time_entries
+    // 2) Her KW için 5 işgünü Sollstunden (Mo-Fr × 8h = 40h tam hafta)
+    for (const [kw, monday] of kwToMonday) {
+      const cur = byKw.get(kw)!;
+      for (let i = 0; i < 5; i++) {
+        const day = new Date(monday);
+        day.setDate(day.getDate() + i);
+        cur.sollMins += getDayStdMins(day.getDay());
+      }
+    }
+
+    // 3) Arbeiten time_entries'lerden gerçek çalışılan dakikalar
+    //    Sadece bu ayın entries'leri var elimizde — taşan günlerin Arbeiten'i gerekirse ayrıca yüklenebilir.
+    //    Şimdilik elimizdeki entries'lerden bu KW'lara katkıyı ekle.
     for (const e of entries) {
       if (e.day_type !== "arbeiten" || !e.start_time || !e.end_time) continue;
       const kw = isoWeek(e.date);
@@ -97,21 +116,8 @@ export function NotdienstWeekly() {
       cur.workedMins += net_minutes;
     }
 
-    // Add notdienst minutes
-    for (const nd of ndRows) {
-      if (!nd.start_time || !nd.end_time) continue;
-      const kw = isoWeek(nd.date);
-      const cur = byKw.get(kw);
-      if (!cur) continue;
-      cur.ndCount++;
-      cur.ndMins += calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
-    }
-
-    // Only weeks with notdienst
-    return Array.from(byKw.values())
-      .filter(w => w.ndCount > 0)
-      .sort((a, b) => a.kw - b.kw);
-  }, [entries, ndRows, year, month]);
+    return Array.from(byKw.values()).sort((a, b) => a.kw - b.kw);
+  }, [entries, ndRows]);
 
   if (weeks.length === 0) return null;
 

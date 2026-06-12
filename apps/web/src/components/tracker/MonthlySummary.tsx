@@ -5,6 +5,7 @@ import { useTrackerStore } from "@/store/trackerStore";
 import { DAY_TYPES } from "@workly/shared";
 import { calculateWorkDuration } from "@workly/shared";
 import { createClient } from "@/lib/supabase/client";
+import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT       = 30; // yıllık urlaub kontingenti
@@ -75,22 +76,26 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
     return () => window.removeEventListener("storage", handler);
   }, [year, month]);
 
-  // Notdienst bu ay
+  // Notdienst bu ay — hafta-Pazartesi'si bu aya düşen tüm Notdienst'ler
+  // (bu ayın 1'inden sonraki ayın 7'sine kadar yükle, sonra haftaya göre filtrele)
   useEffect(() => {
     async function loadNd() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-      const startDate   = `${year}-${String(month).padStart(2,"0")}-01`;
-      const daysInMonth = new Date(year, month, 0).getDate();
-      const endDate     = `${year}-${String(month).padStart(2,"0")}-${String(daysInMonth).padStart(2,"0")}`;
+      const { start, end } = notdienstLoadRange(year, month);
       const { data } = await supabase
         .from("notdienst_entries")
         .select("date, start_time, end_time, erledigt")
         .eq("user_id", session.user.id)
-        .gte("date", startDate)
-        .lte("date", endDate);
-      if (data) setNdEntries(data as NdEntry[]);
+        .gte("date", start)
+        .lte("date", end);
+      if (!data) return;
+      // Hafta'nın Pazartesi'si bu aya düşenleri tut, diğerlerini ele
+      const filtered = (data as NdEntry[]).filter(nd =>
+        notdienstBelongsToMonth(nd.date, year, month)
+      );
+      setNdEntries(filtered);
     }
     void loadNd();
   }, [year, month, ndVersion]);

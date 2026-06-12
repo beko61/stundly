@@ -1,26 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getFeiertage } from "@/lib/utils/feiertage";
-import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
-import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import type { TimeEntry } from "@workly/shared";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
-const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const STD_TIMES = { start: "07:45", endLong: "17:00", endShort: "14:30", pauseLong: 60, pauseShort: 30 };
 
 /**
- * Settings'te "Monatsbefüllung & Berichte" kartı.
- * 1) Yıl seç → "Jahr komplett befüllen" — Mo-Fr boş günler standart saatlerle dolar.
- *    Buton, yıl tamamen dolduysa pasifleşir; reset sonrası aktif olur.
- * 2) Yıl + Ay seç → "Monatsbericht PDF" indirir.
+ * Settings → "Jahres-Befüllung" kartı.
+ * Yıl seç → "Jahr komplett befüllen" — Mo-Fr boş günler standart saatlerle dolar.
+ * Buton, yıl tamamen dolduysa pasifleşir; reset sonrası aktif olur.
+ * (PDF Monatsbericht artık /reports sayfasında.)
  */
 export function AutoFillReports() {
   const now = new Date();
   const [year, setYear]     = useState(now.getFullYear());
-  const [month, setMonth]   = useState(now.getMonth() + 1);
 
   const [bundesland, setBundesland] = useState("NI");
   const [yearEntries, setYearEntries] = useState<TimeEntry[]>([]);
@@ -28,7 +25,6 @@ export function AutoFillReports() {
 
   const [yearFilling, setYearFilling] = useState(false);
   const [yearFillResult, setYearFillResult] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Profil + tüm yılın entries'ini yükle (Werktage hesabı + buton pasiflik kontrolü için)
@@ -142,93 +138,39 @@ export function AutoFillReports() {
     }
   }
 
-  /** Seçili yıl+ay için Monatsbericht PDF üret. */
-  async function handlePdf() {
-    setPdfLoading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { setError("Nicht angemeldet."); setPdfLoading(false); return; }
-      const userId = session.user.id;
-
-      const startDate = `${year}-${String(month).padStart(2,"0")}-01`;
-      const daysInMonth = new Date(year, month, 0).getDate();
-      const endDate   = `${year}-${String(month).padStart(2,"0")}-${String(daysInMonth).padStart(2,"0")}`;
-
-      const [{ data: te }, { data: nd }, { data: prof }] = await Promise.all([
-        supabase.from("time_entries").select("*")
-          .eq("user_id", userId).gte("date", startDate).lte("date", endDate),
-        supabase.from("notdienst_entries")
-          .select("date, start_time, end_time, erledigt, kunde, note")
-          .eq("user_id", userId).gte("date", startDate).lte("date", endDate),
-        supabase.from("profiles")
-          .select("vorname, nachname, personal_nr, company_name, logo_data")
-          .eq("user_id", userId).maybeSingle(),
-      ]);
-
-      const entries = (te ?? []) as TimeEntry[];
-      const notdienst: NotdienstEntry[] = (nd ?? []).map((n) => ({
-        date:       n.date as string,
-        start_time: n.start_time as string,
-        end_time:   n.end_time as string,
-        erledigt:   Boolean((n as { erledigt?: boolean }).erledigt),
-        kunde:      (n as { kunde?: string | null }).kunde ?? null,
-        note:       (n as { note?: string | null }).note ?? null,
-      }));
-      const profile: ProfileInfo = {
-        company_name: (prof?.company_name as string | null) ?? "Stundly",
-        logo_data:    (prof?.logo_data as string | null) ?? null,
-      };
-      if (prof?.vorname)     profile.vorname     = prof.vorname as string;
-      if (prof?.nachname)    profile.nachname    = prof.nachname as string;
-      if (prof?.personal_nr) profile.personal_nr = prof.personal_nr as string;
-
-      const feiertage = getFeiertage(year, bundesland);
-      await generateMonthlyReportPDF({ year, month, entries, notdienst, feiertage, profile });
-    } catch (err) {
-      console.error("PDF Error:", err);
-      setError("PDF konnte nicht erstellt werden: " + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setPdfLoading(false);
-    }
-  }
-
   const yearOptions: number[] = [];
   for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) yearOptions.push(y);
 
   return (
     <div className="card">
       <div className="label" style={{ marginBottom: 6, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", display: "inline-flex", alignItems: "center" }}>
-        📅 Monatsbefüllung & Berichte
-        <InfoTooltip title="Was macht dieser Bereich?">
-          <strong>Komplett befüllen:</strong> trägt alle leeren Werktage
-          (Mo–Fr ohne Feiertage) mit Standardzeiten ein, damit du nicht jeden
-          Tag einzeln klicken musst.
+        ⚡ Jahres-Befüllung
+        <InfoTooltip title="Was macht dieser Knopf?">
+          Trägt alle leeren Mo–Fr-Werktage (ohne Feiertage) im
+          ausgewählten Jahr mit Standardzeiten ein
+          (Mo–Do 07:45–17:00, Fr 07:45–14:30). Bestehende Einträge
+          werden nicht überschrieben.
           {"\n\n"}
-          <strong>Monatsbericht PDF:</strong> erzeugt eine druckreife
-          Zusammenfassung für den gewählten Monat — mit Tagesübersicht,
-          Notdienst-Details und Briefkopf aus den Firmendaten.
+          Sobald alle Werktage befüllt sind, wird der Knopf grün
+          und deaktiviert. Nach „Daten zurücksetzen" oder einer
+          Reset-Aktion wird er wieder aktiv.
+          {"\n\n"}
+          PDF-Monatsberichte findest du in der App unter
+          <strong> Berichte</strong> (Sidebar).
         </InfoTooltip>
       </div>
       <p style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
-        Schnelles Massenbefüllen + PDF-Reports — alles an einer Stelle.
+        Fülle ein ganzes Jahr Werktage in einem Schritt mit deinen
+        Standardzeiten. PDF-Reports findest du unter{" "}
+        <Link href="/reports" style={{ color: "var(--accent2)", fontWeight: 700 }}>Berichte</Link>.
       </p>
 
       {/* Jahr selector */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-        <div>
-          <label className="label">Jahr</label>
-          <select className="input" value={year} onChange={e => setYear(parseInt(e.target.value, 10))} style={{ appearance: "none" }}>
-            {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="label">Monat (für PDF)</label>
-          <select className="input" value={month} onChange={e => setMonth(parseInt(e.target.value, 10))} style={{ appearance: "none" }}>
-            {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-        </div>
+      <div style={{ marginBottom: 14 }}>
+        <label className="label">Jahr</label>
+        <select className="input" value={year} onChange={e => setYear(parseInt(e.target.value, 10))} style={{ appearance: "none" }}>
+          {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
       </div>
 
       {/* Year auto-fill */}
@@ -262,7 +204,7 @@ export function AutoFillReports() {
       </button>
       {yearFillResult && (
         <div style={{
-          marginBottom: 10, padding: "10px 12px",
+          padding: "10px 12px",
           background: "color-mix(in srgb, var(--green) 12%, transparent)",
           border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)",
           color: "var(--green)", borderRadius: 8, fontSize: 12,
@@ -271,20 +213,9 @@ export function AutoFillReports() {
         </div>
       )}
 
-      {/* PDF */}
-      <button
-        type="button"
-        onClick={() => void handlePdf()}
-        disabled={pdfLoading}
-        className="btn btn-primary"
-        style={{ width: "100%", padding: "13px", fontSize: 13 }}
-      >
-        {pdfLoading ? "📄 PDF wird erstellt..." : `📄 Monatsbericht ${MONTHS[month - 1]} ${year} als PDF`}
-      </button>
-
       {error && (
         <div style={{
-          marginTop: 12, padding: "10px 12px",
+          marginTop: 10, padding: "10px 12px",
           background: "color-mix(in srgb, var(--red) 12%, transparent)",
           border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
           color: "var(--red)", borderRadius: 8, fontSize: 12,

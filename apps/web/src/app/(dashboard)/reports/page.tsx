@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
+import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
+import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
+import { getFeiertage } from "@/lib/utils/feiertage";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -72,6 +75,58 @@ export default function ReportsPage() {
   const fmt = (min: number) => formatDuration(Math.round(Math.abs(min)));
   const sign = (min: number) => min>=0?"+":"-";
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError]     = useState<string | null>(null);
+
+  /** Aylık Monatsbericht PDF — seçili year+month için. */
+  async function exportPDF() {
+    setPdfError(null);
+    setPdfLoading(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { setPdfLoading(false); return; }
+      const uid = session.user.id;
+
+      const startDate = `${year}-${String(month).padStart(2,"0")}-01`;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const endDate   = `${year}-${String(month).padStart(2,"0")}-${String(daysInMonth).padStart(2,"0")}`;
+
+      const [{ data: nd }, { data: prof }] = await Promise.all([
+        supabase.from("notdienst_entries")
+          .select("date, start_time, end_time, erledigt, kunde, note")
+          .eq("user_id", uid).gte("date", startDate).lte("date", endDate),
+        supabase.from("profiles")
+          .select("vorname, nachname, personal_nr, company_name, logo_data, bundesland")
+          .eq("user_id", uid).maybeSingle(),
+      ]);
+
+      const notdienst: NotdienstEntry[] = (nd ?? []).map((n) => ({
+        date:       n.date as string,
+        start_time: n.start_time as string,
+        end_time:   n.end_time as string,
+        erledigt:   Boolean((n as { erledigt?: boolean }).erledigt),
+        kunde:      (n as { kunde?: string | null }).kunde ?? null,
+        note:       (n as { note?: string | null }).note ?? null,
+      }));
+      const profile: ProfileInfo = {
+        company_name: (prof?.company_name as string | null) ?? "Stundly",
+        logo_data:    (prof?.logo_data as string | null) ?? null,
+      };
+      if (prof?.vorname)     profile.vorname     = prof.vorname as string;
+      if (prof?.nachname)    profile.nachname    = prof.nachname as string;
+      if (prof?.personal_nr) profile.personal_nr = prof.personal_nr as string;
+
+      const feiertage = getFeiertage(year, (prof?.bundesland as string | null) ?? "NI");
+      await generateMonthlyReportPDF({ year, month, entries, notdienst, feiertage, profile });
+    } catch (err) {
+      console.error("PDF Error:", err);
+      setPdfError("PDF konnte nicht erstellt werden: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
   function exportCSV() {
     const rows = [["Datum","Tag","Typ","Start","Ende","Pause","Stunden","Notiz"]];
     for (const e of entries) {
@@ -96,12 +151,41 @@ export default function ReportsPage() {
   return (
     <>
       <div className="page-header">
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, gap:8, flexWrap:"wrap" }}>
           <h1 style={{ fontSize: 22, fontWeight: 800 }}>Berichte & Export</h1>
-          <button onClick={exportCSV} style={{ background:"color-mix(in srgb,var(--green) 15%,transparent)", border:"1px solid var(--green)", color:"var(--green)", padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700 }}>
-            ⬇ CSV Export
-          </button>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={exportCSV} style={{ background:"color-mix(in srgb,var(--green) 15%,transparent)", border:"1px solid var(--green)", color:"var(--green)", padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700 }}>
+              ⬇ CSV
+            </button>
+            {mode==="month" && (
+              <button
+                onClick={() => void exportPDF()}
+                disabled={pdfLoading || loading || entries.length===0}
+                style={{
+                  background:"color-mix(in srgb,var(--accent2) 15%,transparent)",
+                  border:"1px solid var(--accent2)",
+                  color:"var(--accent2)",
+                  padding:"6px 12px", borderRadius:8,
+                  cursor: (pdfLoading || entries.length===0) ? "not-allowed" : "pointer",
+                  opacity: (pdfLoading || entries.length===0) ? 0.6 : 1,
+                  fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700,
+                }}
+              >
+                {pdfLoading ? "📄 ..." : "📄 Monatsbericht PDF"}
+              </button>
+            )}
+          </div>
         </div>
+        {pdfError && (
+          <div style={{
+            marginBottom:10, padding:"8px 12px",
+            background:"color-mix(in srgb, var(--red) 12%, transparent)",
+            border:"1px solid color-mix(in srgb, var(--red) 30%, transparent)",
+            color:"var(--red)", borderRadius:8, fontSize:11,
+          }}>
+            ❌ {pdfError}
+          </div>
+        )}
         <div style={{ display:"flex", gap:8, marginBottom:10 }}>
           {(["month","year"] as const).map(v => (
             <button key={v} onClick={() => setMode(v)} style={{

@@ -25,7 +25,13 @@ function minsToTime(min: number): string {
   return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
 }
 
-export function MonthlySummary() {
+interface MonthlySummaryProps {
+  /** Otomatik tespit edilen Feiertag'lar (Tracker'dan geçer). DB'de entry'si olmayan
+   *  Mo-Fr Feiertag'lar (örn. Neujahr) Sollstunden'e dahil edilir ki Differenz doğru olsun. */
+  feiertage?: Record<string, string>;
+}
+
+export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   const { entries, year, month, ndVersion } = useTrackerStore();
   const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
   const [yearUrlaub, setYearUrlaub] = useState(0); // tüm yılın Urlaub gün sayısı
@@ -144,6 +150,19 @@ export function MonthlySummary() {
       workedMin += net_minutes;
     }
 
+    // Auto-Feiertag: DB'de entry'si olmayan Feiertag günleri (örn. Neujahr) için de
+    // Sollstunden ekle. Eskiden bunlar workedMin'e dahil edilmiyor, Differenz 8h eksik kalıyordu.
+    if (feiertage) {
+      const entryDates = new Set(entries.map(e => e.date));
+      const monthPrefix = `${year}-${String(month).padStart(2, "0")}-`;
+      for (const ftDate of Object.keys(feiertage)) {
+        if (!ftDate.startsWith(monthPrefix)) continue;       // sadece aktif ay
+        if (entryDates.has(ftDate)) continue;                // zaten DB'de var → çift saymadan
+        const stdMin = getDayStdMins(ftDate);                // Mo-Fr 8h, Sa/So 0
+        workedMin += stdMin;
+      }
+    }
+
     const notdienstMin = ndEntries.reduce((sum, nd) => {
       if (!nd.start_time || !nd.end_time) return sum;
       return sum + calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
@@ -162,7 +181,7 @@ export function MonthlySummary() {
       krankDays, urlaubDays, urlaubMin, krankMin,
       diffMin, targetMin,
     };
-  }, [entries, ndEntries, targetHours]);
+  }, [entries, ndEntries, targetHours, feiertage, year, month]);
 
   const urlaubKonto = Math.max(0, URLAUB_DEFAULT - yearUrlaub);
 

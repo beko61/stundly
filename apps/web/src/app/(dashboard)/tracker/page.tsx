@@ -193,7 +193,7 @@ export default function TrackerPage() {
   return (
     <>
       <MonthNav />
-      <MonthlySummary />
+      <MonthlySummary feiertage={feiertage} />
       <NotdienstWeekly />
 
       <WelcomeBanner

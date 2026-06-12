@@ -85,10 +85,21 @@ function mergeSettings(base: SalarySettings, patch: Partial<SalarySettings> | nu
   };
 }
 
-/** Calculate worked minutes + Notdienst minutes from arbitrary entries. */
-function calcMonthMinutes(entries: TimeEntry[], ndEntries: NdEntry[]) {
+/**
+ * Calculate worked minutes + Notdienst minutes from arbitrary entries.
+ *
+ * `feiertageInRange` (optional): otomatik tespit edilen Feiertag tarihleri.
+ * DB'de entry'si olmayan Feiertag günleri (örn. Neujahr) için de Sollstunden
+ * (8h Mo-Fr) eklenir — aksi halde Differenz 8h eksik kalır.
+ */
+function calcMonthMinutes(
+  entries: TimeEntry[],
+  ndEntries: NdEntry[],
+  feiertageInRange?: string[],
+) {
   let workedMin = 0;
   let urlaubDays = 0, krankDays = 0, feiertagDays = 0, arbeitstageCount = 0;
+  const entryDates = new Set(entries.map(e => e.date));
   for (const e of entries) {
     if (e.day_type === "urlaub")   urlaubDays++;
     if (e.day_type === "krank")    krankDays++;
@@ -101,6 +112,17 @@ function calcMonthMinutes(entries: TimeEntry[], ndEntries: NdEntry[]) {
     if (e.day_type === "notdienst" || e.day_type === "frei") continue;
     if (!e.start_time || !e.end_time) continue;
     workedMin += calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes;
+  }
+  // Auto-Feiertag günleri (DB'de yok) için Sollstunden ekle
+  if (feiertageInRange) {
+    for (const ftDate of feiertageInRange) {
+      if (entryDates.has(ftDate)) continue;
+      const stdMin = getDayStdMins(ftDate);
+      if (stdMin > 0) {
+        workedMin += stdMin;
+        feiertagDays++;
+      }
+    }
   }
   const ndMin = ndEntries.reduce((s, n) => {
     if (!n.start_time || !n.end_time) return s;
@@ -230,14 +252,22 @@ export default function DashboardPage() {
     };
   }, []);
 
+  // ── Feiertage (Yıllık — selected year için bir kez hesapla) ──
+  const yearFeiertage = useMemo(
+    () => getFeiertage(selectedYear, bundesland),
+    [selectedYear, bundesland],
+  );
+
   // ── Monthly stats (selected month) ──
   const stats = useMemo(() => {
-    const m = calcMonthMinutes(entries, ndEntries);
+    const monthPrefix = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-`;
+    const monthFeiertage = Object.keys(yearFeiertage).filter(d => d.startsWith(monthPrefix));
+    const m = calcMonthMinutes(entries, ndEntries, monthFeiertage);
     const targetMin = settings.monthly_target_hours * 60;
     const diffMin = m.workedMin + m.ndMin - targetMin;
     const brutto = calcBrutto(m.workedMin, m.ndMin, m.ndCount, settings);
     return { ...m, diffMin, targetMin, brutto };
-  }, [entries, ndEntries, settings]);
+  }, [entries, ndEntries, settings, yearFeiertage, selectedYear, selectedMonth]);
 
   // ── Last 7 days bars (always relative to today) ──
   const days7 = useMemo(() => {
@@ -274,6 +304,7 @@ export default function DashboardPage() {
   const monthlyBreakdown = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
+      const monthPrefix = `${selectedYear}-${String(m).padStart(2, "0")}-`;
       const monthEntries = yearEntries.filter(e => {
         const d = new Date(e.date);
         return d.getFullYear() === selectedYear && (d.getMonth() + 1) === m;
@@ -282,11 +313,12 @@ export default function DashboardPage() {
         const d = new Date(n.date);
         return d.getFullYear() === selectedYear && (d.getMonth() + 1) === m;
       });
-      const stats = calcMonthMinutes(monthEntries, monthNd);
+      const monthFeiertage = Object.keys(yearFeiertage).filter(d => d.startsWith(monthPrefix));
+      const stats = calcMonthMinutes(monthEntries, monthNd, monthFeiertage);
       const brutto = calcBrutto(stats.workedMin, stats.ndMin, stats.ndCount, settings);
       return { month: m, label: MONTHS_SHORT[i]!, ...stats, brutto };
     });
-  }, [yearEntries, yearNd, selectedYear, settings]);
+  }, [yearEntries, yearNd, selectedYear, settings, yearFeiertage]);
 
   const yearlyMaxBrutto = Math.max(...monthlyBreakdown.map(m => m.brutto), 1);
 

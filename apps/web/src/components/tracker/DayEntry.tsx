@@ -73,15 +73,21 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
 
   // Saat değeri:
   //  - Arbeiten / echte Zeitstempel → tatsächlich gearbeitete Std
-  //  - Urlaub / Krank / Feiertag (NULL Zeiten) → Sollstunden (8:15 / 6:15)
+  //  - Urlaub / Krank / Feiertag (entry mit NULL Zeiten) → Sollstunden (8:15 / 6:15)
+  //  - Auto-Feiertag (entry yok, feiertag prop var, örn. Neujahr) → Sollstunden
   //  - Andere → null
-  const isPaidAbsence = !!entry && PAID_ABSENCE.includes(entry.day_type);
+  const isPaidAbsence    = !!entry && PAID_ABSENCE.includes(entry.day_type);
+  const isAutoHoliday    = !entry && !!feiertag;        // örn. 01.01 Neujahr DB'de yokken
+  const showSollstunden  = isPaidAbsence || isAutoHoliday;
+
   const netHours = workDuration
     ? formatDuration(workDuration.net_minutes)
-    : isPaidAbsence
+    : showSollstunden
       ? formatDuration(getDayStdMins(date))
       : null;
-  const netColor = entry ? STATUS_COLOR[entry.day_type] : "var(--text)";
+  const netColor = entry
+    ? STATUS_COLOR[entry.day_type]
+    : isAutoHoliday ? "var(--yellow)" : "var(--text)";
 
   const isFeiertag = !!feiertag && !entry;
   const borderStyle: React.CSSProperties = entry
@@ -116,6 +122,11 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
               <div style={{ marginTop:1 }}>
                 <span style={{ fontSize:13, fontWeight:700, color:"var(--yellow)" }}>🎉 Feiertag</span>
                 <span style={{ fontSize:10, color:"var(--yellow)", marginLeft:6, opacity:0.8 }}>{feiertag}</span>
+                {isAutoHoliday && netHours && getDayStdMins(date) > 0 && (
+                  <span style={{ fontSize:10, color:"var(--muted)", marginLeft:8 }}>
+                    · Soll {netHours}
+                  </span>
+                )}
               </div>
             ) : (
               <div style={{ fontSize:12, color:"var(--muted)", marginTop:1 }}>

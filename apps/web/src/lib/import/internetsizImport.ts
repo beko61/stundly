@@ -1,18 +1,24 @@
 /**
  * Internetsiz HTML (alter App) → Stundly veri import dönüştürme
  *
- * Beklenen JSON format (internetsiz exportData):
- * {
- *   "userData": { "2026-01-15": { "status": "Arbeiten", "start": "07:45", "end": "17:00", "pause": "01:00", "hours": "08:15" }, ... },
- *   "userTimes": { ... },
- *   "userNotes": { "2026-01-15": "Notiz..." },
- *   "userNotdienst": { "2026-01-15": [{ "start": "18:00", "end": "22:00", "hours": "04:00", "note": "...", "erledigt": true }, ...] },
- *   "exportDate": "2026-..."
- * }
+ * İki olası format destekleniyor:
+ *
+ * A) COMBINED (yeni internetsiz):
+ *    userData[date] = { status, start, end, pause, hours }
+ *    userTimes opsiyonel, yedek olarak kullanılır
+ *
+ * B) SPLIT (eski kullanici.html / kullanici_v2):
+ *    userData[date]  = "Urlaub"            (string)
+ *    userTimes[date] = { start, end, pause, hours }   (saatler ayrı table)
  *
  * Stundly Tabellen:
  *   time_entries:      date, day_type, start_time, end_time, break_minutes, is_night_shift, note
  *   notdienst_entries: date, start_time, end_time, kunde, note, erledigt
+ *
+ * Önemli: Frei günleri import edilmez (gereksiz boş kayıt). Sadece gerçek aktivite
+ * (Arbeiten / Urlaub / Krank / Feiertag) tablosuna girer.
+ * Urlaub / Krank / Feiertag için start_time/end_time NULL — Sollstunden hesaplama
+ * gün tipine göre yapılır (Mo-Do 8:15h, Fr 6:15h).
  */
 
 import type { DayType } from "@workly/shared";
@@ -42,11 +48,21 @@ export interface InternetsizNd {
   erledigt?: boolean;
 }
 
+/** Eski/split format: userData[date] sadece status string'i, saatler userTimes'da. */
+export type InternetsizDayValue = InternetsizDay | string;
+/** userTimes split-format'ta saatleri tutar. */
+export interface InternetsizTimes {
+  start?: string;
+  end?:   string;
+  pause?: string;
+  hours?: string;
+}
+
 export interface InternetsizExport {
-  userData?:      Record<string, InternetsizDay>;
+  userData?:      Record<string, InternetsizDayValue>;
   userNotdienst?: Record<string, InternetsizNd | InternetsizNd[]>;
   userNotes?:     Record<string, string>;
-  userTimes?:     Record<string, unknown>;
+  userTimes?:     Record<string, InternetsizTimes>;
   exportDate?:    string;
 }
 
@@ -102,23 +118,24 @@ function isValidDate(d: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(d);
 }
 
-const STATUS_MAP: Record<string, DayType> = {
+/** Status -> Stundly day_type. Boş/Frei/Wochenende dönmez → çağıran satır kayıt etmez. */
+const STATUS_MAP: Record<string, DayType | null> = {
   "arbeiten":  "arbeiten",
   "urlaub":    "urlaub",
   "krank":     "krank",
   "feiertag":  "feiertag",
-  "frei":      "frei",
   "notdienst": "notdienst",
   // Almanca büyük harf varyasyonları
   "Arbeiten":  "arbeiten",
   "Urlaub":    "urlaub",
   "Krank":     "krank",
   "Feiertag":  "feiertag",
-  "Frei":      "frei",
   "Notdienst": "notdienst",
-  // Boş/Wochenende → frei
-  "":          "frei",
-  "Wochenende":"frei",
+  // Frei / Wochenende / boş gün → import etme (DB temiz kalsın)
+  "frei":      null,
+  "Frei":      null,
+  "Wochenende":null,
+  "":          null,
 };
 
 // ───────────────────────────────────────────────────────────────
@@ -150,12 +167,36 @@ export function parseInternetsizExport(raw: string): ImportPayload {
   const notdienst:   StundlyNotdienstInsert[] = [];
 
   // ── time_entries (userData) ──
-  for (const [date, day] of Object.entries(data.userData ?? {})) {
+  for (const [date, rawValue] of Object.entries(data.userData ?? {})) {
     if (!isValidDate(date)) continue;
-    const status = day?.status ?? "";
-    const dayType = STATUS_MAP[status] ?? "frei";
-    const note = data.userNotes?.[date] ?? null;
 
+    // Format A (combined): userData[date] = { status, start, end, ... }
+    // Format B (split):    userData[date] = "Urlaub" + userTimes[date] = { start, ... }
+    let status: string;
+    let dayTimes: InternetsizTimes;
+    if (typeof rawValue === "string") {
+      status   = rawValue;
+      dayTimes = data.userTimes?.[date] ?? {};
+    } else {
+      status   = rawValue?.status ?? "";
+      // Combined formatta saatler aynı objede; userTimes yedeği de kabul edilir
+      const fallback = data.userTimes?.[date] ?? {};
+      dayTimes = {};
+      const start = rawValue?.start ?? fallback.start;
+      const end   = rawValue?.end   ?? fallback.end;
+      const pause = rawValue?.pause ?? fallback.pause;
+      const hours = rawValue?.hours ?? fallback.hours;
+      if (start) dayTimes.start = start;
+      if (end)   dayTimes.end   = end;
+      if (pause) dayTimes.pause = pause;
+      if (hours) dayTimes.hours = hours;
+    }
+
+    const dayType = STATUS_MAP[status];
+    // Frei / Wochenende / boş / bilinmeyen → kayıt etme
+    if (!dayType) continue;
+
+    const note = data.userNotes?.[date] ?? null;
     const entry: StundlyTimeEntryInsert = {
       date,
       day_type:       dayType,
@@ -167,12 +208,14 @@ export function parseInternetsizExport(raw: string): ImportPayload {
       tags:           [],
     };
 
-    if (dayType === "arbeiten" && day?.start && day.end) {
-      entry.start_time    = day.start;
-      entry.end_time      = day.end;
-      entry.break_minutes = timeToMins(day.pause);
-      // Night shift detect: end < start = overnight
-      entry.is_night_shift = timeToMins(day.end) < timeToMins(day.start);
+    // Sadece ARBEITEN günleri gerçek saatler taşır.
+    // Urlaub / Krank / Feiertag günleri NULL → Tracker/Salary Sollstunden kullanır.
+    if (dayType === "arbeiten" && dayTimes.start && dayTimes.end) {
+      entry.start_time     = dayTimes.start;
+      entry.end_time       = dayTimes.end;
+      entry.break_minutes  = timeToMins(dayTimes.pause);
+      // Night shift: bitiş başlangıçtan küçükse gece vardiyası
+      entry.is_night_shift = timeToMins(dayTimes.end) < timeToMins(dayTimes.start);
     }
 
     timeEntries.push(entry);
@@ -229,6 +272,7 @@ export function parseInternetsizExport(raw: string): ImportPayload {
   }
 
   // ── Preview ──
+  // 'frei' import edilmediği için 0 kalır (UI ayrıca göstermez).
   const byDayType: Record<DayType, number> = {
     arbeiten: 0, urlaub: 0, krank: 0, notdienst: 0, feiertag: 0, frei: 0,
   };

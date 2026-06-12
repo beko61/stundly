@@ -14,9 +14,11 @@ interface Props {
   onClose: () => void;
 }
 
-// Tüm Tagestypen: Arbeiten / Urlaub / Krank / Notdienst / Feiertag / Frei
-// (Urlaubsantrag mit PDF wird zusätzlich auf der Vacation-Seite verwaltet)
-const DAY_TYPE_OPTIONS = Object.entries(DAY_TYPE_LABELS) as [DayType, string][];
+// Wählbare Tagestypen: Arbeiten / Urlaub / Krank / Notdienst / Feiertag
+// 'Frei' ist absichtlich ausgeblendet — leere Tage sind automatisch frei,
+// daraus muss kein DB-Eintrag erstellt werden.
+const DAY_TYPE_OPTIONS = (Object.entries(DAY_TYPE_LABELS) as [DayType, string][])
+  .filter(([value]) => value !== DAY_TYPES.FREI);
 
 /** Mo–Do: 07:45–17:00  Fr: 07:45–14:30  Sa/So/Feiertag: frei */
 function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: string) {
@@ -31,9 +33,9 @@ function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: 
     };
   }
   const isFriday  = dayOfWeek === 5;
-  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  // Default: Feiertag → Feiertag, sonst Arbeiten (Frei kaldırıldı — boş günler kayıtsız kalır)
   return {
-    dayType:      (isWeekend || feiertag) ? (feiertag ? DAY_TYPES.FEIERTAG : DAY_TYPES.FREI) : DAY_TYPES.ARBEITEN as DayType,
+    dayType:      feiertag ? DAY_TYPES.FEIERTAG : DAY_TYPES.ARBEITEN as DayType,
     startTime:    "07:45",
     endTime:      isFriday ? "14:30" : "17:00",
     breakMinutes: isFriday ? 30 : 60,

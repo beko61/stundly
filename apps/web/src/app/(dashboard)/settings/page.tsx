@@ -6,6 +6,7 @@ import SignatureCanvas from "react-signature-canvas";
 import { BUNDESLAENDER } from "@/lib/utils/feiertage";
 import { parseInternetsizExport } from "@/lib/import/internetsizImport";
 import type { ImportPayload } from "@/lib/import/internetsizImport";
+import { AutoFillReports } from "@/components/settings/AutoFillReports";
 
 interface Profile {
   vorname:        string;
@@ -429,6 +430,9 @@ export default function SettingsPage() {
         >
           {saved ? "✅ Gespeichert!" : saving ? "Speichern..." : "💾 Einstellungen speichern"}
         </button>
+
+        {/* ── Monatsbefüllung & Berichte ── */}
+        <AutoFillReports />
 
         {/* ── Import aus alter App ── */}
         <div className="card">

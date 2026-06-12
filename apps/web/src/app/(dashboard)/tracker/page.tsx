@@ -10,22 +10,13 @@ import { PhotoScanModal } from "@/components/tracker/PhotoScanModal";
 import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
 import { useTimeEntries } from "@/hooks/useTimeEntries";
 import { getFeiertage } from "@/lib/utils/feiertage";
-import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
-import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import { createClient } from "@/lib/supabase/client";
-
-const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 
 export default function TrackerPage() {
   const { entries, year, month, loading } = useTrackerStore();
   const { fetchEntries, create, update, remove } = useTimeEntries();
   const [scanOpen,      setScanOpen]      = useState(false);
-  const [bulkFilling,   setBulkFilling]   = useState(false);
-  const [bulkCount,     setBulkCount]     = useState<number | null>(null);
-  const [yearFilling,   setYearFilling]   = useState(false);
-  const [yearFillCount, setYearFillCount] = useState<number | null>(null);
   const [bundesland,    setBundesland]    = useState("NI");
-  const [pdfLoading,    setPdfLoading]    = useState(false);
 
   // Load bundesland from profile for correct public holidays
   useEffect(() => {
@@ -60,135 +51,7 @@ export default function TrackerPage() {
     });
   }, [entries, year, month]);
 
-  /** Aylık PDF rapor üret */
-  async function handleMonthlyPDF() {
-    setPdfLoading(true);
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { setPdfLoading(false); return; }
-      const userId = session.user.id;
-
-      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-      const daysInMonth = new Date(year, month, 0).getDate();
-      const endDate = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-
-      const [{ data: nd }, { data: prof }] = await Promise.all([
-        supabase.from("notdienst_entries")
-          .select("date, start_time, end_time, erledigt, kunde, note")
-          .eq("user_id", userId).gte("date", startDate).lte("date", endDate),
-        supabase.from("profiles")
-          .select("vorname, nachname, personal_nr, company_name, logo_data")
-          .eq("user_id", userId).maybeSingle(),
-      ]);
-
-      const notdienst: NotdienstEntry[] = (nd ?? []).map((n) => ({
-        date:       n.date as string,
-        start_time: n.start_time as string,
-        end_time:   n.end_time as string,
-        erledigt:   Boolean((n as { erledigt?: boolean }).erledigt),
-        kunde:      (n as { kunde?: string | null }).kunde ?? null,
-        note:       (n as { note?: string | null }).note ?? null,
-      }));
-
-      const profile: ProfileInfo = {
-        company_name: (prof?.company_name as string | null) ?? "Stundly",
-        logo_data:    (prof?.logo_data as string | null) ?? null,
-      };
-      if (prof?.vorname)     profile.vorname     = prof.vorname as string;
-      if (prof?.nachname)    profile.nachname    = prof.nachname as string;
-      if (prof?.personal_nr) profile.personal_nr = prof.personal_nr as string;
-
-      await generateMonthlyReportPDF({
-        year, month, entries, notdienst, feiertage, profile,
-      });
-    } catch (err) {
-      console.error("PDF Error:", err);
-      window.alert("PDF konnte nicht erstellt werden: " + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setPdfLoading(false);
-    }
-  }
-
-  /** Boş iş günlerini standart saatlerle doldur */
-  async function handleBulkFill() {
-    const emptyDays = days.filter(({ dateStr, dow, entry }) => {
-      if (entry) return false;          // zaten var
-      if (dow === 0 || dow === 6) return false; // hafta sonu
-      if (feiertage[dateStr]) return false;     // Feiertag
-      return true;
-    });
-
-    if (emptyDays.length === 0) {
-      setBulkCount(0);
-      setTimeout(() => setBulkCount(null), 2500);
-      return;
-    }
-
-    setBulkFilling(true);
-    let count = 0;
-    for (const { dateStr, dow } of emptyDays) {
-      const isFriday = dow === 5;
-      const res = await create({
-        date:           dateStr,
-        day_type:       "arbeiten",
-        start_time:     "07:45",
-        end_time:       isFriday ? "14:30" : "17:00",
-        break_minutes:  isFriday ? 30 : 60,
-        is_night_shift: false,
-        note:           null,
-        tags:           [],
-      });
-      if (!res?.error) count++;
-    }
-    setBulkFilling(false);
-    setBulkCount(count);
-    setTimeout(() => setBulkCount(null), 3000);
-    await fetchEntries();
-  }
-
-  /** Tüm yılın boş iş günlerini standart saatlerle doldur */
-  async function handleYearFill() {
-    const confirmed = window.confirm(
-      `${year} yılının tüm boş iş günleri standart saatlerle (Mo–Do 07:45–17:00, Fr 07:45–14:30) doldurulacak. Devam edilsin mi?`
-    );
-    if (!confirmed) return;
-
-    setYearFilling(true);
-    const yearFeiertage = getFeiertage(year, bundesland);
-    let count = 0;
-
-    for (let m = 1; m <= 12; m++) {
-      const daysInMonth = new Date(year, m, 0).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-        const dow = new Date(year, m - 1, d).getDay();
-        // Skip weekends, holidays, already-existing entries
-        if (dow === 0 || dow === 6) continue;
-        if (yearFeiertage[dateStr]) continue;
-        const alreadyExists = entries.some(e => e.date === dateStr);
-        if (alreadyExists) continue;
-
-        const isFriday = dow === 5;
-        const res = await create({
-          date:           dateStr,
-          day_type:       "arbeiten",
-          start_time:     "07:45",
-          end_time:       isFriday ? "14:30" : "17:00",
-          break_minutes:  isFriday ? 30 : 60,
-          is_night_shift: false,
-          note:           null,
-          tags:           [],
-        });
-        if (!res?.error) count++;
-      }
-    }
-
-    setYearFilling(false);
-    setYearFillCount(count);
-    setTimeout(() => setYearFillCount(null), 4000);
-    await fetchEntries();
-  }
+  // Befüllung & PDF jetzt in Settings → "Monatsbefüllung & Berichte".
 
   return (
     <>
@@ -199,80 +62,14 @@ export default function TrackerPage() {
       <WelcomeBanner
         storageKey="stundly_tracker_welcome"
         title="Willkommen bei Stundly!"
-        text="Tipp: Klicke unten auf '📅 Monat automatisch befüllen' und dein Monat ist in einer Sekunde fertig. Du kannst danach einzelne Tage anpassen."
+        text="Tipp: In Profil & Settings → 'Monatsbefüllung & Berichte' kannst du dein ganzes Jahr mit einem Klick mit Standardzeiten füllen und Monatsberichte als PDF erzeugen."
         cta="Los geht's"
       />
 
-      {/* Befüllen buttons */}
-      <div style={{ padding: "14px 16px 0", display: "flex", flexDirection: "column", gap: 8, maxWidth: 960, margin: "0 auto" }}>
-        {/* Monat befüllen */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button
-            onClick={() => void handleBulkFill()}
-            disabled={bulkFilling || yearFilling || loading}
-            style={{
-              flex: 1, padding: "9px 12px",
-              background: "var(--surface)", border: "1px dashed var(--green)",
-              borderRadius: 10, cursor: bulkFilling ? "wait" : "pointer",
-              color: "var(--green)", fontFamily: "'Syne',sans-serif",
-              fontSize: 12, fontWeight: 700,
-              opacity: (bulkFilling || yearFilling) ? 0.7 : 1,
-            }}
-          >
-            {bulkFilling
-              ? "⏳ Wird befüllt..."
-              : `📅 ${MONTHS[month - 1]} automatisch befüllen`}
-          </button>
-          {bulkCount !== null && (
-            <span style={{ fontSize: 12, color: bulkCount > 0 ? "var(--green)" : "var(--muted)", fontWeight: 700, whiteSpace: "nowrap" }}>
-              {bulkCount > 0 ? `✅ ${bulkCount} Tage` : "Nichts zu befüllen"}
-            </span>
-          )}
-        </div>
-
-        {/* Monatsbericht PDF */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button
-            onClick={() => void handleMonthlyPDF()}
-            disabled={pdfLoading || bulkFilling || yearFilling || loading}
-            style={{
-              flex: 1, padding: "9px 12px",
-              background: "var(--surface)", border: "1px dashed var(--accent2)",
-              borderRadius: 10, cursor: pdfLoading ? "wait" : "pointer",
-              color: "var(--accent2)", fontFamily: "'Syne',sans-serif",
-              fontSize: 12, fontWeight: 700,
-              opacity: pdfLoading ? 0.7 : 1,
-            }}
-          >
-            {pdfLoading ? "📄 PDF wird erstellt..." : `📄 Monatsbericht ${MONTHS[month - 1]} als PDF`}
-          </button>
-        </div>
-
-        {/* Ganzes Jahr befüllen */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button
-            onClick={() => void handleYearFill()}
-            disabled={bulkFilling || yearFilling || loading}
-            style={{
-              flex: 1, padding: "9px 12px",
-              background: "var(--surface)", border: "1px dashed var(--accent)",
-              borderRadius: 10, cursor: yearFilling ? "wait" : "pointer",
-              color: "var(--accent2)", fontFamily: "'Syne',sans-serif",
-              fontSize: 12, fontWeight: 700,
-              opacity: (bulkFilling || yearFilling) ? 0.7 : 1,
-            }}
-          >
-            {yearFilling
-              ? "⏳ Jahr wird befüllt..."
-              : `🗓 ${year} komplett befüllen`}
-          </button>
-          {yearFillCount !== null && (
-            <span style={{ fontSize: 12, color: yearFillCount > 0 ? "var(--accent2)" : "var(--muted)", fontWeight: 700, whiteSpace: "nowrap" }}>
-              {yearFillCount > 0 ? `✅ ${yearFillCount} Tage` : "Alles befüllt"}
-            </span>
-          )}
-        </div>
-      </div>
+      {/*
+        Befüllen / PDF butonları artık Settings → "Monatsbefüllung & Berichte"
+        kartında. Tracker sayfası sade ve uzun listeye odaklı tutuluyor.
+      */}
 
       <div style={{ padding: "14px 16px 0", maxWidth: 960, margin: "0 auto" }}>
         {loading ? (

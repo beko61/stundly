@@ -56,9 +56,10 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
   const dayNum    = parseInt(date.split("-")[2] ?? "0", 10);
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  // Load Notdienst sub-entries (weekends always; weekdays only if main entry exists)
+  // Load Notdienst sub-entries (weekends + Feiertage immer, Wochentage nur wenn Haupteintrag existiert)
   useEffect(() => {
-    if (!entry && !isWeekend) return;
+    const isAutoHolidayDay = !!feiertag;
+    if (!entry && !isWeekend && !isAutoHolidayDay) return;
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return;
@@ -67,7 +68,7 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
         .order("start_time")
         .then(({ data }) => { if (data) setNdEntries(data as NotdienstEntry[]); });
     });
-  }, [date, entry, isWeekend]);
+  }, [date, entry, isWeekend, feiertag]);
 
   const workDuration = entry?.start_time && entry?.end_time
     ? calculateWorkDuration(entry.start_time, entry.end_time, entry.break_minutes)
@@ -275,8 +276,8 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
           </div>
         )}
 
-        {/* + Notdienst hinzufügen */}
-        {(entry || isWeekend) && ndEntries.length < 6 && (
+        {/* + Notdienst hinzufügen — auch an Wochenenden + Feiertagen (DB-Eintrag nicht nötig) */}
+        {(entry || isWeekend || isFeiertag) && ndEntries.length < 6 && (
           <button onClick={e => { e.stopPropagation(); setNdModal("new"); }}
             style={{ width:"calc(100% - 28px)", margin:"0 14px 12px", padding:"7px",
               background:"transparent", border:"1px dashed var(--orange)", borderRadius:8,

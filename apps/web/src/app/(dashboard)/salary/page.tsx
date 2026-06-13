@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { calculateMonthlySalary, formatDuration, calcNettoFromBrutto } from "@workly/shared";
 import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode } from "@workly/shared";
@@ -460,6 +461,51 @@ export default function SalaryPage() {
         {/* ── Monatsberechnung ── */}
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0" }}>Laden...</div>
+        ) : entries.length === 0 && yearEntries.length === 0 ? (
+          /* Yeni kullanıcı: bu yıl henüz hiç entry yok → setup hint */
+          <div style={{
+            background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--surface)) 0%, color-mix(in srgb, var(--accent2) 8%, var(--surface)) 100%)",
+            border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+            borderRadius: 16,
+            padding: "24px 22px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>💰</div>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
+              Noch keine Berechnung möglich
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 18, maxWidth: 460, margin: "0 auto 18px" }}>
+              Stelle oben deinen <strong style={{ color: "var(--text)" }}>Stundenlohn</strong> ein und erfasse anschließend deinen ersten Arbeitstag im Tracker. Stundly berechnet dann automatisch dein geschätztes Brutto- und Netto-Gehalt.
+            </p>
+            <Link href="/tracker" style={{
+              display: "inline-block",
+              padding: "12px 24px",
+              background: "var(--accent)",
+              color: "white",
+              borderRadius: 10,
+              fontFamily: "'Syne',sans-serif",
+              fontSize: 13,
+              fontWeight: 800,
+              textDecoration: "none",
+            }}>
+              ⏱ Zur Zeiterfassung →
+            </Link>
+          </div>
+        ) : entries.length === 0 ? (
+          /* Bu ayda entry yok ama yıllık var → küçük info notice */
+          <div className="card" style={{
+            textAlign: "center",
+            background: "color-mix(in srgb, var(--accent2) 6%, var(--surface))",
+            border: "1px solid color-mix(in srgb, var(--accent2) 25%, transparent)",
+          }}>
+            <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
+              ℹ️ Für <strong style={{ color: "var(--text)" }}>{MONTHS[month-1]} {year}</strong> gibt es noch keine Zeiteinträge — daher wird kein Lohn berechnet.
+              <br />
+              <Link href="/tracker" style={{ color: "var(--accent2)", fontWeight: 700, textDecoration: "none" }}>
+                Arbeitstage erfassen →
+              </Link>
+            </div>
+          </div>
         ) : (
           <>
             {/* HERO — Brutto → Netto */}

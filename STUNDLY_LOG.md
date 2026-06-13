@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #12): v0.4.3 — Dynamic OG image**
+**Son değişiklik (2026-06-13 #13): v0.5.0 — Salary empty states**
+- Yıllık hiç entry yoksa: büyük gradient hint card + Tracker CTA
+- Sadece bu ayda yoksa: küçük info notice + inline link
+- Yeni kullanıcı artık €0 brutto görmüyor, ne yapacağını biliyor
+
+**Önceki değişiklik (2026-06-13 #12): v0.4.3 — Dynamic OG image**
 - `app/opengraph-image.tsx` (Next.js ImageResponse, edge runtime, 1200×630)
 - Gradient bg + STUNDLY başlık + tagline + DSGVO/ArbZG/§19/PWA trust strip
 - Twitter/FB/LinkedIn paylaşımları artık büyük profesyonel preview

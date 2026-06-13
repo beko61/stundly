@@ -1,5 +1,39 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (13) – v0.5.0: Salary page empty states
+
+### Yapıldı
+- ✅ Salary page'e **2 katmanlı empty state** eklendi:
+  1. **`entries.length === 0 && yearEntries.length === 0`** → Yeni kullanıcı (bu yıl hiç entry yok)
+     - Büyük gradient hint card: "Noch keine Berechnung möglich"
+     - 💰 ikon + açıklama: "Stundenlohn ayarla → Tracker'da arbeitstage erfasse"
+     - CTA: "⏱ Zur Zeiterfassung →" (Link, accent button)
+  2. **`entries.length === 0` (yalnızca bu ayda yok)** → Daha küçük info notice
+     - "ℹ️ Für Juni 2026 gibt es noch keine Zeiteinträge"
+     - Inline link: "Arbeitstage erfassen →"
+- Settings kartları (Stundenlohn input + Steuer settings) her durumda görünür kalır
+- ✅ Versiyon bump v0.4.3 → v0.5.0 (MINOR — yeni user-facing UX katmanı)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Önceden yeni kullanıcı Salary sayfasında €0 brutto + €0 netto + sıfır breakdown görüyordu → ürünün bozuk gibi göründüğü algı
+- Yeni davranış: net mesaj + actionable CTA → next-step belirsizliği yok
+- 2 katman ayrımı önemli: yıllık hiç entry yok = kurulum aşaması; ay-bazlı yok = sadece geçici durum (geçmiş ay browse ediyor olabilir)
+- "💰 Noch keine Berechnung möglich" wording: pozitif ton, "broken" izlenimi vermez
+
+### Versiyon tarihçesi (bu session)
+- v0.1.0 → v0.2.0 (audit + version system)
+- v0.2.0 → v0.3.0 (Dashboard setup guide + Beta wording)
+- v0.3.0 → v0.4.0 (Landing mockup section)
+- v0.4.0 → v0.4.1 (SEO infra + trust strip)
+- v0.4.1 → v0.4.2 (schema.org JSON-LD)
+- v0.4.2 → v0.4.3 (Dynamic OG image)
+- v0.4.3 → **v0.5.0** (Salary empty states)
+
+---
+
 ## 2026-06-13 (12) – v0.4.3: Dynamic OG image (1200×630)
 
 ### Yapıldı

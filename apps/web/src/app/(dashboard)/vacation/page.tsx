@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import type { VacationRequest } from "@workly/shared";
 import { calculateWorkDuration, DAY_TYPES } from "@workly/shared";
+import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 
 const STATUS_LABELS: Record<VacationRequest["status"], string> = {
   pending:  "Ausstehend",
@@ -329,7 +330,7 @@ export default function VacationPage() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(107, 107, 128);
-    doc.text(`Erstellt am ${heute} · Stundly v0.1.0`, 20, 285);
+    doc.text(`Erstellt am ${heute} · ${STUNDLY_VERSION_LABEL}`, 20, 285);
 
     const fname = `${p?.nachname ?? "Urlaub"}_${startDate}_${endDate}`.replace(/\s/g, "_");
     doc.save(`Urlaubsantrag_${fname}.pdf`);

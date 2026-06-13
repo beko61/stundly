@@ -7,6 +7,7 @@ import { BUNDESLAENDER } from "@/lib/utils/feiertage";
 import { parseInternetsizExport } from "@/lib/import/internetsizImport";
 import type { ImportPayload } from "@/lib/import/internetsizImport";
 import { AutoFillReports } from "@/components/settings/AutoFillReports";
+import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 
 interface Profile {
   vorname:        string;
@@ -751,6 +752,18 @@ export default function SettingsPage() {
         >
           🚪 Abmelden
         </button>
+
+        {/* Version footer */}
+        <div style={{
+          textAlign: "center",
+          fontSize: 11,
+          color: "var(--muted)",
+          marginTop: 14,
+          fontFamily: "'DM Mono',monospace",
+          letterSpacing: "0.04em",
+        }}>
+          {STUNDLY_VERSION_LABEL}
+        </div>
 
       </div>
     </>

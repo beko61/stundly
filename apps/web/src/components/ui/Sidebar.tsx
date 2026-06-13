@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
+import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 
 type NavItem = { href: string; label: string; icon: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -155,7 +156,7 @@ export function Sidebar() {
         <button onClick={handleLogout} className="sidebar-logout">
           🚪 Abmelden
         </button>
-        <div className="sidebar-version">Stundly v0.1.0</div>
+        <div className="sidebar-version">{STUNDLY_VERSION_LABEL}</div>
       </div>
     </aside>
   );

@@ -32,7 +32,13 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #6): #12b refactor tamam + yorum cleanup**
+**Son değişiklik (2026-06-13 #7): v0.2.0 — Versiyon sistemi**
+- Yeni `lib/version.ts` (tek kaynak), Sidebar + Vacation PDF + Settings'te kullanıldı
+- Settings → Abmelden altında version footer eklendi
+- Semver bump standardı belirlendi (patch/minor/major), memory'e kaydedildi
+- v0.1.0 → **v0.2.0** (audit roundları + Standardzeiten feature topluca)
+
+**Önceki değişiklik (2026-06-13 #6): #12b refactor tamam + yorum cleanup**
 - monthStats helper genişletildi: urlaubMin + krankMin
 - MonthlySummary + dashboard helper'a geçti (toplam 4/4 dosya tek doğruluk kaynağında)
 - Yorum drift'leri temizlendi (DayEntry, TimeEntryModal)

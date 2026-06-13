@@ -1,5 +1,32 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (7) – v0.2.0: Versiyon sistemi + Abmelden altı footer
+
+### Yapıldı
+- ✅ Yeni `lib/version.ts` — tek doğruluk kaynağı (`STUNDLY_VERSION = "0.2.0"`, `STUNDLY_VERSION_LABEL = "Stundly v0.2.0"`)
+- ✅ Sidebar footer hardcoded "v0.1.0" → `STUNDLY_VERSION_LABEL` (import edildi)
+- ✅ Vacation PDF footer hardcoded "v0.1.0" → `STUNDLY_VERSION_LABEL`
+- ✅ Settings → Abmelden butonunun altına version footer eklendi (DM Mono, küçük, muted)
+- ✅ Memory: `feedback_versiyon_bump.md` eklendi — semver bump standardı (patch/minor/major)
+
+### Bump kuralları (artık standart)
+- **PATCH**: bug fix, yorum cleanup, log-only değişiklik, internal refactor
+- **MINOR**: yeni kullanıcı-görünür özellik / UI / alan
+- **MAJOR**: breaking change, public launch
+
+### Versiyon geçmişi
+- v0.1.0 → v0.2.0 (audit roundlarındaki tüm fix + Standardzeiten feature + refactor toplandı)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Kullanıcı talebi: "abmelden altinda versiyon var her yeni yada degisiklik yaptiginda versiyon sitandarti belirle ve versiyon atla"
+- Memory'ye standart kaydedildi → bundan sonra her commit'ten önce version.ts bump edilecek
+- Şu an v0.2.0 — sonraki PATCH bug fix'lerde v0.2.1, sonraki MINOR feature'da v0.3.0
+
+---
+
 ## 2026-06-13 (6) – #12b refactor tamamlandı + #10 yorum cleanup
 
 ### Yapıldı

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { isBetaActive, BETA_END_DATE_LABEL } from "@/lib/beta";
 
 function DoneContent() {
   const router = useRouter();
@@ -40,8 +41,8 @@ function DoneContent() {
       </h1>
       <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.7, marginBottom: 12 }}>
         {isCompany
-          ? "Dein Unternehmen wurde erfolgreich eingerichtet. Du hast 14 Tage kostenlosen Zugang zu allen Team-Funktionen."
-          : "Dein Konto ist fertig eingerichtet. Du hast 14 Tage kostenlosen Zugang zu Stundly."}
+          ? "Dein Unternehmen wurde erfolgreich eingerichtet."
+          : "Dein Konto ist fertig eingerichtet."}
       </p>
 
       <div style={{
@@ -50,7 +51,9 @@ function DoneContent() {
         borderRadius: 12, padding: "14px 18px", marginBottom: 28,
         fontSize: 13, color: "var(--accent2)", fontWeight: 600,
       }}>
-        ✓ 14 Tage kostenlos testen – keine Kreditkarte erforderlich
+        {isBetaActive()
+          ? `🎁 Beta-Phase: Alle Funktionen 3 Monate kostenlos bis ${BETA_END_DATE_LABEL}`
+          : "✓ 14 Tage kostenlos testen – keine Kreditkarte erforderlich"}
       </div>
 
       {isCompany && (

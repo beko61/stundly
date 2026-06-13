@@ -360,6 +360,116 @@ export default function DashboardPage() {
 
   if (loading) return <div style={{ textAlign: "center", padding: 80, color: "var(--muted)" }}>Laden…</div>;
 
+  // Yeni kullanıcı: yıl boyu hiç entry yok → setup guide göster
+  const isNewUser = yearEntries.length === 0;
+
+  if (isNewUser) {
+    return (
+      <div className="dash-wrapper">
+        <div className="dash-greet">
+          <h1>{greeting}{name ? `, ${name}` : ""} 👋</h1>
+          <p>Willkommen bei Stundly — in 3 Schritten startklar.</p>
+        </div>
+
+        {/* Setup guide card */}
+        <div style={{
+          background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface)) 0%, color-mix(in srgb, var(--accent2) 8%, var(--surface)) 100%)",
+          border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+          borderRadius: 16,
+          padding: "24px 22px",
+          marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 11, color: "var(--accent2)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>
+            🚀 In 3 Schritten startklar
+          </div>
+
+          {[
+            {
+              n: 1,
+              icon: "🕐",
+              title: "Standardzeiten festlegen",
+              desc: "Beginn / Ende / Pause für Mo–Do und Fr — wird beim Auto-Befüllen und für neue Einträge verwendet.",
+              cta: "Standardzeiten einstellen",
+              href: "/settings",
+            },
+            {
+              n: 2,
+              icon: "💰",
+              title: "Stundenlohn & Steuer",
+              desc: "Stundenlohn, Sollstunden, Steuerklasse — für die automatische Lohnberechnung.",
+              cta: "Lohn einstellen",
+              href: "/salary",
+            },
+            {
+              n: 3,
+              icon: "⏱",
+              title: "Ersten Arbeitstag erfassen",
+              desc: "Tipp: auf den heutigen Tag tippen — oder ein ganzes Jahr mit einem Klick befüllen.",
+              cta: "Zur Zeiterfassung",
+              href: "/tracker",
+            },
+          ].map(step => (
+            <Link
+              key={step.n}
+              href={step.href}
+              style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "14px 16px",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                marginBottom: 10,
+                textDecoration: "none",
+                color: "var(--text)",
+              }}
+            >
+              <div style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: "color-mix(in srgb, var(--accent2) 18%, transparent)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 800, color: "var(--accent2)",
+                flexShrink: 0,
+              }}>
+                {step.n}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                  {step.icon} {step.title}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                  {step.desc}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--accent2)", fontWeight: 700, flexShrink: 0 }}>
+                {step.cta} →
+              </div>
+            </Link>
+          ))}
+
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, textAlign: "center" }}>
+            💡 Sobald du den ersten Eintrag erfasst hast, siehst du hier dein vollständiges Dashboard.
+          </div>
+        </div>
+
+        <div className="dash-panel">
+          <div className="dash-panel-title">⚡ Schnellzugriff</div>
+          <div className="dash-actions">
+            <Link href="/tracker" className="dash-action">
+              <span className="dash-action-icon">⏱</span>
+              <span>Heute erfassen</span>
+              <span className="dash-action-arrow">→</span>
+            </Link>
+            <Link href="/settings" className="dash-action">
+              <span className="dash-action-icon">⚙️</span>
+              <span>Einstellungen</span>
+              <span className="dash-action-arrow">→</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dash-wrapper">
       {/* Greeting */}

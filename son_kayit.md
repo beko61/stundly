@@ -1,5 +1,43 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (8) – v0.3.0: Yeni kullanıcı setup guide + Beta wording
+
+### Yapıldı
+
+**Yeni kullanıcı Dashboard empty-state (#1 ürün önceliği: basit + first-60s WOW)**
+- ✅ `dashboard/page.tsx` — `isNewUser = yearEntries.length === 0` kontrolü
+- Yeni kullanıcı için ayrı render branch: tüm KPI/hero/chart'lar gizli, yerine **3-adım setup guide**:
+  1. 🕐 Standardzeiten festlegen → `/settings`
+  2. 💰 Stundenlohn & Steuer → `/salary`
+  3. ⏱ Ersten Arbeitstag erfassen → `/tracker`
+- Her adım kart-link, numaralı badge + icon + açıklama + CTA arrow
+- Gradient background (accent → accent2), gözü çekiyor
+- Altta küçük Schnellzugriff (Tracker + Einstellungen)
+- "Sobald du den ersten Eintrag erfasst hast, siehst du hier dein vollständiges Dashboard." footnote
+
+**Onboarding done page Beta wording düzeltildi**
+- ✅ `onboarding/done/page.tsx` — `isBetaActive()` kontrolü eklendi
+- Beta aktifse: "🎁 Beta-Phase: Alle Funktionen 3 Monate kostenlos bis 07. September 2026"
+- Beta bitince: eski "✓ 14 Tage kostenlos testen" wording'ine düşer
+- Eski metin "14 Tage kostenlos" ile çelişiyordu (Beta phase'de 3 ay ücretsiz)
+
+**Versiyon bump: v0.2.0 → v0.3.0** (MINOR — kullanıcı-görünür yeni feature)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata (bir JSX unicode quote hatası düzeltildi)
+
+### Sebep & Notlar
+- Log'daki strateji notu: "5 çalışan deneyiminden ders: 5 çalışanına `internetsiz HTML` denetti, 'zor' deyip reddettiler. Bu **#1 ürün önceliği**: basit + telefonda + tek tıkla"
+- Yeni kullanıcı Dashboard'da sıfır değerli kartlar görmek yerine net "şu 3 adımı yap" rehberi görür
+- Beta dışındaki müşteri yolculuğu da onarıldı (kayıt sonrası mesaj artık doğru)
+
+### Sonraki adım için fikir
+- Tracker'da "Heute" gününe scroll/highlight (ilk açılışta)
+- Onboarding done → direkt Settings'e yönlendirmek de düşünülebilir (3-adımdan #1'i atla)
+- Setup guide adımlarının "tamamlandı" işaretlemesi (DB-driven checkmarks)
+
+---
+
 ## 2026-06-13 (7) – v0.2.0: Versiyon sistemi + Abmelden altı footer
 
 ### Yapıldı

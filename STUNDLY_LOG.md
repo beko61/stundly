@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #14): v0.5.1 — Vacation empty state polish**
+**Son değişiklik (2026-06-13 #15): v0.5.2 — BUG FIX: OG image redirect**
+- `/opengraph-image` middleware tarafından `/login`'e 307 redirect oluyordu
+- Matcher exclude listesine `opengraph-image|twitter-image|apple-icon|icon` eklendi
+- Kullanıcı yakaladı (manual test)
+
+**Önceki değişiklik (2026-06-13 #14): v0.5.1 — Vacation empty state polish**
 - Gradient hint card + CTA "Ersten Antrag erstellen"
 - 4 sayfa tutarlı empty state'e sahip: Dashboard, Salary (2-katman), Vacation
 

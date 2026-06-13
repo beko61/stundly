@@ -1,5 +1,27 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (15) – v0.5.2: BUG FIX — OG image middleware redirect
+
+### Yapıldı
+- ✅ **Bug**: `https://stundly.de/opengraph-image` URL'i `/login`'e 307 redirect ediyordu
+  - Sebep: `middleware.ts` matcher pattern'i `opengraph-image` route'unu exclude etmiyordu
+  - Auth check'i metadata route'unu da yakalıyor → social paylaşımlarda preview bozuk olabilirdi
+- ✅ **Fix**: Matcher exclude listesine `opengraph-image|twitter-image|apple-icon|icon` eklendi
+- ✅ Kullanıcının doğrulamadan tespit ettiği gerçek bug — sitemap.xml + robots.txt çalışıyordu ama OG image değildi
+- ✅ Versiyon bump v0.5.1 → v0.5.2 (PATCH — bug fix)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+- ⏳ Vercel deploy bitince: `curl -I https://stundly.de/opengraph-image` → `200 OK` + `Content-Type: image/png` dönmeli (eskiden `307 Location: /login`)
+
+### Sebep & Notlar
+- robots.txt + sitemap.xml exclude edilmişti ama yeni eklenen `app/opengraph-image.tsx` route'u listede yoktu
+- Next.js'in tüm metadata route'ları için (icon, apple-icon, twitter-image dahil) generic exclude pattern eklendi → ileride benzer file convention'lar eklenirse otomatik public olur
+- Bu bug olmadan: Twitter/FB/LinkedIn'de paylaşım önce yükleyebilir ama crawler `/login` HTML görüp parse edemez → preview kayıp
+- Test komutu: kullanıcı `curl -I https://stundly.de/opengraph-image` ile doğrulayabilir
+
+---
+
 ## 2026-06-13 (14) – v0.5.1: Vacation page empty state polish
 
 ### Yapıldı

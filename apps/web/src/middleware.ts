@@ -76,6 +76,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icons|robots.txt|sitemap.xml).*)",
+    // Static + metadata route'ları auth middleware'inden hariç tut
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icons|robots.txt|sitemap.xml|opengraph-image|twitter-image|apple-icon|icon).*)",
   ],
 };

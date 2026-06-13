@@ -12,9 +12,7 @@ const WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag
 
 /**
  * Sollstunden für bezahlte Abwesenheit (Urlaub/Krank/Feiertag) in Minuten.
- *
- * VEREINFACHT (07.06.2026): Mo-Fr immer 8h (08:00–17:00 / 1h Pause),
- * Sa/So 0. So weiß der Nutzer ohne Nachdenken: jeder Urlaub-Tag = 8h.
+ * Mo-Fr immer 8h flat, Sa/So 0. (Arbeiten-Defaults sind separat — siehe lib/utils/standardTimes.)
  */
 function getDayStdMins(dateStr: string): number {
   const dow = new Date(dateStr).getDay();
@@ -22,7 +20,7 @@ function getDayStdMins(dateStr: string): number {
   return 8 * 60;
 }
 
-/** Standard-Zeitstempel für Urlaub/Krank/Feiertag-Tage (nur Anzeige, in DB bleibt NULL). */
+/** Anzeige-Zeitstempel für Urlaub/Krank/Feiertag (in DB sind die echten Zeiten NULL). */
 const STANDARD_TIMES = { start: "08:00", end: "17:00", pauseMin: 60 };
 
 /** Status-Typen, die mit Sollstunden gerechnet werden (ohne echte Zeitstempel) */
@@ -76,8 +74,8 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
 
   // Saat değeri:
   //  - Arbeiten / echte Zeitstempel → tatsächlich gearbeitete Std
-  //  - Urlaub / Krank / Feiertag (entry mit NULL Zeiten) → Sollstunden (8:15 / 6:15)
-  //  - Auto-Feiertag (entry yok, feiertag prop var, örn. Neujahr) → Sollstunden
+  //  - Urlaub / Krank / Feiertag (entry mit NULL Zeiten) → 8h Sollstunden (Mo-Fr)
+  //  - Auto-Feiertag (entry yok, feiertag prop var, örn. Neujahr) → 8h Sollstunden
   //  - Andere → null
   const isPaidAbsence    = !!entry && PAID_ABSENCE.includes(entry.day_type);
   const isAutoHoliday    = !entry && !!feiertag;        // örn. 01.01 Neujahr DB'de yokken

@@ -32,7 +32,13 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #5): Standardzeiten özelleştirilebilir + Cuma 6:15h geri**
+**Son değişiklik (2026-06-13 #6): #12b refactor tamam + yorum cleanup**
+- monthStats helper genişletildi: urlaubMin + krankMin
+- MonthlySummary + dashboard helper'a geçti (toplam 4/4 dosya tek doğruluk kaynağında)
+- Yorum drift'leri temizlendi (DayEntry, TimeEntryModal)
+- ~150 satır tekrar eden kod silindi
+
+**Önceki değişiklik (2026-06-13 #5): Standardzeiten özelleştirilebilir + Cuma 6:15h geri**
 - `lib/utils/standardTimes.ts` — Mo-Do ve Fr için ayrı start/end/pause ayarları (localStorage)
 - Settings → "Jahres-Befüllung" kartına Standardzeiten config inputları eklendi
 - TimeEntryModal yeni Arbeiten entry'leri için bu ayarları okur

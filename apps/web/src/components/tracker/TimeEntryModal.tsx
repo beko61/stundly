@@ -75,7 +75,7 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, onCreate, onU
     setSaving(true);
     setError(null);
 
-    // Urlaub/Krank/Feiertag: keine Zeiten in DB (Berechnung nutzt Sollstunden Mo-Do 8:15 / Fr 6:15)
+    // Urlaub/Krank/Feiertag: keine Zeiten in DB (Sollstunden = 8h flat Mo-Fr)
     const payload = {
       date,
       day_type:       dayType,

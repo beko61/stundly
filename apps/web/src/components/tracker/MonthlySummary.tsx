@@ -2,22 +2,13 @@
 
 import { useMemo, useEffect, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
-import { DAY_TYPES } from "@workly/shared";
-import { calculateWorkDuration } from "@workly/shared";
 import { createClient } from "@/lib/supabase/client";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
 
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT       = 30; // Fallback: salary_settings.urlaub_anspruch okunamazsa
-
-// VEREINFACHT (07.06.2026): Mo-Fr = 8h, Sa/So = 0.
-// Urlaub/Krank/Feiertag werden auf jedem Werktag wie 08:00–17:00 / 1h Pause = 8h gezählt.
-function getDayStdMins(dateStr: string): number {
-  const dow = new Date(dateStr).getDay();
-  if (dow === 0 || dow === 6) return 0;
-  return 8 * 60;
-}
 
 interface NdEntry { date: string; start_time: string; end_time: string; erledigt?: boolean; }
 
@@ -116,72 +107,25 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   }, [year, entries]);
 
   const stats = useMemo(() => {
-    let workedMin    = 0;
-    let krankDays    = 0;
-    let urlaubDays   = 0;
-    let urlaubMin    = 0;
-    let krankMin     = 0;
-
-    for (const e of entries) {
-      switch (e.day_type) {
-        case DAY_TYPES.KRANK:  krankDays++;  break;
-        case DAY_TYPES.URLAUB: urlaubDays++; break;
-      }
-
-      // Bezahlte Abwesenheit (Urlaub/Krank/Feiertag): IMMER Sollstunden,
-      // unabhängig davon ob versehentlich Zeiten gespeichert sind.
-      // (Fr Urlaub = 6:15h, Mo-Do Urlaub = 8:15h)
-      if (
-        e.day_type === DAY_TYPES.KRANK ||
-        e.day_type === DAY_TYPES.URLAUB ||
-        e.day_type === DAY_TYPES.FEIERTAG
-      ) {
-        const stdMin = getDayStdMins(e.date);
-        workedMin += stdMin;
-        if (e.day_type === DAY_TYPES.KRANK)  krankMin  += stdMin;
-        if (e.day_type === DAY_TYPES.URLAUB) urlaubMin += stdMin;
-        continue;
-      }
-
-      if (e.day_type === DAY_TYPES.NOTDIENST) continue;
-      if (e.day_type === DAY_TYPES.FREI)      continue;
-      if (!e.start_time || !e.end_time)       continue;
-
-      // Sadece ARBEITEN gerçek saatler kullanır
-      const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
-      workedMin += net_minutes;
-    }
-
-    // Auto-Feiertag: DB'de entry'si olmayan Feiertag günleri (örn. Neujahr) için de
-    // Sollstunden ekle. Eskiden bunlar workedMin'e dahil edilmiyor, Differenz 8h eksik kalıyordu.
-    if (feiertage) {
-      const entryDates = new Set(entries.map(e => e.date));
-      const monthPrefix = `${year}-${String(month).padStart(2, "0")}-`;
-      for (const ftDate of Object.keys(feiertage)) {
-        if (!ftDate.startsWith(monthPrefix)) continue;       // sadece aktif ay
-        if (entryDates.has(ftDate)) continue;                // zaten DB'de var → çift saymadan
-        const stdMin = getDayStdMins(ftDate);                // Mo-Fr 8h, Sa/So 0
-        workedMin += stdMin;
-      }
-    }
-
-    const notdienstMin = ndEntries.reduce((sum, nd) => {
-      if (!nd.start_time || !nd.end_time) return sum;
-      return sum + calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
-    }, 0);
-
-    const ndPaid  = ndEntries.filter(nd => nd.erledigt).length;
-    const ndOffen = ndEntries.length - ndPaid;
-    const ndCount = ndEntries.length;
-
-    const targetMin = targetHours * 60;
-    // Differenz = gerçek çalışılan + notdienst - hedef (notdienst dahil)
-    const diffMin = workedMin + notdienstMin - targetMin;
-
+    const r = calcMonthStats({
+      entries,
+      ndEntries: ndEntries as NdEntryHelper[],
+      feiertage: feiertage ?? {},
+      year, month,
+      targetHoursPerMonth: targetHours,
+    });
     return {
-      workedMin, notdienstMin, ndPaid, ndOffen, ndCount,
-      krankDays, urlaubDays, urlaubMin, krankMin,
-      diffMin, targetMin,
+      workedMin:    r.workedMin,
+      notdienstMin: r.ndMin,
+      ndPaid:       r.ndPaid,
+      ndOffen:      r.ndCount - r.ndPaid,
+      ndCount:      r.ndCount,
+      krankDays:    r.krankDays,
+      urlaubDays:   r.urlaubDays,
+      urlaubMin:    r.urlaubMin,
+      krankMin:     r.krankMin,
+      diffMin:      r.diffMin,
+      targetMin:    r.targetMin,
     };
   }, [entries, ndEntries, targetHours, feiertage, year, month]);
 

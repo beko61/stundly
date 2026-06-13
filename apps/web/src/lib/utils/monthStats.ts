@@ -47,8 +47,12 @@ export interface MonthStatsResult {
   ndPaid: number;
   /** Urlaub gün sayısı (entry day_type=urlaub) */
   urlaubDays: number;
+  /** Urlaub dakikası (Sollstunden toplamı — UI breakdown için ayrı tutulur) */
+  urlaubMin: number;
   /** Krank gün sayısı */
   krankDays: number;
+  /** Krank dakikası (Sollstunden toplamı) */
+  krankMin: number;
   /** Feiertag gün sayısı — entry feiertag + auto-feiertag */
   feiertagDays: number;
   /** day_type=arbeiten entry sayısı */
@@ -101,6 +105,7 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   const { entries, ndEntries = [], feiertage = {}, year, month, targetHoursPerMonth } = input;
 
   let workedMin = 0;
+  let urlaubMin = 0, krankMin = 0;
   let urlaubDays = 0, krankDays = 0, feiertagDays = 0, arbeitenEntries = 0;
 
   const entryDates = new Set(entries.map(e => e.date));
@@ -122,7 +127,10 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
       const [yStr, mStr, dStr] = e.date.split("-");
       const y = Number(yStr); const m = Number(mStr); const d = Number(dStr);
       if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
-        workedMin += getDayStdMins(y, m - 1, d);
+        const std = getDayStdMins(y, m - 1, d);
+        workedMin += std;
+        if (e.day_type === DAY_TYPES.URLAUB) urlaubMin += std;
+        if (e.day_type === DAY_TYPES.KRANK)  krankMin  += std;
       }
       continue;
     }
@@ -167,7 +175,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
 
   return {
     workedMin, ndMin, ndCount, ndPaid,
-    urlaubDays, krankDays, feiertagDays, arbeitenEntries,
+    urlaubDays, urlaubMin, krankDays, krankMin,
+    feiertagDays, arbeitenEntries,
     workDaysInPeriod,
     diffMin, targetMin,
   };

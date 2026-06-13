@@ -1,5 +1,38 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (6) – #12b refactor tamamlandı + #10 yorum cleanup
+
+### Yapıldı
+
+**#12b — MonthlySummary + Dashboard helper'a geçti (DRY tamam)**
+- ✅ `lib/utils/monthStats.ts` — `MonthStatsResult` genişletildi: `urlaubMin` ve `krankMin` alanları eklendi (UI breakdown için)
+- ✅ `MonthlySummary.tsx` — 70 satırlık lokal `stats` hesabı kaldırıldı, helper'ı çağırıyor (worked/ndMin/urlaubMin/krankMin hepsi tek kaynaktan)
+- ✅ `dashboard/page.tsx` — `calcMonthMinutes` yerel fonksiyonu kaldırıldı, helper'a geçti (selected month stats + 12-month breakdown)
+- ✅ Yeni `monthFeiertageMap()` küçük helper'ı (yıllık feiertage → aylık subset Record)
+
+**#10 — Yorum drift cleanup**
+- ✅ `DayEntry.tsx` — "Sollstunden (8:15 / 6:15)" yorumu "8h Sollstunden (Mo-Fr)" olarak güncellendi
+- ✅ `DayEntry.tsx` — `getDayStdMins` üst yorumu sadeleştirildi, `standardTimes` referansı eklendi
+- ✅ `TimeEntryModal.tsx` — "Sollstunden Mo-Do 8:15 / Fr 6:15" yorumu "Sollstunden = 8h flat Mo-Fr" oldu
+
+### Sonuç: 4 dosyanın hepsi tek doğruluk kaynağını kullanıyor
+- `reports/page.tsx` ✓
+- `calendar/page.tsx` ✓
+- `MonthlySummary.tsx` ✓ (yeni)
+- `dashboard/page.tsx` ✓ (yeni)
+- Helper kullananlar: Auto-Feiertag sayımı + targetMin + workDaysInPeriod ortak
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata (tek small fix: dashboard'da `calculateWorkDuration` import'u 7-day chart için geri eklendi)
+
+### Sebep & Notlar
+- DRY ihlali #12 ile başlamıştı (reports + calendar refactor edilmişti, ama MonthlySummary + dashboard kendi kodunda kalmıştı)
+- Bu turda helper'a `urlaubMin`/`krankMin` eklenerek MonthlySummary'nin UI breakdown'u korundu
+- Dashboard refactor sırasında 30+ satır tekrar eden kod silindi
+- Toplam: ~150 satır kod kaldırıldı, hepsi tek helper'a delegated
+
+---
+
 ## 2026-06-13 (5) – Standardzeiten özelleştirilebilir (kullanıcının gerçek schedule'ı)
 
 ### Yapıldı

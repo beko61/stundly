@@ -479,9 +479,36 @@ export default function VacationPage() {
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0" }}>Laden...</div>
         ) : requests.length === 0 ? (
-          <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🏖</div>
-            Noch keine Urlaubsanträge.
+          <div style={{
+            background: "linear-gradient(135deg, color-mix(in srgb, var(--blue) 12%, var(--surface)) 0%, color-mix(in srgb, var(--accent2) 8%, var(--surface)) 100%)",
+            border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)",
+            borderRadius: 16,
+            padding: "28px 22px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>🏖</div>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
+              Noch keine Urlaubsanträge
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 18, maxWidth: 420, margin: "0 auto 18px" }}>
+              Erstelle deinen ersten Urlaubsantrag — Stundly generiert das PDF mit deiner Unterschrift und füllt automatisch die Tracker-Tage als <strong style={{ color: "var(--blue)" }}>Urlaub</strong>.
+            </p>
+            <button
+              onClick={() => setShowForm(true)}
+              style={{
+                padding: "12px 24px",
+                background: "var(--blue)",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                fontFamily: "'Syne',sans-serif",
+                fontSize: 13,
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              ➕ Ersten Antrag erstellen
+            </button>
           </div>
         ) : (
           requests.map((r) => (

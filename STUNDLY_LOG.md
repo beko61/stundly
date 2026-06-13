@@ -32,7 +32,11 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #13): v0.5.0 — Salary empty states**
+**Son değişiklik (2026-06-13 #14): v0.5.1 — Vacation empty state polish**
+- Gradient hint card + CTA "Ersten Antrag erstellen"
+- 4 sayfa tutarlı empty state'e sahip: Dashboard, Salary (2-katman), Vacation
+
+**Önceki değişiklik (2026-06-13 #13): v0.5.0 — Salary empty states**
 - Yıllık hiç entry yoksa: büyük gradient hint card + Tracker CTA
 - Sadece bu ayda yoksa: küçük info notice + inline link
 - Yeni kullanıcı artık €0 brutto görmüyor, ne yapacağını biliyor

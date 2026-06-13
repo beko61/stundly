@@ -1,5 +1,25 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (14) – v0.5.1: Vacation page empty state polish
+
+### Yapıldı
+- ✅ Vacation page'de eski minimal "Noch keine Urlaubsanträge" textine yerine gradient hint card:
+  - Büyük 🏖 ikon, başlık, açıklayıcı paragraph
+  - Açıklama: "Stundly PDF üretir + Tracker tagleri auto Urlaub'a çevirir"
+  - CTA buton: "➕ Ersten Antrag erstellen" → mevcut `setShowForm(true)` handler'ı
+- Salary/Dashboard empty state'leriyle görsel olarak tutarlı (gradient + emoji + CTA)
+- ✅ Versiyon bump v0.5.0 → v0.5.1 (PATCH — UX polish, davranış aynı)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Empty state'ler 4 sayfada tutarlı şimdi: Dashboard, Salary (2-katman), Vacation
+- Reports için her ay tüm günleri zaten gösteriyor (Wochenende/Frei fallback), ayrıca empty state'e gerek yok
+- Calendar zaten görsel bar grafik, az veriyle dürüst görünüyor
+
+---
+
 ## 2026-06-13 (13) – v0.5.0: Salary page empty states
 
 ### Yapıldı

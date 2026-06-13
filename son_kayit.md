@@ -1,5 +1,45 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (10) – v0.4.1: SEO infrastructure + Trust strip + CTA Beta wording
+
+### Yapıldı
+- ✅ **Yeni `app/robots.ts`** — Next.js auto robots.txt
+  - Allow `/`, disallow tüm authenticated route'lar (`/dashboard`, `/tracker`, `/api/`, vb.)
+  - Sitemap reference: `${APP_URL}/sitemap.xml`
+- ✅ **Yeni `app/sitemap.ts`** — Next.js auto sitemap.xml
+  - Index: priority 1.0, weekly
+  - Pricing: 0.8 monthly
+  - Register/Login: 0.4-0.5 yearly
+  - Impressum/Datenschutz/AGB: 0.3 yearly
+- ✅ **Landing trust strip** — Footer üstüne 5 ikonlu satır
+  - 🇩🇪 Entwickelt in Hannover
+  - 🔒 Server in Frankfurt (EU)
+  - 🚫 0 Tracking-Cookies
+  - ⚖️ DSGVO & ArbZG-konform
+  - 💶 Für Handwerk-Betriebe
+- ✅ **CTA banner Beta-aware** — eskiden hardcoded "14 Tage kostenlos", Beta'da "3 Monate Beta-Zugang kostenlos"
+- ✅ **Twitter card** `summary` → `summary_large_image` (sosyal paylaşımlarda büyük preview)
+
+### Versiyon bump v0.4.0 → v0.4.1 (PATCH — SEO + polish)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- robots.ts + sitemap.ts: Google/Bing crawl talimatı — organic SEO altyapısı
+- Auth route'ları disallow → gizli sayfalar arama motoruna düşmesin
+- Trust strip: ziyaretçi karar verme anında küçük şüpheleri ortadan kaldırır (Hannover'lı developer + EU server + DSGVO)
+- "0 Tracking-Cookies" = differentiator (Toggl/Clockify çerez yüklüyor)
+- Twitter large image: stundly.de linki Twitter/X'te paylaşılınca artık büyük görsel
+
+### Sonraki olası adımlar
+- Gerçek 1200x630 OG image tasarımı (şu an icon-512 kullanılıyor, ideal değil)
+- Footer'a hosting badge (Vercel + Supabase logoları opsiyonel)
+- Schema.org JSON-LD (SaaS Product structured data)
+- Hreflang/multilang (DE/EN ileride)
+
+---
+
 ## 2026-06-13 (9) – v0.4.0: Landing "Stundly im Einsatz" — 3 browser-mockup
 
 ### Yapıldı

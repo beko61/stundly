@@ -472,11 +472,40 @@ export default function LandingPage() {
           Bereit anzufangen?
         </h2>
         <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 32 }}>
-          14 Tage kostenlos – keine Kreditkarte – sofort loslegen
+          {BETA_MODE
+            ? "3 Monate Beta-Zugang kostenlos – keine Kreditkarte – sofort loslegen"
+            : "14 Tage kostenlos – keine Kreditkarte – sofort loslegen"}
         </p>
         <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>
           Jetzt kostenlos starten
         </Link>
+      </section>
+
+      {/* TRUST STRIP — kleine Icons-Reihe vor Footer */}
+      <section style={{
+        padding: "24px 24px 0",
+        maxWidth: 1100, margin: "0 auto",
+      }}>
+        <div style={{
+          display: "flex", flexWrap: "wrap", justifyContent: "center",
+          gap: "20px 32px",
+          padding: "20px 0",
+          borderTop: "1px solid var(--border)",
+          fontSize: 12, color: "var(--muted)",
+        }}>
+          {[
+            { icon: "🇩🇪", text: "Entwickelt in Hannover" },
+            { icon: "🔒", text: "Server in Frankfurt (EU)" },
+            { icon: "🚫", text: "0 Tracking-Cookies" },
+            { icon: "⚖️", text: "DSGVO & ArbZG-konform" },
+            { icon: "💶", text: "Für Handwerk-Betriebe" },
+          ].map((b) => (
+            <div key={b.text} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14 }}>{b.icon}</span>
+              <span style={{ fontWeight: 600 }}>{b.text}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* FOOTER */}

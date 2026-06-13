@@ -44,9 +44,9 @@ export const metadata: Metadata = {
     images: [{ url: "/icons/icon-512.png", width: 512, height: 512, alt: "Stundly" }],
   },
   twitter: {
-    card: "summary",
-    title: "Stundly – Arbeitszeiterfassung",
-    description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen.",
+    card: "summary_large_image",
+    title: "Stundly – Arbeitszeiterfassung für Deutschland",
+    description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform, ArbZG-ready.",
     images: ["/icons/icon-512.png"],
   },
 };

@@ -32,7 +32,13 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #9): v0.4.0 — Landing "Stundly im Einsatz" mockup section**
+**Son değişiklik (2026-06-13 #10): v0.4.1 — SEO infra + Trust strip**
+- robots.ts + sitemap.ts (Next.js auto-generated SEO altyapısı)
+- Landing'e 5-ikonlu trust strip (Hannover + Frankfurt + 0 tracker + DSGVO + Handwerk)
+- CTA banner Beta-aware ("3 Monate Beta-Zugang kostenlos")
+- Twitter card summary → summary_large_image
+
+**Önceki değişiklik (2026-06-13 #9): v0.4.0 — Landing "Stundly im Einsatz" mockup section**
 - 3 browser-tarzı mockup (Dashboard / Tracker / Salary) eklendi
 - Mac chrome (3 nokta + URL bar) + Stundly UI HTML-rendered
 - FAZ 2'nin ilk işi (ekran görüntüleri / mockup)

@@ -8,50 +8,11 @@ import { YearPicker } from "@/components/ui/YearPicker";
 import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
 import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import { getFeiertage } from "@/lib/utils/feiertage";
+import { calcMonthStats } from "@/lib/utils/monthStats";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const STANDARD_HOURS_DEFAULT = 174;
-const DAY_STD_MIN = 8 * 60; // Mo-Fr 8h sabit
-
-/** Mo-Fr (Feiertag hariç) iş günlerini sayar. */
-function countWorkDays(year: number, month: number | null, feiertage: Record<string, string>): number {
-  let count = 0;
-  const months = month != null ? [month] : Array.from({ length: 12 }, (_, i) => i + 1);
-  for (const m of months) {
-    const daysIn = new Date(year, m, 0).getDate();
-    for (let d = 1; d <= daysIn; d++) {
-      const dow = new Date(year, m - 1, d).getDay();
-      if (dow === 0 || dow === 6) continue;
-      const iso = `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      if (feiertage[iso]) continue;
-      count++;
-    }
-  }
-  return count;
-}
-
-function calcStats(entries: TimeEntry[], workDaysInPeriod: number, targetHours: number) {
-  let workedMin = 0, ndMin = 0;
-  let urlaub=0, krank=0, feiertag=0, notdienst=0;
-  for (const e of entries) {
-    if (e.day_type===DAY_TYPES.URLAUB)    { urlaub++;    workedMin+=DAY_STD_MIN; }
-    if (e.day_type===DAY_TYPES.KRANK)     { krank++;     workedMin+=DAY_STD_MIN; }
-    if (e.day_type===DAY_TYPES.FEIERTAG)  { feiertag++;  workedMin+=DAY_STD_MIN; }
-    if (e.day_type===DAY_TYPES.NOTDIENST) notdienst++;
-    if (!e.start_time||!e.end_time) continue;
-    const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
-    if (e.day_type===DAY_TYPES.NOTDIENST) ndMin+=net_minutes;
-    else if (e.day_type===DAY_TYPES.ARBEITEN) workedMin+=net_minutes;
-  }
-  return {
-    workedMin, ndMin,
-    diffMin: workedMin-(targetHours*60),
-    urlaub, krank, feiertag,
-    arbeiten: workDaysInPeriod,
-    notdienst,
-  };
-}
 
 export default function ReportsPage() {
   const now = new Date();
@@ -97,11 +58,24 @@ export default function ReportsPage() {
   const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
 
   const stats = useMemo(() => {
-    const wd = mode === "month"
-      ? countWorkDays(year, month, feiertage)
-      : countWorkDays(year, null, feiertage);
-    const target = mode === "year" ? targetHours * 12 : targetHours;
-    return calcStats(entries, wd, target);
+    const r = calcMonthStats({
+      entries,
+      feiertage,
+      year,
+      month: mode === "month" ? month : null,
+      targetHoursPerMonth: targetHours,
+    });
+    // Geriye uyumluluk için eski isimlere map'le
+    return {
+      workedMin: r.workedMin,
+      ndMin:     r.ndMin,
+      diffMin:   r.diffMin,
+      urlaub:    r.urlaubDays,
+      krank:     r.krankDays,
+      feiertag:  r.feiertagDays,
+      arbeiten:  r.workDaysInPeriod,
+      notdienst: r.ndCount,
+    };
   }, [entries, year, month, mode, feiertage, targetHours]);
 
   // Monthly breakdown for year mode
@@ -110,8 +84,13 @@ export default function ReportsPage() {
     return Array.from({length:12}, (_,i) => {
       const m = i+1;
       const me = entries.filter(e => e.date.startsWith(`${year}-${String(m).padStart(2,"0")}`));
-      const wd = countWorkDays(year, m, feiertage);
-      return { month:m, ...calcStats(me, wd, targetHours) };
+      const r = calcMonthStats({ entries: me, feiertage, year, month: m, targetHoursPerMonth: targetHours });
+      return {
+        month: m,
+        workedMin: r.workedMin, ndMin: r.ndMin, diffMin: r.diffMin,
+        urlaub: r.urlaubDays, krank: r.krankDays, feiertag: r.feiertagDays,
+        arbeiten: r.workDaysInPeriod, notdienst: r.ndCount,
+      };
     });
   }, [entries, year, mode, feiertage, targetHours]);
 

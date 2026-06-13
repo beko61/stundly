@@ -1,5 +1,42 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (4) – Audit listesi devamı: #9 #14 #11 #12 (4 fix)
+
+### Yapıldı
+
+**#9 — TimeEntryModal Cuma default 8h**
+- ✅ `TimeEntryModal.tsx` — `getDefaults` artık tüm hafta içi günler için 08:00–17:00 / 60dk pause = 8h netto (eskiden Cuma 07:45–14:30 / 30dk = 6:15h, eski Hannover modeli)
+- Sollstunden Mo-Fr 8h modeli ile uyumlu (eskiden UI default model ile çelişiyordu)
+
+**#14 — Onboarding Bundesland zorunlu seçim**
+- ✅ `onboarding/setup/page.tsx` — Bundesland default `""` (boş) yapıldı, `<option value="" disabled>Bitte auswählen…</option>` eklendi
+- Eskiden "NI" otomatik seçili → Bayern'li kullanıcı "Weiter" deyince Niedersachsen Feiertag'ları alırdı
+- Açıklama metni de güncellendi: "Bestimmt die gesetzlichen Feiertage in deinem Bundesland."
+
+**#11 — Logo upload resize + compress**
+- ✅ `settings/page.tsx` — Yeni `resizeLogo(file, maxWidth, quality)` helper'ı eklendi (Canvas API)
+  - Max genişlik 400px, JPEG kalite 0.85 → genelde 30-80 KB base64
+  - Dosya tipi kontrolü (image/*)
+  - 5 MB üst sınır + okunabilir hata mesajı
+- DB row patlama riski ortadan kalktı
+
+**#12 — Month-stat helper'a refactor (kısmi: 2/4 dosya)**
+- ✅ Yeni `lib/utils/monthStats.ts` — tek doğruluk kaynağı `calcMonthStats({...})` + `countWorkDays(...)`
+- ✅ `reports/page.tsx` — eski lokal `calcStats`/`countWorkDays` kaldırıldı, helper kullanıyor
+- ✅ `calendar/page.tsx` — eski lokal `calcMonthStats` kaldırıldı, bundesland yükleniyor + Auto-Feiertag desteği (eskiden Neujahr vb. saymıyordu!)
+- ⏳ `MonthlySummary.tsx` + `dashboard/page.tsx` UI-spesifik ekstra alanlar kullanıyor (urlaubMin/krankMin/brutto) → sonraki turda helper'ı genişleterek refactor edilecek
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- #9: Tracker'da Cuma yeni Arbeiten entry açtığında 14:30 görmek kullanıcıyı şaşırtıyordu (Sollstunden 8h ama default 6:15h)
+- #14: Bayern/BW gibi farklı Feiertag profili olan eyaletler için zorunluydu
+- #11: 5 MB logo → 5+ MB base64 + row size limit → sessizce kesik veri/timeout
+- #12: Hidden bug öldü: Calendar `calcMonthStats` Auto-Feiertag (Neujahr vb. DB'de olmayan) saymıyordu → yıllık total saatler 5×8=40h+ eksik gözüküyordu. Helper bunu içeriyor
+
+---
+
 ## 2026-06-13 (3) – A-Z audit sonrası 8 kritik fix (Türkçe leak + hardcoded değerler)
 
 ### Yapıldı

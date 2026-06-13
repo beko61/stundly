@@ -3,35 +3,17 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
+import { formatDuration } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 import { useTrackerStore } from "@/store/trackerStore";
 import { YearPicker } from "@/components/ui/YearPicker";
+import { calcMonthStats } from "@/lib/utils/monthStats";
+import { getFeiertage } from "@/lib/utils/feiertage";
 
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const TARGET_H_DEFAULT  = 174;
 const VAC_TOTAL_DEFAULT = 30;
 const SALARY_LS_KEY     = "workly_salary_settings_v2";
-
-function calcMonthStats(entries: TimeEntry[], targetH: number) {
-  let workedMin = 0, ndMin = 0, ndCount = 0;
-  let urlaub = 0, krank = 0, feiertag = 0, arbeiten = 0;
-  for (const e of entries) {
-    if (e.day_type === DAY_TYPES.URLAUB)    urlaub++;
-    if (e.day_type === DAY_TYPES.KRANK)     krank++;
-    if (e.day_type === DAY_TYPES.FEIERTAG)  feiertag++;
-    if (e.day_type === DAY_TYPES.ARBEITEN)  arbeiten++;
-    if (e.day_type === DAY_TYPES.NOTDIENST) ndCount++;
-    if (!e.start_time || !e.end_time) {
-      if (e.day_type !== DAY_TYPES.FREI && e.day_type !== DAY_TYPES.NOTDIENST) workedMin += 8 * 60;
-      continue;
-    }
-    const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
-    if (e.day_type === DAY_TYPES.NOTDIENST) ndMin += net_minutes;
-    else if (e.day_type !== DAY_TYPES.FREI) workedMin += net_minutes;
-  }
-  return { workedMin, ndMin, ndCount, urlaub, krank, feiertag, arbeiten, diffMin: workedMin - targetH * 60 };
-}
 
 function DonutChart({ pct, color, size = 80, stroke = 9, label, sub }: {
   pct: number; color: string; size?: number; stroke?: number; label: string; sub: string;
@@ -68,6 +50,7 @@ export default function CalendarPage() {
   const router = useRouter();
   const [vacTotal, setVacTotal] = useState(VAC_TOTAL_DEFAULT);
   const [targetH,  setTargetH]  = useState(TARGET_H_DEFAULT);
+  const [bundesland, setBundesland] = useState("NI");
 
   // Sollstunden + Urlaubsanspruch aus Supabase / localStorage (Salary-Seite schreibt beides)
   useEffect(() => {
@@ -106,24 +89,38 @@ export default function CalendarPage() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-      const { data } = await supabase
-        .from("time_entries").select("*")
-        .eq("user_id", session.user.id)
-        .gte("date", `${year}-01-01`)
-        .lte("date", `${year}-12-31`);
+      const [{ data }, { data: prof }] = await Promise.all([
+        supabase.from("time_entries").select("*")
+          .eq("user_id", session.user.id)
+          .gte("date", `${year}-01-01`)
+          .lte("date", `${year}-12-31`),
+        supabase.from("profiles").select("bundesland")
+          .eq("user_id", session.user.id).maybeSingle(),
+      ]);
       if (data) setAllEntries(data as TimeEntry[]);
+      if (prof?.bundesland) setBundesland(prof.bundesland as string);
       setLoading(false);
     }
     void load();
   }, [year]);
 
+  const yearFeiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
+
   const monthStats = useMemo(() =>
     Array.from({ length: 12 }, (_, i) => {
       const m  = i + 1;
       const me = allEntries.filter(e => e.date.startsWith(`${year}-${String(m).padStart(2,"0")}`));
-      return { month: m, ...calcMonthStats(me, TARGET_H) };
+      const r = calcMonthStats({
+        entries: me, feiertage: yearFeiertage, year, month: m, targetHoursPerMonth: TARGET_H,
+      });
+      return {
+        month: m,
+        workedMin: r.workedMin, ndMin: r.ndMin, ndCount: r.ndCount,
+        urlaub: r.urlaubDays, krank: r.krankDays, feiertag: r.feiertagDays,
+        arbeiten: r.arbeitenEntries, diffMin: r.diffMin,
+      };
     }),
-  [allEntries, year, TARGET_H]);
+  [allEntries, year, TARGET_H, yearFeiertage]);
 
   const yearly = useMemo(() => {
     let totalWorked = 0, totalNd = 0, totalDiff = 0;

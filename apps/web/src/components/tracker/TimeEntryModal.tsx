@@ -20,25 +20,25 @@ interface Props {
 const DAY_TYPE_OPTIONS = (Object.entries(DAY_TYPE_LABELS) as [DayType, string][])
   .filter(([value]) => value !== DAY_TYPES.FREI);
 
-/** Mo–Do: 07:45–17:00  Fr: 07:45–14:30  Sa/So/Feiertag: frei */
+/** Mo–Fr: 08:00–17:00 mit 60 Min Pause = 8h netto. Sa/So/Feiertag: frei */
 function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: string) {
   if (existing) {
     return {
       dayType:      existing.day_type,
-      startTime:    existing.start_time  ?? "07:45",
+      startTime:    existing.start_time  ?? "08:00",
       endTime:      existing.end_time    ?? "17:00",
       breakMinutes: existing.break_minutes,
       isNightShift: existing.is_night_shift,
       note:         existing.note ?? "",
     };
   }
-  const isFriday  = dayOfWeek === 5;
+  void dayOfWeek;
   // Default: Feiertag → Feiertag, sonst Arbeiten (Frei kaldırıldı — boş günler kayıtsız kalır)
   return {
     dayType:      feiertag ? DAY_TYPES.FEIERTAG : DAY_TYPES.ARBEITEN as DayType,
-    startTime:    "07:45",
-    endTime:      isFriday ? "14:30" : "17:00",
-    breakMinutes: isFriday ? 30 : 60,
+    startTime:    "08:00",
+    endTime:      "17:00",
+    breakMinutes: 60,
     isNightShift: false,
     note:         "",
   };

@@ -32,7 +32,13 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #3): A-Z audit sonrası 8 kritik fix**
+**Son değişiklik (2026-06-13 #4): Audit listesi devamı (#9, #14, #11, #12)**
+- TimeEntryModal: Cuma default 8h (eski 6:15h Hannover modeli kaldırıldı)
+- Onboarding: Bundesland zorunlu seçim (eskiden "NI" otomatik seçili)
+- Settings: Logo upload Canvas API ile resize (400px JPEG 0.85) + 5 MB cap
+- **Yeni `lib/utils/monthStats.ts`** — tek doğruluk kaynağı; reports + calendar bu helper'a geçti. Bonus: Calendar artık Auto-Feiertag sayıyor (eskiden Neujahr saymıyordu, ~40h+ eksik)
+
+**Önceki değişiklik (2026-06-13 #3): A-Z audit sonrası 8 kritik fix**
 - Türkçe leak temizlendi: Register sayfası error mesajları + confirm ekranı tamamen DE
 - FAQ "Almanya" → "in Deutschland", "14-tägige" → "während Beta-Phase 3 Monate"
 - Landing fiyatları Pricing ile senkron (5,99 / 19,99 / 49,99)

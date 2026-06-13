@@ -30,7 +30,7 @@ function SetupForm() {
   const isCompany = type === "company";
 
   const [companyName, setCompanyName] = useState("");
-  const [bundesland, setBundesland] = useState("NI");
+  const [bundesland, setBundesland] = useState(""); // Kullanıcı bilinçli seçsin
   const [vatId, setVatId] = useState("");
   const [city, setCity] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -185,12 +185,13 @@ function SetupForm() {
             onChange={(e) => setBundesland(e.target.value)}
             required
           >
+            <option value="" disabled>Bitte auswählen…</option>
             {BUNDESLAENDER.map((bl) => (
               <option key={bl.code} value={bl.code}>{bl.name}</option>
             ))}
           </select>
           <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-            Wird für die Berechnung von Feiertagen (ArbZG) verwendet.
+            Bestimmt die gesetzlichen Feiertage in deinem Bundesland.
           </p>
         </div>
 

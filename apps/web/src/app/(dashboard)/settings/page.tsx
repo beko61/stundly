@@ -35,6 +35,36 @@ const EMPTY: Profile = {
   signature_data: null,
 };
 
+/**
+ * Logo'yu Canvas API ile küçültür + JPEG'e dönüştürür.
+ * Max genişlik 400px, kalite 0.85 → genelde 30-80 KB base64.
+ * SVG dosyalar Canvas'a çizilebilir ama vektör korunmaz; bu yeterli çünkü PDF/UI küçük gösterir.
+ */
+async function resizeLogo(file: File, maxWidth: number, quality: number): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Bild konnte nicht geladen werden."));
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas-Kontext nicht verfügbar.")); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        // PNG ile şeffaflık korunur ama JPEG çok daha küçük → JPEG kullan
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function SettingsPage() {
   const [profile,    setProfile]    = useState<Profile>(EMPTY);
   const [loading,    setLoading]    = useState(true);
@@ -192,13 +222,22 @@ export default function SettingsPage() {
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Resize/compress: max 200KB
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
+    setSaveError(null);
+    if (!file.type.startsWith("image/")) {
+      setSaveError("Bitte eine Bilddatei (PNG / JPG / SVG) auswählen.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError("Datei zu groß (max. 5 MB).");
+      return;
+    }
+
+    try {
+      const dataUrl = await resizeLogo(file, 400, 0.85);
       setProfile(p => ({ ...p, logo_data: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      setSaveError("Logo konnte nicht verarbeitet werden: " + (err instanceof Error ? err.message : String(err)));
+    }
   }
 
   async function handleLogout() {

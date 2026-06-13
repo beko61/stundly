@@ -1,5 +1,32 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (17) – v0.5.4: Per-page SEO meta (title + description)
+
+### Yapıldı
+- ✅ **Server component'ler — direkt `metadata` export**:
+  - `impressum/page.tsx` → "Impressum · Stundly"
+  - `datenschutz/page.tsx` → "Datenschutz · Stundly"
+  - `agb/page.tsx` → "AGB · Stundly"
+- ✅ **Client component'ler için yan `layout.tsx`** (metadata server-only):
+  - `pricing/layout.tsx` → "Preise · Stundly"
+  - `(auth)/login/layout.tsx` → "Anmelden · Stundly"
+  - `(auth)/register/layout.tsx` → "Kostenlos starten · Stundly"
+- Her sayfa unique description ile: Google search snippet + browser tab title doğru gösterir
+- Title template (`%s · Stundly`) layout.tsx'te zaten tanımlı — değiştirilmedi
+- ✅ Versiyon bump v0.5.3 → v0.5.4 (PATCH — SEO meta)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Eskiden tüm sayfaların title'ı default "Stundly – Arbeitszeiterfassung für Deutschland" idi
+- Google'ın "search snippet" için unique title kullanması daha iyi → CTR artar
+- /pricing artık "Preise · Stundly" gösterir, /impressum "Impressum · Stundly"
+- Browser tab title da unique → kullanıcı tab arasında ayırt edebilir
+- Client component'ler doğrudan metadata export edemez (Next.js kuralı) → layout pattern kullanıldı (`return children`)
+
+---
+
 ## 2026-06-13 (16) – v0.5.3: Tracker auto-scroll zum heutigen Tag
 
 ### Yapıldı

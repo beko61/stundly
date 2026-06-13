@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "AGB",
+  description: "Allgemeine Geschäftsbedingungen von Stundly. Während der Beta-Phase alle Funktionen 3 Monate kostenlos.",
+};
 
 const SECTIONS: { title: string; content: string }[] = [
   {

@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Impressum",
+  description: "Angaben gemäß § 5 TMG für Stundly. Verantwortlich: Yusuf Bektas, Tiergarten 122, 30559 Hannover.",
+};
 
 export default function ImpressumPage() {
   return (

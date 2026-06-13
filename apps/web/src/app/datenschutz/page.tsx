@@ -1,4 +1,10 @@
-﻿import Link from "next/link";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Datenschutz",
+  description: "Datenschutzerklärung von Stundly nach DSGVO. Alle Daten werden auf EU-Servern in Frankfurt gespeichert.",
+};
 
 export default function DatenschutzPage() {
   return (

@@ -6,8 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import type { TimeEntry } from "@workly/shared";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
-
-const STD_TIMES = { start: "07:45", endLong: "17:00", endShort: "14:30", pauseLong: 60, pauseShort: 30 };
+import {
+  DEFAULT_STANDARD_TIMES,
+  getStandardTimes,
+  setStandardTimes,
+  STANDARD_TIMES_LS_KEY,
+  type StandardTimes,
+} from "@/lib/utils/standardTimes";
 
 /**
  * Settings → "Jahres-Befüllung" kartı.
@@ -26,6 +31,25 @@ export function AutoFillReports() {
   const [yearFilling, setYearFilling] = useState(false);
   const [yearFillResult, setYearFillResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Standardzeiten — kullanıcı ayarlanabilir
+  const [std, setStd] = useState<StandardTimes>(DEFAULT_STANDARD_TIMES);
+  const [stdSaved, setStdSaved] = useState(false);
+  useEffect(() => {
+    setStd(getStandardTimes());
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STANDARD_TIMES_LS_KEY) setStd(getStandardTimes());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  function updateStd<K extends keyof StandardTimes>(key: K, value: StandardTimes[K]) {
+    const next = { ...std, [key]: value };
+    setStd(next);
+    setStandardTimes(next);
+    setStdSaved(true);
+    setTimeout(() => setStdSaved(false), 1200);
+  }
 
   // Profil + tüm yılın entries'ini yükle (Werktage hesabı + buton pasiflik kontrolü için)
   useEffect(() => {
@@ -77,7 +101,7 @@ export function AutoFillReports() {
   async function handleYearFill() {
     if (fullyFilled || yearFilling) return;
     const confirmed = window.confirm(
-      `${year}: alle leeren Mo-Fr-Werktage werden mit Standardzeiten ausgefüllt (Mo–Do 07:45–17:00, Fr 07:45–14:30). Bestehende Einträge bleiben unverändert. Fortfahren?`
+      `${year}: alle leeren Mo-Fr-Werktage werden ausgefüllt — Mo–Do ${std.monThuStart}–${std.monThuEnd} (${std.monThuPause}min Pause), Fr ${std.friStart}–${std.friEnd} (${std.friPause}min Pause). Bestehende Einträge bleiben unverändert. Fortfahren?`
     );
     if (!confirmed) return;
 
@@ -109,9 +133,9 @@ export function AutoFillReports() {
             user_id: userId,
             date: dateStr,
             day_type: "arbeiten",
-            start_time: STD_TIMES.start,
-            end_time: isFriday ? STD_TIMES.endShort : STD_TIMES.endLong,
-            break_minutes: isFriday ? STD_TIMES.pauseShort : STD_TIMES.pauseLong,
+            start_time:    isFriday ? std.friStart : std.monThuStart,
+            end_time:      isFriday ? std.friEnd   : std.monThuEnd,
+            break_minutes: isFriday ? std.friPause : std.monThuPause,
             is_night_shift: false,
             note: null,
             tags: [],
@@ -147,9 +171,8 @@ export function AutoFillReports() {
         ⚡ Jahres-Befüllung
         <InfoTooltip title="Was macht dieser Knopf?">
           Trägt alle leeren Mo–Fr-Werktage (ohne Feiertage) im
-          ausgewählten Jahr mit Standardzeiten ein
-          (Mo–Do 07:45–17:00, Fr 07:45–14:30). Bestehende Einträge
-          werden nicht überschrieben.
+          ausgewählten Jahr mit deinen Standardzeiten ein.
+          Bestehende Einträge werden nicht überschrieben.
           {"\n\n"}
           Sobald alle Werktage befüllt sind, wird der Knopf grün
           und deaktiviert. Nach „Daten zurücksetzen" oder einer
@@ -164,6 +187,70 @@ export function AutoFillReports() {
         Standardzeiten. PDF-Reports findest du unter{" "}
         <Link href="/reports" style={{ color: "var(--accent2)", fontWeight: 700 }}>Berichte</Link>.
       </p>
+
+      {/* Standardzeiten config */}
+      <div style={{
+        background: "var(--surface2)",
+        borderRadius: 10,
+        padding: "12px 14px",
+        marginBottom: 14,
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            🕐 Standardzeiten
+          </span>
+          {stdSaved && <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 700 }}>✓ Gespeichert</span>}
+        </div>
+        <p style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.5, marginBottom: 12 }}>
+          Diese Zeiten werden beim <strong>Auto-Befüllen</strong> und für neue <strong>Arbeiten</strong>-Einträge im Tracker verwendet.
+        </p>
+
+        {/* Mo-Do block */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: "var(--accent2)", fontWeight: 700, marginBottom: 6 }}>Montag – Donnerstag</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <div>
+              <label className="label" style={{ fontSize: 10 }}>Beginn</label>
+              <input className="input" type="time" value={std.monThuStart}
+                onChange={e => updateStd("monThuStart", e.target.value)} />
+            </div>
+            <div>
+              <label className="label" style={{ fontSize: 10 }}>Ende</label>
+              <input className="input" type="time" value={std.monThuEnd}
+                onChange={e => updateStd("monThuEnd", e.target.value)} />
+            </div>
+            <div>
+              <label className="label" style={{ fontSize: 10 }}>Pause (min)</label>
+              <input className="input" type="number" min={0} max={240}
+                value={std.monThuPause}
+                onChange={e => updateStd("monThuPause", parseInt(e.target.value, 10) || 0)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Fr block */}
+        <div>
+          <div style={{ fontSize: 11, color: "var(--accent2)", fontWeight: 700, marginBottom: 6 }}>Freitag</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <div>
+              <label className="label" style={{ fontSize: 10 }}>Beginn</label>
+              <input className="input" type="time" value={std.friStart}
+                onChange={e => updateStd("friStart", e.target.value)} />
+            </div>
+            <div>
+              <label className="label" style={{ fontSize: 10 }}>Ende</label>
+              <input className="input" type="time" value={std.friEnd}
+                onChange={e => updateStd("friEnd", e.target.value)} />
+            </div>
+            <div>
+              <label className="label" style={{ fontSize: 10 }}>Pause (min)</label>
+              <input className="input" type="number" min={0} max={240}
+                value={std.friPause}
+                onChange={e => updateStd("friPause", parseInt(e.target.value, 10) || 0)} />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Jahr selector */}
       <div style={{ marginBottom: 14 }}>

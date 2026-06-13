@@ -1,5 +1,43 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (5) – Standardzeiten özelleştirilebilir (kullanıcının gerçek schedule'ı)
+
+### Yapıldı
+- ✅ **Yeni `lib/utils/standardTimes.ts`** — localStorage tabanlı kullanıcı arbeitszeit ayarları
+  - `monThuStart/End/Pause` (Mo-Do) + `friStart/End/Pause` (Fr) ayrı alanlar
+  - Default: Mo-Do 07:45-17:00/60dk = 8:15h, Fr 07:45-14:30/30dk = 6:15h (Hannover Vorlage — kullanıcının gerçek schedule'ı geri geldi)
+  - `getStandardTimes()`, `setStandardTimes()`, `getDefaultForDow(dow)` API
+  - localStorage'a yazınca `storage` event firewall ile cross-component sync
+- ✅ **TimeEntryModal** — `getDefaults` artık `getStandardTimes()` okuyor, hafta gününe göre Mo-Do veya Fr ayarını seçiyor (Sa/So için Mo-Do fallback)
+- ✅ **AutoFillReports** — Standardzeiten config bölümü eklendi:
+  - Mo-Do + Fr ayrı kartlar, her birinde 3 input (Beginn / Ende / Pause)
+  - Yazınca anında localStorage'a kaydeder + "✓ Gespeichert" feedback
+  - Confirm dialog kullanıcının kaydettiği saatleri gösterir
+  - Yıllık doldurma artık STD_TIMES constant'ı yerine kullanıcının ayarlarını kullanır
+
+### Geri alındı (önceki #9 fix'i)
+- ⏪ TimeEntryModal Cuma default = 17:00/60dk değişikliği geri alındı
+  - Sebep: Kullanıcı "cuma günü bilerek öyle yaptım, benim çalışma saatim öyle" diye belirtti
+  - Yeni çözüm: Standardzeiten artık kullanıcı tarafından ayarlanabilir
+  - Default tekrar Hannover Vorlage (07:45-14:30/30dk) — istediği gibi değişebilir
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Kullanıcı tek tipte Mo-Fr 8h sabit değil, Cuma yarım gün çalışıyor (07:45-14:30 / 30dk pause = 6:15h)
+- "Auto-Fill önce ayarla, sonra doldur" UX akışı için Settings'te ayarlar inline duruyor
+- localStorage tercihi: Beta phase'de cihaz-başına ayar yeterli; ileride DB migration ile multi-device sync eklenebilir
+- Sollstunden (Urlaub/Krank/Feiertag günleri 8h flat sayılıyor — bu ayrı bir karar) DEĞİŞMEDİ, sadece UI default + AutoFill saatleri özelleştirilebilir hale geldi
+
+### Kullanım
+1. Settings'e git → "Jahres-Befüllung" kartı
+2. "Standardzeiten" bölümünde Mo-Do ve Fr için kendi saatlerini gir → otomatik kaydeder
+3. "Jahr komplett befüllen" butonu kaydettiğin saatlerle doldurur
+4. Tracker'da yeni Arbeiten entry açtığında da bu saatler default gelir
+
+---
+
 ## 2026-06-13 (4) – Audit listesi devamı: #9 #14 #11 #12 (4 fix)
 
 ### Yapıldı

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DAY_TYPES, DAY_TYPE_LABELS } from "@workly/shared";
 import type { TimeEntry, DayType } from "@workly/shared";
+import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
 
 interface Props {
   date: string;
@@ -20,7 +21,14 @@ interface Props {
 const DAY_TYPE_OPTIONS = (Object.entries(DAY_TYPE_LABELS) as [DayType, string][])
   .filter(([value]) => value !== DAY_TYPES.FREI);
 
-/** Mo–Fr: 08:00–17:00 mit 60 Min Pause = 8h netto. Sa/So/Feiertag: frei */
+/**
+ * Default Zeitwerte für ein neues Eintrag.
+ *
+ * - Bestehende Einträge → vorhandene Werte beibehalten.
+ * - Neue Einträge → aus Standardzeiten (Settings → Standardzeiten),
+ *   abhängig vom Wochentag.
+ * - Sa/So: kein Default — fallback auf Mo-Do Werte (Nutzer kann editieren).
+ */
 function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: string) {
   if (existing) {
     return {
@@ -32,13 +40,18 @@ function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: 
       note:         existing.note ?? "",
     };
   }
-  void dayOfWeek;
-  // Default: Feiertag → Feiertag, sonst Arbeiten (Frei kaldırıldı — boş günler kayıtsız kalır)
+
+  const std    = getStandardTimes();
+  const dayStd = getDefaultForDow(dayOfWeek, std);
+  // Sa/So için fallback: Mo-Do
+  const fallback = { start: std.monThuStart, end: std.monThuEnd, pause: std.monThuPause };
+  const { start, end, pause } = dayStd ?? fallback;
+
   return {
     dayType:      feiertag ? DAY_TYPES.FEIERTAG : DAY_TYPES.ARBEITEN as DayType,
-    startTime:    "08:00",
-    endTime:      "17:00",
-    breakMinutes: 60,
+    startTime:    start,
+    endTime:      end,
+    breakMinutes: pause,
     isNightShift: false,
     note:         "",
   };

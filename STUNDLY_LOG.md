@@ -32,7 +32,15 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #4): Audit listesi devamı (#9, #14, #11, #12)**
+**Son değişiklik (2026-06-13 #5): Standardzeiten özelleştirilebilir + Cuma 6:15h geri**
+- `lib/utils/standardTimes.ts` — Mo-Do ve Fr için ayrı start/end/pause ayarları (localStorage)
+- Settings → "Jahres-Befüllung" kartına Standardzeiten config inputları eklendi
+- TimeEntryModal yeni Arbeiten entry'leri için bu ayarları okur
+- AutoFillReports da bu ayarları kullanır
+- Default geri Hannover Vorlage (Mo-Do 07:45-17:00/60dk, Fr 07:45-14:30/30dk) — kullanıcının gerçek schedule'ı
+- Kullanıcı talebi: "Cuma günü bilerek öyle yaptım, benim çalışma saatim öyle"
+
+**Önceki değişiklik (2026-06-13 #4): Audit listesi devamı (#9, #14, #11, #12)**
 - TimeEntryModal: Cuma default 8h (eski 6:15h Hannover modeli kaldırıldı)
 - Onboarding: Bundesland zorunlu seçim (eskiden "NI" otomatik seçili)
 - Settings: Logo upload Canvas API ile resize (400px JPEG 0.85) + 5 MB cap

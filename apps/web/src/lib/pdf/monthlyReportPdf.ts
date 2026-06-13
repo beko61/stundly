@@ -31,14 +31,21 @@ export interface NotdienstEntry {
 }
 
 export interface ProfileInfo {
+  // Mitarbeiter
   vorname?:        string;
   nachname?:       string;
   personal_nr?:    string;
+  abteilung?:      string;
+  vorgesetzter?:   string;
+  signature_data?: string | null;  // base64 PNG, Unterschrift
+  // Firma
   company_name?:   string;
-  company_address?: string;
-  company_phone?:   string;
-  company_email?:   string;
-  logo_data?:      string | null;  // base64
+  firma_strasse?:  string;
+  firma_plz?:      string;
+  firma_ort?:      string;
+  firma_telefon?:  string;
+  company_email?:  string;
+  logo_data?:      string | null;  // base64 PNG, Logo
 }
 
 export interface MonthlyReportInput {
@@ -207,28 +214,46 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promi
     if (y + need > 285) { doc.addPage(); y = 16; }
   };
 
-  // Logo
+  // ── Briefkopf: Logo solda, Firma bilgileri sağda ────────────────
+  const headerStartY = y;
+  let logoBottom = y;
   if (input.profile.logo_data) {
     try {
-      doc.addImage(input.profile.logo_data, "PNG", W/2 - 7, y, 14, 14);
-      y += 16;
-    } catch { y += 2; }
+      // Logo sol üstte 24x24 mm
+      doc.addImage(input.profile.logo_data, "PNG", L, y, 24, 24);
+      logoBottom = y + 24;
+    } catch {
+      // Logo yüklenemediyse atla
+    }
   }
 
-  // Firma adı + adres
-  doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.setTextColor(0);
-  doc.text(input.profile.company_name || "Stundly", W/2, y, { align: "center" });
-  y += 4.5;
-  if (input.profile.company_address || input.profile.company_phone || input.profile.company_email) {
-    doc.setFontSize(7); doc.setFont("helvetica", "normal");
-    const parts = [
-      input.profile.company_address,
-      input.profile.company_phone ? `Tel. ${input.profile.company_phone}` : null,
-      input.profile.company_email,
-    ].filter(Boolean).join(" | ");
-    doc.text(parts, W/2, y, { align: "center" });
-    y += 4;
+  // Firma bilgileri sağda (Name + adres + telefon)
+  const firmaX = input.profile.logo_data ? L + 28 : L;
+  doc.setTextColor(0);
+  doc.setFontSize(14); doc.setFont("helvetica", "bold");
+  doc.text(input.profile.company_name || "Stundly", firmaX, headerStartY + 5);
+
+  doc.setFontSize(9); doc.setFont("helvetica", "normal");
+  let firmaY = headerStartY + 10;
+  if (input.profile.firma_strasse) {
+    doc.text(input.profile.firma_strasse, firmaX, firmaY);
+    firmaY += 4;
   }
+  if (input.profile.firma_plz || input.profile.firma_ort) {
+    doc.text([input.profile.firma_plz, input.profile.firma_ort].filter(Boolean).join(" "), firmaX, firmaY);
+    firmaY += 4;
+  }
+  if (input.profile.firma_telefon) {
+    doc.text(`Tel.: ${input.profile.firma_telefon}`, firmaX, firmaY);
+    firmaY += 4;
+  }
+  if (input.profile.company_email) {
+    doc.text(input.profile.company_email, firmaX, firmaY);
+    firmaY += 4;
+  }
+
+  // Header bittikten sonra y
+  y = Math.max(logoBottom, firmaY) + 4;
   doc.setDrawColor(80); doc.setLineWidth(0.4); doc.line(L, y, R, y); y += 7;
 
   // Başlık
@@ -236,9 +261,13 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promi
   doc.text("MONATSBERICHT ARBEITSZEIT", W/2, y, { align: "center" }); y += 6;
   doc.setFontSize(11); doc.setFont("helvetica", "bold");
   doc.text(`${MONTHS_DE[input.month - 1]} ${input.year}`, W/2, y, { align: "center" }); y += 5;
+
+  // Mitarbeiter satırı: ad + Pers-Nr + Abteilung
   doc.setFontSize(9); doc.setFont("helvetica", "normal");
-  const headerInfo = `Mitarbeiter: ${maName}` + (input.profile.personal_nr ? `   Pers-Nr.: ${input.profile.personal_nr}` : "");
-  doc.text(headerInfo, W/2, y, { align: "center" }); y += 8;
+  const headerParts = [`Mitarbeiter: ${maName}`];
+  if (input.profile.personal_nr) headerParts.push(`Pers-Nr.: ${input.profile.personal_nr}`);
+  if (input.profile.abteilung)   headerParts.push(`Abteilung: ${input.profile.abteilung}`);
+  doc.text(headerParts.join("   "), W/2, y, { align: "center" }); y += 8;
 
   // Section helper
   const secTitle = (t: string) => {
@@ -384,14 +413,26 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promi
   }
 
   // ===== UNTERSCHRIFT =====
-  checkPage(28);
-  y = Math.max(y, 265);
+  checkPage(35);
+  y = Math.max(y, 258);
+
+  // Sol: Mitarbeiter — varsa kayıtlı imzayı çizgiye yerleştir
+  if (input.profile.signature_data) {
+    try {
+      // İmza: 35 mm genişlik, 12 mm yükseklik, sol blok ortalı
+      doc.addImage(input.profile.signature_data, "PNG", L + 17, y - 12, 36, 12);
+    } catch { /* signature yüklenemediyse atla */ }
+  }
   doc.setDrawColor(80); doc.setLineWidth(0.3);
   doc.line(L, y, L + 70, y);
   doc.line(R - 70, y, R, y);
   doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
-  doc.text(`Mitarbeiter/in — ${heuteStr}`, L + 35, y + 4, { align: "center" });
-  doc.text("Vorgesetzte/r — Datum", R - 35, y + 4, { align: "center" });
+  doc.text(`${maName} — ${heuteStr}`, L + 35, y + 4, { align: "center" });
+  // Sağ: Vorgesetzter — adı varsa altında yaz
+  const supLabel = input.profile.vorgesetzter
+    ? `${input.profile.vorgesetzter} — Datum`
+    : "Vorgesetzte/r — Datum";
+  doc.text(supLabel, R - 35, y + 4, { align: "center" });
   y += 12;
   doc.setFontSize(6.5); doc.setTextColor(140);
   doc.text(`Erstellt am ${heuteStr} mit Stundly`, W/2, y, { align: "center" });

@@ -97,7 +97,7 @@ export default function ReportsPage() {
           .select("date, start_time, end_time, erledigt, kunde, note")
           .eq("user_id", uid).gte("date", startDate).lte("date", endDate),
         supabase.from("profiles")
-          .select("vorname, nachname, personal_nr, company_name, logo_data, bundesland")
+          .select("vorname, nachname, personal_nr, abteilung, vorgesetzter, email, company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, signature_data, bundesland")
           .eq("user_id", uid).maybeSingle(),
       ]);
 
@@ -112,10 +112,20 @@ export default function ReportsPage() {
       const profile: ProfileInfo = {
         company_name: (prof?.company_name as string | null) ?? "Stundly",
         logo_data:    (prof?.logo_data as string | null) ?? null,
+        signature_data: (prof?.signature_data as string | null) ?? null,
       };
-      if (prof?.vorname)     profile.vorname     = prof.vorname as string;
-      if (prof?.nachname)    profile.nachname    = prof.nachname as string;
-      if (prof?.personal_nr) profile.personal_nr = prof.personal_nr as string;
+      // Mitarbeiter alanları
+      if (prof?.vorname)      profile.vorname      = prof.vorname as string;
+      if (prof?.nachname)     profile.nachname     = prof.nachname as string;
+      if (prof?.personal_nr)  profile.personal_nr  = prof.personal_nr as string;
+      if (prof?.abteilung)    profile.abteilung    = prof.abteilung as string;
+      if (prof?.vorgesetzter) profile.vorgesetzter = prof.vorgesetzter as string;
+      // Firma alanları
+      if (prof?.firma_strasse) profile.firma_strasse = prof.firma_strasse as string;
+      if (prof?.firma_plz)     profile.firma_plz     = prof.firma_plz as string;
+      if (prof?.firma_ort)     profile.firma_ort     = prof.firma_ort as string;
+      if (prof?.firma_telefon) profile.firma_telefon = prof.firma_telefon as string;
+      if (prof?.email)         profile.company_email = prof.email as string;
 
       const feiertage = getFeiertage(year, (prof?.bundesland as string | null) ?? "NI");
       await generateMonthlyReportPDF({ year, month, entries, notdienst, feiertage, profile });

@@ -28,11 +28,24 @@
 > Veya: "Gewerbe açtım, Stripe live mode'a geçelim."
 > Veya: "Beta mode'u kapatalım, ücretli plana geçelim." (BETA_MODE=false yeterli)
 
-**⚠️ HENÜZ ÇALIŞTIRILMAMIŞ MIGRATION'LAR (Supabase SQL Editor'da):**
-- `013_urlaub_anspruch.sql` — Urlaubsanspruch ayarı için
-- `014_firma_adresse.sql` — firma_strasse/plz/ort/telefon kolonları (Settings'te firma bilgileri kaydedilmiyorsa bu eksik)
+**✅ TÜM MIGRATION'LAR ÇALIŞTI (2026-06-13):**
+- `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
+- `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13): Settings & PDF reorganizasyonu**
+**Son değişiklik (2026-06-13 #3): A-Z audit sonrası 8 kritik fix**
+- Türkçe leak temizlendi: Register sayfası error mesajları + confirm ekranı tamamen DE
+- FAQ "Almanya" → "in Deutschland", "14-tägige" → "während Beta-Phase 3 Monate"
+- Landing fiyatları Pricing ile senkron (5,99 / 19,99 / 49,99)
+- Calendar `TARGET_H=174` hardcoded kaldırıldı → `salary_settings.monthly_target_hours` (MonthlySummary ile birebir uyum)
+- MonthlySummary + Vacation + Reports → `urlaub_anspruch` ve `monthly_target_hours` salary_settings'ten okunur (3 dosyada hardcoded 30/174 kaldı)
+
+**Önceki değişiklik (2026-06-13 #2): PDF Briefkopf ortalama + Berichte tüm günler + Vacation senkron**
+- PDF: Logo + firma adı + adres sayfa ortasında merkezlendi
+- Berichte: Urlaub/Krank/Feiertag artık Std sütununda 08:00 gösterir (boş kalmaz)
+- Berichte: Tüm ay günleri listelenir (eskiden sadece entries vardı), Arbeitstage Mo-Fr−Feiertag (Haziran 22)
+- Vacation: Urlaub sayısı `time_entries.day_type=urlaub`'tan okunur → Zeiterfassung ile birebir senkron
+
+**Önceki değişiklik (2026-06-13): Settings & PDF reorganizasyonu**
 - Dashboard ↔ Salary live sync (storage event + visibility)
 - Auto-Feiertag (Neujahr vb.) artık MonthlySummary + Dashboard'a dahil
 - Notdienst hafta-ay atfı (cross-month weeks tek bir aya)

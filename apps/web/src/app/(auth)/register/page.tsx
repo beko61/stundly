@@ -7,15 +7,15 @@ import { createClient } from "@/lib/supabase/client";
 
 function mapError(msg: string): string {
   if (msg.includes("already registered") || msg.includes("already been registered"))
-    return "Bu e-posta adresi zaten kayıtlı.";
+    return "Diese E-Mail-Adresse ist bereits registriert.";
   if (msg.includes("Password should be at least"))
-    return "Şifre en az 6 karakter olmalıdır.";
+    return "Das Passwort muss mindestens 6 Zeichen lang sein.";
   if (msg.includes("Unable to validate email") || msg.includes("invalid email"))
-    return "Geçerli bir e-posta adresi girin.";
+    return "Bitte eine gültige E-Mail-Adresse eingeben.";
   if (msg.includes("rate limit") || msg.includes("too many"))
-    return "Çok fazla deneme. Lütfen birkaç dakika bekleyin.";
+    return "Zu viele Versuche. Bitte einige Minuten warten.";
   if (msg.includes("Signup is disabled"))
-    return "Kayıt şu an kapalı. Lütfen yöneticiyle iletişime geçin.";
+    return "Die Registrierung ist derzeit deaktiviert. Bitte kontaktiere den Administrator.";
   return msg;
 }
 
@@ -58,16 +58,15 @@ export default function RegisterPage() {
     router.refresh();
   }
 
-  // Email onayı bekleniyor ekranı
+  // Warteansicht: E-Mail-Bestätigung
   if (needsConfirm) {
     return (
       <div className="card" style={{ padding: "32px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
-        <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>E-postanı kontrol et</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>Bitte E-Mail prüfen</h1>
         <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.7, marginBottom: 24 }}>
-          <strong style={{ color: "var(--text)" }}>{email}</strong> adresine
-          bir onay linki gönderdik.<br />
-          Linke tıkladıktan sonra giriş yapabilirsin.
+          Wir haben einen Bestätigungslink an <strong style={{ color: "var(--text)" }}>{email}</strong> gesendet.<br />
+          Klicke auf den Link, um dich anzumelden.
         </p>
         <Link
           href="/login"
@@ -77,10 +76,10 @@ export default function RegisterPage() {
             fontSize: 13, textDecoration: "none",
           }}
         >
-          Giriş sayfasına git
+          Zur Anmeldung
         </Link>
         <p style={{ color: "var(--muted)", fontSize: 11, marginTop: 16 }}>
-          Mail gelmedi mi? Spam klasörünü kontrol et.
+          Keine Mail erhalten? Bitte Spam-Ordner prüfen.
         </p>
       </div>
     );

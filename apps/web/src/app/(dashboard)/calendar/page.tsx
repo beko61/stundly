@@ -9,11 +9,11 @@ import { useTrackerStore } from "@/store/trackerStore";
 import { YearPicker } from "@/components/ui/YearPicker";
 
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-const TARGET_H     = 174;
+const TARGET_H_DEFAULT  = 174;
 const VAC_TOTAL_DEFAULT = 30;
 const SALARY_LS_KEY     = "workly_salary_settings_v2";
 
-function calcMonthStats(entries: TimeEntry[]) {
+function calcMonthStats(entries: TimeEntry[], targetH: number) {
   let workedMin = 0, ndMin = 0, ndCount = 0;
   let urlaub = 0, krank = 0, feiertag = 0, arbeiten = 0;
   for (const e of entries) {
@@ -30,7 +30,7 @@ function calcMonthStats(entries: TimeEntry[]) {
     if (e.day_type === DAY_TYPES.NOTDIENST) ndMin += net_minutes;
     else if (e.day_type !== DAY_TYPES.FREI) workedMin += net_minutes;
   }
-  return { workedMin, ndMin, ndCount, urlaub, krank, feiertag, arbeiten, diffMin: workedMin - TARGET_H * 60 };
+  return { workedMin, ndMin, ndCount, urlaub, krank, feiertag, arbeiten, diffMin: workedMin - targetH * 60 };
 }
 
 function DonutChart({ pct, color, size = 80, stroke = 9, label, sub }: {
@@ -67,15 +67,17 @@ export default function CalendarPage() {
   const { setMonth: setTrackerMonth } = useTrackerStore();
   const router = useRouter();
   const [vacTotal, setVacTotal] = useState(VAC_TOTAL_DEFAULT);
+  const [targetH,  setTargetH]  = useState(TARGET_H_DEFAULT);
 
-  // Urlaubsanspruch aus Supabase / localStorage (Salary-Seite schreibt beides)
+  // Sollstunden + Urlaubsanspruch aus Supabase / localStorage (Salary-Seite schreibt beides)
   useEffect(() => {
     function applyLocal() {
       try {
         const raw = localStorage.getItem(SALARY_LS_KEY);
         if (!raw) return;
-        const parsed = JSON.parse(raw) as { urlaub_anspruch?: number };
+        const parsed = JSON.parse(raw) as { urlaub_anspruch?: number; monthly_target_hours?: number };
         if (parsed.urlaub_anspruch && parsed.urlaub_anspruch > 0) setVacTotal(parsed.urlaub_anspruch);
+        if (parsed.monthly_target_hours && parsed.monthly_target_hours > 0) setTargetH(parsed.monthly_target_hours);
       } catch { /* ignore */ }
     }
     async function loadFromSupabase() {
@@ -83,9 +85,10 @@ export default function CalendarPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       const { data } = await supabase.from("salary_settings")
-        .select("urlaub_anspruch").eq("user_id", session.user.id)
+        .select("urlaub_anspruch, monthly_target_hours").eq("user_id", session.user.id)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (data?.urlaub_anspruch) setVacTotal(Number(data.urlaub_anspruch));
+      if (data?.monthly_target_hours) setTargetH(Number(data.monthly_target_hours));
     }
     applyLocal();
     void loadFromSupabase();
@@ -95,6 +98,7 @@ export default function CalendarPage() {
   }, []);
 
   const VAC_TOTAL = vacTotal;
+  const TARGET_H  = targetH;
 
   useEffect(() => {
     async function load() {
@@ -117,9 +121,9 @@ export default function CalendarPage() {
     Array.from({ length: 12 }, (_, i) => {
       const m  = i + 1;
       const me = allEntries.filter(e => e.date.startsWith(`${year}-${String(m).padStart(2,"0")}`));
-      return { month: m, ...calcMonthStats(me) };
+      return { month: m, ...calcMonthStats(me, TARGET_H) };
     }),
-  [allEntries, year]);
+  [allEntries, year, TARGET_H]);
 
   const yearly = useMemo(() => {
     let totalWorked = 0, totalNd = 0, totalDiff = 0;

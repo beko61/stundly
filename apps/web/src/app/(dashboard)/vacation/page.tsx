@@ -110,7 +110,8 @@ export default function VacationPage() {
   const [saving,        setSaving]        = useState(false);
   const [yearUsedDays,  setYearUsedDays]  = useState(0);
   const [overtimeMin,   setOvertimeMin]   = useState(0);
-  const VAC_TOTAL = 30;
+  const [vacTotal,      setVacTotal]      = useState(30);
+  const VAC_TOTAL = vacTotal;
 
   // Signature (draw only)
   const [sigData, setSigData] = useState<string | null>(null);
@@ -126,39 +127,37 @@ export default function VacationPage() {
     if (!user) { setLoading(false); return; }
 
     const year = new Date().getFullYear();
-    const [{ data: reqs }, { data: prof }] = await Promise.all([
+    const [{ data: reqs }, { data: prof }, { data: salary }] = await Promise.all([
       supabase.from("vacation_requests").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
       supabase.from("profiles").select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data").eq("user_id", user.id).single(),
+      supabase.from("salary_settings").select("urlaub_anspruch").eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
+
+    if (salary?.urlaub_anspruch) setVacTotal(Number(salary.urlaub_anspruch));
 
     if (reqs) {
       setRequests(reqs as VacationRequest[]);
-      // Count used days from approved + pending requests in current year
-      const usedDays = (reqs as VacationRequest[])
-        .filter(r => {
-          if (r.status === "rejected") return false;
-          const reqYear = new Date(r.start_date).getFullYear();
-          return reqYear === year;
-        })
-        .reduce((sum, r) => sum + r.days_count, 0);
-      setYearUsedDays(usedDays);
     }
 
-    // Calculate year-to-date overtime from time_entries
+    // Urlaub sayısı + overtime hesabı — TEK kaynak: time_entries (Zeiterfassung ile senkron)
     const monthsElapsed = new Date().getMonth() + 1;
     const { data: timeData } = await supabase
       .from("time_entries")
-      .select("start_time, end_time, break_minutes, day_type")
+      .select("date, start_time, end_time, break_minutes, day_type")
       .eq("user_id", user.id)
       .gte("date", `${year}-01-01`)
       .lte("date", `${year}-12-31`);
     if (timeData) {
       let workedMin = 0;
+      let urlaubDays = 0;
       for (const e of timeData) {
+        if (e.day_type === DAY_TYPES.URLAUB) urlaubDays++;
         if (e.day_type === DAY_TYPES.ARBEITEN && e.start_time && e.end_time) {
           workedMin += calculateWorkDuration(e.start_time, e.end_time, e.break_minutes as number).net_minutes;
         }
       }
+      setYearUsedDays(urlaubDays);
       const targetMin = 174 * 60 * monthsElapsed;
       setOvertimeMin(Math.max(0, workedMin - targetMin));
     }
@@ -237,15 +236,7 @@ export default function VacationPage() {
       }
     }
 
-    setRequests(prev => {
-      const updated = prev.filter(r => r.id !== id);
-      const year = new Date().getFullYear();
-      const usedDays = updated
-        .filter(r => r.status !== "rejected" && new Date(r.start_date).getFullYear() === year)
-        .reduce((sum, r) => sum + r.days_count, 0);
-      setYearUsedDays(usedDays);
-      return updated;
-    });
+    void load();
   }
 
   function handleSaveSignature() {

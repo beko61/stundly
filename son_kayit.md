@@ -1,5 +1,102 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (3) – A-Z audit sonrası 8 kritik fix (Türkçe leak + hardcoded değerler)
+
+### Yapıldı
+
+**Türkçe → Almanca temizliği (kritik — pazarlama önce şart)**
+- ✅ `register/page.tsx` — tüm error mesajları DE: "Diese E-Mail-Adresse ist bereits registriert.", "Das Passwort muss mindestens 6 Zeichen lang sein.", "Bitte eine gültige E-Mail-Adresse eingeben.", "Zu viele Versuche. Bitte einige Minuten warten.", "Die Registrierung ist derzeit deaktiviert. Bitte kontaktiere den Administrator."
+- ✅ `register/page.tsx` — confirm ekranı DE: "Bitte E-Mail prüfen", "Wir haben einen Bestätigungslink an X gesendet. Klicke auf den Link...", "Zur Anmeldung", "Keine Mail erhalten? Bitte Spam-Ordner prüfen."
+- ✅ `page.tsx` — FAQ "für Almanya (ArbZG)" → "in Deutschland"
+
+**Landing ↔ Pricing fiyat senkronu**
+- ✅ `page.tsx` — Plans dizisi yeni fiyatlara güncellendi: Einzelperson 5,99€ · Team 19,99€ · Business 49,99€ (eskiden 9,99/29,99/79,99)
+- ✅ Plan features Pricing ile uyumlu hale getirildi
+- ✅ FAQ "14-tägige Testphase" → Beta phase wording: "kostenlose Testphase – während der Beta-Phase 3 Monate komplett gratis"
+
+**Hardcoded değerler → salary_settings'ten oku**
+- ✅ `calendar/page.tsx` — `TARGET_H = 174` hardcoded kaldırıldı, salary_settings'ten okunur (Tracker ile birebir uyum), `calcMonthStats` parametre alır
+- ✅ `MonthlySummary.tsx` — `URLAUB_DEFAULT = 30` hardcoded kaldırıldı, `urlaub_anspruch` salary_settings'ten okunur (live sync via localStorage)
+- ✅ `vacation/page.tsx` — `VAC_TOTAL = 30` hardcoded kaldırıldı, salary_settings'ten okunur
+- ✅ `reports/page.tsx` — `STANDARD_HOURS = 174` hardcoded kaldırıldı, salary_settings'ten okunur (year mode'da × 12)
+
+### Güncellendi
+- ✅ 7 dosya değişti (register, page.tsx landing, calendar, MonthlySummary, vacation, reports, ayrıca önceki PDF + Berichte fix'leri tek commit'e dahil)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Kullanıcının A-Z audit talebi sonrası bulunan ana sorunlar:
+  - **Türkçe leak**: Alman müşteri Register sayfasında Türkçe error görseydi şokta olurdu
+  - **Fiyat tutarsızlığı**: Beta sonrası landing 9,99 gösterirken pricing 5,99 → kafa karışıklığı
+  - **Calendar vs Tracker uyumsuzluğu** (kullanıcının raporladığı sorun): Calendar `TARGET_H=174` hardcoded olduğu için Tracker'daki MonthlySummary ile diff'ler birbirini tutmuyordu
+  - **Urlaub kontingenti**: 3 yerde (MonthlySummary, vacation, calendar) `30` hardcoded; sadece Dashboard doğru okuyordu → kullanıcı 25'e değiştirse her yerde 30 görürdü
+- Kalan teknik borç (audit listesi #9-18):
+  - TimeEntryModal Cuma default 6:15h (eski Hannover modeli) → 8h olmalı
+  - Logo upload resize/compress yok
+  - DRY: aynı month-stat hesabı 4 dosyada kopya → tek lib helper'a refactor edilmeli
+  - DayEntry yorum drift'leri
+
+---
+
+## 2026-06-13 (2) – PDF Briefkopf ortalama + Berichte tüm günler + Vacation senkron
+
+### Yapıldı
+- ✅ **PDF Monatsbericht Briefkopf ortalandı** (`lib/pdf/monthlyReportPdf.ts`)
+  - Logo (22 mm) sayfa ortasına alındı (eskiden sol blok)
+  - Firma adı + adres + tel + email tek blokta sayfa ortasında
+- ✅ **Berichte Std sütunu Urlaub/Krank/Feiertag için 08:00 gösterir** (`reports/page.tsx`)
+  - Eski: `start_time` null olunca "—" gösteriyordu
+  - Yeni: day_type urlaub/krank/feiertag ise Sollstunden (08:00) yazılır
+  - CSV export'u da aynı kurala uydu
+- ✅ **Berichte tüm ay günlerini gösterir** (eskiden sadece entries vardı, 6-29 arası gözüküyordu)
+  - `monthDays` memo'su her ayın tüm günlerini iterate eder
+  - Entry yoksa: Wochenende / Feiertag / Frei olarak doğru tag
+  - Wochenende satırı yumuşak gri arkaplanla ayrıştı
+- ✅ **Arbeitstage KPI doğru sayıyor** — Mo-Fr minus Feiertag (Haziran 2026 NI: 22)
+  - Eski: `entries.filter(arbeiten).length` → kullanıcı işlediği gün sayısı (yanıltıcı)
+  - Yeni: `countWorkDays(year, month, feiertage)` → ayın gerçek iş günü sayısı
+  - Profil'den bundesland yüklendi → doğru Feiertag listesi
+- ✅ **Vacation page Urlaub sayısı time_entries'ten okunur** (`vacation/page.tsx`)
+  - Eski: `vacation_requests.days_count` toplamı → Tracker'dan direkt Urlaub girilince saymıyordu
+  - Yeni: `time_entries.day_type=urlaub` count → Zeiterfassung ile birebir senkron
+  - `handleDelete` artık lokal hesap yapmıyor, `load()` çağırır → tek doğruluk kaynağı
+
+### Güncellendi
+- ✅ `apps/web/src/lib/pdf/monthlyReportPdf.ts` — Briefkopf merkezleme
+- ✅ `apps/web/src/app/(dashboard)/reports/page.tsx` — countWorkDays + monthDays + DAY_STD_MIN
+- ✅ `apps/web/src/app/(dashboard)/vacation/page.tsx` — yearUsedDays time_entries'ten
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- 4 fix kullanıcı raporundan: (1) PDF ortalama (2) Urlaub Std boş (3) "6-29 yerine 22 iş günü olmalı" (4) menü ↔ Zeiterfassung Urlaub mismatch
+- 3 numaranın gerçek sorunu: Berichte sadece entries'i listeliyordu, eksik günleri (1-5, 30) görünmüyordu → şimdi tüm 30 gün listelenir; Arbeitstage de gerçek iş günü sayısını gösterir
+- 4 numaranın gerçek sorunu: Tracker'dan eklenen Urlaub `vacation_requests` tablosuna yazılmıyordu (sadece `time_entries`'e); Vacation menüsü `vacation_requests`'i sayıyordu → şimdi her iki yer aynı kaynaktan okuyor
+
+---
+
+## 2026-06-13 – Bekleyen Supabase migration'ları çalıştırıldı
+
+### Yapıldı
+- ✅ Supabase SQL Editor → **013_urlaub_anspruch.sql** çalıştırıldı (salary_settings'e `urlaub_anspruch int default 30` kolonu eklendi, check 0-60)
+- ✅ Supabase SQL Editor → **014_firma_adresse.sql** çalıştırıldı (profiles'a `firma_strasse / firma_plz / firma_ort / firma_telefon` text kolonları eklendi)
+- ✅ Settings sayfasında firma adresi artık kaydedilebilir, PDF Briefkopf tam veri ile çıkar
+- ✅ Urlaubsanspruch artık DB-driven (eski 30 gün hardcoded yerine kullanıcı ayarı)
+
+### Güncellendi
+- ✅ `STUNDLY_LOG.md` → "Henüz çalıştırılmamış migration" uyarısı kaldırıldı
+- ✅ `son_kayit.md` → bu giriş eklendi
+
+### Not
+- Migration 001-012 zaten canlıda çalışıyordu (site ayakta) — sadece 013/014 bekliyordu
+- Her ikisi de idempotent (`add column if not exists`), tekrar çalıştırılsa güvenli
+- Kullanıcı tarafında kalan offline iş: Gewerbe Anmeldung + info@stundly.de forwarding
+
+---
+
 ## 2026-06-12 → 13 – Beta launch + Settings reorganizasyonu + bug fix yağmuru
 
 ### Tamamlanan (özet)

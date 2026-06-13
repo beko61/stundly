@@ -11,23 +11,46 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-const STANDARD_HOURS = 174;
+const STANDARD_HOURS_DEFAULT = 174;
+const DAY_STD_MIN = 8 * 60; // Mo-Fr 8h sabit
 
-function calcStats(entries: TimeEntry[]) {
+/** Mo-Fr (Feiertag hariç) iş günlerini sayar. */
+function countWorkDays(year: number, month: number | null, feiertage: Record<string, string>): number {
+  let count = 0;
+  const months = month != null ? [month] : Array.from({ length: 12 }, (_, i) => i + 1);
+  for (const m of months) {
+    const daysIn = new Date(year, m, 0).getDate();
+    for (let d = 1; d <= daysIn; d++) {
+      const dow = new Date(year, m - 1, d).getDay();
+      if (dow === 0 || dow === 6) continue;
+      const iso = `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      if (feiertage[iso]) continue;
+      count++;
+    }
+  }
+  return count;
+}
+
+function calcStats(entries: TimeEntry[], workDaysInPeriod: number, targetHours: number) {
   let workedMin = 0, ndMin = 0;
-  let urlaub=0, krank=0, feiertag=0, arbeiten=0, notdienst=0;
+  let urlaub=0, krank=0, feiertag=0, notdienst=0;
   for (const e of entries) {
-    if (e.day_type===DAY_TYPES.URLAUB)    { urlaub++;    workedMin+=8*60; }
-    if (e.day_type===DAY_TYPES.KRANK)     { krank++;     workedMin+=8*60; }
-    if (e.day_type===DAY_TYPES.FEIERTAG)  { feiertag++;  workedMin+=8*60; }
-    if (e.day_type===DAY_TYPES.ARBEITEN)  arbeiten++;
+    if (e.day_type===DAY_TYPES.URLAUB)    { urlaub++;    workedMin+=DAY_STD_MIN; }
+    if (e.day_type===DAY_TYPES.KRANK)     { krank++;     workedMin+=DAY_STD_MIN; }
+    if (e.day_type===DAY_TYPES.FEIERTAG)  { feiertag++;  workedMin+=DAY_STD_MIN; }
     if (e.day_type===DAY_TYPES.NOTDIENST) notdienst++;
     if (!e.start_time||!e.end_time) continue;
     const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
     if (e.day_type===DAY_TYPES.NOTDIENST) ndMin+=net_minutes;
     else if (e.day_type===DAY_TYPES.ARBEITEN) workedMin+=net_minutes;
   }
-  return { workedMin, ndMin, diffMin: workedMin-(STANDARD_HOURS*60), urlaub, krank, feiertag, arbeiten, notdienst };
+  return {
+    workedMin, ndMin,
+    diffMin: workedMin-(targetHours*60),
+    urlaub, krank, feiertag,
+    arbeiten: workDaysInPeriod,
+    notdienst,
+  };
 }
 
 export default function ReportsPage() {
@@ -37,6 +60,8 @@ export default function ReportsPage() {
   const [mode, setMode]   = useState<"month"|"year">("month");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bundesland, setBundesland] = useState<string>("NI");
+  const [targetHours, setTargetHours] = useState<number>(STANDARD_HOURS_DEFAULT);
 
   useEffect(() => {
     async function load() {
@@ -52,15 +77,32 @@ export default function ReportsPage() {
         ? new Date(year, month, 0).toISOString().split("T")[0]!
         : `${year}-12-31`;
 
-      const { data } = await supabase.from("time_entries").select("*")
-        .eq("user_id", session.user.id).gte("date", start).lte("date", end);
+      const [{ data }, { data: prof }, { data: salary }] = await Promise.all([
+        supabase.from("time_entries").select("*")
+          .eq("user_id", session.user.id).gte("date", start).lte("date", end),
+        supabase.from("profiles").select("bundesland")
+          .eq("user_id", session.user.id).maybeSingle(),
+        supabase.from("salary_settings").select("monthly_target_hours")
+          .eq("user_id", session.user.id).order("created_at", { ascending: false })
+          .limit(1).maybeSingle(),
+      ]);
       if (data) setEntries(data as TimeEntry[]);
+      if (prof?.bundesland) setBundesland(prof.bundesland as string);
+      if (salary?.monthly_target_hours) setTargetHours(Number(salary.monthly_target_hours));
       setLoading(false);
     }
     void load();
   }, [year, month, mode]);
 
-  const stats = useMemo(() => calcStats(entries), [entries]);
+  const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
+
+  const stats = useMemo(() => {
+    const wd = mode === "month"
+      ? countWorkDays(year, month, feiertage)
+      : countWorkDays(year, null, feiertage);
+    const target = mode === "year" ? targetHours * 12 : targetHours;
+    return calcStats(entries, wd, target);
+  }, [entries, year, month, mode, feiertage, targetHours]);
 
   // Monthly breakdown for year mode
   const monthlyBreakdown = useMemo(() => {
@@ -68,9 +110,29 @@ export default function ReportsPage() {
     return Array.from({length:12}, (_,i) => {
       const m = i+1;
       const me = entries.filter(e => e.date.startsWith(`${year}-${String(m).padStart(2,"0")}`));
-      return { month:m, ...calcStats(me) };
+      const wd = countWorkDays(year, m, feiertage);
+      return { month:m, ...calcStats(me, wd, targetHours) };
     });
-  }, [entries, year, mode]);
+  }, [entries, year, mode, feiertage, targetHours]);
+
+  // Tüm ay günleri (month mode için)
+  const monthDays = useMemo(() => {
+    if (mode !== "month") return [];
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const entryMap = new Map(entries.map(e => [e.date, e]));
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const d = i + 1;
+      const iso = `${year}-${String(month).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const dow = new Date(year, month - 1, d).getDay();
+      return {
+        date: iso,
+        dow,
+        isWeekend: dow === 0 || dow === 6,
+        isFeiertag: !!feiertage[iso],
+        entry: entryMap.get(iso),
+      };
+    });
+  }, [entries, year, month, mode, feiertage]);
 
   const fmt = (min: number) => formatDuration(Math.round(Math.abs(min)));
   const sign = (min: number) => min>=0?"+":"-";
@@ -142,9 +204,16 @@ export default function ReportsPage() {
     for (const e of entries) {
       const d = new Date(e.date);
       const dow = ["So","Mo","Di","Mi","Do","Fr","Sa"][d.getDay()]!;
-      const dur = e.start_time&&e.end_time
-        ? fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes)
-        : "";
+      let dur = "";
+      if (e.start_time && e.end_time) {
+        dur = fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes);
+      } else if (
+        e.day_type === DAY_TYPES.URLAUB ||
+        e.day_type === DAY_TYPES.KRANK ||
+        e.day_type === DAY_TYPES.FEIERTAG
+      ) {
+        dur = "08:00";
+      }
       rows.push([e.date, dow, e.day_type, e.start_time??"-", e.end_time??"-",
         String(e.break_minutes), dur, e.note??""]);
     }
@@ -254,35 +323,49 @@ export default function ReportsPage() {
             </div>
 
             {mode==="month" ? (
-              /* Day list table */
-              entries.length===0 ? (
-                <div style={{ textAlign:"center", color:"var(--muted)", padding:"30px 0" }}>Keine Einträge für diesen Monat.</div>
-              ) : (
-                <div className="card" style={{ padding:0, overflow:"hidden" }}>
-                  <div className="report-table-header" style={{ padding:"12px 14px", borderBottom:"1px solid var(--border)", fontSize:10, color:"var(--muted)", fontWeight:700, display:"grid", gridTemplateColumns:"60px 60px 1fr 80px 80px 60px 60px", gap:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>
-                    <span>Datum</span><span>Tag</span><span>Typ</span><span>Start</span><span>Ende</span><span>Pause</span><span>Std</span>
-                  </div>
-                  {entries.sort((a,b)=>a.date.localeCompare(b.date)).map(e => {
-                    const d = new Date(e.date);
-                    const dow = ["So","Mo","Di","Mi","Do","Fr","Sa"][d.getDay()]!;
-                    const dur = e.start_time&&e.end_time
-                      ? fmt(calculateWorkDuration(e.start_time,e.end_time,e.break_minutes).net_minutes)
-                      : "—";
-                    const COLOR: Record<string,string> = { arbeiten:"var(--green)", urlaub:"var(--blue)", krank:"var(--red)", notdienst:"var(--orange)", feiertag:"var(--yellow)", frei:"var(--muted)" };
-                    return (
-                      <div key={e.id} className="report-table-row" style={{ padding:"10px 14px", borderBottom:"1px solid var(--surface2)", display:"grid", gridTemplateColumns:"60px 60px 1fr 80px 80px 60px 60px", gap:8, alignItems:"center", fontSize:12 }}>
-                        <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{e.date.slice(5)}</span>
-                        <span style={{ color:"var(--muted)", fontWeight:700 }}>{dow}</span>
-                        <span style={{ color:COLOR[e.day_type]??"var(--text)", fontWeight:700, textTransform:"capitalize" }}>{e.day_type}</span>
-                        <span style={{ fontFamily:"'DM Mono',monospace" }}>{e.start_time??"-"}</span>
-                        <span style={{ fontFamily:"'DM Mono',monospace" }}>{e.end_time??"-"}</span>
-                        <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{e.break_minutes}m</span>
-                        <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--green)" }}>{dur}</span>
-                      </div>
-                    );
-                  })}
+              /* Day list table — tüm ay günleri */
+              <div className="card" style={{ padding:0, overflow:"hidden" }}>
+                <div className="report-table-header" style={{ padding:"12px 14px", borderBottom:"1px solid var(--border)", fontSize:10, color:"var(--muted)", fontWeight:700, display:"grid", gridTemplateColumns:"60px 60px 1fr 80px 80px 60px 60px", gap:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>
+                  <span>Datum</span><span>Tag</span><span>Typ</span><span>Start</span><span>Ende</span><span>Pause</span><span>Std</span>
                 </div>
-              )
+                {monthDays.map(d => {
+                  const dow = ["So","Mo","Di","Mi","Do","Fr","Sa"][d.dow]!;
+                  const e = d.entry;
+                  const typLabel = e
+                    ? e.day_type
+                    : d.isFeiertag ? "feiertag"
+                    : d.isWeekend ? "wochenende"
+                    : "frei";
+                  const COLOR: Record<string,string> = {
+                    arbeiten:"var(--green)", urlaub:"var(--blue)", krank:"var(--red)",
+                    notdienst:"var(--orange)", feiertag:"var(--yellow)",
+                    frei:"var(--muted)", wochenende:"var(--muted)",
+                  };
+                  let dur = "—";
+                  if (e?.day_type === DAY_TYPES.ARBEITEN && e.start_time && e.end_time) {
+                    dur = fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes);
+                  } else if (
+                    e?.day_type === DAY_TYPES.URLAUB ||
+                    e?.day_type === DAY_TYPES.KRANK ||
+                    e?.day_type === DAY_TYPES.FEIERTAG ||
+                    (!e && d.isFeiertag)
+                  ) {
+                    dur = "08:00";
+                  }
+                  const rowBg = d.isWeekend && !e ? "color-mix(in srgb, var(--muted) 6%, transparent)" : undefined;
+                  return (
+                    <div key={d.date} className="report-table-row" style={{ padding:"10px 14px", borderBottom:"1px solid var(--surface2)", display:"grid", gridTemplateColumns:"60px 60px 1fr 80px 80px 60px 60px", gap:8, alignItems:"center", fontSize:12, background: rowBg }}>
+                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{d.date.slice(5)}</span>
+                      <span style={{ color:"var(--muted)", fontWeight:700 }}>{dow}</span>
+                      <span style={{ color:COLOR[typLabel]??"var(--text)", fontWeight:700, textTransform:"capitalize" }}>{typLabel}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace" }}>{e?.start_time ?? "-"}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace" }}>{e?.end_time ?? "-"}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{e ? `${e.break_minutes}m` : "-"}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace", color: dur === "—" ? "var(--muted)" : "var(--green)" }}>{dur}</span>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               /* Year monthly breakdown table */
               <div className="card" style={{ padding:0, overflow:"hidden" }}>

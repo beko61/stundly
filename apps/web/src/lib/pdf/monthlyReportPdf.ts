@@ -214,46 +214,41 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promi
     if (y + need > 285) { doc.addPage(); y = 16; }
   };
 
-  // ── Briefkopf: Logo solda, Firma bilgileri sağda ────────────────
-  const headerStartY = y;
-  let logoBottom = y;
+  // ── Briefkopf: Logo + Firma bilgileri ORTALANMIŞ ────────────────
+  const LOGO_SIZE = 22;
   if (input.profile.logo_data) {
     try {
-      // Logo sol üstte 24x24 mm
-      doc.addImage(input.profile.logo_data, "PNG", L, y, 24, 24);
-      logoBottom = y + 24;
+      doc.addImage(input.profile.logo_data, "PNG", (W - LOGO_SIZE) / 2, y, LOGO_SIZE, LOGO_SIZE);
+      y += LOGO_SIZE + 3;
     } catch {
       // Logo yüklenemediyse atla
     }
   }
 
-  // Firma bilgileri sağda (Name + adres + telefon)
-  const firmaX = input.profile.logo_data ? L + 28 : L;
   doc.setTextColor(0);
   doc.setFontSize(14); doc.setFont("helvetica", "bold");
-  doc.text(input.profile.company_name || "Stundly", firmaX, headerStartY + 5);
+  doc.text(input.profile.company_name || "Stundly", W / 2, y + 4, { align: "center" });
+  y += 6;
 
   doc.setFontSize(9); doc.setFont("helvetica", "normal");
-  let firmaY = headerStartY + 10;
   if (input.profile.firma_strasse) {
-    doc.text(input.profile.firma_strasse, firmaX, firmaY);
-    firmaY += 4;
+    doc.text(input.profile.firma_strasse, W / 2, y + 3, { align: "center" });
+    y += 4;
   }
   if (input.profile.firma_plz || input.profile.firma_ort) {
-    doc.text([input.profile.firma_plz, input.profile.firma_ort].filter(Boolean).join(" "), firmaX, firmaY);
-    firmaY += 4;
+    doc.text([input.profile.firma_plz, input.profile.firma_ort].filter(Boolean).join(" "), W / 2, y + 3, { align: "center" });
+    y += 4;
   }
   if (input.profile.firma_telefon) {
-    doc.text(`Tel.: ${input.profile.firma_telefon}`, firmaX, firmaY);
-    firmaY += 4;
+    doc.text(`Tel.: ${input.profile.firma_telefon}`, W / 2, y + 3, { align: "center" });
+    y += 4;
   }
   if (input.profile.company_email) {
-    doc.text(input.profile.company_email, firmaX, firmaY);
-    firmaY += 4;
+    doc.text(input.profile.company_email, W / 2, y + 3, { align: "center" });
+    y += 4;
   }
 
-  // Header bittikten sonra y
-  y = Math.max(logoBottom, firmaY) + 4;
+  y += 5;
   doc.setDrawColor(80); doc.setLineWidth(0.4); doc.line(L, y, R, y); y += 7;
 
   // Başlık

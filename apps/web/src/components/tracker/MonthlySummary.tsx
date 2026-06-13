@@ -9,7 +9,7 @@ import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMon
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 const TARGET_HOURS_DEFAULT = 174;
-const URLAUB_DEFAULT       = 30; // yıllık urlaub kontingenti
+const URLAUB_DEFAULT       = 30; // Fallback: salary_settings.urlaub_anspruch okunamazsa
 
 // VEREINFACHT (07.06.2026): Mo-Fr = 8h, Sa/So = 0.
 // Urlaub/Krank/Feiertag werden auf jedem Werktag wie 08:00–17:00 / 1h Pause = 8h gezählt.
@@ -38,9 +38,9 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
   const [yearUrlaub, setYearUrlaub] = useState(0); // tüm yılın Urlaub gün sayısı
   const [targetHours, setTargetHours] = useState(TARGET_HOURS_DEFAULT);
+  const [urlaubAnspruch, setUrlaubAnspruch] = useState(URLAUB_DEFAULT);
 
-  // Settings'ten Sollstunden oku (Settings değişince güncellenmesi için ndVersion'a benzer trigger gerekir,
-  // ama useEffect [year,month] zaten her ay değişiminde tetikler. Live update için 'storage' event kullan.)
+  // Settings'ten Sollstunden + Urlaubsanspruch oku (live sync via localStorage)
   useEffect(() => {
     async function loadSettings() {
       const supabase = createClient();
@@ -48,32 +48,28 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
       if (!session?.user) return;
       const { data } = await supabase
         .from("salary_settings")
-        .select("monthly_target_hours")
+        .select("monthly_target_hours, urlaub_anspruch")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (data?.monthly_target_hours) setTargetHours(Number(data.monthly_target_hours));
+      if (data?.urlaub_anspruch)      setUrlaubAnspruch(Number(data.urlaub_anspruch));
     }
     void loadSettings();
-    // Listen for localStorage changes (Salary page writes to it on save)
+    const applyLocal = (raw: string | null) => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw) as { monthly_target_hours?: number; urlaub_anspruch?: number };
+        if (parsed.monthly_target_hours) setTargetHours(Number(parsed.monthly_target_hours));
+        if (parsed.urlaub_anspruch)      setUrlaubAnspruch(Number(parsed.urlaub_anspruch));
+      } catch {}
+    };
     const handler = (e: StorageEvent) => {
-      if (e.key === "workly_salary_settings_v2" && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue) as { monthly_target_hours?: number };
-          if (parsed.monthly_target_hours) setTargetHours(Number(parsed.monthly_target_hours));
-        } catch {}
-      }
+      if (e.key === "workly_salary_settings_v2") applyLocal(e.newValue);
     };
     window.addEventListener("storage", handler);
-    // Also check on mount from localStorage (same-tab updates)
-    try {
-      const raw = localStorage.getItem("workly_salary_settings_v2");
-      if (raw) {
-        const parsed = JSON.parse(raw) as { monthly_target_hours?: number };
-        if (parsed.monthly_target_hours) setTargetHours(Number(parsed.monthly_target_hours));
-      }
-    } catch {}
+    try { applyLocal(localStorage.getItem("workly_salary_settings_v2")); } catch {}
     return () => window.removeEventListener("storage", handler);
   }, [year, month]);
 
@@ -189,7 +185,7 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
     };
   }, [entries, ndEntries, targetHours, feiertage, year, month]);
 
-  const urlaubKonto = Math.max(0, URLAUB_DEFAULT - yearUrlaub);
+  const urlaubKonto = Math.max(0, urlaubAnspruch - yearUrlaub);
 
   // ── Kart bileşeni ──
   function Card({ title, icon, color, big, mid, sub, info }: {
@@ -345,7 +341,7 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           icon="🌴"
           color="var(--accent2)"
           big={`${urlaubKonto} Tage`}
-          mid={`von ${URLAUB_DEFAULT} genommen`}
+          mid={`von ${urlaubAnspruch} verfügbar`}
           sub={`${yearUrlaub} verbraucht ${year}`}
         />
       </div>

@@ -14,40 +14,40 @@ const plans = [
   {
     id: "individual",
     name: "Einzelperson",
-    price: "9,99",
+    price: "5,99",
     period: "/ Monat",
     desc: "Für Freelancer & Selbstständige",
-    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohnberechnung", "PDF Export", "Mobile App"],
-    cta: "Kostenlos testen",
+    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
+    cta: "14 Tage gratis testen",
     highlight: false,
   },
   {
     id: "team",
     name: "Team",
-    price: "29,99",
+    price: "19,99",
     period: "/ Monat",
-    desc: "Für kleine Unternehmen",
-    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte", "KI-Funktionen", "Prioritäts-Support"],
+    desc: "Für Handwerk-Betriebe bis 10 MA",
+    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
     cta: "14 Tage gratis testen",
     highlight: true,
   },
   {
     id: "business",
     name: "Unternehmen",
-    price: "79,99",
+    price: "49,99",
     period: "/ Monat",
     desc: "Für größere Betriebe",
-    features: ["Unbegrenzte Mitarbeiter", "API-Zugang", "Eigene Berichte", "Alle KI-Funktionen", "Prioritäts-Support", "Onboarding-Service"],
-    cta: "Kontakt aufnehmen",
+    features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
+    cta: "14 Tage gratis testen",
     highlight: false,
   },
 ];
 
 const faqs = [
   { q: "Ist Stundly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
-  { q: "Muss ich eine Kreditkarte angeben?", a: "Nein. Die 14-tägige Testphase ist vollständig kostenlos und ohne Zahlungsdaten." },
-  { q: "Kann ich Stundly für Almanya (ArbZG) nutzen?", a: "Ja. Stundly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
-  { q: "Gibt es eine mobile App?", a: "Ja. Stundly ist für iOS und Android verfügbar und funktioniert auch offline." },
+  { q: "Muss ich eine Kreditkarte angeben?", a: "Nein. Die kostenlose Testphase ist vollständig ohne Zahlungsdaten – während der Beta-Phase sogar 3 Monate komplett gratis." },
+  { q: "Kann ich Stundly in Deutschland nutzen?", a: "Ja. Stundly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
+  { q: "Gibt es eine mobile App?", a: "Ja. Stundly ist als PWA für iOS und Android verfügbar und funktioniert auch offline." },
 ];
 
 export default function LandingPage() {

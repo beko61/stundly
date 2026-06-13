@@ -7,21 +7,40 @@
 
 ## ⚡ HIZLI BAŞLANGIÇ (yeni sohbet için)
 
-**Mevcut durum (07.06.2026 sonu):**
+**Mevcut durum (13.06.2026):**
 - ✅ Stundly canlıda: **https://stundly.de**
-- ✅ Tüm internetsiz HTML özellikleri Stundly'ye taşındı (vergi/PDF/Notdienst/Urlaub/Lohn)
-- ✅ 4 kritik UX bug düzeltildi (Lohn Festgehalt, Settings↔Tracker sync, Vacation↔Tracker sync, Notdienst toggle)
-- ⏳ FAZ 1 kalan: **Resend** + **Stripe Test** + **Impressum/Gewerbe**
+- ✅ **Beta Phase aktif** (BETA_MODE=true) — 07.06.2026 → 07.09.2026, 3 ay 100% ücretsiz, Pricing/Stripe gizli
+- ✅ Dashboard tamamen yeniden tasarlandı (ay seçici + yıllık kart + 12 ay trend + 7 gün grafik)
+- ✅ Resend email kurulumu TAMAM (3 trigger: welcome / invite / subscription)
+- ✅ Stripe Test mode TAMAM (Beta sonrası kullanılacak: ürünler + checkout + webhook + BETA30 coupon)
+- ✅ Yasal sayfalar: Impressum + Datenschutz (Yusuf Bektas, Tiergarten 122, 30559 Hannover) + AGB + Widerrufsbelehrung
+- ✅ Pricing strategy (Beta sonrası): Individual €5,99/€59 · Team €19,99/€199 · Business €49,99/€499
+- ✅ Sollstunden artık sabit (Mo-Fr 8h flat, Sa/So 0) — eskiden Mo-Do 8:15h/Fr 6:15h idi
+- ✅ Notdienst hafta-ay atfı (haftanın Pazartesisi hangi aydaysa hafta o aya)
+- ✅ Settings tüm kişisel + firma bilgileri tek yerde, PDF için tam Briefkopf
+
+**FAZ 1 KAPATILDI — kullanıcı tarafında 2 offline iş kaldı:**
+1. ⏳ **Gewerbe Anmeldung** (Hannover Gewerbeamt) — pazarlamadan önce şart
+2. ⏳ **info@stundly.de email forwarding** (ImprovMX önerildi) — yasal şart, Impressum'da bu adres var
 
 **Sonraki sohbette ilk adım:**
-> "Stundly devam ediyoruz. STUNDLY_LOG.md'ye göre **Resend kurulumu** ile başlayalım."
-> *(Veya yeni bir bug varsa bildir → ilgili dosyalar STUNDLY_LOG'da yer alıyor.)*
+> "Stundly devam ediyoruz. FAZ 2'ye geçelim — demo video, landing iyileştirmeleri, ilk beta müşteriler."
+> Veya: "Gewerbe açtım, Stripe live mode'a geçelim."
+> Veya: "Beta mode'u kapatalım, ücretli plana geçelim." (BETA_MODE=false yeterli)
 
-**Son değişiklik (2026-06-07 gece): Masaüstü Dashboard tamamen yenilendi.**
-- Yeni `/dashboard` route (Übersicht): 2 hero kart + 4 KPI + 7 gün bar grafik + quick actions
-- Sidebar 240px, gruplu nav (Übersicht / Erfassung / Auswertung / Konto)
-- Login redirect `/tracker` → `/dashboard`
-- Eski globals.css bug'ı düzeltildi (Sidebar masaüstünde de gizliydi)
+**⚠️ HENÜZ ÇALIŞTIRILMAMIŞ MIGRATION'LAR (Supabase SQL Editor'da):**
+- `013_urlaub_anspruch.sql` — Urlaubsanspruch ayarı için
+- `014_firma_adresse.sql` — firma_strasse/plz/ort/telefon kolonları (Settings'te firma bilgileri kaydedilmiyorsa bu eksik)
+
+**Son değişiklik (2026-06-13): Settings & PDF reorganizasyonu**
+- Dashboard ↔ Salary live sync (storage event + visibility)
+- Auto-Feiertag (Neujahr vb.) artık MonthlySummary + Dashboard'a dahil
+- Notdienst hafta-ay atfı (cross-month weeks tek bir aya)
+- Settings: Firma adresi + Mitarbeiter alanları + Generic Mustermann placeholders
+- Notdienst ℹ️ tooltip (hafta-ay kuralı + kullanım rehberi)
+- Auto-fill butonu Settings'e taşındı (komplett dolu→pasif, reset→aktif)
+- PDF Monatsbericht butonu Reports/Berichte sayfasına taşındı (CSV yanına)
+- PDF template'i logo + firma adresi + Mitarbeiter detayları + imza gösterir hale geldi
 
 **Repo**: `C:\Users\bktas\Desktop\Claude\workly` (git: github.com/beko61/stundly, main branch)
 **GitHub**: https://github.com/beko61/stundly
@@ -33,16 +52,113 @@
 ## 🗺️ Genel Plan (4 Faz)
 
 ```
-[FAZ 1] Canlıya çıkış          █████████████░  ~95% — neredeyse bitti
-[FAZ 2] Pazarlanabilir hale    ░░░░░░░░░░░░░  0%
+[FAZ 1] Canlıya çıkış          ██████████████ 100% — TAMAM (Gewerbe + email forwarding sadece offline iş kaldı)
+[FAZ 2] Pazarlanabilir hale    ░░░░░░░░░░░░░  0% — sıradaki
 [FAZ 3] İlk 10 müşteri         ░░░░░░░░░░░░░  0%
 [FAZ 4] Para trafik + ölçek    ░░░░░░░░░░░░░  0%
 ```
 
-Şu an **FAZ 1 sonuna yaklaştık**. Sadece şu 3 maddenin halledilmesi gerek:
-- Resend email (ihbar/davet mailleri için)
-- Stripe Test mode (ödeme akışı için)
-- Impressum/Gewerbe (yasal — pazarlamadan ÖNCE şart, kullanıcı kararı bekliyor — bkz. `project_legal_pending` memory)
+**FAZ 1 KAPATILDI ✅** — Resend + Stripe + Yasal sayfalar hepsi tamam. Sadece kullanıcının offline iki adımı kaldı:
+- **Gewerbe Anmeldung** (Hannover Gewerbeamt, 50€, 10 dk)
+- **info@stundly.de email forwarding** (United-Domains → Gmail)
+
+Bunlar tamam olunca **FAZ 2'ye geçilir**: Demo video, landing iyileştirme, beta tester davetleri.
+
+---
+
+## 📅 2026-06-12 → 13 — Yoğun bir hafta sonu: sync fix + reorganizasyon
+
+Önceki sohbetten kalan tüm iş bu iki günde tamamlandı. 30+ commit, 4 kritik bug fix, büyük Settings refactoru.
+
+### 🐛 Önemli bug fix'leri
+
+**Calendar Mayıs bug**: `window.location.href = "/tracker"` full page reload yapıp Zustand state'i siliyordu → `router.push()`. Artık tıklanan ay korunur.
+
+**Dashboard ↔ Salary sync**: Salary'de hourly_rate değişirse Dashboard'a yansımıyordu → localStorage + `storage` event + `visibilitychange` ile canlı sync. Hem cross-tab hem same-tab navigation çalışır.
+
+**Auto-Feiertag eksik sayım**: Neujahr (01.01) gibi otomatik Feiertage DB'de yok, sadece `getFeiertage()` lookup'tan geliyor → MonthlySummary + Dashboard tüm Sollstunden hesabında bu günleri ATLIYORDU (8h eksik sayım). `feiertage` prop'u eklendi, eksik tatil günleri için Sollstunden ekleniyor. Yıllık fark: Januar 8h, April 16h, Mai 24h, Oktober 8h, Dezember 16h.
+
+**Notdienst hafta-ay atfı**: Cross-month haftalar Notdienst saatlerini iki aya bölüyordu (KW 18 Apr 28 - Mai 4 → April'e 3 gün, Mayıs'a 4 gün) → `lib/utils/weekMonth.ts` helper ile yeni kural: haftanın Pazartesi'si hangi aydaysa, o ayda sayılır. Sadece Notdienst için (Arbeiten/Urlaub/Krank gün-bazlı kalır).
+
+**Import bug split format**: Eski internetsiz HTML formatı (userData[date] = "Urlaub" string) parser combined format bekliyordu → tüm Urlaub/Krank/Feiertag "Frei" geliyordu. Otomatik format algılama eklendi.
+
+### 🔥 Sollstunden modeli basitleştirildi
+
+Eski: Mo-Do 8:15h / Fr 6:15h (Hannover Vorlage)
+Yeni: **Mo-Fr 8h sabit** / Sa-So 0
+
+Sebep: Cuma Urlaub'unun "6:15" sayması kullanıcıyı tedirgin ediyordu. Şimdi her hafta içi günü tam 8h. Etkiledi: `salaryCalc.ts`, `MonthlySummary`, `Dashboard`, `DayEntry`. `monthly_target_hours` kullanıcı ayarı bağımsız (default 174h).
+
+DayEntry artık Urlaub/Krank/Feiertag için tam time chip strip gösterir: Start 08:00 | Pause 01:00 | Ende 17:00 | Std 08:00. Sağ üstte status rengiyle saati gösterir.
+
+### 🎁 Beta Phase aktive edildi
+
+`lib/beta.ts` — tek dosya flag (`BETA_MODE = true`, `BETA_END_DATE = "2026-09-07"`).
+
+- **Landing**: üstte gradient şerit "🎁 BETA: 3 Monate komplett kostenlos — bis 07.09.2026"
+- **Pricing**: plan kartları gizli, tek büyük "Jetzt kostenlos starten" CTA + "50% lifetime discount Beta sonrası" sözü
+- **/api/stripe/checkout**: BETA_MODE true'da 403 dönüyor (kazara tıklama korumalı)
+- **Footer**: "Preise" linki gizli
+- **Welcome email**: Beta-Tester badge + 3 ay garantisi
+- **AGB §5**: Beta phase wording
+
+Sept 7'de tek satır flag false → tüm normal Stripe pricing geri gelir.
+
+### ⚙️ Settings reorganizasyonu (3 aşama)
+
+**Aşama 1**: Firma adres alanları (migration 014: `firma_strasse`, `firma_plz`, `firma_ort`, `firma_telefon`). Placeholders Generic Mustermann tarzına çevrildi.
+
+**Aşama 2**: Notdienst ℹ️ tooltip — MonthlySummary kartında + Wochenübersicht başlığında. `InfoTooltip.tsx` reusable component.
+
+**Aşama 3**: Auto-fill + PDF Settings'e taşındı. `AutoFillReports.tsx`:
+- Yıl seçici + boş Werktage sayar
+- Buton: `⚡ 2026 komplett befüllen · 123 Werktage offen`
+- Tamamlanmışsa: yeşil pasif `✓ 2026 ist komplett befüllt`
+- Reset edilince tekrar aktif
+
+Sonra: PDF butonu Settings'ten kaldırılıp Berichte sayfasına taşındı (CSV yanına 📄 Monatsbericht PDF).
+
+### 📄 PDF Monatsbericht template'i yenilendi
+
+Briefkopf düzeni:
+- Sol üst: Logo 24x24 mm (eskiden ortada 14x14)
+- Logo sağı: Firma adı (14pt bold) + Straße + PLZ Ort + Tel + E-Mail
+- Mitarbeiter satırı: ad + Pers-Nr + Abteilung
+- İmza alanı: signature_data varsa sol çizgi üstüne yapıştır, sağda Vorgesetzter adı (varsa)
+
+Reports/page.tsx tüm yeni alanları SELECT eder ve `ProfileInfo`'ya geçer.
+
+### 🗑️ Daten zurücksetzen butonu
+
+Settings'in altında kırmızı kart: "Alle Daten zurücksetzen". Modal'da `LÖSCHEN` yazma onayı. `/api/account/reset-data` endpoint'i — time_entries + notdienst_entries + vacation_requests + salary_records siler, profile + salary_settings + auth korur. Audit log'a kayıt.
+
+### 🚪 Feiertag günlerinde Notdienst ekleme aktif
+
+Auto-Feiertag günlerinde "+ Notdienst hinzufügen" butonu gözükmüyordu (kod sadece `entry || isWeekend` kontrol ediyordu). `|| isFeiertag` eklendi. Neujahr, Karfreitag gibi günlerde de Notdienst eklenebilir.
+
+### 🔧 Diğer bug fix'leri
+
+- /setup sayfası tek-kullanımlık tool olarak silindi (security cleanup)
+- Stripe Tax deaktive (Kleinunternehmer §19 UStG)
+- Pricing strategy yenilendi: aggressive beta launch
+- Pricing'de duplicate row temizliği SQL örnekleri
+- Type errors düzeltildi (exactOptionalPropertyTypes uyumu)
+
+### 📊 Önemli dosyalar (yeni eklenen / değişen)
+
+**Yeni**:
+- `apps/web/src/lib/beta.ts` — Beta mode flag + tarihler
+- `apps/web/src/lib/utils/weekMonth.ts` — Notdienst hafta-ay atfı yardımcıları
+- `apps/web/src/components/ui/InfoTooltip.tsx` — Reusable info tooltip
+- `apps/web/src/components/settings/AutoFillReports.tsx` — Settings'teki year-fill kartı
+- `apps/web/src/app/api/account/reset-data/route.ts` — Data reset endpoint
+
+**Sil**:
+- `apps/web/src/app/setup/` ve `apps/web/src/app/api/setup/` (tek-kullanımlık tool kaldırıldı)
+
+**Migration** (Supabase'de el ile çalıştırılması gereken):
+- `supabase/migrations/013_urlaub_anspruch.sql` — Urlaubsanspruch ayarı için
+- `supabase/migrations/014_firma_adresse.sql` — firma_strasse/plz/ort/telefon
 
 ---
 

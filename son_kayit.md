@@ -1,5 +1,59 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-12 → 13 – Beta launch + Settings reorganizasyonu + bug fix yağmuru
+
+### Tamamlanan (özet)
+- ✅ **Beta Phase** aktive (`lib/beta.ts`, BETA_MODE=true, 07.06 → 07.09.2026, Pricing gizli, Stripe checkout 403)
+- ✅ **Sollstunden** Mo-Fr 8h sabit (Hannover 8:15/6:15 modeli kaldırıldı)
+- ✅ **Auto-Feiertag sayım fix**: Neujahr vb. artık MonthlySummary + Dashboard workedMin'e dahil (eskiden 8h eksik sayılıyordu)
+- ✅ **Notdienst hafta-ay atfı**: cross-month haftalar haftanın Pazartesi'sinin bulunduğu aya yazılır
+- ✅ **Calendar Mayıs bug**: `window.location.href` → `router.push()` (Zustand state korunuyor)
+- ✅ **Dashboard ↔ Salary live sync**: storage event + visibilitychange
+- ✅ **Import split format desteği**: eski internetsiz HTML'in `userData[date]="Urlaub"` formatı parse edilir, Frei import'tan çıkar
+- ✅ **Feiertag günlerinde Notdienst ekleme** açık
+- ✅ **Settings reorganization**:
+  - Firma adresi alanları eklendi (migration 014: firma_strasse/plz/ort/telefon)
+  - Generic Mustermann placeholders
+  - Notdienst ℹ️ tooltip (`InfoTooltip.tsx`)
+  - Auto-fill butonu Settings'e taşındı (`AutoFillReports.tsx`), komplett dolu → pasif yeşil
+  - PDF butonu Berichte sayfasına taşındı (CSV yanına)
+- ✅ **PDF Briefkopf yenilendi**: logo sol üstte 24x24, firma adresi düzenli yerleşim, Mitarbeiter detayları, imza otomatik
+- ✅ **Daten zurücksetzen butonu** Settings'e + `/api/account/reset-data`
+- ✅ /setup tek-kullanımlık sayfa silindi (security)
+
+### ⚠️ Kullanıcı tarafında bekleyen
+1. Supabase'de **migration 013_urlaub_anspruch.sql** ve **014_firma_adresse.sql** çalıştırılmalı (firma bilgileri kaydedilmiyorsa bu eksik demektir)
+2. Gewerbe Anmeldung (Hannover Gewerbeamt)
+3. info@stundly.de forwarding (ImprovMX önerildi)
+
+### Genel durum
+- FAZ 1 KAPATILDI ✓
+- Beta phase aktive, 3 ay ücretsiz, Stripe arka planda hazır
+- 07.09.2026'da `BETA_MODE=false` set → normal Stripe pricing devreye girer
+
+---
+
+## 2026-06-07 (gece-2) – Export tam kapsamlı + Calendar/Dashboard sync fix
+
+### Yapılan
+- ✅ `apps/web/src/app/(dashboard)/calendar/page.tsx` — Ay tıklamada `window.location.href` (full reload) → `router.push()`. Zustand state silinmiyor, seçili ay korunuyor.
+- ✅ `apps/web/src/app/(dashboard)/dashboard/page.tsx` — Salary sayfasındaki hourly_rate / monthly_target_hours / vb. değişiklikleri Dashboard'a canlı yansıtmak için: localStorage ilk + 'storage' event + 'visibilitychange' listener. Supabase satırı baseline, lokal en taze.
+- ✅ `apps/web/src/app/(dashboard)/reports/page.tsx` — CSV export tamamen yenilendi:
+  - `notdienst_entries` tablosu da yükleniyor (eskiden eksikti)
+  - Yeni sütunlar: Kunde, Adresse, Problem, Ergebnis, Bezahlt
+  - Urlaub/Krank/Feiertag için Sollstunden (Mo-Do 8:15h, Fr 6:15h) Std sütununa yazılır (eskiden NULL → boş görünüyordu)
+  - Ayraç `;` + CRLF + BOM (Excel-DE uyumlu), tırnak escape
+- ✅ `apps/web/src/app/(dashboard)/settings/page.tsx` — Yeni "💾 Sicherung herunterladen" butonu (Import kartının üstünde). `stundly_backup_YYYY-MM-DD.json` indirir: userData + userNotdienst + userNotes + salarySettings + vacationRequests + salaryRecords. İnternetsiz HTML formatıyla uyumlu → aynı sayfadaki Import alanından geri yüklenebilir.
+- ✅ `apps/web/src/app/api/dsgvo/export/route.ts` — `notdienst_entries` ve `salary_records` eklendi.
+
+### Güncellendi
+- ✅ `STUNDLY_LOG.md` (devam ediyor).
+
+### Test
+- ✅ `tsc --noEmit` → temiz.
+
+---
+
 ## 2026-06-07 (gece) – Masaüstü Dashboard yeniden tasarlandı
 
 ### Yapılan

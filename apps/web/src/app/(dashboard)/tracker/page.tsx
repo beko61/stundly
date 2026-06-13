@@ -38,6 +38,21 @@ export default function TrackerPage() {
   const today    = new Date();
   const todayStr = today.toISOString().split("T")[0]!;
 
+  // Aktif ay = bu ay ise, ilk render'da bugünün satırına scroll et
+  useEffect(() => {
+    if (loading) return;
+    const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
+    if (!isCurrentMonth) return;
+    // Layout settle olduktan sonra scroll
+    const timer = setTimeout(() => {
+      const el = document.getElementById("today-entry");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    return () => clearTimeout(timer);
+  // intentionally only on loading change + month/year change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, year, month]);
+
   const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
 
   const days = useMemo(() => {

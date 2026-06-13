@@ -1,5 +1,29 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (16) – v0.5.3: Tracker auto-scroll zum heutigen Tag
+
+### Yapıldı
+- ✅ Tracker'a yeni `useEffect` eklendi:
+  - Loading bitince + aktif ay == bu ay ise
+  - 150ms layout settle delay sonrası `#today-entry` element'ine `scrollIntoView({behavior:"smooth", block:"center"})`
+- ✅ Açılışta otomatik bugünün satırına kayıyor (kullanıcı manuel scroll yapmaz)
+- ✅ Geçmiş aylar açılırsa kaydırma yapmaz (geçen Mai'ı browse ederken zıplama olmaz)
+- ✅ Versiyon bump v0.5.2 → v0.5.3 (PATCH — UX micro-improvement)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Eski davranış: Tracker açıldığında ayın 1'i görünüyordu, kullanıcı 13.06'yı bulmak için aşağıya scroll yapıyordu
+- Yeni: 150ms sonra smooth scroll, bugün satırı sayfanın orta yüksekliğinde
+- Edge case: ay değiştirildiyse (örn. Mai geri git → tekrar Juni) sadece aktif ay bu ay ise scroll → geçmiş aylar browse ederken zıplama yok
+- `block: "center"` → today satırı viewport'un ortasında, üstte MonthlySummary görünür kalır
+
+### Versiyon tarihçesi (bu session özet)
+- v0.1.0 → v0.5.3 (16 commit, 1 gün)
+
+---
+
 ## 2026-06-13 (15) – v0.5.2: BUG FIX — OG image middleware redirect
 
 ### Yapıldı

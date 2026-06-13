@@ -32,7 +32,11 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #15): v0.5.2 — BUG FIX: OG image redirect**
+**Son değişiklik (2026-06-13 #16): v0.5.3 — Tracker Heute-Scroll**
+- Tracker açılınca 150ms sonra `#today-entry`'e smooth scroll (block:center)
+- Sadece aktif ay = bu ay ise (geçmiş aylar browse'da zıplama yok)
+
+**Önceki değişiklik (2026-06-13 #15): v0.5.2 — BUG FIX: OG image redirect**
 - `/opengraph-image` middleware tarafından `/login`'e 307 redirect oluyordu
 - Matcher exclude listesine `opengraph-image|twitter-image|apple-icon|icon` eklendi
 - Kullanıcı yakaladı (manual test)

@@ -36,11 +36,12 @@ const EMPTY: Profile = {
 };
 
 export default function SettingsPage() {
-  const [profile,  setProfile]  = useState<Profile>(EMPTY);
-  const [loading,  setLoading]  = useState(true);
-  const [saving,   setSaving]   = useState(false);
-  const [saved,    setSaved]    = useState(false);
-  const [sigSaved, setSigSaved] = useState(false);
+  const [profile,    setProfile]    = useState<Profile>(EMPTY);
+  const [loading,    setLoading]    = useState(true);
+  const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
+  const [saveError,  setSaveError]  = useState<string | null>(null);
+  const [sigSaved,   setSigSaved]   = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
 
   // ── Import (von alter App / internettesiz HTML) ──
@@ -156,16 +157,23 @@ export default function SettingsPage() {
 
   async function handleSave() {
     setSaving(true);
+    setSaveError(null);
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
+    if (!session?.user) { setSaving(false); setSaveError("Nicht angemeldet."); return; }
 
     const { error } = await supabase
       .from("profiles")
       .upsert({ user_id: session.user.id, ...profile }, { onConflict: "user_id" });
 
     setSaving(false);
-    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
+    if (error) {
+      console.error("Profile save error:", error);
+      setSaveError(error.message);
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   }
 
   function handleSaveSignature() {
@@ -430,6 +438,28 @@ export default function SettingsPage() {
         >
           {saved ? "✅ Gespeichert!" : saving ? "Speichern..." : "💾 Einstellungen speichern"}
         </button>
+        {saveError && (
+          <div style={{
+            padding: "10px 14px",
+            background: "color-mix(in srgb, var(--red) 12%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
+            color: "var(--red)",
+            borderRadius: 8,
+            fontSize: 12,
+            lineHeight: 1.6,
+          }}>
+            ❌ <strong>Speichern fehlgeschlagen:</strong> {saveError}
+            {/column.*does not exist|firma_/.test(saveError) && (
+              <>
+                <br />
+                <small style={{ color: "var(--muted)" }}>
+                  Hinweis: Es fehlt die Datenbank-Migration <code>014_firma_adresse.sql</code> in Supabase.
+                  Bitte den SQL-Inhalt im Supabase SQL-Editor ausführen.
+                </small>
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── Monatsbefüllung & Berichte ── */}
         <AutoFillReports />

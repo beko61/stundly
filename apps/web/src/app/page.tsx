@@ -2,6 +2,44 @@
 import type { ReactNode } from "react";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
 
+const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
+
+/** schema.org JSON-LD — Google'a "bu bir SaaS" der, fiyat + organisator info ile rich snippet üretir. */
+const SCHEMA_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Stundly",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web, iOS, Android",
+  "url": APP_URL,
+  "inLanguage": "de-DE",
+  "description": "Arbeitszeiterfassung, Urlaubsverwaltung und Notdienst-Tracking für deutsche Handwerk-Betriebe. DSGVO-konform, ArbZG-ready, mobil nutzbar.",
+  "offers": [
+    { "@type": "Offer", "name": "Einzelperson",  "price": "5.99",  "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
+    { "@type": "Offer", "name": "Team",          "price": "19.99", "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
+    { "@type": "Offer", "name": "Unternehmen",   "price": "49.99", "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
+  ],
+  "creator": {
+    "@type": "Organization",
+    "name": "Stundly",
+    "url": APP_URL,
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Hannover",
+      "addressRegion": "Niedersachsen",
+      "addressCountry": "DE",
+    },
+  },
+  "featureList": [
+    "Arbeitszeiterfassung",
+    "Lohn- & Steuerberechnung",
+    "Urlaubsantrag PDF",
+    "Notdienst-Verwaltung",
+    "Monatsbericht PDF Export",
+    "DSGVO-konforme EU-Speicherung",
+  ],
+};
+
 /** Browser-Fensterrahmen für Landing-Mockups. */
 function BrowserMock({ url, children }: { url: string; children: ReactNode }) {
   return (
@@ -90,6 +128,12 @@ const faqs = [
 export default function LandingPage() {
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif" }}>
+
+      {/* schema.org SoftwareApplication structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(SCHEMA_JSON_LD) }}
+      />
 
       {/* BETA-Streifen — ganz oben, durchgehend */}
       {BETA_MODE && (

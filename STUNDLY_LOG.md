@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #10): v0.4.1 — SEO infra + Trust strip**
+**Son değişiklik (2026-06-13 #11): v0.4.2 — schema.org JSON-LD**
+- Landing'e SoftwareApplication structured data eklendi
+- 3 plan + Creator (Hannover, NI, DE) + Feature list
+- Google rich snippet altyapısı tamam
+
+**Önceki değişiklik (2026-06-13 #10): v0.4.1 — SEO infra + Trust strip**
 - robots.ts + sitemap.ts (Next.js auto-generated SEO altyapısı)
 - Landing'e 5-ikonlu trust strip (Hannover + Frankfurt + 0 tracker + DSGVO + Handwerk)
 - CTA banner Beta-aware ("3 Monate Beta-Zugang kostenlos")

@@ -1,5 +1,30 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (11) – v0.4.2: schema.org JSON-LD (SoftwareApplication)
+
+### Yapıldı
+- ✅ Landing page'e schema.org `SoftwareApplication` JSON-LD eklendi
+  - 3 plan (Einzelperson 5.99 / Team 19.99 / Unternehmen 49.99 EUR)
+  - Creator/Organization: Stundly, Hannover, Niedersachsen, DE
+  - Feature list (6 öğe)
+  - `inLanguage: de-DE`, `applicationCategory: BusinessApplication`
+- ✅ `dangerouslySetInnerHTML` ile `<script type="application/ld+json">` render edildi (Next.js + React standardı)
+- ✅ Versiyon bump v0.4.1 → v0.4.2 (PATCH — SEO only, kullanıcı-görünür değişiklik yok)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+- ✅ Google Rich Results Test ile doğrulanabilir: https://search.google.com/test/rich-results?url=https://stundly.de
+
+### Sebep & Notlar
+- Schema.org JSON-LD: Google'ın crawler'ı sayfayı "bir SaaS, fiyatları şunlar, geliştirici Hannover'lı" olarak anlar
+- Sonuç: arama sonuçlarında rich snippet (yıldız reyting + fiyat + organisator) çıkma şansı artar
+- "Stundenerfassung Hannover" gibi local search'ler için lokasyon doğru kayıtlı (Niedersachsen)
+- ratingValue eklenmedi (henüz kullanıcı testimonial yok)
+- priceValidUntil: 2027-12-31 (1.5 yıl, makul)
+- Beta phase'de bile bu schema kalıcı (yıllık fiyatlar, beta phase tek-seferlik özel teklif)
+
+---
+
 ## 2026-06-13 (10) – v0.4.1: SEO infrastructure + Trust strip + CTA Beta wording
 
 ### Yapıldı

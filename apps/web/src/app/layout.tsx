@@ -41,13 +41,13 @@ export const metadata: Metadata = {
     siteName: "Stundly",
     title: "Stundly – Arbeitszeiterfassung für Deutschland",
     description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform.",
-    images: [{ url: "/icons/icon-512.png", width: 512, height: 512, alt: "Stundly" }],
+    // images: dynamic opengraph-image.tsx (app/) tarafından sağlanır
   },
   twitter: {
     card: "summary_large_image",
     title: "Stundly – Arbeitszeiterfassung für Deutschland",
     description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform, ArbZG-ready.",
-    images: ["/icons/icon-512.png"],
+    // images: opengraph-image.tsx fallback (large card için bu doğru davranış)
   },
 };
 

@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #11): v0.4.2 — schema.org JSON-LD**
+**Son değişiklik (2026-06-13 #12): v0.4.3 — Dynamic OG image**
+- `app/opengraph-image.tsx` (Next.js ImageResponse, edge runtime, 1200×630)
+- Gradient bg + STUNDLY başlık + tagline + DSGVO/ArbZG/§19/PWA trust strip
+- Twitter/FB/LinkedIn paylaşımları artık büyük profesyonel preview
+
+**Önceki değişiklik (2026-06-13 #11): v0.4.2 — schema.org JSON-LD**
 - Landing'e SoftwareApplication structured data eklendi
 - 3 plan + Creator (Hannover, NI, DE) + Feature list
 - Google rich snippet altyapısı tamam

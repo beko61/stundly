@@ -1,5 +1,43 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (12) – v0.4.3: Dynamic OG image (1200×630)
+
+### Yapıldı
+- ✅ **Yeni `app/opengraph-image.tsx`** — Next.js `ImageResponse` API ile dinamik OG image
+  - Boyut: 1200×630 (Twitter/Facebook/LinkedIn standardı)
+  - Edge runtime
+  - Tasarım:
+    - Gradient background (#0f0f13 → #1a1a2e → #16213e diagonal)
+    - Sağ üstte/sol altta dekoratif gradient blob'lar (#7c6af7 / #c084fc)
+    - "🇩🇪 Made for Deutschland" rounded badge (üstte)
+    - "STUNDLY" başlık (110px, accent purple)
+    - Tagline 2-satır: "Arbeitszeit, Lohn & Notdienst" + "— alles in einer App."
+    - Altta trust strip: 🔒 DSGVO · ⚖️ ArbZG · 💶 §19 UStG · 📱 PWA
+- ✅ `layout.tsx` — Eski `images: ["/icons/icon-512.png"]` openGraph + twitter'dan kaldırıldı
+  - Şimdi otomatik olarak `opengraph-image.tsx` kullanılır (Next.js convention)
+- ✅ Versiyon bump v0.4.2 → v0.4.3 (PATCH — marketing/SEO polish)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+- ⏳ Vercel build sonrası `stundly.de/opengraph-image` URL'i üretilmiş olmalı
+- ⏳ Test: https://www.opengraph.xyz/?url=https%3A%2F%2Fstundly.de — sosyal preview kontrol
+- ⏳ Test: Twitter Card Validator + LinkedIn Post Inspector
+
+### Sebep & Notlar
+- Önceden Twitter/Facebook stundly.de paylaşılınca 512×512 ufak icon gösteriyordu
+- Şimdi 1200×630 büyük tasarım: marka adı + tagline + trust signals
+- "Made for Deutschland" rozeti hedef pazarı netleştirir
+- ImageResponse'un kısıtları: flexbox only, sınırlı CSS — bunlarla uyumlu tasarlandı
+- Gradient blob'lar derinlik veriyor, düz background'dan daha profesyonel
+- Bundle'a ekleme yok — edge runtime'da request anında üretilir
+
+### Test Vercel deploy sonrası
+1. https://stundly.de/opengraph-image — direkt image URL'i (PNG indirir)
+2. https://www.opengraph.xyz/?url=https%3A%2F%2Fstundly.de — Twitter/FB preview
+3. Discord/Slack'te `https://stundly.de` paylaş — gerçek render kontrol
+
+---
+
 ## 2026-06-13 (11) – v0.4.2: schema.org JSON-LD (SoftwareApplication)
 
 ### Yapıldı

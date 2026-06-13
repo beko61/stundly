@@ -1,5 +1,42 @@
 ﻿import Link from "next/link";
+import type { ReactNode } from "react";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
+
+/** Browser-Fensterrahmen für Landing-Mockups. */
+function BrowserMock({ url, children }: { url: string; children: ReactNode }) {
+  return (
+    <div style={{
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
+      borderRadius: 12,
+      overflow: "hidden",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+    }}>
+      {/* Chrome */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "10px 12px",
+        background: "var(--surface2)",
+        borderBottom: "1px solid var(--border)",
+      }}>
+        <div style={{ display: "flex", gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff5f57" }} />
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#febc2e" }} />
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#28c840" }} />
+        </div>
+        <div style={{
+          flex: 1, background: "var(--bg)", borderRadius: 6,
+          padding: "4px 10px", fontSize: 10, color: "var(--muted)",
+          fontFamily: "'DM Mono',monospace", textAlign: "center",
+        }}>
+          🔒 {url}
+        </div>
+      </div>
+      {/* Body */}
+      {children}
+    </div>
+  );
+}
 
 const features = [
   { icon: "⏱️", title: "Arbeitszeiterfassung", desc: "Start, Ende, Pausen – automatische Berechnung inklusive Überstunden und Nachtschichten." },
@@ -150,6 +187,146 @@ export default function LandingPage() {
               <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6 }}>{f.desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* STUNDLY IM EINSATZ — Browser-mockups */}
+      <section style={{ padding: "0 24px 80px", maxWidth: 1200, margin: "0 auto" }}>
+        <h2 style={{ textAlign: "center", fontSize: 32, fontWeight: 800, marginBottom: 12 }}>
+          Stundly im Einsatz
+        </h2>
+        <p style={{ textAlign: "center", color: "var(--muted)", marginBottom: 48, fontSize: 15 }}>
+          Klar, aufgeräumt, mobil-optimiert — so sieht der Arbeitsalltag mit Stundly aus.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 28 }}>
+
+          {/* ─── MOCKUP 1: Dashboard mit Setup-Guide ─── */}
+          <div>
+            <BrowserMock url="stundly.de/dashboard">
+              <div style={{ padding: "18px 16px", background: "var(--bg)" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 2 }}>Guten Morgen, Max 👋</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 16 }}>Willkommen bei Stundly — in 3 Schritten startklar.</div>
+
+                <div style={{
+                  background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent2) 10%, transparent) 100%)",
+                  border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+                  borderRadius: 12, padding: "14px 12px",
+                }}>
+                  <div style={{ fontSize: 9, color: "var(--accent2)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
+                    🚀 In 3 Schritten startklar
+                  </div>
+                  {[
+                    { n: 1, icon: "🕐", title: "Standardzeiten festlegen" },
+                    { n: 2, icon: "💰", title: "Stundenlohn & Steuer" },
+                    { n: 3, icon: "⏱", title: "Ersten Arbeitstag erfassen" },
+                  ].map((s) => (
+                    <div key={s.n} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      borderRadius: 8, padding: "9px 11px", marginBottom: 6,
+                    }}>
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: "color-mix(in srgb, var(--accent2) 18%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "var(--accent2)", fontSize: 12, flexShrink: 0 }}>{s.n}</div>
+                      <div style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>{s.icon} {s.title}</div>
+                      <div style={{ fontSize: 10, color: "var(--accent2)", fontWeight: 700 }}>→</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </BrowserMock>
+            <div style={{ textAlign: "center", marginTop: 12, color: "var(--muted)", fontSize: 13 }}>
+              <strong style={{ color: "var(--text)" }}>Dashboard</strong> — in 60 Sekunden startklar
+            </div>
+          </div>
+
+          {/* ─── MOCKUP 2: Tracker Tag-Liste ─── */}
+          <div>
+            <BrowserMock url="stundly.de/tracker">
+              <div style={{ padding: "12px 14px", background: "var(--bg)" }}>
+                {/* MonthlySummary mini */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+                  <div style={{ background: "color-mix(in srgb, var(--green) 10%, var(--surface))", border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)", borderRadius: 8, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 8, fontWeight: 700, color: "var(--green)", textTransform: "uppercase", letterSpacing: "0.06em" }}>📊 Differenz</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--green)", marginTop: 2 }}>+04:15</div>
+                    <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 1 }}>Überstunden</div>
+                  </div>
+                  <div style={{ background: "color-mix(in srgb, var(--blue) 10%, var(--surface))", border: "1px solid color-mix(in srgb, var(--blue) 30%, transparent)", borderRadius: 8, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 8, fontWeight: 700, color: "var(--blue)", textTransform: "uppercase", letterSpacing: "0.06em" }}>⏱ Gearbeitet</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--blue)", marginTop: 2 }}>178:15</div>
+                    <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 1 }}>von 174 Std</div>
+                  </div>
+                </div>
+
+                {/* Tag-Liste */}
+                {[
+                  { d: "01.06.", dow: "Mo", type: "Arbeiten", start: "07:45", end: "17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
+                  { d: "02.06.", dow: "Di", type: "Arbeiten", start: "07:45", end: "17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
+                  { d: "03.06.", dow: "Mi", type: "Urlaub",   start: "—",     end: "—",     dur: "08:00", color: "var(--blue)",  icon: "🏖" },
+                  { d: "04.06.", dow: "Do", type: "Arbeiten", start: "07:45", end: "17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
+                  { d: "05.06.", dow: "Fr", type: "Arbeiten", start: "07:45", end: "14:30", dur: "06:15", color: "var(--green)", icon: "✓" },
+                ].map((e) => (
+                  <div key={e.d} style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    background: "var(--surface)", border: "1px solid var(--border)", borderLeftColor: e.color, borderLeftWidth: 2,
+                    borderRadius: 6, padding: "7px 10px", marginBottom: 4,
+                  }}>
+                    <div style={{ width: 28, fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", fontWeight: 700, flexShrink: 0 }}>{e.d}</div>
+                    <div style={{ width: 22, fontSize: 10, color: "var(--muted)", flexShrink: 0 }}>{e.dow}</div>
+                    <div style={{ flex: 1, fontSize: 11, fontWeight: 700, color: e.color }}>{e.icon} {e.type}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", flexShrink: 0 }}>{e.start}–{e.end}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: e.color, flexShrink: 0, width: 36, textAlign: "right" }}>{e.dur}</div>
+                  </div>
+                ))}
+              </div>
+            </BrowserMock>
+            <div style={{ textAlign: "center", marginTop: 12, color: "var(--muted)", fontSize: 13 }}>
+              <strong style={{ color: "var(--text)" }}>Zeiterfassung</strong> — pro Tag in 5 Sekunden
+            </div>
+          </div>
+
+          {/* ─── MOCKUP 3: Salary Brutto → Netto ─── */}
+          <div>
+            <BrowserMock url="stundly.de/salary">
+              <div style={{ padding: "14px 14px", background: "var(--bg)" }}>
+                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>💰 Juni 2026 — Schätzung</div>
+
+                {/* Brutto → Netto Hero */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 14%, transparent)", borderRadius: 10, padding: "10px 8px" }}>
+                    <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>BRUTTO</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
+                  </div>
+                  <div style={{ fontSize: 18, color: "var(--muted)" }}>→</div>
+                  <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 10, padding: "10px 8px" }}>
+                    <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>NETTO</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
+                  </div>
+                </div>
+
+                {/* Abzüge breakdown */}
+                <div style={{ background: "color-mix(in srgb, var(--red) 8%, var(--surface))", border: "1px solid color-mix(in srgb, var(--red) 25%, transparent)", borderRadius: 10, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 9, color: "var(--red)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>🧾 Abzüge</div>
+                  {[
+                    { l: "Lohnsteuer", v: "318,40" },
+                    { l: "Soli",       v: "0,00" },
+                    { l: "RV (9,3 %)", v: "264,77" },
+                    { l: "KV (8,15 %)",v: "232,03" },
+                    { l: "AV (1,3 %)", v: "37,01" },
+                    { l: "PV (2,35 %)", v: "66,90" },
+                  ].map((r) => (
+                    <div key={r.l} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0" }}>
+                      <span style={{ color: "var(--muted)" }}>{r.l}</span>
+                      <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--red)" }}>−€ {r.v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </BrowserMock>
+            <div style={{ textAlign: "center", marginTop: 12, color: "var(--muted)", fontSize: 13 }}>
+              <strong style={{ color: "var(--text)" }}>Lohn & Steuer</strong> — Brutto → Netto automatisch
+            </div>
+          </div>
+
         </div>
       </section>
 

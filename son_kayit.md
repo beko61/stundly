@@ -1,5 +1,40 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-13 (9) – v0.4.0: Landing "Stundly im Einsatz" — 3 browser-mockup
+
+### Yapıldı
+- ✅ **Yeni `BrowserMock` component** (landing page'de inline) — Mac-tarzı pencere chrome (3 nokta + URL bar) + body slot
+- ✅ Landing'e "Stundly im Einsatz" section eklendi (FEATURES ile COMPLIANCE arasında)
+- ✅ **3 realistik UI mockup**:
+  1. **Dashboard** (`stundly.de/dashboard`) — Yeni kullanıcı setup guide görünümü (3 numaralı adım kartı, gradient)
+  2. **Zeiterfassung** (`stundly.de/tracker`) — 2 mini KPI kart (Differenz +04:15, Gearbeitet 178:15) + 5 günlük day list (Arbeiten/Urlaub karışık, doğru renkler, gerçek tarih + Cuma 6:15h)
+  3. **Lohn & Steuer** (`stundly.de/salary`) — Brutto € 2.847 → Netto € 1.973 hero + Abzüge breakdown (LSt/Soli/RV/KV/AV/PV gerçek oranlarla)
+- ✅ Caption altta her birinde: Dashboard "in 60 Sekunden startklar", Tracker "pro Tag in 5 Sekunden", Salary "Brutto → Netto automatisch"
+- ✅ Versiyon bump v0.3.0 → v0.4.0 (MINOR — yeni section)
+
+### Tasarım detayları
+- Browser chrome: Mac-tarzı, 3 renkli nokta (#ff5f57 / #febc2e / #28c840)
+- URL bar: 🔒 prefix, DM Mono font, muted color
+- Pencere shadow: `0 8px 32px rgba(0,0,0,0.25)`
+- İçerikler Stundly'nin gerçek CSS değişkenlerini kullanıyor (var(--green), var(--accent2), vs.) → tema değişse de uyumlu
+- Mobile responsive: `repeat(auto-fit, minmax(340px, 1fr))` — küçük ekranda dikey yığılır
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- FAZ 2 ana iş paketinden ilki: "Landing'de ekran görüntüleri / mockup"
+- Mockup'lar real screenshot değil — Stundly UI'ın HTML-rendered versiyonu (renkler/fontlar gerçek, içerikler örnek). İleride gerçek screenshot ile değiştirilebilir
+- Honesty perspektifinden: ürün gerçekten böyle görünüyor (aynı CSS), sadece sample data ile
+- Ziyaretçi "Demo ansehen" butonu olmadan da ürünü görsel olarak değerlendirebilir
+
+### Kalan FAZ 2 işleri
+- Demo video (60sn ekran kaydı)
+- Sosyal kanıt rozetleri (Made in Germany badge daha belirgin)
+- Testimonial section (ilk beta testerlardan toplanacak)
+
+---
+
 ## 2026-06-13 (8) – v0.3.0: Yeni kullanıcı setup guide + Beta wording
 
 ### Yapıldı

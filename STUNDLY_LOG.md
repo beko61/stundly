@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #8): v0.3.0 — Yeni kullanıcı setup guide**
+**Son değişiklik (2026-06-13 #9): v0.4.0 — Landing "Stundly im Einsatz" mockup section**
+- 3 browser-tarzı mockup (Dashboard / Tracker / Salary) eklendi
+- Mac chrome (3 nokta + URL bar) + Stundly UI HTML-rendered
+- FAZ 2'nin ilk işi (ekran görüntüleri / mockup)
+
+**Önceki değişiklik (2026-06-13 #8): v0.3.0 — Yeni kullanıcı setup guide**
 - Dashboard'da `yearEntries.length === 0` ise 3-adım setup guide gösterilir (Standardzeiten → Lohn → Tracker)
 - Onboarding done page Beta wording düzeltildi (artık "3 Monate kostenlos bis 07.09.2026")
 - #1 ürün önceliği "basit + first-60s WOW" üzerine

@@ -1,5 +1,29 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (30) – v0.9.2: Mobile app TrackerScreen header kompakt — gün listesi için bol alan
+
+### Sorun
+- Mobile app'in TrackerScreen header'ı (apps/mobile, React Native) çok yer kaplıyordu
+- "STUNDLY" brand + 4 büyük yıl butonu + 26px Juni başlığı + 38x38 arrow butonları = ekranın yarısı header
+- Kullanıcı: "üsttü olmamis zeiterfassung komple kaplami diger hicbirsey gözükmüyor"
+- Ayrıca: "bu düzeltmeyi app icin yapacaksin web icin degil" — fix mobile app içindi, web değil
+
+### Çözüm — apps/mobile/src/screens/TrackerScreen.tsx
+- Header layout: tek satır 2-sütun (sol: brand + alt label, sağ: yıl+ay stack)
+- Sol kolon: STUNDLY (13px) + "Zeiterfassung" alt label (10px muted, uppercase)
+- Sağ kolon (stack, alignItems flex-end):
+  - Yıl butonları: 4 küçük pill, padding 5→3 / 8→6, fontSize 11→10, borderRadius 8→6
+  - Ay nav: 38x38 → **26x26** arrows, başlık 26px → **14px**, gap 10→6
+  - 📍 Heute butonu — sadece güncel ay değilken görünür
+- headerGradient padding: paddingTop 50→46, paddingHorizontal 16→14, paddingBottom 14→10
+- Eski `headerTopRow` stilini sildim, yeni `headerRow` ile değiştirdim (flex-start align)
+
+### Değişen dosyalar
+- `apps/mobile/src/screens/TrackerScreen.tsx` — header JSX + StyleSheet
+- `apps/web/src/lib/version.ts` — 0.9.1 → 0.9.2 (PATCH: mobile UI fix)
+
+---
+
 ## 2026-06-14 (29) – v0.9.1: MonthNav başlığı küçültüldü — sağ taraf görünür hale geldi
 
 ### Sorun

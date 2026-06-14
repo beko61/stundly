@@ -244,23 +244,38 @@ export function TrackerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header - gradient yapısı */}
+      {/* Header - kompakt: brand sol, yıl/ay sağ stack */}
       <View style={styles.headerGradient}>
-        <View style={styles.headerTopRow}>
-          <Text style={styles.brand}>STUNDLY</Text>
-          <View style={{ flexDirection: 'row', gap: 5 }}>
-            {[2025, 2026, 2027, 2028].map(y => (
-              <TouchableOpacity key={y} onPress={() => setYear(y)}
-                style={[styles.yearBtn, y === year && styles.yearBtnActive]}>
-                <Text style={[styles.yearBtnText, y === year && { color: '#fff' }]}>{y}</Text>
-              </TouchableOpacity>
-            ))}
+        <View style={styles.headerRow}>
+          {/* Sol: brand + alt label */}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.brand}>STUNDLY</Text>
+            <Text style={styles.brandSub}>Zeiterfassung</Text>
           </View>
-        </View>
-        <View style={styles.monthNav}>
-          <TouchableOpacity onPress={prevMonth} style={styles.navBtn}><Text style={styles.navBtnText}>‹</Text></TouchableOpacity>
-          <Text style={styles.monthTitle}>{MONTHS[month - 1]}</Text>
-          <TouchableOpacity onPress={nextMonth} style={styles.navBtn}><Text style={styles.navBtnText}>›</Text></TouchableOpacity>
+
+          {/* Sağ: yıl üstte, ay altta (kompakt stack) */}
+          <View style={{ flexShrink: 0, alignItems: 'flex-end', gap: 6 }}>
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              {[2025, 2026, 2027, 2028].map(y => (
+                <TouchableOpacity key={y} onPress={() => setYear(y)}
+                  style={[styles.yearBtn, y === year && styles.yearBtnActive]}>
+                  <Text style={[styles.yearBtnText, y === year && { color: '#fff' }]}>{y}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.monthNav}>
+              <TouchableOpacity onPress={prevMonth} style={styles.navBtn}><Text style={styles.navBtnText}>‹</Text></TouchableOpacity>
+              <Text style={styles.monthTitle}>{MONTHS[month - 1]}</Text>
+              <TouchableOpacity onPress={nextMonth} style={styles.navBtn}><Text style={styles.navBtnText}>›</Text></TouchableOpacity>
+              {!(year === now.getFullYear() && month === now.getMonth() + 1) && (
+                <TouchableOpacity
+                  onPress={() => { setYear(now.getFullYear()); setMonth(now.getMonth() + 1); }}
+                  style={[styles.navBtn, { borderColor: colors.accent, marginLeft: 2 }]}>
+                  <Text style={{ color: colors.accent2, fontSize: 13 }}>📍</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
       </View>
 
@@ -371,17 +386,18 @@ export function TrackerScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  // Header
-  headerGradient: { backgroundColor: '#1a1a2e', paddingTop: 50, paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  // Header — kompakt
+  headerGradient: { backgroundColor: '#1a1a2e', paddingTop: 46, paddingHorizontal: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
   brand: { color: colors.accent2, fontSize: 13, fontWeight: '700', letterSpacing: 2 },
-  yearBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 8 },
+  brandSub: { color: colors.muted, fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
+  yearBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, paddingVertical: 3, paddingHorizontal: 6, borderRadius: 6 },
   yearBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  yearBtnText: { color: colors.muted, fontSize: 11, fontWeight: '700' },
-  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  navBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  navBtnText: { color: colors.text, fontSize: 18 },
-  monthTitle: { fontSize: 26, fontWeight: '800', color: colors.text, flex: 1, textAlign: 'center' },
+  yearBtnText: { color: colors.muted, fontSize: 10, fontWeight: '700' },
+  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  navBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, width: 26, height: 26, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  navBtnText: { color: colors.text, fontSize: 13 },
+  monthTitle: { fontSize: 14, fontWeight: '800', color: colors.text, minWidth: 70, textAlign: 'center' },
   // Summary
   summaryCard: { flexDirection: 'row', alignItems: 'center', margin: 16, marginBottom: 0, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16 },
   summaryWorked: { fontSize: 22, fontWeight: '700', color: colors.text },

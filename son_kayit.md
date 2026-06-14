@@ -1,5 +1,36 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (18) – v0.5.5: Stundenlohn default = Mindestlohn + Warnung
+
+### Yapıldı
+- ✅ Yeni `lib/mindestlohn.ts` — Almanya gesetzlicher Mindestlohn tek doğruluk kaynağı
+  - 2024: 12,41 € / 2025: 12,82 € / **2026: 13,90 €** / 2027: 14,60 €
+  - `currentMindestlohn(now)` — aktif yıl için Mindestlohn, fallback en son bilinen yıl
+  - `formatMindestlohn()` — "13,90 €" (DE locale, virgüllü)
+- ✅ Salary page: `DEFAULT_SETTINGS.hourly_rate = 15` → `MINDESTLOHN_CURRENT` (şu an 13,90 €)
+- ✅ Dashboard page: aynı default güncellendi
+- ✅ Salary Stundenlohn input'unun altına **dinamik hint**:
+  - Normal durumda: `💶 Gesetzlicher Mindestlohn 2026: 13,90 €/h`
+  - Kullanıcı Mindestlohn altında yazarsa: `⚠️ Unter dem gesetzlichen Mindestlohn (13,90 €/h) — bitte prüfen.` (kırmızı border + kırmızı text)
+- ✅ Versiyon bump v0.5.4 → v0.5.5 (PATCH — default value + UX hint)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Kullanıcı talebi: "gehaltta varya bunu standar ücret askari ücret yapar misin"
+- Eski default 15 € rastgele değerdi; yeni kullanıcı bunu görüp "bu benim ücretim mi?" düşünebiliyordu
+- Şimdi yasal Mindestlohn referans alınıyor — yeni kullanıcı görür: "ah, bu sadece bir minimum default"
+- ArbZG/Mindestlohn validation feature'ı zaten landing'de vaad ediliyor → buradaki uyarı o vaadi karşılıyor
+- Mevcut kullanıcıların DB'deki `hourly_rate` değeri etkilenmedi (sadece yeni `DEFAULT_SETTINGS` için fallback)
+- Mindestlohnkommission 27.06.2025 kararı: 2026 = 13,90 €, 2027 = 14,60 €
+
+### UX detayı
+- Hint normalde muted gri, kullanıcı 13,90'ın altına yazınca anında kırmızı (border + text + ⚠️ icon)
+- Eski label "Stundenlohn (€)" değişmedi, hint yeni satır olarak input'un altına eklendi
+
+---
+
 ## 2026-06-13 (17) – v0.5.4: Per-page SEO meta (title + description)
 
 ### Yapıldı

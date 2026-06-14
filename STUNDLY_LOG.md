@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-13 #17): v0.5.4 — Per-page SEO meta**
+**Son değişiklik (2026-06-14 #18): v0.5.5 — Stundenlohn default = Mindestlohn**
+- `lib/mindestlohn.ts` yeni helper (2024-2027 yasal değerler)
+- Salary + Dashboard default 15 € → 13,90 € (Mindestlohn 2026)
+- Stundenlohn input'unun altında dinamik hint + kullanıcı altına yazarsa kırmızı uyarı
+
+**Önceki değişiklik (2026-06-13 #17): v0.5.4 — Per-page SEO meta**
 - Impressum/Datenschutz/AGB → direkt metadata export
 - Pricing/Login/Register → yan layout.tsx (client component için)
 - Google search snippet + browser tab title artık doğru

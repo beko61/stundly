@@ -7,6 +7,7 @@ import { calculateWorkDuration } from "@workly/shared";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
+import { MINDESTLOHN_CURRENT } from "@/lib/mindestlohn";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -67,7 +68,7 @@ interface SalarySettings {
 }
 
 const DEFAULT_SETTINGS: SalarySettings = {
-  hourly_rate: 15,
+  hourly_rate: MINDESTLOHN_CURRENT,
   monthly_target_hours: 174,
   overtime_rate_multiplier: 1.25,
   night_shift_bonus: 0,

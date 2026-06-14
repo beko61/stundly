@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateMonthlySalary, formatDuration, calcNettoFromBrutto } from "@workly/shared";
 import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
+import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
 
 const STEUERKLASSEN: { value: Steuerklasse; label: string; hint: string }[] = [
   { value: "I",   label: "I",   hint: "Ledig" },
@@ -38,7 +39,7 @@ interface MonthRecord {
 
 const DEFAULT_SETTINGS: SalarySettings = {
   id: "local", user_id: "local", valid_from: "",
-  hourly_rate:              15,
+  hourly_rate:              MINDESTLOHN_CURRENT,
   overtime_rate_multiplier: 1.25,
   night_shift_bonus:        3,
   notdienst_bonus:          50,
@@ -325,16 +326,31 @@ export default function SalaryPage() {
               { key: "night_shift_bonus",        label: "Nachtzuschlag €/h" },
               { key: "notdienst_bonus",          label: "Notdienst €/Tag" },
               { key: "urlaub_anspruch",          label: "Urlaubsanspruch / Jahr" },
-            ] as { key: keyof SalarySettings; label: string }[]).map(({ key, label }) => (
-              <div key={key}>
-                <label className="label">{label}</label>
-                <input
-                  className="input" type="number" step="0.01"
-                  value={settings[key] as number}
-                  onChange={(e) => setSettings(s => ({ ...s, [key]: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            ))}
+            ] as { key: keyof SalarySettings; label: string }[]).map(({ key, label }) => {
+              const isHourly = key === "hourly_rate";
+              const rate = settings.hourly_rate ?? 0;
+              const belowMindestlohn = isHourly && rate > 0 && rate < MINDESTLOHN_CURRENT;
+              return (
+                <div key={key}>
+                  <label className="label">{label}</label>
+                  <input
+                    className="input" type="number" step="0.01"
+                    value={settings[key] as number}
+                    onChange={(e) => setSettings(s => ({ ...s, [key]: parseFloat(e.target.value) || 0 }))}
+                    style={isHourly && belowMindestlohn ? { borderColor: "var(--red)" } : undefined}
+                  />
+                  {isHourly && (
+                    <div style={{ fontSize: 10, marginTop: 4, color: belowMindestlohn ? "var(--red)" : "var(--muted)", lineHeight: 1.4 }}>
+                      {belowMindestlohn ? (
+                        <>⚠️ Unter dem gesetzlichen Mindestlohn ({formatMindestlohn()}/h) — bitte prüfen.</>
+                      ) : (
+                        <>💶 Gesetzlicher Mindestlohn {new Date().getFullYear()}: <strong style={{ color: "var(--text)" }}>{formatMindestlohn()}/h</strong></>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

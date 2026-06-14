@@ -1,5 +1,18 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (31) – v0.9.3: "ZEITERFASSUNG" alt label daha küçük
+
+### Değişiklik
+- Mobile TrackerScreen alt label fontSize 10 → **8px**
+- letterSpacing 1 → 0.8 (sıkışmasın)
+- marginTop 2 → 1 (STUNDLY ile daha yakın)
+
+### Değişen dosyalar
+- `apps/mobile/src/screens/TrackerScreen.tsx` — brandSub style
+- `apps/web/src/lib/version.ts` — 0.9.2 → 0.9.3 (PATCH)
+
+---
+
 ## 2026-06-14 (30) – v0.9.2: Mobile app TrackerScreen header kompakt — gün listesi için bol alan
 
 ### Sorun

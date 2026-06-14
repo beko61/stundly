@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   headerGradient: { backgroundColor: '#1a1a2e', paddingTop: 46, paddingHorizontal: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
   brand: { color: colors.accent2, fontSize: 13, fontWeight: '700', letterSpacing: 2 },
-  brandSub: { color: colors.muted, fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
+  brandSub: { color: colors.muted, fontSize: 8, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 1 },
   yearBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, paddingVertical: 3, paddingHorizontal: 6, borderRadius: 6 },
   yearBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   yearBtnText: { color: colors.muted, fontSize: 10, fontWeight: '700' },

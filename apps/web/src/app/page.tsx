@@ -313,193 +313,202 @@ export default function LandingPage() {
           Stundly im Einsatz
         </h2>
         <p style={{ textAlign: "center", color: "var(--muted)", marginBottom: 48, fontSize: 15 }}>
-          📱 Auf deinem Handy. Im Büro, auf der Baustelle, im Auto — überall einsatzbereit.
+          📱 Auf dem Handy unterwegs · 🖥 Am Desktop im Büro — gleiche Daten, beide Geräte.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 28, justifyItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 36, justifyItems: "center" }}>
 
-          {/* ─── PHONE 1: Tracker — kullanıcının her gün açacağı sayfa ─── */}
-          <div style={{ width: "100%", maxWidth: 310 }}>
-            <PhoneMock>
-              {/* App header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 4px 8px" }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--accent2)", letterSpacing: 2 }}>STUNDLY</span>
-                <span style={{ fontSize: 9, color: "var(--muted)" }}>Juni 2026</span>
-              </div>
-
-              {/* Mini KPIs */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, marginBottom: 8 }}>
-                <div style={{ background: "color-mix(in srgb, var(--green) 12%, var(--surface))", border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)", borderRadius: 7, padding: "6px 7px" }}>
-                  <div style={{ fontSize: 7, fontWeight: 800, color: "var(--green)", textTransform: "uppercase" }}>📊 Diff</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: "var(--green)" }}>+04:15</div>
+          {/* ─── MOCKUP 1: Tracker (Desktop + Phone) ─── */}
+          <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+            {/* Desktop browser */}
+            <div style={{ width: "100%", position: "relative", zIndex: 1 }}>
+              <BrowserMock url="stundly.de/tracker">
+                <div style={{ padding: "12px 14px", background: "var(--bg)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+                    <div style={{ background: "color-mix(in srgb, var(--green) 10%, var(--surface))", border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)", borderRadius: 7, padding: "7px 9px" }}>
+                      <div style={{ fontSize: 8, fontWeight: 800, color: "var(--green)", textTransform: "uppercase" }}>📊 Differenz</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: "var(--green)", marginTop: 2 }}>+04:15</div>
+                      <div style={{ fontSize: 8, color: "var(--muted)", marginTop: 1 }}>Überstunden</div>
+                    </div>
+                    <div style={{ background: "color-mix(in srgb, var(--blue) 10%, var(--surface))", border: "1px solid color-mix(in srgb, var(--blue) 30%, transparent)", borderRadius: 7, padding: "7px 9px" }}>
+                      <div style={{ fontSize: 8, fontWeight: 800, color: "var(--blue)", textTransform: "uppercase" }}>⏱ Gearbeitet</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: "var(--blue)", marginTop: 2 }}>178:15</div>
+                      <div style={{ fontSize: 8, color: "var(--muted)", marginTop: 1 }}>von 174 Std</div>
+                    </div>
+                  </div>
+                  {[
+                    { d: "01.06.", dow: "Mo", type: "Arbeiten", se: "07:45–17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
+                    { d: "02.06.", dow: "Di", type: "Arbeiten", se: "07:45–17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
+                    { d: "03.06.", dow: "Mi", type: "Urlaub",   se: "—",          dur: "08:00", color: "var(--blue)",  icon: "🏖" },
+                    { d: "04.06.", dow: "Do", type: "Arbeiten", se: "07:45–17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
+                    { d: "05.06.", dow: "Fr", type: "Arbeiten", se: "07:45–14:30", dur: "06:15", color: "var(--green)", icon: "✓" },
+                  ].map((e) => (
+                    <div key={e.d} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      borderLeft: `2px solid ${e.color}`,
+                      borderRadius: 5, padding: "6px 9px", marginBottom: 3,
+                    }}>
+                      <div style={{ width: 28, fontFamily: "'DM Mono',monospace", fontSize: 9, color: "var(--muted)", fontWeight: 700 }}>{e.d}</div>
+                      <div style={{ width: 18, fontSize: 9, color: "var(--muted)" }}>{e.dow}</div>
+                      <div style={{ flex: 1, fontSize: 10, fontWeight: 700, color: e.color }}>{e.icon} {e.type}</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, color: "var(--muted)" }}>{e.se}</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, fontWeight: 700, color: e.color, width: 34, textAlign: "right" }}>{e.dur}</div>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ background: "color-mix(in srgb, var(--blue) 12%, var(--surface))", border: "1px solid color-mix(in srgb, var(--blue) 30%, transparent)", borderRadius: 7, padding: "6px 7px" }}>
-                  <div style={{ fontSize: 7, fontWeight: 800, color: "var(--blue)", textTransform: "uppercase" }}>⏱ Std</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>178:15</div>
+              </BrowserMock>
+            </div>
+            {/* Phone overlapping at bottom */}
+            <div style={{ width: "55%", maxWidth: 180, marginTop: -50, position: "relative", zIndex: 2, transform: "translateX(38%) rotate(2deg)" }}>
+              <PhoneMock>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 4px 6px" }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--accent2)", letterSpacing: 1.5 }}>STUNDLY</span>
+                  <span style={{ fontSize: 8, color: "var(--muted)" }}>Juni</span>
                 </div>
-              </div>
-
-              {/* Day list */}
-              {[
-                { d: "01", dow: "Mo", type: "Arbeiten", start: "07:45", end: "17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
-                { d: "02", dow: "Di", type: "Arbeiten", start: "07:45", end: "17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
-                { d: "03", dow: "Mi", type: "Urlaub",   start: "—",     end: "—",     dur: "08:00", color: "var(--blue)",  icon: "🏖" },
-                { d: "04", dow: "Do", type: "Arbeiten", start: "07:45", end: "17:00", dur: "08:15", color: "var(--green)", icon: "✓" },
-                { d: "05", dow: "Fr", type: "Arbeiten", start: "07:45", end: "14:30", dur: "06:15", color: "var(--green)", icon: "✓" },
-                { d: "06", dow: "Sa", type: "Frei",     start: "—",     end: "—",     dur: "—",     color: "var(--muted)", icon: "—" },
-              ].map((e) => (
-                <div key={e.d} style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderLeft: `2px solid ${e.color}`,
-                  borderRadius: 5, padding: "5px 7px", marginBottom: 3,
-                }}>
-                  <div style={{ width: 16, fontFamily: "'DM Mono',monospace", fontSize: 9, color: "var(--muted)", fontWeight: 700 }}>{e.d}</div>
-                  <div style={{ width: 16, fontSize: 8, color: "var(--muted)" }}>{e.dow}</div>
-                  <div style={{ flex: 1, fontSize: 9, fontWeight: 700, color: e.color }}>{e.icon} {e.type}</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, fontWeight: 700, color: e.color }}>{e.dur}</div>
-                </div>
-              ))}
-
-              {/* Bottom nav */}
-              <div style={{ position: "absolute", bottom: 14, left: 8, right: 8, display: "flex", justifyContent: "space-around", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 4px" }}>
                 {[
-                  { i: "⏱", l: "Zeit", a: true },
-                  { i: "📅", l: "Tage" },
-                  { i: "💰", l: "Lohn" },
-                  { i: "🏖", l: "Url." },
-                  { i: "👤", l: "Profil" },
-                ].map(n => (
-                  <div key={n.l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                    <span style={{ fontSize: 14 }}>{n.i}</span>
-                    <span style={{ fontSize: 8, color: n.a ? "var(--accent2)" : "var(--muted)", fontWeight: 700 }}>{n.l}</span>
+                  { d: "01", dow: "Mo", dur: "08:15", color: "var(--green)", icon: "✓" },
+                  { d: "02", dow: "Di", dur: "08:15", color: "var(--green)", icon: "✓" },
+                  { d: "03", dow: "Mi", dur: "08:00", color: "var(--blue)",  icon: "🏖" },
+                  { d: "04", dow: "Do", dur: "08:15", color: "var(--green)", icon: "✓" },
+                  { d: "05", dow: "Fr", dur: "06:15", color: "var(--green)", icon: "✓" },
+                ].map((e) => (
+                  <div key={e.d} style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    background: "var(--surface)", border: "1px solid var(--border)",
+                    borderLeft: `2px solid ${e.color}`,
+                    borderRadius: 4, padding: "3px 5px", marginBottom: 2,
+                  }}>
+                    <div style={{ width: 14, fontFamily: "'DM Mono',monospace", fontSize: 8, color: "var(--muted)", fontWeight: 700 }}>{e.d}</div>
+                    <div style={{ width: 14, fontSize: 7, color: "var(--muted)" }}>{e.dow}</div>
+                    <div style={{ flex: 1, fontSize: 8, fontWeight: 700, color: e.color }}>{e.icon}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 8, fontWeight: 700, color: e.color }}>{e.dur}</div>
                   </div>
                 ))}
-              </div>
-            </PhoneMock>
-            <div style={{ textAlign: "center", marginTop: 14, color: "var(--muted)", fontSize: 13 }}>
-              📱 <strong style={{ color: "var(--text)" }}>Zeiterfassung</strong> — täglich in 5 Sekunden
+              </PhoneMock>
+            </div>
+            <div style={{ textAlign: "center", marginTop: 24, color: "var(--muted)", fontSize: 13 }}>
+              <strong style={{ color: "var(--text)" }}>Zeiterfassung</strong> — desktop + handy synchron
             </div>
           </div>
 
-          {/* ─── PHONE 2: Lohn-Schätzung Brutto → Netto ─── */}
-          <div style={{ width: "100%", maxWidth: 310 }}>
-            <PhoneMock>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 4px 10px" }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--accent2)", letterSpacing: 2 }}>STUNDLY</span>
-                <span style={{ fontSize: 9, color: "var(--muted)" }}>💰 Lohn</span>
-              </div>
-
-              <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 8 }}>Juni 2026 — Schätzung</div>
-
-              {/* Brutto Netto stacked */}
-              <div style={{ background: "color-mix(in srgb, var(--green) 14%, transparent)", borderRadius: 9, padding: "10px 12px", marginBottom: 6, textAlign: "center" }}>
-                <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700 }}>BRUTTO</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
-              </div>
-              <div style={{ textAlign: "center", color: "var(--muted)", fontSize: 16, margin: "2px 0" }}>↓</div>
-              <div style={{ background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 9, padding: "10px 12px", marginBottom: 10, textAlign: "center" }}>
-                <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700 }}>NETTO</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
-              </div>
-
-              {/* Abzüge compact */}
-              <div style={{ background: "color-mix(in srgb, var(--red) 8%, var(--surface))", border: "1px solid color-mix(in srgb, var(--red) 25%, transparent)", borderRadius: 8, padding: "7px 9px" }}>
-                <div style={{ fontSize: 8, color: "var(--red)", fontWeight: 800, textTransform: "uppercase", marginBottom: 4 }}>🧾 Abzüge</div>
-                {[
-                  { l: "Lohnsteuer", v: "318,40" },
-                  { l: "RV", v: "264,77" },
-                  { l: "KV", v: "232,03" },
-                  { l: "AV", v: "37,01" },
-                  { l: "PV", v: "66,90" },
-                ].map((r) => (
-                  <div key={r.l} style={{ display: "flex", justifyContent: "space-between", fontSize: 9, padding: "2px 0" }}>
-                    <span style={{ color: "var(--muted)" }}>{r.l}</span>
-                    <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--red)" }}>−€ {r.v}</span>
+          {/* ─── MOCKUP 2: Lohn (Desktop + Phone) ─── */}
+          <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+            <div style={{ width: "100%", position: "relative", zIndex: 1 }}>
+              <BrowserMock url="stundly.de/salary">
+                <div style={{ padding: "14px 14px", background: "var(--bg)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>💰 Juni 2026 — Schätzung</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 14%, transparent)", borderRadius: 10, padding: "10px 8px" }}>
+                      <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>BRUTTO</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
+                    </div>
+                    <div style={{ fontSize: 18, color: "var(--muted)" }}>→</div>
+                    <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 10, padding: "10px 8px" }}>
+                      <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>NETTO</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
+                    </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Bottom nav */}
-              <div style={{ position: "absolute", bottom: 14, left: 8, right: 8, display: "flex", justifyContent: "space-around", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 4px" }}>
-                {[
-                  { i: "⏱", l: "Zeit" },
-                  { i: "📅", l: "Tage" },
-                  { i: "💰", l: "Lohn", a: true },
-                  { i: "🏖", l: "Url." },
-                  { i: "👤", l: "Profil" },
-                ].map(n => (
-                  <div key={n.l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                    <span style={{ fontSize: 14 }}>{n.i}</span>
-                    <span style={{ fontSize: 8, color: n.a ? "var(--accent2)" : "var(--muted)", fontWeight: 700 }}>{n.l}</span>
+                  <div style={{ background: "color-mix(in srgb, var(--red) 8%, var(--surface))", border: "1px solid color-mix(in srgb, var(--red) 25%, transparent)", borderRadius: 8, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 8, color: "var(--red)", fontWeight: 800, textTransform: "uppercase", marginBottom: 5 }}>🧾 Abzüge</div>
+                    {[
+                      { l: "Lohnsteuer", v: "318,40" },
+                      { l: "RV (9,3 %)", v: "264,77" },
+                      { l: "KV (8,15 %)", v: "232,03" },
+                      { l: "AV (1,3 %)", v: "37,01" },
+                      { l: "PV (2,35 %)", v: "66,90" },
+                    ].map((r) => (
+                      <div key={r.l} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0" }}>
+                        <span style={{ color: "var(--muted)" }}>{r.l}</span>
+                        <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--red)" }}>−€ {r.v}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </PhoneMock>
-            <div style={{ textAlign: "center", marginTop: 14, color: "var(--muted)", fontSize: 13 }}>
-              📱 <strong style={{ color: "var(--text)" }}>Lohn & Steuer</strong> — Brutto → Netto automatisch
+                </div>
+              </BrowserMock>
+            </div>
+            <div style={{ width: "55%", maxWidth: 180, marginTop: -50, position: "relative", zIndex: 2, transform: "translateX(38%) rotate(2deg)" }}>
+              <PhoneMock>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 4px 6px" }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--accent2)", letterSpacing: 1.5 }}>STUNDLY</span>
+                  <span style={{ fontSize: 8, color: "var(--muted)" }}>💰</span>
+                </div>
+                <div style={{ background: "color-mix(in srgb, var(--green) 14%, transparent)", borderRadius: 7, padding: "7px 8px", marginBottom: 3, textAlign: "center" }}>
+                  <div style={{ fontSize: 7, color: "var(--muted)", fontWeight: 700 }}>BRUTTO</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
+                </div>
+                <div style={{ textAlign: "center", color: "var(--muted)", fontSize: 11, margin: "1px 0" }}>↓</div>
+                <div style={{ background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 7, padding: "7px 8px", marginBottom: 4, textAlign: "center" }}>
+                  <div style={{ fontSize: 7, color: "var(--muted)", fontWeight: 700 }}>NETTO</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
+                </div>
+              </PhoneMock>
+            </div>
+            <div style={{ textAlign: "center", marginTop: 24, color: "var(--muted)", fontSize: 13 }}>
+              <strong style={{ color: "var(--text)" }}>Lohn & Steuer</strong> — Brutto → Netto auf beiden
             </div>
           </div>
 
-          {/* ─── PHONE 3: Setup-Guide für neue Nutzer ─── */}
-          <div style={{ width: "100%", maxWidth: 310 }}>
-            <PhoneMock>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 4px 8px" }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--accent2)", letterSpacing: 2 }}>STUNDLY</span>
-                <span style={{ fontSize: 9, color: "var(--muted)" }}>🏠 Start</span>
-              </div>
-
-              <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>Guten Morgen, Yusuf 👋</div>
-              <div style={{ fontSize: 9, color: "var(--muted)", marginBottom: 10 }}>In 3 Schritten startklar.</div>
-
-              <div style={{
-                background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent) 0%, color-mix(in srgb, var(--accent2) 12%, transparent) 100%)",
-                border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
-                borderRadius: 10, padding: "10px 9px",
-              }}>
-                <div style={{ fontSize: 8, color: "var(--accent2)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-                  🚀 Setup
+          {/* ─── MOCKUP 3: Dashboard Setup (Desktop + Phone) ─── */}
+          <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+            <div style={{ width: "100%", position: "relative", zIndex: 1 }}>
+              <BrowserMock url="stundly.de/dashboard">
+                <div style={{ padding: "16px 16px", background: "var(--bg)" }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>Guten Morgen, Yusuf 👋</div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 14 }}>Willkommen bei Stundly — in 3 Schritten startklar.</div>
+                  <div style={{
+                    background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent2) 10%, transparent) 100%)",
+                    border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+                    borderRadius: 11, padding: "12px 11px",
+                  }}>
+                    <div style={{ fontSize: 8, color: "var(--accent2)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 9 }}>
+                      🚀 In 3 Schritten startklar
+                    </div>
+                    {[
+                      { n: 1, icon: "🕐", title: "Standardzeiten festlegen" },
+                      { n: 2, icon: "💰", title: "Stundenlohn & Steuer" },
+                      { n: 3, icon: "⏱", title: "Ersten Arbeitstag erfassen" },
+                    ].map((s) => (
+                      <div key={s.n} style={{
+                        display: "flex", alignItems: "center", gap: 9,
+                        background: "var(--surface)", border: "1px solid var(--border)",
+                        borderRadius: 7, padding: "8px 10px", marginBottom: 5,
+                      }}>
+                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: "color-mix(in srgb, var(--accent2) 18%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "var(--accent2)", fontSize: 11, flexShrink: 0 }}>{s.n}</div>
+                        <div style={{ flex: 1, fontSize: 11, fontWeight: 700 }}>{s.icon} {s.title}</div>
+                        <div style={{ fontSize: 10, color: "var(--accent2)", fontWeight: 700 }}>→</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              </BrowserMock>
+            </div>
+            <div style={{ width: "55%", maxWidth: 180, marginTop: -50, position: "relative", zIndex: 2, transform: "translateX(38%) rotate(2deg)" }}>
+              <PhoneMock>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 4px 6px" }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--accent2)", letterSpacing: 1.5 }}>STUNDLY</span>
+                  <span style={{ fontSize: 8, color: "var(--muted)" }}>🏠</span>
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 800, marginBottom: 1 }}>Hi Yusuf 👋</div>
+                <div style={{ fontSize: 7, color: "var(--muted)", marginBottom: 6 }}>3 Schritte</div>
                 {[
                   { n: 1, icon: "🕐", title: "Standardzeiten" },
-                  { n: 2, icon: "💰", title: "Stundenlohn & Steuer" },
-                  { n: 3, icon: "⏱", title: "Erster Arbeitstag" },
+                  { n: 2, icon: "💰", title: "Lohn" },
+                  { n: 3, icon: "⏱", title: "1. Tag" },
                 ].map((s) => (
                   <div key={s.n} style={{
-                    display: "flex", alignItems: "center", gap: 8,
+                    display: "flex", alignItems: "center", gap: 5,
                     background: "var(--surface)", border: "1px solid var(--border)",
-                    borderRadius: 7, padding: "8px 9px", marginBottom: 5,
+                    borderRadius: 5, padding: "5px 6px", marginBottom: 3,
                   }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "color-mix(in srgb, var(--accent2) 22%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "var(--accent2)", fontSize: 10, flexShrink: 0 }}>{s.n}</div>
-                    <div style={{ flex: 1, fontSize: 10, fontWeight: 700 }}>{s.icon} {s.title}</div>
-                    <div style={{ fontSize: 9, color: "var(--accent2)", fontWeight: 700 }}>→</div>
+                    <div style={{ width: 14, height: 14, borderRadius: "50%", background: "color-mix(in srgb, var(--accent2) 22%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "var(--accent2)", fontSize: 7 }}>{s.n}</div>
+                    <div style={{ flex: 1, fontSize: 8, fontWeight: 700 }}>{s.icon} {s.title}</div>
                   </div>
                 ))}
-              </div>
-
-              <div style={{ fontSize: 8, color: "var(--muted)", marginTop: 8, textAlign: "center" }}>
-                💡 In 60 Sekunden startklar
-              </div>
-
-              {/* Bottom nav */}
-              <div style={{ position: "absolute", bottom: 14, left: 8, right: 8, display: "flex", justifyContent: "space-around", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 4px" }}>
-                {[
-                  { i: "⏱", l: "Zeit" },
-                  { i: "📅", l: "Tage" },
-                  { i: "💰", l: "Lohn" },
-                  { i: "🏖", l: "Url." },
-                  { i: "👤", l: "Profil" },
-                ].map((n, i) => (
-                  <div key={n.l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                    <span style={{ fontSize: 14 }}>{n.i}</span>
-                    <span style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700 }}>{n.l}</span>
-                    {void i}
-                  </div>
-                ))}
-              </div>
-            </PhoneMock>
-            <div style={{ textAlign: "center", marginTop: 14, color: "var(--muted)", fontSize: 13 }}>
-              📱 <strong style={{ color: "var(--text)" }}>Onboarding</strong> — startklar in 60 Sek.
+              </PhoneMock>
+            </div>
+            <div style={{ textAlign: "center", marginTop: 24, color: "var(--muted)", fontSize: 13 }}>
+              <strong style={{ color: "var(--text)" }}>Onboarding</strong> — startklar in 60 Sek.
             </div>
           </div>
 

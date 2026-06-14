@@ -7,6 +7,7 @@ import { calculateMonthlySalary, formatDuration, calcNettoFromBrutto } from "@wo
 import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
 import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 const STEUERKLASSEN: { value: Steuerklasse; label: string; hint: string }[] = [
   { value: "I",   label: "I",   hint: "Ledig" },
@@ -320,19 +321,46 @@ export default function SalaryPage() {
           </div>
           <div className="settings-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {([
-              { key: "hourly_rate",              label: "Stundenlohn (€)" },
-              { key: "monthly_target_hours",     label: "Sollstunden/Monat" },
-              { key: "overtime_rate_multiplier", label: "Überstunden ×" },
-              { key: "night_shift_bonus",        label: "Nachtzuschlag €/h" },
-              { key: "notdienst_bonus",          label: "Notdienst €/Tag" },
-              { key: "urlaub_anspruch",          label: "Urlaubsanspruch / Jahr" },
-            ] as { key: keyof SalarySettings; label: string }[]).map(({ key, label }) => {
+              {
+                key: "hourly_rate", label: "Stundenlohn (€)",
+                tipTitle: "Stundenlohn",
+                tipBody: "Dein Brutto-Stundenlohn. Grundlage für alle Berechnungen — Grundgehalt, Überstunden und Bonusbeträge.\n\nGesetzlicher Mindestlohn 2026: 13,90 €/h.",
+              },
+              {
+                key: "monthly_target_hours", label: "Sollstunden/Monat",
+                tipTitle: "Sollstunden / Monat",
+                tipBody: "Deine vertragliche Monatsarbeitszeit.\n\nVerwendung:\n• Lohnberechnung (Festgehalt = Sollstunden × Stundenlohn)\n• Tracker-Differenz (Über-/Unterstunden)\n\nTypisch 160-174h für Vollzeit.",
+              },
+              {
+                key: "overtime_rate_multiplier", label: "Überstunden ×",
+                tipTitle: "Überstunden-Multiplikator",
+                tipBody: "Aufschlag für Stunden über deiner Sollzeit.\n\n• 1,00 = kein Extra (Überstunden wie normale Stunden)\n• 1,25 = 25 % Aufschlag (üblich)\n• 1,50 = 50 % Aufschlag (Wochenende/Nacht)",
+              },
+              {
+                key: "night_shift_bonus", label: "Nachtzuschlag €/h",
+                tipTitle: "Nachtzuschlag",
+                tipBody: "Zusätzlicher Bonus pro Stunde für als 'Nachtschicht' markierte Einträge.\n\nWird auf den Stundenlohn aufgeschlagen, NICHT mit dem Überstundensatz multipliziert.",
+              },
+              {
+                key: "notdienst_bonus", label: "Notdienst €/Tag",
+                tipTitle: "Notdienst-Bonus",
+                tipBody: "Pauschaler Bonus pro Notdienst-Einsatz (unabhängig von der Dauer).\n\nWird zusätzlich zum Stundenlohn × geleisteten Notdienst-Stunden ausgezahlt.",
+              },
+              {
+                key: "urlaub_anspruch", label: "Urlaubsanspruch / Jahr",
+                tipTitle: "Urlaubsanspruch",
+                tipBody: "Deine jährlichen Urlaubstage laut Vertrag.\n\n• 24 Tage = BUrlG-Minimum (6-Tage-Woche)\n• 20 Tage = BUrlG-Minimum (5-Tage-Woche)\n• 30 Tage = übliche Regelung im Handwerk\n\nWird im Tracker für 'Urlaub übrig' verwendet.",
+              },
+            ] as { key: keyof SalarySettings; label: string; tipTitle: string; tipBody: string }[]).map(({ key, label, tipTitle, tipBody }) => {
               const isHourly = key === "hourly_rate";
               const rate = settings.hourly_rate ?? 0;
               const belowMindestlohn = isHourly && rate > 0 && rate < MINDESTLOHN_CURRENT;
               return (
                 <div key={key}>
-                  <label className="label">{label}</label>
+                  <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
+                    {label}
+                    <InfoTooltip title={tipTitle}>{tipBody}</InfoTooltip>
+                  </label>
                   <input
                     className="input" type="number" step="0.01"
                     value={settings[key] as number}
@@ -360,7 +388,18 @@ export default function SalaryPage() {
 
           {/* Steuerklasse — visual buttons */}
           <div style={{ marginBottom: 14 }}>
-            <label className="label" style={{ marginBottom: 6 }}>Steuerklasse</label>
+            <label className="label" style={{ marginBottom: 6, display: "inline-flex", alignItems: "center" }}>
+              Steuerklasse
+              <InfoTooltip title="Lohnsteuerklasse">
+                Deine Steuerklasse laut Lohnsteuerkarte (I–VI).{"\n\n"}
+                • I = Ledig / dauernd getrennt{"\n"}
+                • II = Alleinerziehend{"\n"}
+                • III = Verheiratet, höher verdienend{"\n"}
+                • IV = Verheiratet, etwa gleich{"\n"}
+                • V = Verheiratet, niedriger verdienend{"\n"}
+                • VI = Zweitjob (höchste Steuer)
+              </InfoTooltip>
+            </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
               {STEUERKLASSEN.map(({ value, label, hint }) => {
                 const active = (settings.steuerklasse ?? "I") === value;
@@ -394,7 +433,15 @@ export default function SalaryPage() {
           {/* Row 2: Kirchensteuer + Kind */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div>
-              <label className="label">Kirchensteuer</label>
+              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
+                Kirchensteuer
+                <InfoTooltip title="Kirchensteuer">
+                  Wird auf die Lohnsteuer aufgeschlagen, wenn du Mitglied einer Kirche bist.{"\n\n"}
+                  • 9 % in den meisten Bundesländern{"\n"}
+                  • 8 % in Bayern und Baden-Württemberg{"\n"}
+                  • Keine, wenn nicht in der Kirche
+                </InfoTooltip>
+              </label>
               <select
                 className="input"
                 value={String(settings.kirchensteuer ?? 0)}
@@ -407,7 +454,15 @@ export default function SalaryPage() {
               </select>
             </div>
             <div>
-              <label className="label">Kind im Haushalt</label>
+              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
+                Kind im Haushalt
+                <InfoTooltip title="Kinder & Pflegeversicherung">
+                  Beeinflusst nur die Pflegeversicherung (PV):{"\n\n"}
+                  • Mit Kind: 1,7 % PV{"\n"}
+                  • Ohne Kind (ab 23 Jahre): 2,35 % PV (Kinderlosenzuschlag 0,6 %){"\n\n"}
+                  Hat KEINEN Einfluss auf die Lohnsteuer.
+                </InfoTooltip>
+              </label>
               <button
                 type="button"
                 onClick={() => setSettings(s => ({ ...s, hat_kinder: !s.hat_kinder }))}
@@ -434,7 +489,14 @@ export default function SalaryPage() {
           <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: settings.tax_mode === "manual" ? 10 : 0 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>Manueller Modus</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", display: "inline-flex", alignItems: "center" }}>
+                  Manueller Modus
+                  <InfoTooltip title="Manueller Abzugs-Modus">
+                    Wenn die automatische Berechnung stark von deiner echten Abrechnung abweicht, kannst du einen festen Gesamt-Abzugssatz eingeben.{"\n\n"}
+                    Beispiel: Echte Abrechnung zeigt 32 % Abzug → trage 32 ein.{"\n\n"}
+                    Stundly nutzt dann diesen Prozentsatz statt EStG-Berechnung + SV-Beiträge.
+                  </InfoTooltip>
+                </div>
                 <div style={{ fontSize: 11, color: "var(--muted)" }}>Fester % statt echte Berechnung</div>
               </div>
               <button
@@ -468,9 +530,20 @@ export default function SalaryPage() {
             )}
           </div>
 
-          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 10, lineHeight: 1.5 }}>
-            ℹ️ Lohnsteuer-Schätzung nach EStG §32a 2024. Genauigkeit ±5% bei mittlerem/hohem Brutto.
-            Für genaue Werte bitte echte Gehaltsabrechnung verwenden.
+          <div style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            background: "color-mix(in srgb, var(--yellow) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--yellow) 25%, transparent)",
+            borderRadius: 8,
+            fontSize: 11,
+            color: "var(--muted)",
+            lineHeight: 1.55,
+          }}>
+            ⚠️ <strong style={{ color: "var(--text)" }}>Wichtig:</strong> Alle Brutto/Netto-Werte sind <strong style={{ color: "var(--yellow)" }}>Schätzungen</strong>.
+            Die echte Lohnabrechnung kann abweichen — Krankenkassen-Zusatzbeitrag (kassenspezifisch),
+            geldwerte Vorteile, Pauschalsteuer und Freibeträge werden nicht berücksichtigt.
+            Für exakte Werte bitte deine echte Gehaltsabrechnung verwenden.
           </div>
         </div>
 
@@ -526,7 +599,19 @@ export default function SalaryPage() {
           <>
             {/* HERO — Brutto → Netto */}
             <div className="card purple">
-              <div className="label" style={{ marginBottom: 12 }}>💰 {MONTHS[month-1]} — Schätzung</div>
+              <div className="label" style={{ marginBottom: 12, display: "inline-flex", alignItems: "center" }}>
+                💰 {MONTHS[month-1]} — Schätzung
+                <InfoTooltip title="Warum nur eine Schätzung?" color="var(--yellow)" icon="⚠️">
+                  Die echte Lohnabrechnung kann abweichen, weil:{"\n\n"}
+                  • <strong>Krankenkassen-Zusatzbeitrag</strong> variiert je Kasse (0,9 – 2,5 %){"\n"}
+                  • <strong>Geldwerte Vorteile</strong> (Dienstwagen, Job-Ticket, Essensgutscheine){"\n"}
+                  • <strong>Pauschalsteuer</strong> bei Minijobs oder Bonuszahlungen{"\n"}
+                  • <strong>Vermögenswirksame Leistungen</strong>, betriebliche Altersvorsorge{"\n"}
+                  • <strong>Freibeträge</strong> auf deiner Steuerkarte (Werbungskosten, Kinderfreibetrag){"\n\n"}
+                  Stundly nutzt EStG §32a 2024 + Standard-SV-Sätze. Genauigkeit ±5 % bei mittlerem Brutto.{"\n\n"}
+                  Für exakte Werte → echte Gehaltsabrechnung verwenden.
+                </InfoTooltip>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 10 }}>
                 <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 12%, transparent)", borderRadius: 12, padding: "12px 8px" }}>
                   <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>BRUTTO</div>

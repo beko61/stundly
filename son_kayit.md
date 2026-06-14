@@ -1,5 +1,49 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (19) – v0.5.6: Salary alanlarına InfoTooltip + Schätzung-Disclaimer
+
+### Yapıldı
+
+**Settings kartındaki her field için ℹ️ hover tooltip eklendi:**
+- ✅ **Stundenlohn (€)** — "Brutto-Stundenlohn. Grundlage für alle Berechnungen. Mindestlohn 2026: 13,90 €/h"
+- ✅ **Sollstunden/Monat** — "Vertragliche Monatsarbeitszeit. Lohnberechnung + Tracker-Differenz. Typisch 160-174h"
+- ✅ **Überstunden ×** — "1,00=kein Extra, 1,25=25% Aufschlag (üblich), 1,50=Wochenende/Nacht"
+- ✅ **Nachtzuschlag €/h** — "Bonus pro 'Nachtschicht'-Stunde, NICHT mit Überstundensatz multipliziert"
+- ✅ **Notdienst €/Tag** — "Pauschal pro Einsatz (unabhängig von Dauer), zusätzlich zum Stundenlohn"
+- ✅ **Urlaubsanspruch / Jahr** — "BUrlG-Min 20-24, üblich 30 im Handwerk"
+
+**Steuer kartındaki tooltip'ler:**
+- ✅ **Steuerklasse** — I-VI ayrı ayrı açıklandı (ledig/alleinerziehend/verheiratet vb.)
+- ✅ **Kirchensteuer** — "9% standart, 8% BY+BW, 0% kirchenfrei"
+- ✅ **Kind im Haushalt** — "Pflegeversicherung: mit kind 1,7%, ohne 2,35% (Kinderlosenzuschlag)"
+- ✅ **Manueller Modus** — "Echter Abzugssatz % statt EStG-Berechnung — beispiel: echte Abrechnung 32% → trage 32 ein"
+
+**Schätzung-Disclaimer 2 yerde:**
+- ✅ **HERO Brutto→Netto kartında** ⚠️ tooltip: "Warum nur eine Schätzung?" — 5 sebep listelendi:
+  - Krankenkassen-Zusatzbeitrag (0,9-2,5%, kassenspezifisch)
+  - Geldwerte Vorteile (Dienstwagen, Job-Ticket, Essensgutscheine)
+  - Pauschalsteuer (Minijobs, Bonuszahlungen)
+  - Vermögenswirksame Leistungen, betriebliche Altersvorsorge
+  - Freibeträge auf Steuerkarte (Werbungskosten, Kinderfreibetrag)
+- ✅ **Steuer kartının altındaki not** genişletildi:
+  - Eskiden küçük gri ℹ️ "Lohnsteuer-Schätzung nach EStG §32a 2024"
+  - Yeni: sarı uyarı kutusu ⚠️ "Wichtig: Alle Brutto/Netto-Werte sind Schätzungen. Die echte Lohnabrechnung kann abweichen — Krankenkassen-Zusatzbeitrag (kassenspezifisch), geldwerte Vorteile, Pauschalsteuer und Freibeträge werden nicht berücksichtigt."
+
+### Versiyon bump v0.5.5 → v0.5.6 (PATCH — UX hint/disclaimer)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata (2 typografik tırnak hatası düzeltildi: `„...` → `'...'`)
+
+### Sebep & Notlar
+- Kullanıcı talebi: "gehaltee einstellungu da hepsinin yanina aciklama yapalim üstüne gelince ne ise yaradigini yazsin"
+- Ek talep: "birde bu hesap tahmini hesap oldugunu belirtelim cünkü sosyalsigorta ve diger seylerde hep ayni kesilmeyebiliyor"
+- Mevcut `InfoTooltip` component yeniden kullanıldı (zaten MonthlySummary + AutoFillReports'ta var)
+- Hover (masaüstü) + tap (mobil) açar — `useState` + outside-click handler
+- Disclaimer sarı uyarı kutusu (eskisi gri ℹ️ idi) → daha dikkat çekici
+- 5 spesifik teknik sebep (Zusatzbeitrag, geldwerte Vorteile vb.) sayılırsa "neden tahmin" daha güvenilir görünüyor
+
+---
+
 ## 2026-06-14 (18) – v0.5.5: Stundenlohn default = Mindestlohn + Warnung
 
 ### Yapıldı

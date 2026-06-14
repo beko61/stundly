@@ -1,5 +1,35 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (27) – v0.8.4: FAB overlap (mail vs scan) + Juni month-nav slimmed
+
+### Sorun 1: Tracker'da iki FAB üst üste
+- `.floating-scan` (📷 Stundenzettel scan) ve `.support-fab` (📧 mail) ikisi de sağ-altta
+- Tracker sayfasında mail butonu scan butonunu kapatıyordu
+
+### Sorun 2: Juni month-nav alanı çok büyük
+- Tracker MonthNav: buttons 40x40, h2 28px, gap 12, `flex: 1` → bar tüm ekran genişliği
+- Salary header: buttons 38x38, h1 26px, gap 10, `flex: 1` → aynı problem
+- Mobilde ekranın büyük bir kısmını sadece ay seçici kaplıyordu
+
+### Düzeltme
+- **CSS `body:has(.floating-scan) .support-fab`** rule: sayfada scan butonu varsa mail butonu yukarı kaldırılıyor
+  - Desktop: `bottom: 90px` (scan üzerinde)
+  - Mobile: `bottom: calc(160px + safe-area)` (scan + BottomNav üstünde)
+- **Tracker MonthNav** & **Salary header**: kompakt pill tasarımı
+  - Buttons 40/38 → **30x30**
+  - Font 18 → **14**
+  - h1/h2 26-28 → **18**
+  - `flex: 1` kaldırıldı, `minWidth: 90` ile sabit genişlik + `justifyContent: center`
+  - Sonuç: ay seçici artık ortalanmış kompakt bir pill, ekranı kaplamıyor
+
+### Değişen dosyalar
+- `apps/web/src/app/globals.css` — `:has()` ile FAB stacking
+- `apps/web/src/components/tracker/MonthNav.tsx` — kompakt pill nav
+- `apps/web/src/app/(dashboard)/salary/page.tsx` — aynı kompakt pill
+- `apps/web/src/lib/version.ts` — 0.8.3 → 0.8.4
+
+---
+
 ## 2026-06-14 (26) – v0.8.3: SupportButton overlap fix (sol-alt → sağ-alt + mobil BottomNav clearance)
 
 ### Sorun

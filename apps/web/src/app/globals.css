@@ -524,6 +524,15 @@ body {
     right: 16px;
   }
 }
+/* Tracker gibi sayfalarda .floating-scan da sağ-altta — support-fab onun üstüne kaldırılır */
+body:has(.floating-scan) .support-fab {
+  bottom: 90px;
+}
+@media (max-width: 767px) {
+  body:has(.floating-scan) .support-fab {
+    bottom: calc(160px + env(safe-area-inset-bottom));
+  }
+}
 
 @media (max-width: 767px) {
 

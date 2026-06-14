@@ -87,21 +87,21 @@ export function MonthNav() {
         </div>
       </div>
 
-      {/* Month nav */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {/* Month nav — kompakt, ortalanmış pill */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
         <button onClick={prev} style={{
           background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)",
-          width: 40, height: 40, borderRadius: 10, cursor: "pointer", fontSize: 18,
+          width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 14,
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>‹</button>
 
-        <h2 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", flex: 1, textAlign: "center" }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", minWidth: 90, textAlign: "center" }}>
           {MONTHS[month - 1]}
         </h2>
 
         <button onClick={next} style={{
           background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)",
-          width: 40, height: 40, borderRadius: 10, cursor: "pointer", fontSize: 18,
+          width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 14,
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>›</button>
       </div>

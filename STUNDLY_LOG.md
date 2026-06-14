@@ -32,7 +32,15 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-14 #24): v0.7.1 — Vercel Analytics + Speed Insights**
+**Son değişiklik (2026-06-14 #25): v0.8.2 — Reddit launch günü logu**
+- r/Hannover post canlıydı birkaç saat, sonra permaban (self-promo)
+- Analytics: 68 visitor, %85 mobile, %94 DE, 28 Reddit referral
+- 2 kayıt: 1 throwaway email Einzelperson + 1 "Test gmbh" GmbH plan
+- 8 yorum yanıtlandı Almanca, em-dash yasağı memory'e alındı
+- Conversion 1.5% cold Reddit için iyi
+- Yarın için: mobile audit, demo mode, admin-panel, r/Selbststaendig seçenekleri
+
+**Önceki değişiklik (2026-06-14 #24): v0.7.1 — Vercel Analytics + Speed Insights**
 - `@vercel/analytics` + `@vercel/speed-insights` paketleri
 - layout.tsx'te `<Analytics />` ve `<SpeedInsights />` eklendi
 - Çerezsiz, DSGVO uyumlu — pazarlama öncesi görünürlük altyapısı

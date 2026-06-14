@@ -1,5 +1,68 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (25) – v0.8.2: Reddit launch günü + ilk visitor data + öğrenilen dersler
+
+### Reddit Launch (r/Hannover)
+- ✅ Post atıldı: "Ich habe eine Arbeitszeit-App für Handwerker gebaut — sucht jemand Beta-Tester?"
+- ❌ **Birkaç saat sonra permaban** — r/Hannover self-promo kuralı (yerel sub, startup launch tolere etmiyor)
+- 🟡 Post yayında kaldı süre boyunca, ban moderatör gecikmeli oldu
+- 🟡 Karar: Reddit'e bağımlı olmamak, başka subreddit'ler için strateji rafine et (problem-first format)
+- 🟡 r/Handwerker zaten önceden reddetmişti
+
+### Vercel Analytics ilk dalga (last 7 days)
+- **68 visitor** (organik, Reddit'ten)
+- **178 page views** (avg 2.6 sayfa/visitor)
+- **60% bounce rate** (cold traffic için normal)
+- **Pages**: / (68), /impressum (14), /register (5), /datenschutz (4), /dashboard (2), /agb (1), /calendar (1)
+- **Referrers**: reddit.com (15), com.reddit.frontpage (13) = toplam 28 Reddit
+- **Country**: %94 Germany (perfect target)
+- **Devices**: %85 mobile (Android 51% + iOS 34%), %15 desktop
+
+### Konversiyon funnel
+- 68 visitor → 14 impressum check (Alman due diligence) → 5 register click → 2 dashboard
+- **2 kayıt**: 1 throwaway email (`masome2963@hotkev.com`) + 1 "Test gmbh" (GmbH planını test eden)
+- Conversion 1.5% (cold Reddit traffic için iyi)
+- "Test gmbh" kaydı önemli sinyal: **GmbH planına gerçek ilgi** + Admin-Panel henüz tam olmadığı için bouncede etti
+
+### Yanıtlanan Reddit yorumları (8 yorum, Almanca yazıldı)
+1. **k_ekse** — "AI yapımı, mobile kötü, güvenlik şart" → Excel 2 sene + Supabase RLS + mobile düzeltildi yanıtı
+2. **ephirial** — "%100 vibe-coded" → Excel 2 sene + "2 Jahre Frustration in Code gegossen" yanıtı
+3. **Ill-Suggestion-349 (1)** — "2 hafta sonra ölecek" → "Bookmark dich gerne, falls nichts passiert hast du recht" yanıtı
+4. **NichtOhneMeineKamera** — "İşveren modeli var mı?" → Team/Unternehmen plan + AG-Admin-Panel in Arbeit yanıtı
+5. **Salty-Information-41** — "Mindestlohn legal karmaşık" → §17 MiLoG + Fachanwalt için Pflicht yanıtı
+6. **Friendly guy** — "Text de AI :D" → "Erwischt, mein Deutsch nicht ganz Muttersprachler" yanıtı
+7. **Ill-Suggestion-349 (2)** — "%99 ölüyor" → 2-yıl Excel + Lohnabrechnung ile karşılaştırma yanıtı
+8. **Em-dash tip** → "Guter Tipp, danke! Wird übernommen" yanıtı → **MEMORY: Almanca'da em-dash yasak**
+
+### Öğrenilen gerçekler (24 saatte kazanılan piyasa verisi)
+- 🟢 Stundly insan algısında **ciddiye alınıyor** (%21 impressum kontrolü = ortalama'nın 4 katı)
+- 🟢 GmbH planına gerçek ilgi var (1 test kaydı)
+- 🟢 Yazılımcı kitlesi **detaylı yorum yazdı** (vibe-coded slop'a kimse vakit ayırmaz)
+- 🟢 Yorumlar saldırgan değil yapıcı sırada
+- 🟢 Spesifik feedback alanları: Mindestlohn nuans, Rufbereitschaft, AG admin-panel, mobile UX
+- 🔴 Trust yetersiz (throwaway email kullanıldı) → demo mode veya social proof gerek
+- 🔴 Mobile experience eleştirildi (k_ekse) → audit + iyileştirme
+- 🔴 r/Hannover banlandı, yorumlara cevap veremez durumda
+
+### Memory eklendi
+- ✅ `feedback_almanca_yazim_stili.md` — Almanca metinde em-dash kullanma, doğal Alman tarzı (Reddit feedback'inden çıktı)
+
+### Versiyon bump v0.8.1 → v0.8.2 (PATCH — log-only)
+
+### Yarın için seçenekler
+| Seçenek | Etki | Süre |
+|---------|------|------|
+| Mobile responsive audit + iyileştirme | k_ekse haklı + %85 mobile trafik | 2-3 saat |
+| Demo mode (kayıtsız dene) | Throwaway email sorununu çöz | 1-2 saat |
+| Admin-Panel başla (employee davet) | GmbH testçisinin eksik bulduğu | 1-2 gün |
+| r/Selbststaendig post (problem-first) | Yeni traffic dalgası | 30 dk |
+
+### Notlar
+- Reddit ban'a moderasyon kibar bir mesaj atma planı vardı, **karar verildi: bırakalım**, Reddit'e bağımlı değiliz
+- Kullanıcı bugün için **doyduk** dedi — yarın taze kafayla devam
+
+---
+
 ## 2026-06-14 (24) – v0.7.1: Vercel Analytics + Speed Insights (launch readiness)
 
 ### Yapıldı

@@ -1,5 +1,29 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (32) – v0.9.4: 🚨 SSR crash fix — Stripe lazy init
+
+### Sorun (stundly.de "Application error: server-side exception", Digest 2241623409)
+- Stripe v22 constructor placeholder string'i reddediyor: `"Neither apiKey nor config.authenticator provided"`
+- Eski kod `lib/stripe/server.ts:7`: `new Stripe(STRIPE_SECRET_KEY ?? "sk_test_placeholder", ...)` — modül yüklemede çağrılıyor
+- Vercel'de "Collecting page data" fazı `/api/stripe/webhook` route'unu evaluate ederken `new Stripe()` patlıyor → build/runtime crash
+- Sonuç: SSR exception, landing page yüklenmiyor
+
+### Çözüm — `apps/web/src/lib/stripe/server.ts`
+- `new Stripe(...)` modül yüklemede çağrılmıyor artık
+- `getStripe()` lazy getter: ilk çağrıda init, sonrasında singleton
+- `stripe` export'u Proxy ile sarıldı — `stripe.checkout.sessions.create(...)` mevcut kullanımları aynen çalışır (geriye dönük uyumlu)
+- Env yoksa init zamanında throw eder, modül yüklemede DEĞİL
+
+### Doğrulama
+- Local `next build` artık temiz tamamlanıyor (öncesi: "Failed to collect page data for /api/stripe/webhook")
+- Landing page artık `○ Static` olarak prerender ediliyor
+
+### Değişen dosyalar
+- `apps/web/src/lib/stripe/server.ts` — lazy init + Proxy
+- `apps/web/src/lib/version.ts` — 0.9.3 → 0.9.4 (PATCH: critical bugfix)
+
+---
+
 ## 2026-06-14 (31) – v0.9.3: "ZEITERFASSUNG" alt label daha küçük
 
 ### Değişiklik

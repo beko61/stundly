@@ -1,12 +1,40 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.warn("STRIPE_SECRET_KEY is not set");
+/**
+ * Lazy Stripe client — sadece ilk kullanımda init olur.
+ *
+ * Sebep: Stripe v22 constructor'ı placeholder string'i de reddediyor
+ * ("Neither apiKey nor config.authenticator provided"). Eski "sk_test_placeholder"
+ * fallback'i artık çalışmıyor — modül yüklemede patlıyor (örn. Next.js build'in
+ * "Collecting page data" fazı, /api/stripe/webhook route'unu evaluate ederken).
+ *
+ * Lazy init ile:
+ *   - Build & SSR sırasında Stripe init olmaz, env eksik olsa bile patlama.
+ *   - Sadece checkout/portal/webhook çağrıldığında env zorunlu olur.
+ */
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (_stripe) return _stripe;
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  _stripe = new Stripe(key, {
+    apiVersion: "2025-03-31.basil",
+    typescript: true,
+  });
+  return _stripe;
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_test_placeholder", {
-  apiVersion: "2025-03-31.basil",
-  typescript: true,
+/**
+ * Geriye dönük uyumluluk için Proxy export — `stripe.checkout.sessions.create(...)`
+ * şeklindeki mevcut kullanımlar lazy init üzerinden çalışır.
+ */
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return Reflect.get(getStripe(), prop);
+  },
 });
 
 export const PRICE_IDS: Record<string, Record<string, string>> = {

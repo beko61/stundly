@@ -124,9 +124,18 @@ export default function EmployeesPage() {
     load();
   }
 
-  async function toggleEmployee(userId: string, isActive: boolean) {
-    const supabase = createClient();
-    await supabase.from("profiles").update({ is_active: !isActive }).eq("user_id", userId);
+  async function toggleEmployee(userId: string) {
+    setError(null);
+    const res = await fetch("/api/company/employees/toggle", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ userId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Aktion fehlgeschlagen");
+      return;
+    }
     load();
   }
 
@@ -228,7 +237,7 @@ export default function EmployeesPage() {
                 </Link>
 
                 <button
-                  onClick={() => toggleEmployee(emp.user_id, emp.is_active)}
+                  onClick={() => toggleEmployee(emp.user_id)}
                   className="btn"
                   style={{
                     fontSize: 11, padding: "6px 12px", flexShrink: 0,

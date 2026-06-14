@@ -52,10 +52,12 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
 
   if (!employee || employee.company_id !== companyId) notFound();
 
-  // 2) Ay seçimi
+  // 2) Ay seçimi — malformed query'lere karşı validate
   const now = new Date();
-  const year  = parseInt(sp.year  ?? String(now.getFullYear()), 10);
-  const month = parseInt(sp.month ?? String(now.getMonth() + 1), 10);
+  const rawYear  = parseInt(sp.year  ?? "", 10);
+  const rawMonth = parseInt(sp.month ?? "", 10);
+  const year  = (Number.isInteger(rawYear)  && rawYear  >= 2020 && rawYear  <= 2100) ? rawYear  : now.getFullYear();
+  const month = (Number.isInteger(rawMonth) && rawMonth >= 1    && rawMonth <= 12)   ? rawMonth : now.getMonth() + 1;
   const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
   const daysInMonth = new Date(year, month, 0).getDate();
   const lastDay  = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
@@ -255,7 +257,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
                   </div>
                   {v.reason && (
                     <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                      „{v.reason}"
+                      „{v.reason}“
                     </div>
                   )}
                   <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>

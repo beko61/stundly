@@ -1,5 +1,46 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (35) – v0.11.1: Faz 3 test pass + 2 bug fix
+
+### Test sonuçları
+- **Yeni unit testler:** `companyAdmin.test.ts` — netMinutesForEntry (12 case) + formatMinutes (5 case) = **16/16 passed ✓**
+- **Tüm suite:** 43 pass, 3 fail (salaryCalc — F3 öncesi vardı, alakasız)
+- **Build:** ✓ Compiled successfully
+- **TypeScript:** ✓ clean
+- **Lint:** sadece 1 yeni hata (German curly quote) — düzeltildi
+- **Dev server cold-start:** 2.4s, module-level error yok
+
+### Bulunan & düzeltilen buglar
+
+**Bug #1: toggleEmployee silently fails** ❌
+- Sorun: `profiles` UPDATE RLS policy'si sadece `auth.uid() = user_id` izin veriyor → admin başka çalışanın is_active'ini değiştiremiyor, buton tıklanıyor ama hiçbir şey olmuyor
+- Çözüm: yeni server route `/api/company/employees/toggle`
+  - getCompanyAdminContext ile yetki gate
+  - Target user aynı şirkette mi doğrular (404 değilse)
+  - Lockout engeli: admin kendi kendini deaktive edemez
+  - admin client ile bypass
+
+**Bug #2: Employee detail malformed query** ❌
+- Sorun: `?year=abc` gibi geçersiz query → parseInt NaN → firstDay "NaN-NaN-01" → sorgu sessiz fail
+- Çözüm: validation — `Number.isInteger + range check`, geçersizse current ay'a fallback
+
+**Cosmetic: German quote escape**
+- `„{v.reason}"` → `„{v.reason}“` (proper curly close)
+
+### Test komutu
+```bash
+npx vitest run src/__tests__/unit/companyAdmin.test.ts
+```
+
+### Değişen dosyalar
+- `apps/web/src/__tests__/unit/companyAdmin.test.ts` — YENİ (16 test)
+- `apps/web/src/app/api/company/employees/toggle/route.ts` — YENİ (admin toggle bypass)
+- `apps/web/src/app/company/employees/page.tsx` — toggle route kullanıyor
+- `apps/web/src/app/company/employees/[userId]/page.tsx` — query validation + quote fix
+- `apps/web/src/lib/version.ts` — 0.11.0 → 0.11.1 (PATCH)
+
+---
+
 ## 2026-06-14 (34) – v0.11.0: Faz 3 Admin Sight — ekibi gör, drill-down et
 
 ### Hedef

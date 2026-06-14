@@ -1,14 +1,15 @@
 ﻿"use client";
 
+import { useState, useRef, useEffect } from "react";
+
 /**
  * Floating Support-Button — unten links.
  *
  * Reihenfolge der Bevorzugung:
- *   1. WhatsApp (wenn NEXT_PUBLIC_SUPPORT_WHATSAPP gesetzt) — grüner Kreis
- *   2. E-Mail   (wenn NEXT_PUBLIC_SUPPORT_EMAIL gesetzt)    — accent2 Kreis
+ *   1. WhatsApp (wenn NEXT_PUBLIC_SUPPORT_WHATSAPP gesetzt) — grüner Kreis, direkt-Link
+ *   2. E-Mail   (wenn NEXT_PUBLIC_SUPPORT_EMAIL gesetzt)    — accent2 Kreis, Popover mit 3 Optionen
+ *      (mailto:, Gmail web, Adresse kopieren — robust für Windows ohne Mail-Client)
  *   3. Nichts (kein Button)
- *
- * Beide leer -> kein Button (kein "broken" Button im UI).
  */
 
 const RAW_NUMBER = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "";
@@ -33,7 +34,144 @@ const BTN_BASE: React.CSSProperties = {
   zIndex: 9998,
   transition: "transform 0.2s",
   textDecoration: "none",
+  border: "none",
+  cursor: "pointer",
 };
+
+function EmailPopover() {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Outside click + ESC schließen
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onEsc(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  async function copyEmail() {
+    try {
+      await navigator.clipboard.writeText(EMAIL);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard nicht verfügbar */ }
+  }
+
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${EMAIL}&su=${MAIL_SUBJ}&body=${MAIL_BODY}`;
+  const mailtoUrl = `mailto:${EMAIL}?subject=${MAIL_SUBJ}&body=${MAIL_BODY}`;
+
+  return (
+    <div ref={wrapRef} style={{ position: "fixed", bottom: 24, left: 24, zIndex: 9998 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-label="Hilfe per E-Mail"
+        title="Hilfe per E-Mail"
+        style={{
+          ...BTN_BASE,
+          position: "relative",
+          bottom: 0, left: 0,
+          background: "var(--accent2)",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 70,
+            left: 0,
+            minWidth: 260,
+            background: "var(--surface)",
+            border: "1px solid color-mix(in srgb, var(--accent2) 35%, transparent)",
+            borderRadius: 12,
+            padding: "12px 14px",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
+            fontFamily: "'Syne', sans-serif",
+          }}
+        >
+          <div style={{ fontSize: 10, fontWeight: 800, color: "var(--accent2)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
+            📧 Schreib mir
+          </div>
+          <div
+            onClick={copyEmail}
+            title="Klick zum Kopieren"
+            style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 12,
+              padding: "8px 10px",
+              background: "var(--surface2)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              marginBottom: 10,
+              cursor: "pointer",
+              wordBreak: "break-all",
+              color: "var(--text)",
+            }}
+          >
+            {EMAIL} {copied && <span style={{ color: "var(--green)", fontFamily: "'Syne', sans-serif", fontSize: 10 }}> ✓ kopiert</span>}
+          </div>
+
+          <a
+            href={mailtoUrl}
+            onClick={() => setOpen(false)}
+            style={{
+              display: "block",
+              padding: "9px 12px",
+              background: "var(--accent2)",
+              color: "white",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontSize: 12,
+              fontWeight: 700,
+              textAlign: "center",
+              marginBottom: 6,
+            }}
+          >
+            📨 Mail-Programm öffnen
+          </a>
+
+          <a
+            href={gmailUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            style={{
+              display: "block",
+              padding: "9px 12px",
+              background: "var(--surface2)",
+              border: "1px solid var(--border)",
+              color: "var(--text)",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontSize: 12,
+              fontWeight: 700,
+              textAlign: "center",
+            }}
+          >
+            🌐 Gmail (Web) öffnen
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SupportButton() {
   if (NUMBER) {
@@ -55,23 +193,7 @@ export function SupportButton() {
     );
   }
 
-  if (EMAIL) {
-    return (
-      <a
-        href={`mailto:${EMAIL}?subject=${MAIL_SUBJ}&body=${MAIL_BODY}`}
-        aria-label="Hilfe per E-Mail"
-        title="Hilfe per E-Mail"
-        style={{ ...BTN_BASE, background: "var(--accent2)" }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-          <polyline points="22,6 12,13 2,6" />
-        </svg>
-      </a>
-    );
-  }
+  if (EMAIL) return <EmailPopover />;
 
   return null;
 }

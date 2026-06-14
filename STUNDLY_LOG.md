@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-14 #22): v0.6.1 — Salary YTD özet kartı**
+**Son değişiklik (2026-06-14 #23): v0.7.0 — Salary 3 iyileştirme**
+- Notdienst row tıklanır → Tracker'a önceki ay yüklenir
+- Stundenlohn altında "💡 +1 €/h ≈ +€X / Monat Netto" what-if
+- Einstellungen kartının üstünde ⚡ Live Brutto→Netto banner
+
+**Önceki değişiklik (2026-06-14 #22): v0.6.1 — Salary YTD özet kartı**
 - Year-to-Date özet (Brutto / Netto / Ø Netto/Monat) Salary sayfası üstünde
 - 12-ay progress bar + zaman aralığı (Jan – Mai)
 - "Juni läuft noch" footnote

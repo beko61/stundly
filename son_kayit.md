@@ -1,5 +1,47 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (23) – v0.7.0: Salary — 3 iyileştirme (Notdienst link + What-if + Live preview)
+
+### Yapıldı
+
+**#2 — Notdienst → Tracker jump linki**
+- ✅ Verdienst-Aufschlüsselung kartında "Notdienst-Bonus (3× aus Mai) →" satırı tıklanabilir oldu
+- ✅ Tıklayınca `setTrackerMonth(prevYear, prevMonth)` ile Tracker'a önceki ay yüklenerek navigate
+- ✅ Hover effect: turuncu background tinti + cursor pointer + ok karakteri
+- ✅ Title attribute: "Klick: zu Notdienst-Einträgen im Tracker springen"
+- ✅ Notdienst sayısı 0 ise tıklanabilir değil
+
+**#3 — Live "Was wäre wenn?" simülatörü** (Stundenlohn için)
+- ✅ Yeni `whatIfPlusOne` useMemo: Stundenlohn +1€ senaryosu için breakdown + Netto hesabı
+- ✅ Stundenlohn input'unun altında, Mindestlohn hint'ten sonra yeşil satır:
+  - `💡 +1 €/h ≈ +€124 / Monat Netto`
+- ✅ Sadece entries varsa gösterilir (yeni kullanıcıya boş veri sağmaz)
+- ✅ Sadece pozitif Netto delta varsa (mantık güvenliği)
+- ✅ Pazarlık değeri: kullanıcı patronla konuşmadan önce "+1€/h bana ne kazandırır" görür
+
+**#4 — Live Brutto-Netto preview** (Einstellungen kartı içinde)
+- ✅ Einstellungen kartının başlığının altına yatay banner eklendi:
+  - `⚡ Live Juni    € 2.847 Brutto → € 1.973 Netto`
+- ✅ accent2 tinti background, DM Mono font
+- ✅ Settings değiştirdiğinde anında güncellenir (zaten reactive)
+- ✅ Kullanıcı artık ayar değiştirirken HERO'ya scroll yapmadan etkisini görür
+
+### Versiyon bump v0.6.1 → v0.7.0 (MINOR — 3 yeni UX katmanı)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Kullanıcı talebi: "hepsini yapalım sonra test edelim"
+- 3 iyileştirme tek commit'te:
+  - #2: navigasyon kestirme (Tracker'a önceki ay)
+  - #3: optimizasyon karar yardımı ("+1€ ne kadar fayda")
+  - #4: input değiştirirken anında geri bildirim
+- useTrackerStore'un setMonth metodu yeniden kullanıldı (calendar/page.tsx'te de var)
+- whatIfPlusOne: aynı calculateMonthlySalary fonksiyonu, sadece hourly_rate +1 ile
+
+---
+
 ## 2026-06-14 (22) – v0.6.1: Salary YTD özet kartı
 
 ### Yapıldı

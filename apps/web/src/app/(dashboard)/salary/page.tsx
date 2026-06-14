@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { calculateMonthlySalary, formatDuration, calcNettoFromBrutto } from "@workly/shared";
 import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
 import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { useTrackerStore } from "@/store/trackerStore";
 
 const STEUERKLASSEN: { value: Steuerklasse; label: string; hint: string }[] = [
   { value: "I",   label: "I",   hint: "Ledig" },
@@ -65,6 +67,8 @@ export default function SalaryPage() {
   const now = new Date();
   const [year,     setYear]     = useState(now.getFullYear());
   const [month,    setMonth]    = useState(now.getMonth() + 1);
+  const router = useRouter();
+  const setTrackerMonth = useTrackerStore(s => s.setMonth);
   const [entries,  setEntries]  = useState<TimeEntry[]>([]);
   const [records,  setRecords]  = useState<MonthRecord[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -289,6 +293,25 @@ export default function SalaryPage() {
   }), [breakdown.total_gross, settings.steuerklasse, settings.kirchensteuer,
        settings.hat_kinder, settings.tax_mode, settings.manuell_abzug]);
 
+  /** What-if simülatörü: Stundenlohn +1 € senaryosu, aylık Netto farkı.
+   *  Kullanıcının pazarlık değeri için: "+1 €/h ne kazandırır?" */
+  const whatIfPlusOne = useMemo(() => {
+    const settingsPlus = { ...settings, hourly_rate: settings.hourly_rate + 1 };
+    const bdPlus = calculateMonthlySalary(entries, settingsPlus, { notdienstDaysOverride: currentMonthNotdienstDays });
+    const ncPlus = calcNettoFromBrutto({
+      monthBrutto:   bdPlus.total_gross,
+      steuerklasse:  settings.steuerklasse  ?? "I",
+      kirchensteuer: settings.kirchensteuer ?? 0,
+      hatKinder:     settings.hat_kinder    ?? false,
+      taxMode:       settings.tax_mode      ?? "auto",
+      manuellAbzug:  settings.manuell_abzug ?? 0,
+    });
+    return {
+      bruttoDelta: bdPlus.total_gross - breakdown.total_gross,
+      nettoDelta:  ncPlus.netto       - nettoCalc.netto,
+    };
+  }, [entries, settings, currentMonthNotdienstDays, breakdown.total_gross, nettoCalc.netto]);
+
   const fmtEur    = (n: number) => `€ ${n.toFixed(2)}`;
 
   // Yearly totals from records
@@ -367,6 +390,27 @@ export default function SalaryPage() {
             <span className="label">⚙️ Einstellungen</span>
             {settingsSaved && <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 700 }}>✓ Gespeichert</span>}
           </div>
+
+          {/* Live preview — Settings değişince anında güncellenir */}
+          {!loading && entries.length > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 10, marginBottom: 14,
+              padding: "10px 14px",
+              background: "color-mix(in srgb, var(--accent2) 8%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent2) 25%, transparent)",
+              borderRadius: 10,
+              fontFamily: "'DM Mono',monospace",
+              fontSize: 12,
+            }}>
+              <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "'Syne',sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                ⚡ Live {MONTHS[month-1]}
+              </span>
+              <span style={{ color: "var(--green)" }}>{fmtEur(breakdown.total_gross)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Brutto</span></span>
+              <span style={{ color: "var(--muted)" }}>→</span>
+              <span style={{ color: "var(--accent2)" }}>{fmtEur(nettoCalc.netto)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Netto</span></span>
+            </div>
+          )}
           <div className="settings-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {([
               {
@@ -416,11 +460,18 @@ export default function SalaryPage() {
                     style={isHourly && belowMindestlohn ? { borderColor: "var(--red)" } : undefined}
                   />
                   {isHourly && (
-                    <div style={{ fontSize: 10, marginTop: 4, color: belowMindestlohn ? "var(--red)" : "var(--muted)", lineHeight: 1.4 }}>
-                      {belowMindestlohn ? (
-                        <>⚠️ Unter dem gesetzlichen Mindestlohn ({formatMindestlohn()}/h) — bitte prüfen.</>
-                      ) : (
-                        <>💶 Gesetzlicher Mindestlohn {new Date().getFullYear()}: <strong style={{ color: "var(--text)" }}>{formatMindestlohn()}/h</strong></>
+                    <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.5 }}>
+                      <div style={{ color: belowMindestlohn ? "var(--red)" : "var(--muted)" }}>
+                        {belowMindestlohn ? (
+                          <>⚠️ Unter dem gesetzlichen Mindestlohn ({formatMindestlohn()}/h) — bitte prüfen.</>
+                        ) : (
+                          <>💶 Gesetzlicher Mindestlohn {new Date().getFullYear()}: <strong style={{ color: "var(--text)" }}>{formatMindestlohn()}/h</strong></>
+                        )}
+                      </div>
+                      {entries.length > 0 && whatIfPlusOne.nettoDelta > 0 && (
+                        <div style={{ color: "var(--green)", marginTop: 2 }}>
+                          💡 <strong>+1 €/h</strong> ≈ +{fmtEur(whatIfPlusOne.nettoDelta)} / Monat Netto
+                        </div>
                       )}
                     </div>
                   )}
@@ -758,23 +809,49 @@ export default function SalaryPage() {
               {(() => {
                 const prevMonthName = MONTHS[(month - 2 + 12) % 12]!;
                 return [
-                  { label: "Gearbeitete Stunden",   value: formatDuration(Math.round(breakdown.worked_hours * 60)) },
-                  { label: "Grundgehalt",           value: fmtEur(breakdown.base_pay) },
-                  { label: "Überstundenvergütung",  value: fmtEur(breakdown.overtime_pay) },
-                  { label: "Nachtzuschlag",         value: fmtEur(breakdown.night_shift_bonus) },
+                  { key: "hours",     label: "Gearbeitete Stunden",   value: formatDuration(Math.round(breakdown.worked_hours * 60)), clickable: false },
+                  { key: "base",      label: "Grundgehalt",           value: fmtEur(breakdown.base_pay),           clickable: false },
+                  { key: "overtime",  label: "Überstundenvergütung",  value: fmtEur(breakdown.overtime_pay),       clickable: false },
+                  { key: "night",     label: "Nachtzuschlag",         value: fmtEur(breakdown.night_shift_bonus),  clickable: false },
                   {
+                    key:   "notdienst",
                     label: currentMonthNotdienstDays > 0
-                      ? `Notdienst-Bonus (${currentMonthNotdienstDays}× aus ${prevMonthName})`
+                      ? `Notdienst-Bonus (${currentMonthNotdienstDays}× aus ${prevMonthName}) →`
                       : `Notdienst-Bonus (0× aus ${prevMonthName})`,
-                    value: fmtEur(breakdown.notdienst_bonus),
+                    value:     fmtEur(breakdown.notdienst_bonus),
+                    clickable: currentMonthNotdienstDays > 0,
                   },
                 ];
-              })().map(({ label, value }) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
-                  <span style={{ fontSize: 13, color: "var(--muted)" }}>{label}</span>
-                  <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13 }}>{value}</span>
-                </div>
-              ))}
+              })().map(({ key, label, value, clickable }) => {
+                const onClick = clickable && key === "notdienst" ? () => {
+                  const prevMonth = month === 1 ? 12 : month - 1;
+                  const prevYear  = month === 1 ? year - 1 : year;
+                  setTrackerMonth(prevYear, prevMonth);
+                  router.push("/tracker");
+                } : undefined;
+                return (
+                  <div
+                    key={key}
+                    onClick={onClick}
+                    title={clickable ? "Klick: zu Notdienst-Einträgen im Tracker springen" : undefined}
+                    style={{
+                      display: "flex", justifyContent: "space-between",
+                      padding: "7px 0",
+                      borderBottom: "1px solid var(--border)",
+                      cursor: clickable ? "pointer" : "default",
+                      ...(clickable ? {
+                        marginLeft: -6, marginRight: -6, paddingLeft: 6, paddingRight: 6, borderRadius: 6,
+                        transition: "background 0.15s",
+                      } : {}),
+                    }}
+                    onMouseEnter={clickable ? (e) => { (e.currentTarget as HTMLDivElement).style.background = "color-mix(in srgb, var(--orange) 8%, transparent)"; } : undefined}
+                    onMouseLeave={clickable ? (e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; } : undefined}
+                  >
+                    <span style={{ fontSize: 13, color: clickable ? "var(--orange)" : "var(--muted)", fontWeight: clickable ? 700 : 400 }}>{label}</span>
+                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13 }}>{value}</span>
+                  </div>
+                );
+              })}
               <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>Brutto Gesamt</span>
                 <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>

@@ -29,12 +29,20 @@ function getDayStdMinutes(dateStr: string): number {
 
 /**
  * Calculate full salary breakdown for a list of time entries in a month.
+ *
+ * options.notdienstDaysOverride: dışarıdan Notdienst gün sayısı (notdienst_entries
+ *   tablosundan sayılmış olarak). Verilirse entries içindeki day_type=NOTDIENST
+ *   sayımı yerine bu değer kullanılır.
+ *   Önemli: Notdienst genelde bir ay sonra ödendiği için Salary page bunu
+ *   ÖNCEKI ay'dan yüklemeli (Ocak Notdienst → Şubat Brutto).
  */
 export function calculateMonthlySalary(
   entries: TimeEntry[],
-  settings: SalarySettings
+  settings: SalarySettings,
+  options?: { notdienstDaysOverride?: number }
 ): SalaryBreakdown {
   const targetMinutes = settings.monthly_target_hours * 60;
+  void targetMinutes; // ileride hour-bazlı kullanım için, şimdilik sadece base_pay = targetHours × rate
   let regularMinutes = 0;
   let overtimeMinutes = 0;
   let nightShiftMinutes = 0;
@@ -91,7 +99,8 @@ export function calculateMonthlySalary(
   // Mehrarbeit ek tutar (multiplier - 1, çünkü baz zaten ödendi)
   const overtime_pay    = overtimeHours * settings.hourly_rate * (settings.overtime_rate_multiplier - 1);
   const night_bonus     = nightHours * settings.night_shift_bonus;
-  const notdienst_bonus = notdienstDays * settings.notdienst_bonus;
+  const effectiveNotdienstDays = options?.notdienstDaysOverride ?? notdienstDays;
+  const notdienst_bonus = effectiveNotdienstDays * settings.notdienst_bonus;
 
   const total_gross = base_pay + overtime_pay + night_bonus + notdienst_bonus;
 

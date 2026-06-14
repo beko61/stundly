@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-14 #20): v0.5.7 — Stundenlohn default geri 15 €**
+**Son değişiklik (2026-06-14 #21): v0.6.0 — Notdienst Steuer fix + Vormonat-Abrechnung**
+- 🐛 KRİTİK BUG FIX: Notdienst Brutto'ya yansımıyordu (notdienst_entries ayrı tablo, calculateMonthlySalary onları bilmiyordu)
+- 📅 Notdienst Vormonat → bu ay'ın Brutto'sunda (gerçek ödeme akışı)
+- 🎨 Tooltip yazıları küçültüldü (260→200 wide, fontSize 12→10.5)
+
+**Önceki değişiklik (2026-06-14 #20): v0.5.7 — Stundenlohn default geri 15 €**
 - v0.5.5'teki Mindestlohn (13,90) default'u geri 15 € yapıldı (Handwerk standardı)
 - Mindestlohn HINT + altına yazarsa uyarı korunuyor (yine kontrol var)
 

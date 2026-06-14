@@ -69,33 +69,33 @@ export function InfoTooltip({ title, children, color = "var(--accent2)", icon = 
           onMouseLeave={() => setOpen(false)}
           style={{
             position: "absolute",
-            top: "calc(100% + 8px)",
+            top: "calc(100% + 6px)",
             left: 0,
             zIndex: 200,
-            minWidth: 260,
-            maxWidth: 340,
+            minWidth: 200,
+            maxWidth: 280,
             background: "var(--surface)",
             border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-            borderRadius: 12,
-            padding: "12px 14px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            borderRadius: 10,
+            padding: "9px 11px",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.45)",
             fontFamily: "'Syne', sans-serif",
             color: "var(--text)",
           }}
         >
           {title && (
             <div style={{
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 800,
-              letterSpacing: "0.06em",
+              letterSpacing: "0.05em",
               textTransform: "uppercase",
               color,
-              marginBottom: 8,
+              marginBottom: 6,
             }}>
               {title}
             </div>
           )}
-          <div style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted)", whiteSpace: "pre-line" }}>
+          <div style={{ fontSize: 10.5, lineHeight: 1.45, color: "var(--muted)", whiteSpace: "pre-line" }}>
             {children}
           </div>
         </div>

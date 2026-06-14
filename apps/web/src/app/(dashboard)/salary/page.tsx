@@ -172,7 +172,11 @@ export default function SalaryPage() {
   // ALL entries for the year (for monthly auto-netto chart)
   const [yearEntries, setYearEntries] = useState<TimeEntry[]>([]);
 
-  // Load time entries + monthly records
+  // Yıl boyunca tüm Notdienst entry'lerinin tarihleri (sadece date kolonu)
+  // — Notdienst bir önceki ayın işidir, bu ayın brutto'suna gider
+  const [yearNotdienstDates, setYearNotdienstDates] = useState<string[]>([]);
+
+  // Load time entries + monthly records + notdienst dates
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -181,29 +185,46 @@ export default function SalaryPage() {
       const user = session?.user;
       if (!user) { setLoading(false); return; }
 
-      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-      const endDate   = new Date(year, month, 0).toISOString().split("T")[0]!;
       const yearStart = `${year}-01-01`;
       const yearEnd   = `${year}-12-31`;
+      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      const endDate   = new Date(year, month, 0).toISOString().split("T")[0]!;
 
-      const [{ data: te }, { data: rec }, { data: yte }] = await Promise.all([
+      // Notdienst-Range: yıllık + önceki Aralık (Ocak salary için) + sonraki Ocak (Aralık için pek değil ama tutarlı)
+      const ndStart = `${year - 1}-12-01`;
+      const ndEnd   = `${year}-12-31`;
+
+      const [{ data: te }, { data: rec }, { data: yte }, { data: nd }] = await Promise.all([
         supabase.from("time_entries").select("*")
           .eq("user_id", user.id).gte("date", startDate).lte("date", endDate),
         supabase.from("salary_records").select("*")
           .eq("user_id", user.id).eq("year", year).order("month"),
         supabase.from("time_entries").select("*")
           .eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd),
+        supabase.from("notdienst_entries").select("date")
+          .eq("user_id", user.id).gte("date", ndStart).lte("date", ndEnd),
       ]);
 
       if (te)  setEntries(te as TimeEntry[]);
       if (rec) setRecords(rec as MonthRecord[]);
       if (yte) setYearEntries(yte as TimeEntry[]);
+      if (nd)  setYearNotdienstDates((nd as { date: string }[]).map(n => n.date));
       setLoading(false);
     }
     void load();
   }, [year, month]);
 
+  /** Bu ayın brutto'suna giren Notdienst sayısı = ÖNCEKI ay'ın Notdienst'leri.
+   *  Ocak için: önceki yılın Aralık ayı. */
+  function notdienstDaysForBilling(billingYear: number, billingMonth: number): number {
+    const prevMonth = billingMonth === 1 ? 12 : billingMonth - 1;
+    const prevYear  = billingMonth === 1 ? billingYear - 1 : billingYear;
+    const prefix    = `${prevYear}-${String(prevMonth).padStart(2, "0")}-`;
+    return yearNotdienstDates.filter(d => d.startsWith(prefix)).length;
+  }
+
   // Auto-calc: 12 ay brutto + netto serisi (time_entries'ten)
+  // Notdienst bir önceki ayın işidir → her ayın brutto'suna PREVIOUS month'un Notdienst'i ekleniyor
   const yearlyAuto = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
@@ -211,7 +232,8 @@ export default function SalaryPage() {
         const d = new Date(e.date);
         return d.getMonth() + 1 === m && d.getFullYear() === year;
       });
-      const bd = calculateMonthlySalary(monthEntries, settings);
+      const ndDays = notdienstDaysForBilling(year, m);
+      const bd = calculateMonthlySalary(monthEntries, settings, { notdienstDaysOverride: ndDays });
       const nc = calcNettoFromBrutto({
         monthBrutto:   bd.total_gross,
         steuerklasse:  settings.steuerklasse  ?? "I",
@@ -220,15 +242,21 @@ export default function SalaryPage() {
         taxMode:       settings.tax_mode      ?? "auto",
         manuellAbzug:  settings.manuell_abzug ?? 0,
       });
-      return { month: m, brutto: bd.total_gross, netto: nc.netto };
+      return { month: m, brutto: bd.total_gross, netto: nc.netto, ndDays };
     });
-  }, [yearEntries, year, settings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yearEntries, year, settings, yearNotdienstDates]);
 
   const yearlyAutoMax = Math.max(...yearlyAuto.map(a => a.brutto), 1);
   const yearlyAutoBruttoTotal = yearlyAuto.reduce((s, a) => s + a.brutto, 0);
   const yearlyAutoNettoTotal  = yearlyAuto.reduce((s, a) => s + a.netto, 0);
 
-  const breakdown = useMemo(() => calculateMonthlySalary(entries, settings), [entries, settings]);
+  /** Bu ay brutto = bu ay çalışma + ÖNCEKI ay Notdienst (ödeme gecikmesi). */
+  const currentMonthNotdienstDays = notdienstDaysForBilling(year, month);
+  const breakdown = useMemo(
+    () => calculateMonthlySalary(entries, settings, { notdienstDaysOverride: currentMonthNotdienstDays }),
+    [entries, settings, currentMonthNotdienstDays],
+  );
 
   // Otomatik Netto-Berechnung (Almanya 2024)
   const nettoCalc = useMemo(() => calcNettoFromBrutto({
@@ -344,7 +372,7 @@ export default function SalaryPage() {
               {
                 key: "notdienst_bonus", label: "Notdienst €/Tag",
                 tipTitle: "Notdienst-Bonus",
-                tipBody: "Pauschaler Bonus pro Notdienst-Einsatz (unabhängig von der Dauer).\n\nWird zusätzlich zum Stundenlohn × geleisteten Notdienst-Stunden ausgezahlt.",
+                tipBody: "Pauschal pro Einsatz (unabhängig von der Dauer).\n\n⏱ Auszahlungs-Zeitpunkt:\nNotdienst aus Vormonat wird im aktuellen Monat ausgezahlt. Beispiel: Januar-Notdienst → Februar-Brutto.",
               },
               {
                 key: "urlaub_anspruch", label: "Urlaubsanspruch / Jahr",
@@ -636,13 +664,21 @@ export default function SalaryPage() {
             {/* Verdienst breakdown */}
             <div className="card">
               <div className="label" style={{ marginBottom: 10 }}>📊 Verdienst-Aufschlüsselung</div>
-              {[
-                { label: "Gearbeitete Stunden",   value: formatDuration(Math.round(breakdown.worked_hours * 60)) },
-                { label: "Grundgehalt",           value: fmtEur(breakdown.base_pay) },
-                { label: "Überstundenvergütung",  value: fmtEur(breakdown.overtime_pay) },
-                { label: "Nachtzuschlag",         value: fmtEur(breakdown.night_shift_bonus) },
-                { label: "Notdienst-Bonus",       value: fmtEur(breakdown.notdienst_bonus) },
-              ].map(({ label, value }) => (
+              {(() => {
+                const prevMonthName = MONTHS[(month - 2 + 12) % 12]!;
+                return [
+                  { label: "Gearbeitete Stunden",   value: formatDuration(Math.round(breakdown.worked_hours * 60)) },
+                  { label: "Grundgehalt",           value: fmtEur(breakdown.base_pay) },
+                  { label: "Überstundenvergütung",  value: fmtEur(breakdown.overtime_pay) },
+                  { label: "Nachtzuschlag",         value: fmtEur(breakdown.night_shift_bonus) },
+                  {
+                    label: currentMonthNotdienstDays > 0
+                      ? `Notdienst-Bonus (${currentMonthNotdienstDays}× aus ${prevMonthName})`
+                      : `Notdienst-Bonus (0× aus ${prevMonthName})`,
+                    value: fmtEur(breakdown.notdienst_bonus),
+                  },
+                ];
+              })().map(({ label, value }) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
                   <span style={{ fontSize: 13, color: "var(--muted)" }}>{label}</span>
                   <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13 }}>{value}</span>

@@ -1,5 +1,49 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (21) – v0.6.0: Notdienst BUG FIX + Vormonat-Abrechnung + tooltip küçültme
+
+### Yapıldı
+
+**Tooltip küçültüldü** (kullanıcı: "açılır pencere yazıları çok büyük")
+- ✅ `InfoTooltip.tsx`:
+  - minWidth 260 → 200, maxWidth 340 → 280
+  - padding "12px 14px" → "9px 11px"
+  - body fontSize 12 → 10.5
+  - lineHeight 1.6 → 1.45
+  - title fontSize 11 → 10
+  - Shadow + radius da hafif küçüldü
+
+**🐛 KRİTİK BUG FIX: Notdienst Steuer hesabına yansımıyordu**
+- ✅ Sebep: `calculateMonthlySalary` `entries` (TimeEntry[]) içinde `day_type=NOTDIENST` arıyordu, ama Notdienst'ler `notdienst_entries` tablosunda → her zaman 0 sayılıyordu, `notdienst_bonus = 0` 
+- ✅ Fix: `calculateMonthlySalary`'ye `options.notdienstDaysOverride` parametresi eklendi
+- ✅ Salary page `notdienst_entries` tablosundan yükler, sayı override olarak geçer
+- ✅ Şimdi Brutto'ya doğru yansıyor → Lohnsteuer + Soli + SV-Beiträge doğru hesaplanır
+
+**📅 Notdienst Vormonat-Abrechnung**
+- ✅ Kullanıcı: "Ocak ayında yapılan notdienstler Şubat ayında ödeniyor"
+- ✅ Salary sayfası bu ayın Brutto'su için ÖNCEKI ayın Notdienst'lerini sayar
+- ✅ Ocak için: önceki yılın Aralık ayı Notdienst'leri
+- ✅ Yıllık 12-ay grafik de aynı kuralla shifted
+- ✅ Notdienst aralığı yüklenirken: `${year-1}-12-01` → `${year}-12-31` (önceki Aralık + bu yıl)
+
+**UI updates**
+- ✅ Verdienst-Aufschlüsselung kartında: "Notdienst-Bonus (3× aus Mai)" gibi gösterim
+- ✅ Stundenlohn label artık Notdienst settings tooltip'i de: "⏱ Auszahlungs-Zeitpunkt: Notdienst aus Vormonat → aktueller Brutto. Beispiel: Januar-Notdienst → Februar-Brutto."
+
+### Versiyon bump v0.5.7 → v0.6.0 (MINOR — bug fix + yeni davranış)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Kullanıcı 3 sorun raporladı, hepsi şu commit'te:
+  1. Tooltip yazıları küçültüldü
+  2. Notdienst Steuer hesabına yansımıyordu (gerçek bug)
+  3. Notdienst payment timing (önceki ay → bu ay) düzeltildi
+- "Bu sayfada iyileştirme yapılabilir mi" sorusu için sonraki yanıtta önerileri sunacağım
+
+---
+
 ## 2026-06-14 (20) – v0.5.7: Stundenlohn default geri 15 € (Handwerk-Standard)
 
 ### Yapıldı

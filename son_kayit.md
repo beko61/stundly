@@ -1,5 +1,31 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (20) – v0.5.7: Stundenlohn default geri 15 € (Handwerk-Standard)
+
+### Yapıldı
+- ✅ Kullanıcı talebi: "Stundenlohn açılışta 15€ olsun, ilk kayıtta"
+- ✅ `salary/page.tsx` DEFAULT_SETTINGS.hourly_rate: `MINDESTLOHN_CURRENT` (13,90 €) → `15`
+- ✅ `dashboard/page.tsx` aynı default güncellendi
+- ✅ Dashboard'da artık kullanılmayan `MINDESTLOHN_CURRENT` import'u temizlendi (dead code)
+- ✅ Stundenlohn tooltip metni güncellendi:
+  - "Standard für Handwerk: 15 €/h"
+  - "Gesetzlicher Mindestlohn 2026: 13,90 €/h" (referans olarak kalır)
+- ✅ Mindestlohn HINT (input altındaki dinamik mesaj) ve **kullanıcı altına yazarsa kırmızı uyarı** KORUNDU
+  - Kullanıcı 15 default'la başlar, ama 10€ yazarsa hâlâ uyarır: "⚠️ Unter dem gesetzlichen Mindestlohn"
+- ✅ Versiyon bump v0.5.6 → v0.5.7 (PATCH — default value)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Önceki v0.5.5'te default 13,90 € (Mindestlohn) yapıldı, kullanıcı geri 15 istedi
+- 15 € Handwerk için daha makul başlangıç — ortalama bir Geselle bunun üstünde
+- Mindestlohn validation (kullanıcı altına yazarsa kırmızı uyarı) yine çalışır → DSGVO + ArbZG vaadi korundu
+- Mevcut DB row'ları zaten 15 default'lu (migration 002), tutarlı
+- Mindestlohn referans tooltip + hint'te kalır → bilgilendirici ama dayatmıyor
+
+---
+
 ## 2026-06-14 (19) – v0.5.6: Salary alanlarına InfoTooltip + Schätzung-Disclaimer
 
 ### Yapıldı

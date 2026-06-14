@@ -40,7 +40,7 @@ interface MonthRecord {
 
 const DEFAULT_SETTINGS: SalarySettings = {
   id: "local", user_id: "local", valid_from: "",
-  hourly_rate:              MINDESTLOHN_CURRENT,
+  hourly_rate:              15,
   overtime_rate_multiplier: 1.25,
   night_shift_bonus:        3,
   notdienst_bonus:          50,
@@ -324,7 +324,7 @@ export default function SalaryPage() {
               {
                 key: "hourly_rate", label: "Stundenlohn (€)",
                 tipTitle: "Stundenlohn",
-                tipBody: "Dein Brutto-Stundenlohn. Grundlage für alle Berechnungen — Grundgehalt, Überstunden und Bonusbeträge.\n\nGesetzlicher Mindestlohn 2026: 13,90 €/h.",
+                tipBody: "Dein Brutto-Stundenlohn. Grundlage für alle Berechnungen — Grundgehalt, Überstunden und Bonusbeträge.\n\nStandard für Handwerk: 15 €/h.\nGesetzlicher Mindestlohn 2026: 13,90 €/h.",
               },
               {
                 key: "monthly_target_hours", label: "Sollstunden/Monat",

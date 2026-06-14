@@ -511,6 +511,20 @@ body {
   }
 }
 
+/* Floating Support-Button — sağ-alt, mobilde BottomNav üstüne kalkar */
+.support-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9998;
+}
+@media (max-width: 767px) {
+  .support-fab {
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    right: 16px;
+  }
+}
+
 @media (max-width: 767px) {
 
   /* Tighter page paddings on mobile */

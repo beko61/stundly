@@ -21,9 +21,6 @@ const MAIL_SUBJ = encodeURIComponent("Frage zu Stundly");
 const MAIL_BODY = encodeURIComponent("Hallo,\n\nich habe eine Frage zu Stundly:\n\n");
 
 const BTN_BASE: React.CSSProperties = {
-  position: "fixed",
-  bottom: 24,
-  left: 24,
   width: 56,
   height: 56,
   borderRadius: "50%",
@@ -31,7 +28,6 @@ const BTN_BASE: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
-  zIndex: 9998,
   transition: "transform 0.2s",
   textDecoration: "none",
   border: "none",
@@ -70,7 +66,7 @@ function EmailPopover() {
   const mailtoUrl = `mailto:${EMAIL}?subject=${MAIL_SUBJ}&body=${MAIL_BODY}`;
 
   return (
-    <div ref={wrapRef} style={{ position: "fixed", bottom: 24, left: 24, zIndex: 9998 }}>
+    <div ref={wrapRef} className="support-fab">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -78,8 +74,6 @@ function EmailPopover() {
         title="Hilfe per E-Mail"
         style={{
           ...BTN_BASE,
-          position: "relative",
-          bottom: 0, left: 0,
           background: "var(--accent2)",
         }}
         onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
@@ -96,7 +90,7 @@ function EmailPopover() {
           style={{
             position: "absolute",
             bottom: 70,
-            left: 0,
+            right: 0,
             minWidth: 260,
             background: "var(--surface)",
             border: "1px solid color-mix(in srgb, var(--accent2) 35%, transparent)",
@@ -182,6 +176,7 @@ export function SupportButton() {
         rel="noopener noreferrer"
         aria-label="Hilfe per WhatsApp"
         title="Hilfe per WhatsApp"
+        className="support-fab"
         style={{ ...BTN_BASE, background: "#25D366" }}
         onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}

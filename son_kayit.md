@@ -1,5 +1,28 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (26) – v0.8.3: SupportButton overlap fix (sol-alt → sağ-alt + mobil BottomNav clearance)
+
+### Sorun
+- `SupportButton` (mail FAB) `bottom: 24; left: 24` ile sabit oturuyordu
+- **Mobilde**: `BottomNav` (alt navigation, full-width fixed) butonun direkt altına oturduğu için yazma butonu üstüne biniyordu
+- **Desktop'ta**: `Sidebar` (240px sol) ile çakışıyordu, sola yapışık FAB sidebar'ın üstüne giriyordu
+
+### Düzeltme
+- `BTN_BASE`'den `position/bottom/left` kaldırıldı (sadece görsel stil)
+- Yeni CSS class `.support-fab` → `globals.css`'e eklendi
+  - Desktop: `bottom: 24; right: 24` (sağ-alt, sidebar'dan uzak)
+  - Mobile (< 768px): `bottom: calc(96px + safe-area-inset-bottom); right: 16` → BottomNav üstünde temiz konum
+- `SupportButton.tsx`:
+  - WhatsApp `<a>` ve EmailPopover wrapper `<div>` her ikisi `className="support-fab"` aldı
+  - Email popover içeriği artık `right: 0` ile anchor'lanıyor (sol yerine) → ekran dışına taşma riski yok
+
+### Değişen dosyalar
+- `apps/web/src/components/ui/SupportButton.tsx` — pozisyon class'a taşındı
+- `apps/web/src/app/globals.css` — `.support-fab` rule eklendi
+- `apps/web/src/lib/version.ts` — 0.8.2 → 0.8.3
+
+---
+
 ## 2026-06-14 (25) – v0.8.2: Reddit launch günü + ilk visitor data + öğrenilen dersler
 
 ### Reddit Launch (r/Hannover)

@@ -1,5 +1,69 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (34) – v0.11.0: Faz 3 Admin Sight — ekibi gör, drill-down et
+
+### Hedef
+Patron "Ben ekibimi görüyorum" diyebilsin: takım toplam saatleri, bekleyen Urlaubsanträge, her çalışanın aylık özetine tıklayarak gün-gün read-only Tracker görüntüleme.
+
+### Eklenen / değişen
+
+**1) Migration 015 (yeni)** — `015_company_admin_read_access.sql`
+- Helper function: `is_company_member_of_admin(target_user)` — admin'in çağırdığı user'ın aynı şirkette olup olmadığını döner
+- RLS policy'ler eklendi: `company_admin` veya `super_admin` artık ŞİRKETİNDEKİ çalışanların `time_entries`, `vacation_requests`, `notdienst_entries`, `daily_logs`, `salary_records` (varsa) kayıtlarını SELECT edebilir
+- Bilgi: Bu migration manuel apply edilmeli (Supabase Dashboard SQL editor). Kod migration olmadan da çalışır çünkü server route'lar service-role client kullanıyor — migration "future hardening" için
+
+**2) `lib/company/admin.ts` (yeni)**
+- `getCompanyAdminContext()` — server-only: oturum + company_admin doğrulama + service-role admin client döner
+- `netMinutesForEntry()` — gece vardiyası + Urlaub/Krank/Feiertag bezahlte Abwesenheit (8h Mo-Fr) dahil tutarlı hesap
+- `formatMinutes()` — "165h 30m" formatı
+
+**3) `/api/company/team-summary` (yeni route)**
+- GET ?month=YYYY-MM → bu ayın employees + monthly hours + pending vacations
+- Çalışan başına: monthlyMinutes, workDays, vacationDays, sickDays
+- Sadece company_admin/super_admin yetkili
+
+**4) `/company/dashboard` — KPI zenginleştirme**
+- Eski: aktif Mitarbeiter, offene Einladungen, plan, max
+- Yeni: 4 ana KPI kart:
+  • Aktive Mitarbeiter
+  • Team-Stunden · Juni
+  • Offene Einladungen
+  • Offene Urlaubsanträge
+- Plan/max bilgisi alt satıra alındı
+- Bekleyen Urlaubsanträge listesi (ilk 5, tıklayınca çalışan detayına gider)
+
+**5) `/company/employees` — bu ay saatleri + drill-down**
+- Liste artık /api/company/team-summary'den çekiyor
+- Her satırda bu ay saat (büyük) + workDays/Urlaub/Krank mini
+- Satır tıklayınca /company/employees/[userId]'ye gider
+- Deaktivieren butonu Link'in dışında, action ayrı
+
+**6) `/company/employees/[userId]` (yeni sayfa)**
+- Server component, getCompanyAdminContext ile gate
+- Güvenlik: target user'in company_id'si admin'in company_id'si değilse 404
+- Ay nav (?year=&month=) — prev/next ay link
+- Header: ad, email, rol, aktif/deaktiv, son aktivite
+- 6'lı stat grid: Gesamt, Soll (174h), Differenz, Arbeitstage, Urlaub, Krank
+- Read-only Arbeitszeit tablosu: gün-gün, Datum/Tag/Status/Start/Ende/Pause/Stunden
+- Urlaubsanträge listesi (status badge ile, ilk 20)
+
+### Kapsam dışı (F4'te)
+- Urlaub onay/red butonu (F4 approval flow)
+- Per-employee tracker'da edit yetkisi
+- Aktivite feed'i
+- CSV/PDF export
+
+### Değişen dosyalar
+- `supabase/migrations/015_company_admin_read_access.sql` — YENİ
+- `apps/web/src/lib/company/admin.ts` — YENİ
+- `apps/web/src/app/api/company/team-summary/route.ts` — YENİ
+- `apps/web/src/app/company/employees/[userId]/page.tsx` — YENİ
+- `apps/web/src/app/company/dashboard/page.tsx` — KPI zengin + Urlaub listesi
+- `apps/web/src/app/company/employees/page.tsx` — saatler + drill-down link
+- `apps/web/src/lib/version.ts` — 0.10.0 → 0.11.0 (MINOR)
+
+---
+
 ## 2026-06-14 (33) – v0.10.0: Faz 2 Invite Loop — davet zinciri uçtan uca çalışıyor
 
 ### Faz 1 audit sonucu (özet)

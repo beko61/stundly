@@ -1,5 +1,57 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (33) – v0.10.0: Faz 2 Invite Loop — davet zinciri uçtan uca çalışıyor
+
+### Faz 1 audit sonucu (özet)
+- Schema 009 solid: companies, subscriptions, invitations, audit_logs, profiles.role/company_id/plan, handle_new_user trigger
+- Onboarding /type → /setup → /done company yolunu doğru kuruyor
+- /company/{dashboard,employees,reports,billing} iskeleti mevcut, role gate var
+- /join/[token] doğrulama UI'ı var
+- 4 KRİTİK kırık: davet maili gönderilmiyor, register token-blind, accept akışı yok, login token-blind
+
+### Faz 2 implementasyon — bu sürüm
+
+**1) Yeni: `/api/invitations/accept/route.ts`** (merkezi kabul akışı)
+- POST { token } → invitation pending+geçerli mi doğrular
+- Güvenlik: user.email === invitation.email zorunlu (cross-email çalma engeli)
+- profiles.company_id + profiles.role idempotent güncelleme
+- invitations.status='accepted', accepted_at=now()
+- Rol-bazlı redirectTo döndürür (admin→/company/dashboard, employee→/tracker)
+
+**2) `/company/employees/page.tsx` — invite artık mail gönderiyor**
+- Önce: sadece DB'ye INSERT, mail yok ❌
+- Şimdi: INSERT sonrası `/api/email/invite` fetch, başarı/uyarı mesajı
+
+**3) `/register/page.tsx` — invite-aware komple rewrite**
+- ?token & ?email query okuyor
+- Email pre-fill + readonly (davet linki için)
+- Sayfa açılışında invitation'dan şirket adını çekip UI'da gösteriyor
+- signUp metadata'ya company_id + role koyuyor → handle_new_user trigger doğru profile yaratıyor
+- signUp sonrası /api/invitations/accept çağırıp redirect alıyor
+- Davet yoksa eski akış: /onboarding/type
+
+**4) `/login/page.tsx` — invite-aware + company_admin redirect fix**
+- ?token query'i okuyor, login sonrası /api/invitations/accept çağırıyor
+- Bug fix: company_admin artık /dashboard yerine /company/dashboard'a gidiyor (önceden ikisi de /dashboard'du)
+
+### Akış doğrulaması
+Admin → /company/employees → "Mitarbeiter einladen" tıklar →
+  DB invitation insert → mail Resend ile gider →
+  Mitarbeiter linke tıklar → /join/[token] → /register?token=X&email=Y →
+  Register signUp metadata'da company_id+role → trigger profile'ı company'ye bağlar →
+  /api/invitations/accept invitation'ı 'accepted' yapar → /tracker'a redirect.
+
+Mevcut kullanıcı için: /join/[token] → /login?token=X → login sonrası accept → redirect.
+
+### Değişen dosyalar
+- `apps/web/src/app/api/invitations/accept/route.ts` — YENİ
+- `apps/web/src/app/company/employees/page.tsx` — invite-after-mail
+- `apps/web/src/app/(auth)/register/page.tsx` — invite flow
+- `apps/web/src/app/(auth)/login/page.tsx` — invite flow + company_admin redirect
+- `apps/web/src/lib/version.ts` — 0.9.4 → 0.10.0 (MINOR: yeni invite akışı)
+
+---
+
 ## 2026-06-14 (32) – v0.9.4: 🚨 SSR crash fix — Stripe lazy init
 
 ### Sorun (stundly.de "Application error: server-side exception", Digest 2241623409)

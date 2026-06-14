@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -19,14 +19,37 @@ function mapError(msg: string): string {
   return msg;
 }
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const token        = params.get("token");
+  const inviteEmail  = params.get("email");
+
   const [fullName, setFullName]   = useState("");
-  const [email, setEmail]         = useState("");
+  const [email, setEmail]         = useState(inviteEmail ?? "");
   const [password, setPassword]   = useState("");
   const [error, setError]         = useState<string | null>(null);
   const [loading, setLoading]     = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [companyName, setCompanyName]   = useState<string | null>(null);
+
+  // Davet linki varsa şirket adını çek (UI'da göster)
+  useEffect(() => {
+    if (!token) return;
+    const supabase = createClient();
+    supabase
+      .from("invitations")
+      .select("companies(name)")
+      .eq("token", token)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle()
+      .then(({ data }) => {
+        const companies = data?.companies as unknown as { name: string } | { name: string }[] | null;
+        const name = Array.isArray(companies) ? companies[0]?.name : companies?.name;
+        if (name) setCompanyName(name);
+      });
+  }, [token]);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -34,10 +57,38 @@ export default function RegisterPage() {
     setError(null);
 
     const supabase = createClient();
+
+    // Davet linki üzerinden gelen kullanıcılar için company_id + role metadata'da geçer
+    // (handle_new_user trigger bunu okuyup profile'ı doğru company'ye bağlar)
+    let inviteMeta: { role?: string; company_id?: string } = {};
+    if (token) {
+      const { data: inv } = await supabase
+        .from("invitations")
+        .select("company_id, role, email")
+        .eq("token", token)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (!inv) {
+        setError("Einladung ist abgelaufen oder ungültig.");
+        setLoading(false);
+        return;
+      }
+
+      if (inv.email.toLowerCase() !== email.toLowerCase()) {
+        setError("Die E-Mail-Adresse stimmt nicht mit der Einladung überein.");
+        setLoading(false);
+        return;
+      }
+
+      inviteMeta = { role: inv.role, company_id: inv.company_id };
+    }
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName, ...inviteMeta } },
     });
 
     if (signUpError) {
@@ -46,19 +97,27 @@ export default function RegisterPage() {
       return;
     }
 
-    // Supabase email onayı açıksa session gelmez
     if (!data.session) {
       setNeedsConfirm(true);
       setLoading(false);
       return;
     }
 
-    // Session var → direkt onboarding
-    router.push("/onboarding/type");
+    // Session var — davet varsa accept et, yoksa onboarding'e git
+    if (token) {
+      const acceptRes = await fetch("/api/invitations/accept", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ token }),
+      });
+      const accept = await acceptRes.json();
+      router.push(accept.redirectTo ?? "/tracker");
+    } else {
+      router.push("/onboarding/type");
+    }
     router.refresh();
   }
 
-  // Warteansicht: E-Mail-Bestätigung
   if (needsConfirm) {
     return (
       <div className="card" style={{ padding: "32px 24px", textAlign: "center" }}>
@@ -69,7 +128,7 @@ export default function RegisterPage() {
           Klicke auf den Link, um dich anzumelden.
         </p>
         <Link
-          href="/login"
+          href={token ? `/login?token=${token}` : "/login"}
           style={{
             display: "inline-block", padding: "10px 28px", borderRadius: 10,
             background: "var(--accent)", color: "#fff", fontWeight: 700,
@@ -87,9 +146,15 @@ export default function RegisterPage() {
 
   return (
     <div className="card" style={{ padding: "28px 24px" }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Konto erstellen</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
+        {token ? "Einladung annehmen" : "Konto erstellen"}
+      </h1>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-        Starte dein Stundly-Konto.
+        {token && companyName
+          ? `Trete ${companyName} bei.`
+          : token
+            ? "Trete deinem Team auf Stundly bei."
+            : "Starte dein Stundly-Konto."}
       </p>
 
       <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -116,7 +181,14 @@ export default function RegisterPage() {
             placeholder="deine@email.de"
             required
             autoComplete="email"
+            readOnly={!!inviteEmail}
+            style={inviteEmail ? { background: "var(--surface2)", cursor: "not-allowed" } : undefined}
           />
+          {inviteEmail && (
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+              Diese E-Mail wurde mit der Einladung verknüpft.
+            </p>
+          )}
         </div>
 
         <div>
@@ -144,16 +216,24 @@ export default function RegisterPage() {
         )}
 
         <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: 4 }}>
-          {loading ? "Laden..." : "Registrieren"}
+          {loading ? "Laden..." : token ? "Konto erstellen & beitreten" : "Registrieren"}
         </button>
       </form>
 
       <p style={{ textAlign: "center", marginTop: 20, color: "var(--muted)", fontSize: 13 }}>
         Bereits ein Konto?{" "}
-        <Link href="/login" style={{ color: "var(--accent2)", fontWeight: 700 }}>
+        <Link href={token ? `/login?token=${token}` : "/login"} style={{ color: "var(--accent2)", fontWeight: 700 }}>
           Anmelden
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="card" style={{ padding: 32, textAlign: "center" }}>Laden...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

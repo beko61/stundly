@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const token  = params.get("token");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,10 +29,29 @@ export default function LoginPage() {
       return;
     }
 
-    // Rolü çek → doğru panele yönlendir
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
+    // Davet token'i ile geldiyse önce kabul akışını çalıştır
+    if (token) {
+      const acceptRes = await fetch("/api/invitations/accept", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ token }),
+      });
+      const accept = await acceptRes.json();
+      if (acceptRes.ok && accept.redirectTo) {
+        router.push(accept.redirectTo);
+        router.refresh();
+        return;
+      }
+      // Davet hatalı/expired ise normal akışa düş — hatayı göster ama login'i kabul et
+      if (!acceptRes.ok) {
+        setError(accept.error ?? "Einladung konnte nicht angewendet werden.");
+      }
+    }
+
+    // Rol-bazlı yönlendirme
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -41,7 +63,7 @@ export default function LoginPage() {
     if (role === "super_admin") {
       router.push("/superadmin");
     } else if (role === "company_admin") {
-      router.push("/dashboard");
+      router.push("/company/dashboard");
     } else {
       router.push("/dashboard");
     }
@@ -51,9 +73,11 @@ export default function LoginPage() {
 
   return (
     <div className="card" style={{ padding: "28px 24px" }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Willkommen zurück</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
+        {token ? "Anmelden & Einladung annehmen" : "Willkommen zurück"}
+      </h1>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-        Melde dich an, um fortzufahren.
+        {token ? "Melde dich an, um deinem Team beizutreten." : "Melde dich an, um fortzufahren."}
       </p>
 
       <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -90,16 +114,24 @@ export default function LoginPage() {
         )}
 
         <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: 4 }}>
-          {loading ? "Laden..." : "Anmelden"}
+          {loading ? "Laden..." : token ? "Anmelden & beitreten" : "Anmelden"}
         </button>
       </form>
 
       <p style={{ textAlign: "center", marginTop: 20, color: "var(--muted)", fontSize: 13 }}>
         Noch kein Konto?{" "}
-        <Link href="/register" style={{ color: "var(--accent2)", fontWeight: 700 }}>
+        <Link href={token ? `/register?token=${token}` : "/register"} style={{ color: "var(--accent2)", fontWeight: 700 }}>
           Registrieren
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="card" style={{ padding: 32, textAlign: "center" }}>Laden...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

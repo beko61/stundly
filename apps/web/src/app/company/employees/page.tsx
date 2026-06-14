@@ -77,20 +77,38 @@ export default function EmployeesPage() {
       .eq("company_id", companyId)
       .maybeSingle();
 
-    const { error: invErr } = await supabase.from("invitations").insert({
-      company_id: companyId,
-      invited_by: user?.id,
-      email: inviteEmail,
-      role: inviteRole,
+    const { data: created, error: invErr } = await supabase
+      .from("invitations")
+      .insert({
+        company_id: companyId,
+        invited_by: user?.id,
+        email: inviteEmail,
+        role: inviteRole,
+      })
+      .select("id")
+      .single();
+
+    if (invErr || !created) {
+      setError(invErr?.code === "23505" ? "Diese E-Mail wurde bereits eingeladen." : "Fehler beim Einladen.");
+      setInviting(false);
+      return;
+    }
+
+    // Davet maili gönder — başarısız olursa kullanıcı bilsin, ama davet DB'de kayıtlı kalsın
+    const mailRes = await fetch("/api/email/invite", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ invitationId: created.id }),
     });
 
-    if (invErr) {
-      setError(invErr.code === "23505" ? "Diese E-Mail wurde bereits eingeladen." : "Fehler beim Einladen.");
+    if (mailRes.ok) {
+      setSuccess(`✓ Einladung an ${inviteEmail} versendet.`);
     } else {
-      setSuccess(`Einladung an ${inviteEmail} wurde gespeichert.`);
-      setInviteEmail("");
-      load();
+      setSuccess(`⚠️ Einladung gespeichert, aber E-Mail-Versand fehlgeschlagen — Link manuell teilen.`);
     }
+
+    setInviteEmail("");
+    load();
     setInviting(false);
   }
 

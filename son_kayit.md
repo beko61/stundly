@@ -1,5 +1,37 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (22) – v0.6.1: Salary YTD özet kartı
+
+### Yapıldı
+- ✅ **Year-to-Date (YTD) özet kartı** Salary sayfasının üstüne eklendi
+  - Steuer kartının altında, Monatsberechnung'den önce
+  - Gradient accent → accent2 background
+- ✅ **Hesap mantığı**:
+  - Geçmiş yıl: tüm 12 ay sayılır
+  - Aktif yıl: tamamlanmış aylar (bu ay HARİÇ — Juni'de Mai'a kadar)
+  - Gelecek yıl: hiçbir şey gösterilmez
+- ✅ **3 büyük rakam** (DM Mono):
+  - BRUTTO yeşil
+  - NETTO accent2 mor
+  - Ø NETTO/MO mavi (ortalama aylık net)
+- ✅ **12-ay progress-bar**: tamamlanmış aylar dolu, verisi olmayanlar yarı saydam, henüz tamamlanmamış aylar gri
+- ✅ **Footer**: "5 von 5 abgeschlossenen Monaten haben Daten · Juni läuft noch"
+- ✅ Sağ üstte zaman aralığı: "Jan – Mai"
+- ✅ `ytd.brutto === 0` ise kart gizli (yeni kullanıcı için göstermez)
+
+### Versiyon bump v0.6.0 → v0.6.1 (PATCH — küçük UX ekleme)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Sebep & Notlar
+- Salary sayfası iyileştirme önerimden #1: "Year-to-date Netto özet"
+- "Bu yıl şu ana kadar ne kazandım" — psikolojik motivasyon değeri yüksek
+- Mevcut `yearlyAuto` data'yı yeniden kullandı, ek API call yok
+- "Juni läuft noch" mesajı kullanıcıyı şaşırtmasın diye
+
+---
+
 ## 2026-06-14 (21) – v0.6.0: Notdienst BUG FIX + Vormonat-Abrechnung + tooltip küçültme
 
 ### Yapıldı

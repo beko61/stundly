@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-14 #21): v0.6.0 — Notdienst Steuer fix + Vormonat-Abrechnung**
+**Son değişiklik (2026-06-14 #22): v0.6.1 — Salary YTD özet kartı**
+- Year-to-Date özet (Brutto / Netto / Ø Netto/Monat) Salary sayfası üstünde
+- 12-ay progress bar + zaman aralığı (Jan – Mai)
+- "Juni läuft noch" footnote
+
+**Önceki değişiklik (2026-06-14 #21): v0.6.0 — Notdienst Steuer fix + Vormonat-Abrechnung**
 - 🐛 KRİTİK BUG FIX: Notdienst Brutto'ya yansımıyordu (notdienst_entries ayrı tablo, calculateMonthlySalary onları bilmiyordu)
 - 📅 Notdienst Vormonat → bu ay'ın Brutto'sunda (gerçek ödeme akışı)
 - 🎨 Tooltip yazıları küçültüldü (260→200 wide, fontSize 12→10.5)

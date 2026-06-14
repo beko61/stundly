@@ -251,6 +251,26 @@ export default function SalaryPage() {
   const yearlyAutoBruttoTotal = yearlyAuto.reduce((s, a) => s + a.brutto, 0);
   const yearlyAutoNettoTotal  = yearlyAuto.reduce((s, a) => s + a.netto, 0);
 
+  /** Year-to-Date: nur abgeschlossene Monate (Brutto > 0 ODER vergangene Monate). */
+  const ytd = useMemo(() => {
+    const today = new Date();
+    const isCurrentYear = year === today.getFullYear();
+    const isPastYear    = year < today.getFullYear();
+    // Vollständig abgeschlossene Monate (1-indexed):
+    //   Vergangenes Jahr -> alle 12
+    //   Aktuelles Jahr   -> aktueller Monat - 1 (Mai im Juni)
+    //   Zukünftiges Jahr -> 0
+    const completedMonths =
+      isPastYear    ? 12 :
+      isCurrentYear ? today.getMonth() :
+                      0;
+    const slice = yearlyAuto.slice(0, completedMonths);
+    const brutto = slice.reduce((s, m) => s + m.brutto, 0);
+    const netto  = slice.reduce((s, m) => s + m.netto,  0);
+    const withData = slice.filter(m => m.brutto > 0).length;
+    return { brutto, netto, completedMonths, withData };
+  }, [yearlyAuto, year]);
+
   /** Bu ay brutto = bu ay çalışma + ÖNCEKI ay Notdienst (ödeme gecikmesi). */
   const currentMonthNotdienstDays = notdienstDaysForBilling(year, month);
   const breakdown = useMemo(
@@ -574,6 +594,77 @@ export default function SalaryPage() {
             Für exakte Werte bitte deine echte Gehaltsabrechnung verwenden.
           </div>
         </div>
+
+        {/* ── Year-to-Date Übersicht ── */}
+        {!loading && ytd.brutto > 0 && (
+          <div style={{
+            background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--surface)) 0%, color-mix(in srgb, var(--accent2) 8%, var(--surface)) 100%)",
+            border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+            borderRadius: 16,
+            padding: "18px 20px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "var(--accent2)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                📊 Year-to-Date {year}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>
+                {ytd.completedMonths > 0
+                  ? `${MONTHS_S[0]} – ${MONTHS_S[ytd.completedMonths - 1]}`
+                  : "—"}
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+              <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 12%, transparent)", borderRadius: 10, padding: "10px 6px" }}>
+                <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 3 }}>BRUTTO</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--green)" }}>
+                  {fmtEur(ytd.brutto)}
+                </div>
+              </div>
+              <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 10, padding: "10px 6px" }}>
+                <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 3 }}>NETTO</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--accent2)" }}>
+                  {fmtEur(ytd.netto)}
+                </div>
+              </div>
+              <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--blue) 10%, transparent)", borderRadius: 10, padding: "10px 6px" }}>
+                <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 3 }}>Ø NETTO / MO</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--blue)" }}>
+                  {fmtEur(ytd.withData > 0 ? ytd.netto / ytd.withData : 0)}
+                </div>
+              </div>
+            </div>
+
+            {/* 12-Monate Fortschritts-Balken */}
+            <div style={{ display: "flex", gap: 3 }}>
+              {Array.from({ length: 12 }, (_, i) => {
+                const filled = i < ytd.completedMonths;
+                const withData = yearlyAuto[i]?.brutto && yearlyAuto[i]!.brutto > 0;
+                return (
+                  <div
+                    key={i}
+                    title={`${MONTHS_S[i]}: ${withData ? fmtEur(yearlyAuto[i]!.netto) : "—"}`}
+                    style={{
+                      flex: 1,
+                      height: 6,
+                      borderRadius: 3,
+                      background: filled
+                        ? (withData ? "var(--accent2)" : "color-mix(in srgb, var(--accent2) 30%, transparent)")
+                        : "var(--surface2)",
+                      transition: "background 0.3s",
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 6, textAlign: "center" }}>
+              {ytd.withData} von {ytd.completedMonths} abgeschlossenen Monaten haben Daten
+              {!yearlyAuto[(new Date()).getMonth()]?.brutto && year === new Date().getFullYear() && (
+                <> · {MONTHS[(new Date()).getMonth()]} läuft noch</>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Monatsberechnung ── */}
         {loading ? (

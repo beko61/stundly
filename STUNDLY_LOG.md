@@ -32,7 +32,12 @@
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)
 - `014_firma_adresse.sql` ✓ (profiles.firma_strasse/plz/ort/telefon eklendi)
 
-**Son değişiklik (2026-06-14 #23): v0.7.0 — Salary 3 iyileştirme**
+**Son değişiklik (2026-06-14 #24): v0.7.1 — Vercel Analytics + Speed Insights**
+- `@vercel/analytics` + `@vercel/speed-insights` paketleri
+- layout.tsx'te `<Analytics />` ve `<SpeedInsights />` eklendi
+- Çerezsiz, DSGVO uyumlu — pazarlama öncesi görünürlük altyapısı
+
+**Önceki değişiklik (2026-06-14 #23): v0.7.0 — Salary 3 iyileştirme**
 - Notdienst row tıklanır → Tracker'a önceki ay yüklenir
 - Stundenlohn altında "💡 +1 €/h ≈ +€X / Monat Netto" what-if
 - Einstellungen kartının üstünde ⚡ Live Brutto→Netto banner

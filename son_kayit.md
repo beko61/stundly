@@ -1,5 +1,46 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (24) – v0.7.1: Vercel Analytics + Speed Insights (launch readiness)
+
+### Yapıldı
+- ✅ `npm install @vercel/analytics @vercel/speed-insights`
+- ✅ `layout.tsx` — `<Analytics />` ve `<SpeedInsights />` component'leri body'e eklendi
+- ✅ Versiyon bump v0.7.0 → v0.7.1 (PATCH — observability infrastructure)
+
+### Test
+- ✅ `tsc --noEmit` → 0 hata
+
+### Özellikler
+- **Vercel Analytics**: ziyaretçi sayısı, sayfa görüntülemeleri, kaynak (where from), conversion funnel
+  - Çerez kullanmıyor — DSGVO uyumlu, ek banner gerekmiyor
+  - Ücretsiz (Hobby plan dahil)
+  - Dashboard: vercel.com → project → Analytics tab
+- **Vercel Speed Insights**: Web Vitals (LCP, FID, CLS) gerçek kullanıcılardan toplanır
+  - Performance dashboard, yavaş sayfaları tespit
+  - Yine çerezsiz + ücretsiz
+
+### Sebep & Notlar
+- Kullanıcı: "piyasaya sürelim artık test kullanıcıları gelsin"
+- Pazarlamadan önce görünürlük: kim geliyor, nereden, hangi sayfada düşüyor → ölçemezsen yönlendiremezsin
+- Vercel Analytics tercih sebepleri:
+  - Cookie-free (DSGVO + ePrivacy uyumlu, Cookie banner gerekmiyor)
+  - Hosting platform ile entegre (zero-config)
+  - Ücretsiz başlangıçta
+  - Daha sonra Plausible/Posthog gerekirse kolay swap
+
+### KULLANICI TARAFI BEKLEYEN (legal blokerleri)
+- ⏳ Gewerbe Anmeldung — pazarlamadan önce şart (Impressum'da bağlayıcı)
+- ⏳ info@stundly.de email forwarding — Impressum'da bu adres var, ulaşılamazsa abmahnung riski
+
+### Sonraki adımlar (FAZ 3 — ilk 10 müşteri)
+- Beta-tester pozisyonlama: "ömür boyu %50 indirim, ilk 20 kişi"
+- WhatsApp destek butonu aktive (env'e numara ekle)
+- LinkedIn DM kampanyası — Handwerk-Inhaber direkt mesaj
+- Facebook gruplar — Almanya'daki Türk Handwerker grupları
+- 1-2 hafta sonra ilk testimonial topla → Landing'e ekle
+
+---
+
 ## 2026-06-14 (23) – v0.7.0: Salary — 3 iyileştirme (Notdienst link + What-if + Live preview)
 
 ### Yapıldı

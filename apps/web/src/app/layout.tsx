@@ -1,6 +1,8 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/ui/CookieBanner";
 import { SupportButton } from "@/components/ui/SupportButton";
 import { RegisterSW } from "@/components/ui/RegisterSW";
@@ -80,6 +82,8 @@ export default async function RootLayout({
           <CookieBanner />
           <InstallPrompt />
           <RegisterSW />
+          <Analytics />
+          <SpeedInsights />
         </NextIntlClientProvider>
       </body>
     </html>

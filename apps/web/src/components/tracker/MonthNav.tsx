@@ -18,7 +18,7 @@ export function MonthNav() {
     });
   }, []);
 
-  const now   = new Date();
+  const now = new Date();
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
   function prev() {
@@ -40,76 +40,108 @@ export function MonthNav() {
     }, 300);
   }
 
+  const yearSelectStyle: React.CSSProperties = {
+    background:        "var(--accent)",
+    border:            "1px solid var(--accent)",
+    color:             "white",
+    padding:           "4px 22px 4px 10px",
+    borderRadius:      8,
+    cursor:            "pointer",
+    fontFamily:        "'Syne',sans-serif",
+    fontSize:          12,
+    fontWeight:        700,
+    appearance:        "none",
+    WebkitAppearance:  "none",
+    MozAppearance:     "none",
+    backgroundImage:   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
+    backgroundRepeat:  "no-repeat",
+    backgroundPosition:"right 8px center",
+    backgroundSize:    "10px",
+  };
+
+  const arrowBtnStyle: React.CSSProperties = {
+    background:     "var(--surface2)",
+    border:         "1px solid var(--border)",
+    color:          "var(--text)",
+    width:          26,
+    height:         26,
+    borderRadius:   7,
+    cursor:         "pointer",
+    fontSize:       13,
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "center",
+    flexShrink:     0,
+    padding:        0,
+  };
+
   return (
     <div className="page-header">
-      {/* Top row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em" }}>
+      <div style={{
+        display:        "flex",
+        justifyContent: "space-between",
+        alignItems:     "flex-start",
+        gap:            12,
+        flexWrap:       "nowrap",
+      }}>
+        {/* Sol: başlık */}
+        <h1 style={{
+          fontSize:      17,
+          fontWeight:    800,
+          letterSpacing: "-0.01em",
+          margin:        0,
+          paddingTop:    4,
+        }}>
           Zeiterfassung
         </h1>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        {/* Sağ: yıl üstte, ay altta — kompakt stack */}
+        <div style={{
+          display:        "flex",
+          flexDirection:  "column",
+          alignItems:     "flex-end",
+          gap:            6,
+        }}>
           <select
             value={year}
             onChange={(e) => setMonth(Number(e.target.value), month)}
             aria-label="Jahr auswählen"
-            style={{
-              background: "var(--accent)",
-              border: "1px solid var(--accent)",
-              color: "white",
-              padding: "6px 28px 6px 12px",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontFamily: "'Syne',sans-serif",
-              fontSize: 13,
-              fontWeight: 700,
-              appearance: "none",
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-              backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 10px center",
-              backgroundSize: "10px",
-            }}
+            style={yearSelectStyle}
           >
             {YEARS.map((y) => (
               <option key={y} value={y} style={{ background: "var(--surface)", color: "var(--text)" }}>{y}</option>
             ))}
           </select>
 
-          {!isCurrentMonth && (
-            <button onClick={goToday} style={{
-              background: "var(--surface2)", border: "1px solid var(--accent)", color: "var(--accent2)",
-              padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-              fontFamily: "'Syne',sans-serif", fontSize: 12, fontWeight: 700,
-            }}>📍 Heute</button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={prev} aria-label="Vorheriger Monat" style={arrowBtnStyle}>‹</button>
+            <span style={{
+              fontSize:    14,
+              fontWeight:  800,
+              minWidth:    74,
+              textAlign:   "center",
+              letterSpacing: "-0.01em",
+            }}>
+              {MONTHS[month - 1]}
+            </span>
+            <button onClick={next} aria-label="Nächster Monat" style={arrowBtnStyle}>›</button>
+            {!isCurrentMonth && (
+              <button
+                onClick={goToday}
+                aria-label="Heute"
+                title="Heute"
+                style={{
+                  ...arrowBtnStyle,
+                  background:  "var(--surface2)",
+                  borderColor: "var(--accent)",
+                  color:       "var(--accent2)",
+                  marginLeft:  2,
+                }}
+              >📍</button>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Month nav — kompakt, ortalanmış pill */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-        <button onClick={prev} style={{
-          background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)",
-          width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 14,
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>‹</button>
-
-        <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", minWidth: 90, textAlign: "center" }}>
-          {MONTHS[month - 1]}
-        </h2>
-
-        <button onClick={next} style={{
-          background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)",
-          width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 14,
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>›</button>
-      </div>
-
-      <div style={{ textAlign: "center", fontSize: 11, color: "var(--green)", marginTop: 8 }}>
-        ● Synchronisiert ✓
       </div>
     </div>
   );
 }
-

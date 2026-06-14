@@ -1,5 +1,36 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (28) – v0.9.0: Mobile nav rebuild — gruplu BottomNav + kompakt MonthNav header
+
+### Değişiklik 1: BottomNav 5→4 slot, 2'si grup
+- **Eski**: 5 ayrı item (Start, Zeit, Lohn, Urlaub, Profil)
+- **Yeni**: 4 slot — 2'si tıklayınca açılan grup
+  1. **Start** → /dashboard
+  2. **Zeit** (grup) → tıklayınca popover: Zeit /tracker, Urlaub /vacation, Kalender /calendar
+  3. **Berichte** (grup) → tıklayınca popover: Berichte /reports, Gehalt /salary
+  4. **Profil** → /settings
+- Popover yukarı doğru açılır, outside-click + ESC + route değişimi kapatır
+- Grup butonu, alt sayfalardan birinde aktifken highlight olur
+
+### Değişiklik 2: Tracker MonthNav kompakt header
+- "Zeiterfassung" başlığı 22px → **17px** (kısa, dikey alan korunur)
+- Yıl seçici sağ-üste, ay nav'ı altına stack:
+  ```
+  Zeiterfassung      [2026 ▼]
+                     ‹ Juni ›  📍
+  ```
+- Arrow butonları 30 → **26x26** (daha kompakt)
+- "📍 Heute" butonu sadece güncel ay'da değilken görünür, ay nav'ının yanında
+- **"● Synchronisiert ✓" indicator kaldırıldı** — kayıt anında oluyor, gereksizdi
+- Sonuç: Header artık tek satır, gün listesi için bol alan
+
+### Değişen dosyalar
+- `apps/web/src/components/ui/BottomNav.tsx` — komple rewrite (gruplu yapı)
+- `apps/web/src/components/tracker/MonthNav.tsx` — komple rewrite (kompakt header)
+- `apps/web/src/lib/version.ts` — 0.8.4 → 0.9.0 (MINOR: yeni UI)
+
+---
+
 ## 2026-06-14 (27) – v0.8.4: FAB overlap (mail vs scan) + Juni month-nav slimmed
 
 ### Sorun 1: Tracker'da iki FAB üst üste

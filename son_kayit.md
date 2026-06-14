@@ -1,5 +1,24 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-14 (29) – v0.9.1: MonthNav başlığı küçültüldü — sağ taraf görünür hale geldi
+
+### Sorun
+- v0.9.0'da "Zeiterfassung" başlığı (17px, bold) hâlâ çok yer kaplıyordu
+- Mobilde sağdaki yıl/ay seçicileri ekran dışına itiliyordu, görünmüyordu
+
+### Çözüm — MonthNav.tsx
+- Başlık 17px → **13px**, fontWeight 800 → 700
+- `textTransform: uppercase` + `color: var(--muted)` — artık bir "section label" gibi, h1 hissi vermeden
+- `flexShrink: 1` + `overflow: ellipsis` → başlık daralabilir, asla taşmaz
+- Sağ stack (yıl + ay nav) → `flexShrink: 0` → asla sıkışmaz, daima tam görünür
+- `paddingTop: 4 → 6` → küçülen başlık yıl seçici ile dikey hizalı
+
+### Değişen dosyalar
+- `apps/web/src/components/tracker/MonthNav.tsx` — başlık küçültme + flex koruma
+- `apps/web/src/lib/version.ts` — 0.9.0 → 0.9.1 (PATCH: UI fix)
+
+---
+
 ## 2026-06-14 (28) – v0.9.0: Mobile nav rebuild — gruplu BottomNav + kompakt MonthNav header
 
 ### Değişiklik 1: BottomNav 5→4 slot, 2'si grup

@@ -86,11 +86,18 @@ export function MonthNav() {
       }}>
         {/* Sol: başlık */}
         <h1 style={{
-          fontSize:      17,
-          fontWeight:    800,
+          fontSize:      13,
+          fontWeight:    700,
           letterSpacing: "-0.01em",
           margin:        0,
-          paddingTop:    4,
+          paddingTop:    6,
+          minWidth:      0,
+          flexShrink:    1,
+          overflow:      "hidden",
+          textOverflow:  "ellipsis",
+          whiteSpace:    "nowrap",
+          color:         "var(--muted)",
+          textTransform: "uppercase",
         }}>
           Zeiterfassung
         </h1>
@@ -101,6 +108,7 @@ export function MonthNav() {
           flexDirection:  "column",
           alignItems:     "flex-end",
           gap:            6,
+          flexShrink:     0,
         }}>
           <select
             value={year}

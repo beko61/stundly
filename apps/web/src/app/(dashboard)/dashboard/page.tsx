@@ -7,6 +7,7 @@ import { calculateWorkDuration } from "@workly/shared";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
+import { usePrivacyMode } from "@/lib/privacy";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -37,7 +38,8 @@ function minsToTime(min: number): string {
   return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
 }
 
-function eur(n: number): string {
+function eur(n: number, hidden: boolean): string {
+  if (hidden) return "••• €";
   return n.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " €";
 }
 
@@ -118,6 +120,7 @@ export default function DashboardPage() {
 
   const [name, setName] = useState("");
   const [bundesland, setBundesland] = useState("NI");
+  const [moneyHidden] = usePrivacyMode();
 
   // Selected month data
   const [entries, setEntries] = useState<TimeEntry[]>([]);
@@ -508,7 +511,7 @@ export default function DashboardPage() {
         </div>
         <div className="dash-hero-card">
           <span className="label" style={{ color: "var(--accent2)" }}>💰 Brutto-Lohn (geschätzt)</span>
-          <span className="value" style={{ color: "var(--accent2)" }}>{eur(stats.brutto)}</span>
+          <span className="value" style={{ color: "var(--accent2)" }}>{eur(stats.brutto, moneyHidden)}</span>
           <span className="sub">{settings.hourly_rate} €/Std · {settings.monthly_target_hours}h Soll</span>
         </div>
       </div>
@@ -560,8 +563,8 @@ export default function DashboardPage() {
           </div>
           <div className="dash-year-stat">
             <span className="kpi-label">Brutto-Lohn Jahr</span>
-            <span className="kpi-value" style={{ color: "var(--accent2)" }}>{eur(yearly.bruttoTotal)}</span>
-            <span className="kpi-sub">Ø {eur(yearly.bruttoTotal / 12)} / Monat</span>
+            <span className="kpi-value" style={{ color: "var(--accent2)" }}>{eur(yearly.bruttoTotal, moneyHidden)}</span>
+            <span className="kpi-sub">Ø {eur(yearly.bruttoTotal / 12, moneyHidden)} / Monat</span>
           </div>
           <div className="dash-year-stat">
             <span className="kpi-label">Urlaub genommen</span>
@@ -590,7 +593,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setSelectedMonth(m.month)}
                 className={`dash-bar-btn ${isSelected ? "selected" : ""}`}
-                title={`${MONTHS[m.month - 1]}: ${minsToTime(m.workedMin + m.ndMin)} · ${eur(m.brutto)}`}
+                title={`${MONTHS[m.month - 1]}: ${minsToTime(m.workedMin + m.ndMin)} · ${eur(m.brutto, moneyHidden)}`}
               >
                 <div
                   className="dash-bar"
@@ -613,7 +616,7 @@ export default function DashboardPage() {
         </div>
         <div style={{ marginTop: 14, fontSize: 11, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
           <span>Klick auf einen Monat zum Wechseln</span>
-          <span>Gesamt {eur(yearly.bruttoTotal)}</span>
+          <span>Gesamt {eur(yearly.bruttoTotal, moneyHidden)}</span>
         </div>
       </div>
 

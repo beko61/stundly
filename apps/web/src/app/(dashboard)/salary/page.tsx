@@ -10,6 +10,7 @@ import { YearPicker } from "@/components/ui/YearPicker";
 import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { useTrackerStore } from "@/store/trackerStore";
+import { usePrivacyMode, maskMoney } from "@/lib/privacy";
 
 const STEUERKLASSEN: { value: Steuerklasse; label: string; hint: string }[] = [
   { value: "I",   label: "I",   hint: "Ledig" },
@@ -312,7 +313,9 @@ export default function SalaryPage() {
     };
   }, [entries, settings, currentMonthNotdienstDays, breakdown.total_gross, nettoCalc.netto]);
 
-  const fmtEur    = (n: number) => `€ ${n.toFixed(2)}`;
+  const [moneyHidden, togglePrivacy] = usePrivacyMode();
+  const fmtEur    = (n: number) => maskMoney(n, moneyHidden);
+  const fmtEurNoCents = (n: number) => maskMoney(n, moneyHidden, { decimals: 0 });
 
   // Yearly totals from records
   const yearlyBrutto = records.reduce((s, r) => s + r.brutto, 0);
@@ -371,9 +374,26 @@ export default function SalaryPage() {
     <>
       {/* Header */}
       <div className="page-header">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
           <h1 style={{ fontSize: 22, fontWeight: 800 }}>Gehaltsübersicht</h1>
-          <YearPicker value={year} onChange={setYear} />
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={togglePrivacy}
+              title={moneyHidden ? "Beträge anzeigen" : "Beträge verbergen"}
+              aria-label={moneyHidden ? "Beträge anzeigen" : "Beträge verbergen"}
+              style={{
+                background: moneyHidden ? "color-mix(in srgb, var(--blue) 14%, transparent)" : "var(--surface2)",
+                border: `1px solid ${moneyHidden ? "color-mix(in srgb, var(--blue) 35%, transparent)" : "var(--border)"}`,
+                color: moneyHidden ? "var(--blue)" : "var(--muted)",
+                width: 36, height: 30, borderRadius: 8, cursor: "pointer",
+                fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              {moneyHidden ? "🔒" : "👁"}
+            </button>
+            <YearPicker value={year} onChange={setYear} />
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <button onClick={prevMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>‹</button>
@@ -909,15 +929,15 @@ export default function SalaryPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>BRUTTO</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>€ {curRecord.brutto.toFixed(2)}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>{fmtEur(curRecord.brutto)}</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>NETTO</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--blue)" }}>€ {curRecord.netto.toFixed(2)}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--blue)" }}>{fmtEur(curRecord.netto)}</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>STEUER</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--red)" }}>€ {(curRecord.brutto - curRecord.netto).toFixed(2)}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--red)" }}>{fmtEur(curRecord.brutto - curRecord.netto)}</div>
                   </div>
                   {curRecord.note && (
                     <div style={{ gridColumn: "1/-1", fontSize: 12, color: "var(--muted)", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
@@ -938,9 +958,9 @@ export default function SalaryPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
                 {[
-                  { label: "Brutto/Jahr",  val: `€ ${yearlyAutoBruttoTotal.toFixed(0)}`, color: "var(--green)" },
-                  { label: "Netto/Jahr",   val: `€ ${yearlyAutoNettoTotal.toFixed(0)}`,  color: "var(--accent2)"  },
-                  { label: "Ø Netto/Mon", val: `€ ${(yearlyAutoNettoTotal/12).toFixed(0)}`, color: "var(--blue)" },
+                  { label: "Brutto/Jahr",  val: fmtEurNoCents(yearlyAutoBruttoTotal), color: "var(--green)" },
+                  { label: "Netto/Jahr",   val: fmtEurNoCents(yearlyAutoNettoTotal),  color: "var(--accent2)"  },
+                  { label: "Ø Netto/Mon", val: fmtEurNoCents(yearlyAutoNettoTotal/12), color: "var(--blue)" },
                 ].map(c => (
                   <div key={c.label} style={{ textAlign: "center", background: "var(--surface2)", borderRadius: 10, padding: "10px 6px" }}>
                     <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
@@ -967,7 +987,7 @@ export default function SalaryPage() {
                           <span style={{ fontSize: 10, color: "var(--muted)" }}>—</span>
                         ) : (
                           <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
-                            B: €{a.brutto.toFixed(0)} · N: €{a.netto.toFixed(0)}
+                            B: {fmtEurNoCents(a.brutto)} · N: {fmtEurNoCents(a.netto)}
                           </span>
                         )}
                       </div>
@@ -1004,9 +1024,9 @@ export default function SalaryPage() {
               {/* Totals */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
                 {[
-                  { label: "Brutto",  val: `€ ${yearlyBrutto.toFixed(0)}`, color: "var(--green)" },
-                  { label: "Netto",   val: `€ ${yearlyNetto.toFixed(0)}`,  color: "var(--blue)"  },
-                  { label: "Steuer",  val: `€ ${(yearlyBrutto - yearlyNetto).toFixed(0)}`, color: "var(--red)" },
+                  { label: "Brutto",  val: fmtEurNoCents(yearlyBrutto), color: "var(--green)" },
+                  { label: "Netto",   val: fmtEurNoCents(yearlyNetto),  color: "var(--blue)"  },
+                  { label: "Steuer",  val: fmtEurNoCents(yearlyBrutto - yearlyNetto), color: "var(--red)" },
                 ].map(c => (
                   <div key={c.label} style={{ textAlign: "center", background: "var(--surface2)", borderRadius: 10, padding: "10px 6px" }}>
                     <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
@@ -1032,7 +1052,7 @@ export default function SalaryPage() {
                         <span style={{ color: m === month ? "var(--accent2)" : "var(--muted)", fontWeight: 700, width: 28 }}>{MONTHS_S[i]}</span>
                         {rec ? (
                           <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
-                            B: €{rec.brutto.toFixed(0)} · N: €{rec.netto.toFixed(0)}
+                            B: {fmtEurNoCents(rec.brutto)} · N: {fmtEurNoCents(rec.netto)}
                           </span>
                         ) : (
                           <span style={{ fontSize: 10, color: "var(--muted)" }}>—</span>
@@ -1095,7 +1115,7 @@ export default function SalaryPage() {
                 }}>
                   <span style={{ fontSize: 13, color: "var(--muted)" }}>Steuer / Abzüge</span>
                   <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: "var(--red)" }}>
-                    € {(parseFloat(mBrutto||"0") - parseFloat(mNetto||"0")).toFixed(2)}
+                    {fmtEur(parseFloat(mBrutto||"0") - parseFloat(mNetto||"0"))}
                   </span>
                 </div>
               )}

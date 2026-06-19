@@ -1680,4 +1680,64 @@ npx tsc --noEmit → 0 hata ✅
 - Tracker MonthlySummary, dashboard, calendar etkilenmedi (sadece yeni field'lara erişim eklendi).
 
 ---
+
+## 2026-06-19 – Notdienst + Privacy Mode + Year Detay (v0.13.0)
+
+### Kullanıcı geri bildirimi
+- Eski programının Jahresübersicht detayı paylaşıldı (Notdienst hero kart, aylık nd chip, detaylı aylık liste).
+- "notdienst neden bos neden zeit sayfasi ile bagli degil" — kritik bug.
+- "para ile ilgili telefonda acildiginda yildiz gözüksün profilden acilabilsin".
+- Notdienst hafta-ay atfı: pazar günü hangi aydaysa o aya yazılsın.
+
+### Yapılan
+
+#### 1. Notdienst entegrasyonu (kritik bug fix)
+- ✅ `reports/page.tsx` artık `notdienst_entries`'i fetch ediyor.
+- ✅ `calcMonthStats`'e `ndEntries` geçiyor → ndMin/ndCount/ndPaid hesaplanıyor.
+- ✅ Year mode'da `notdienstMonthOf` (Pazartesi atfı) ile filtrelenir, +7 gün taşma payı çekilir.
+- ✅ Aylık breakdown her ay için ndEntries filtrelenir.
+
+#### 2. Year mode UI detaylandırıldı
+- ✅ Hero kartlar (year-only):
+  - ⏱ **Gesamt Überstunden** — +X:XX, ≈ X.X Tage à 8 Std/Tag.
+  - 🚨 **Notdienst** — +X:XX, ≈ X.X Tage · N Einsätze · ✅ X ❌ Y.
+- ✅ KPI 4'lü düzen: GEARBEITET / DIFFERENZ / ARBEITSTAGE (X/Y) / URLAUB (Rest X/30).
+- ✅ Abwesenheit satırı saatlerle: KRANK X T (Yh), FEIERTAG X T (Yh).
+- ✅ Notdienst pro Monat chip satırı (Jan 11× 17:10 vs).
+- ✅ Aylık detay liste (kart format, tıklanabilir → month mode):
+  - Ay başlığı + chip'ler (🏖 🤒 🎉 🚨).
+  - Differenz büyük rakam (Σ Diff+Nd).
+  - "Gearbeitet/Soll Std" + "Erfasst/Werktage" satırı.
+  - Progress bar (diff-relativ).
+
+#### 3. Privacy Mode (para gizleme)
+- ✅ `apps/web/src/lib/privacy.ts` (YENİ):
+  - `usePrivacyMode()` hook (localStorage tabanlı, default true=gizli).
+  - `maskMoney(value, hidden, opts)` helper — "€ •••" / "€ 1.234,56" / decimals/withSymbol opsiyonel.
+  - Sekmeler arası senkron (`storage` event + custom event).
+- ✅ `salary/page.tsx`:
+  - Top-right 🔒/👁 toggle butonu.
+  - Tüm 11 € kullanımı `fmtEur` / `fmtEurNoCents` üzerinden maskelenir.
+- ✅ `dashboard/page.tsx`:
+  - `eur(n, hidden)` signature güncellendi.
+  - Brutto, yearly, ortalama, chart tooltip'leri maskelenir.
+- ✅ `apps/web/src/__tests__/unit/privacy.test.ts` (YENİ) → 6 test, hepsi pass:
+  - Gizli "€ •••", görünür de-DE format.
+  - decimals=0 ondalıksız, withSymbol=false sembolsüz.
+  - 0 ve negatif değer kontrolü.
+
+### Versiyon
+- 0.12.0 → 0.13.0 (MINOR, yeni özellikler: Privacy + Notdienst entegrasyon + UI).
+
+### Sonuç
+- TS clean, next build clean, 90/93 test pass (3 pre-existing salaryCalc).
+- 63 yeni unit test (monthStats 24 + overtime 17 + companyAdmin 16 + privacy 6).
+- Tracker MonthlySummary etkilenmedi (zaten ndEntries vermesini biliyor).
+
+### Açık konu — Notdienst hafta-ay atfı kuralı
+- Mevcut sistem: **haftanın Pazartesi'si hangi aydaysa** o aya sayılır (`weekMonth.ts`).
+- Kullanıcının önerisi: **haftanın Pazarı hangi aydaysa** o aya sayılır.
+- ⚠️ Bu kararı kullanıcı netleştirmeli — değiştirilirse Tracker'daki haftalık Notdienst de etkilenir (tek doğruluk kaynağı `weekMonth.ts`).
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

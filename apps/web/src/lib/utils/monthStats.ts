@@ -34,6 +34,13 @@ export interface MonthStatsInput {
   month: number | null;
   /** Aylık Sollstunden (kullanıcının salary_settings.monthly_target_hours) */
   targetHoursPerMonth: number;
+  /**
+   * Sadece year mode (month=null) için: YTD (Year-To-Date) sınırı.
+   * Bu tarihten sonraki entry/feiertag hesaba katılmaz, hedef de bu tarihe
+   * kadar olan iş günleri × 8h olarak ölçeklenir. month != null ise yok sayılır.
+   * Verilmezse tüm yıl davranışı (yıl sonu raporu için kullanılır).
+   */
+  todayISO?: string;
 }
 
 export interface MonthStatsResult {
@@ -83,15 +90,18 @@ export function countWorkDays(
   year: number,
   month: number | null,
   feiertage: Record<string, string> = {},
+  todayISO?: string,
 ): number {
   const months = month != null ? [month] : Array.from({ length: 12 }, (_, i) => i + 1);
   let count = 0;
   for (const m of months) {
     const daysIn = new Date(year, m, 0).getDate();
     for (let d = 1; d <= daysIn; d++) {
+      const iso = `${year}-${pad2(m)}-${pad2(d)}`;
+      if (month == null && todayISO && iso > todayISO) continue;
       const dow = dowOf(year, m - 1, d);
       if (dow === 0 || dow === 6) continue;
-      if (feiertage[`${year}-${pad2(m)}-${pad2(d)}`]) continue;
+      if (feiertage[iso]) continue;
       count++;
     }
   }
@@ -102,7 +112,9 @@ export function countWorkDays(
  * Ana hesap fonksiyonu. Tüm sayfalar bunu çağırır.
  */
 export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
-  const { entries, ndEntries = [], feiertage = {}, year, month, targetHoursPerMonth } = input;
+  const { entries, ndEntries = [], feiertage = {}, year, month, targetHoursPerMonth, todayISO } = input;
+  const ytdCutoff = month == null ? todayISO : undefined;
+  const inWindow = (iso: string): boolean => !ytdCutoff || iso <= ytdCutoff;
 
   let workedMin = 0;
   let urlaubMin = 0, krankMin = 0;
@@ -111,6 +123,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   const entryDates = new Set(entries.map(e => e.date));
 
   for (const e of entries) {
+    if (!inWindow(e.date)) continue;
+
     switch (e.day_type) {
       case DAY_TYPES.URLAUB:    urlaubDays++; break;
       case DAY_TYPES.KRANK:     krankDays++;  break;
@@ -148,6 +162,7 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   const monthPrefix = month != null ? `${year}-${pad2(month)}-` : `${year}-`;
   for (const ftDate of Object.keys(feiertage)) {
     if (!ftDate.startsWith(monthPrefix)) continue;
+    if (!inWindow(ftDate)) continue;
     if (entryDates.has(ftDate)) continue;
     const [yStr, mStr, dStr] = ftDate.split("-");
     const y = Number(yStr); const m = Number(mStr); const d = Number(dStr);
@@ -161,17 +176,23 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
 
   // Notdienst
   const ndMin = ndEntries.reduce((sum, nd) => {
+    if (!inWindow(nd.date)) return sum;
     if (!nd.start_time || !nd.end_time) return sum;
     return sum + calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
   }, 0);
-  const ndCount = ndEntries.length;
-  const ndPaid  = ndEntries.filter(nd => nd.erledigt).length;
+  const ndCount = ndEntries.filter(nd => inWindow(nd.date)).length;
+  const ndPaid  = ndEntries.filter(nd => inWindow(nd.date) && nd.erledigt).length;
 
-  const monthsInPeriod = month != null ? 1 : 12;
-  const targetMin = targetHoursPerMonth * monthsInPeriod * 60;
-  const diffMin   = workedMin + ndMin - targetMin;
-
-  const workDaysInPeriod = countWorkDays(year, month, feiertage);
+  // YTD: target = (yıl başı .. todayISO arası Mo-Fr × 8h). Aksi halde aylık ortalama × periyot ay sayısı.
+  const workDaysInPeriod = countWorkDays(year, month, feiertage, ytdCutoff);
+  let targetMin: number;
+  if (ytdCutoff) {
+    targetMin = workDaysInPeriod * 8 * 60;
+  } else {
+    const monthsInPeriod = month != null ? 1 : 12;
+    targetMin = targetHoursPerMonth * monthsInPeriod * 60;
+  }
+  const diffMin = workedMin + ndMin - targetMin;
 
   return {
     workedMin, ndMin, ndCount, ndPaid,

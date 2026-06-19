@@ -57,13 +57,18 @@ export default function ReportsPage() {
 
   const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
 
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
   const stats = useMemo(() => {
+    // Year mode → geçmiş yıllar için yıl sonu raporu, mevcut yıl için YTD.
+    const useYtd = !(mode === "year" && year < new Date().getFullYear());
     const r = calcMonthStats({
       entries,
       feiertage,
       year,
       month: mode === "month" ? month : null,
       targetHoursPerMonth: targetHours,
+      ...(useYtd ? { todayISO } : {}),
     });
     // Geriye uyumluluk için eski isimlere map'le
     return {
@@ -76,7 +81,7 @@ export default function ReportsPage() {
       arbeiten:  r.workDaysInPeriod,
       notdienst: r.ndCount,
     };
-  }, [entries, year, month, mode, feiertage, targetHours]);
+  }, [entries, year, month, mode, feiertage, targetHours, todayISO]);
 
   // Monthly breakdown for year mode
   const monthlyBreakdown = useMemo(() => {

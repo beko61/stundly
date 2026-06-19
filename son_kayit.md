@@ -1602,4 +1602,40 @@ npx tsc --noEmit → 0 hata ✅
 - TS clean, build temiz, 33/33 yeni unit test pass (overtime + companyAdmin), pre-existing salaryCalc fail'leri etkilenmedi.
 
 ---
+
+## 2026-06-19 – Berichte Year Mode YTD Düzeltmesi (v0.11.3)
+
+### Sorun
+- `/reports` sayfasında "Jahr" modunda saatler tutmuyordu.
+- `calcMonthStats(year, month=null, ...)` yıl boyunca tüm time_entries'i topluyordu (gelecek tarihli olanlar dahil).
+- `targetMin = targetHoursPerMonth × 12 × 60` sabit 12 ay hedefi. Yıl ortasında Differenz absürt negatif çıkıyordu.
+- Auto-Feiertag yıl modunda tüm yılın Feiertag'ını workedMin'e ekliyordu (Dezember bile Haziran'da görünüyordu).
+- `workDaysInPeriod` her zaman tüm yıl Mo-Fr - Feiertag (≈252).
+
+### Yapılan
+- ✅ `apps/web/src/lib/utils/monthStats.ts` → Opsiyonel `todayISO` parametresi eklendi:
+  - `month=null && todayISO` ⇒ YTD davranışı.
+  - Entries, ndEntries ve auto-feiertage `e.date <= todayISO` filtresi.
+  - `targetMin = countWorkDays(year, null, feiertage, todayISO) × 8 × 60`.
+  - `month != null` ise todayISO görmezden gelinir (legacy davranış korundu).
+  - `todayISO` verilmezse legacy 12-ay × targetHoursPerMonth davranışı korundu (yıl sonu raporu).
+- ✅ `apps/web/src/app/(dashboard)/reports/page.tsx` → Year mode'da:
+  - Mevcut yıl → todayISO geçilir (YTD).
+  - Geçmiş yıllar → todayISO geçilmez (tam yıl raporu).
+- ✅ `apps/web/src/__tests__/unit/monthStats.test.ts` (YENİ) → 19 test, hepsi pass:
+  - countWorkDays: month, year, year+todayISO, ileri Feiertag.
+  - month mode (legacy): arbeiten/urlaub/krank/auto-feiertag/weekend.
+  - year mode legacy: 12-ay hedefi, full year feiertag.
+  - year mode YTD: hedef hesabı, future entries/urlaub/feiertag/nd hariç, regression 88T benzeri bug, diffMin işareti.
+  - month mode todayISO görmezden geliyor.
+
+### Versiyon
+- 0.11.2 → 0.11.3 (PATCH, bug fix).
+
+### Sonuç
+- TS clean, next build clean, 52/52 yeni unit test pass (overtime + companyAdmin + monthStats).
+- Pre-existing salaryCalc fail'leri etkilenmedi.
+- Tracker MonthlySummary, dashboard, calendar etkilenmedi (hepsi month != null çağırıyor).
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

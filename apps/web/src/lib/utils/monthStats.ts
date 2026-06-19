@@ -46,6 +46,10 @@ export interface MonthStatsInput {
 export interface MonthStatsResult {
   /** Echte gearbeitete + bezahlte Abwesenheit (Urlaub/Krank/Feiertag), Notdienst HARİÇ */
   workedMin: number;
+  /** SADECE day_type=arbeiten entry'lerinin net dakikası (Urlaub/Krank/Feiertag HARİÇ) */
+  workedMinPure: number;
+  /** Urlaub + Krank + Feiertag (entry + auto) Sollstunden toplamı */
+  paidAbsenceMin: number;
   /** Notdienst dakika toplamı (ayrı, Differenz hesabında eklenir) */
   ndMin: number;
   /** Notdienst entry sayısı */
@@ -117,6 +121,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   const inWindow = (iso: string): boolean => !ytdCutoff || iso <= ytdCutoff;
 
   let workedMin = 0;
+  let workedMinPure = 0;
+  let paidAbsenceMin = 0;
   let urlaubMin = 0, krankMin = 0;
   let urlaubDays = 0, krankDays = 0, feiertagDays = 0, arbeitenEntries = 0;
 
@@ -142,7 +148,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
       const y = Number(yStr); const m = Number(mStr); const d = Number(dStr);
       if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
         const std = getDayStdMins(y, m - 1, d);
-        workedMin += std;
+        workedMin      += std;
+        paidAbsenceMin += std;
         if (e.day_type === DAY_TYPES.URLAUB) urlaubMin += std;
         if (e.day_type === DAY_TYPES.KRANK)  krankMin  += std;
       }
@@ -155,7 +162,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
 
     // ARBEITEN — gerçek saatler
     const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
-    workedMin += net_minutes;
+    workedMin     += net_minutes;
+    workedMinPure += net_minutes;
   }
 
   // Auto-Feiertag: feiertage map'inde olan ama DB'de entry'si olmayan günler
@@ -169,7 +177,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
     if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) continue;
     const std = getDayStdMins(y, m - 1, d);
     if (std > 0) {
-      workedMin += std;
+      workedMin      += std;
+      paidAbsenceMin += std;
       feiertagDays++;
     }
   }
@@ -195,7 +204,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   const diffMin = workedMin + ndMin - targetMin;
 
   return {
-    workedMin, ndMin, ndCount, ndPaid,
+    workedMin, workedMinPure, paidAbsenceMin,
+    ndMin, ndCount, ndPaid,
     urlaubDays, urlaubMin, krankDays, krankMin,
     feiertagDays, arbeitenEntries,
     workDaysInPeriod,

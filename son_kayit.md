@@ -1638,4 +1638,46 @@ npx tsc --noEmit → 0 hata ✅
 - Tracker MonthlySummary, dashboard, calendar etkilenmedi (hepsi month != null çağırıyor).
 
 ---
+
+## 2026-06-19 – Berichte Year Mode UI Yenilemesi (v0.12.0)
+
+### Kullanıcı Geri Bildirimi
+- "GEARBEITET 960h 35m" yanlış görünüyordu, "ARBEITSTAGE 116" mantıksızdı.
+- "bütün yilin özeti olsun 1 sene bu accont napti hepsini pasta görünü liste olsun".
+- "urlaub calisma izin über stunda diffasiyel", "mantikli basit olsun".
+
+### 5 profesyonelin konsensüsü
+- **GEARBEITET = sadece arbeiten saat** (Urlaub/Krank dahil etme, Almanya muhasebe mantığı).
+- **ARBEITSTAGE = arbeitenEntries** (kayıtlı çalışma gün sayısı, "iş günü possible" değil).
+- **SOLL kart eklendi** (yıl boyunca beklenen toplam Sollstunden).
+- **Donut grafik** — Arbeiten / Urlaub / Krank / Feiertag gün dağılımı.
+- **Year mode YTD kaldırıldı** — kullanıcı "1 sene ne yaptın" özetini istiyor, tüm yıl gösteriliyor.
+
+### Yapılan
+- ✅ `apps/web/src/lib/utils/monthStats.ts` →
+  - `workedMinPure: number` (sadece arbeiten net dakika).
+  - `paidAbsenceMin: number` (urlaub + krank + feiertag + auto-feiertag toplam Sollstunden).
+  - `workedMin = workedMinPure + paidAbsenceMin` invariant.
+  - YTD davranışı opsiyonel olarak helper'da kaldı, reports artık kullanmıyor.
+- ✅ `apps/web/src/app/(dashboard)/reports/page.tsx` →
+  - 4 KPI: GEARBEITET (workedMinPure), SOLL (targetMin), DIFFERENZ (signed), ARBEITSTAGE (arbeitenEntries / workDaysInPeriod).
+  - Yeni Abwesenheit satırı: URLAUB · KRANK · FEIERTAG · NOTDIENST gün bazlı.
+  - Year mode'a Donut chart eklendi (Arbeiten / Urlaub / Krank / Feiertag dağılımı, % gösterim).
+  - Aylık tabloya "Tage" sütunu eklendi (arbeitenDays).
+  - Aylık tabloda "Std" artık `workedMinPure` (saf arbeiten saat) gösterir.
+- ✅ `apps/web/src/__tests__/unit/monthStats.test.ts` → 5 yeni test (toplam 24/24 pass):
+  - `workedMinPure` sadece arbeiten içerir.
+  - `paidAbsenceMin` auto-feiertag dahil.
+  - 10h arbeiten testi (mesai korunur).
+  - Hafta sonu urlaub paidAbsenceMin'e eklenmez.
+  - `workedMin = workedMinPure + paidAbsenceMin` invariant.
+
+### Versiyon
+- 0.11.3 → 0.12.0 (MINOR, kullanıcı-görünür yeni özellikler).
+
+### Sonuç
+- TS clean, next build clean, 57/57 yeni unit test pass.
+- Tracker MonthlySummary, dashboard, calendar etkilenmedi (sadece yeni field'lara erişim eklendi).
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

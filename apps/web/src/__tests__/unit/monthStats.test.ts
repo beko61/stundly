@@ -227,3 +227,67 @@ describe("calcMonthStats: todayISO month mode'da yok sayılır", () => {
     expect(r.workedMin).toBe(8 * 60);
   });
 });
+
+describe("workedMinPure / paidAbsenceMin (saat ayrımı)", () => {
+  it("workedMinPure SADECE arbeiten net dakika içerir", () => {
+    const r = calcMonthStats({
+      entries: [
+        arbeiten("2026-06-15"),   // 8h
+        arbeiten("2026-06-16"),   // 8h
+        urlaub("2026-06-17"),     // 8h paid absence
+        krank("2026-06-18"),      // 8h paid absence
+      ],
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.workedMinPure).toBe(2 * 8 * 60); // sadece 2 arbeiten
+    expect(r.paidAbsenceMin).toBe(2 * 8 * 60); // urlaub + krank
+    expect(r.workedMin).toBe(4 * 8 * 60); // toplam
+  });
+
+  it("paidAbsenceMin auto-feiertag'ı içerir", () => {
+    const r = calcMonthStats({
+      entries: [],
+      feiertage: { "2026-06-15": "Test-Feiertag" }, // Mo
+      year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.workedMinPure).toBe(0);
+    expect(r.paidAbsenceMin).toBe(8 * 60);
+    expect(r.feiertagDays).toBe(1);
+  });
+
+  it("workedMinPure overtime arbeiten saatlerini korur", () => {
+    // 10h arbeiten (08-19, 60m break)
+    const r = calcMonthStats({
+      entries: [arbeiten("2026-06-15", "08:00", "19:00", 60)],
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.workedMinPure).toBe(10 * 60);
+    expect(r.paidAbsenceMin).toBe(0);
+  });
+
+  it("urlaub haftasonu paidAbsenceMin'e eklenmez (Sollstunden 0)", () => {
+    // 2026-06-13 Sa
+    const r = calcMonthStats({
+      entries: [urlaub("2026-06-13")],
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.paidAbsenceMin).toBe(0); // Sa = 0h std
+    expect(r.urlaubDays).toBe(1);
+  });
+
+  it("workedMin = workedMinPure + paidAbsenceMin invariant", () => {
+    const r = calcMonthStats({
+      entries: [
+        arbeiten("2026-06-15", "08:00", "20:00", 60), // 11h
+        urlaub("2026-06-16"),  // 8h
+        krank("2026-06-17"),   // 8h
+        feiertag("2026-06-18"),// 8h
+      ],
+      feiertage: { "2026-06-19": "Auto-Test" }, // +8h auto
+      year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.workedMin).toBe(r.workedMinPure + r.paidAbsenceMin);
+    expect(r.workedMinPure).toBe(11 * 60);
+    expect(r.paidAbsenceMin).toBe(4 * 8 * 60); // 3 entry + 1 auto
+  });
+});

@@ -1740,4 +1740,52 @@ npx tsc --noEmit → 0 hata ✅
 - ⚠️ Bu kararı kullanıcı netleştirmeli — değiştirilirse Tracker'daki haftalık Notdienst de etkilenir (tek doğruluk kaynağı `weekMonth.ts`).
 
 ---
+
+## 2026-06-19 – Pazar Atfı + Notdienst KW Detay (v0.13.1)
+
+### Kullanıcı kararları
+- "pazar bazli cevir en garanti" → Notdienst hafta-ay atfı Pazartesi → Pazar.
+- "jahr bölümüne notdienstleride eklermisin saatlerini" → Açılır kapanır KW detay.
+
+### Yapılan
+
+#### Pazar bazlı hafta-ay atfı
+- ✅ `apps/web/src/lib/utils/weekMonth.ts`:
+  - `weekSundayOf(date)` yeni: haftanın Pazar gününü döner.
+  - `notdienstMonthOf(date)` artık Pazar bazlı (hafta Pazar'ı hangi aydaysa o ay).
+  - `weekMondayOf(date)` deprecated olarak korundu (sadece UI etiket için).
+  - `notdienstLoadRange(year, month)` simetrik 7 gün pay (UTC tabanlı, timezone-safe).
+  - `isoWeek(date)` weekMonth.ts'e taşındı (paylaşım için).
+- ✅ `apps/web/src/app/(dashboard)/reports/page.tsx` → year mode start/end taşma payı:
+  - start = `(year-1)-12-25` (önceki yılın son haftası)
+  - end   = `(year+1)-01-07` (sonraki yılın ilk haftası)
+
+#### Year mode Notdienst KW Detay (açılır kapanır)
+- ✅ `ndByWeek` useMemo: ndEntries'i (ay, KW) bazında grupla.
+- ✅ Native `<details>` element (JS-less, mobil-friendly):
+  - Outer summary: "🚨 Notdienst-Details · N Wochen ▼"
+  - İçinde her hafta için sub-details:
+    - Tablo satırı: Monat | KW | Nd (count × süre) | Überstd (toplam)
+  - Sub-details açılırsa: hafta içi tek tek nd entry'leri
+    - Wochentag/tarih, start, end, kunde, süre.
+
+#### Test
+- ✅ `apps/web/src/__tests__/unit/weekMonth.test.ts` (YENİ) → 15 test, hepsi pass:
+  - weekSundayOf: Mo/So/Fr/Sa varyantları.
+  - notdienstMonthOf Pazar atfı: 28 Apr Mo → Mayıs, 4 Mai So → Mayıs, yıl sınırı.
+  - notdienstBelongsToMonth: 30 Mai Sa → Mayıs (Pazar 31 Mai).
+  - notdienstLoadRange: simetrik 7 gün, Ocak sınırı (UTC safe).
+  - weekMondayOf hâlâ çalışıyor (deprecated visual helper).
+  - isoWeek: hafta 2 (yılbaşı), hafta 25 (Haziran).
+
+### Versiyon
+- 0.13.0 → 0.13.1 (PATCH: kural değişimi + UI ekleme bug fix sınıfında).
+
+### Sonuç
+- TS clean, next build clean, 105/108 test pass (3 pre-existing salaryCalc).
+- 78 yeni unit test toplam (24 monthStats + 17 overtime + 16 companyAdmin + 6 privacy + 15 weekMonth).
+- Tracker NotdienstWeekly etkilenmedi (weekMondayOf hâlâ var).
+- Dashboard `notdienstBelongsToMonth` üzerinden çağırıyor, otomatik Pazar atfına geçti.
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

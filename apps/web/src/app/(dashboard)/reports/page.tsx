@@ -9,7 +9,7 @@ import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
 import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
-import { notdienstMonthOf } from "@/lib/utils/weekMonth";
+import { notdienstMonthOf, isoWeek } from "@/lib/utils/weekMonth";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -124,11 +124,10 @@ export default function ReportsPage() {
 
       const start = mode==="month"
         ? `${year}-${String(month).padStart(2,"0")}-01`
-        : `${year}-01-01`;
-      // Year mode'da notdienst hafta-Pazartesi atfı için +7 gün taşma payı.
+        : `${year - 1}-12-25`; // Hafta Pazar atfı için önceki yılın son haftasından çekme payı
       const end = mode==="month"
         ? new Date(year, month, 0).toISOString().split("T")[0]!
-        : `${year + 1}-01-07`;
+        : `${year + 1}-01-07`; // ve sonraki yılın ilk haftasına taşma payı
 
       const [{ data }, { data: nd }, { data: prof }, { data: salary }] = await Promise.all([
         supabase.from("time_entries").select("*")
@@ -194,7 +193,41 @@ export default function ReportsPage() {
     };
   }, [entries, ndEntries, year, month, mode, feiertage, targetHours]);
 
-  // Monthly breakdown for year mode (hafta-Pazartesi atfı ile)
+  // Year mode'da Notdienst'leri (ay, KW) bazında grupla — açılır kapanır detay için
+  const ndByWeek = useMemo(() => {
+    if (mode !== "year") return [];
+    interface WeekGroup {
+      month: number;          // ait olduğu ay (hafta Pazar atfı)
+      kw:    number;          // ISO Kalenderwoche
+      count: number;
+      mins:  number;
+      paid:  number;          // erledigt=true sayısı
+      items: Array<{ date: string; start: string; end: string; mins: number; erledigt: boolean; kunde?: string | null }>;
+    }
+    const m = new Map<string, WeekGroup>();
+    for (const nd of ndEntries) {
+      const w = notdienstMonthOf(nd.date);
+      const kw = isoWeek(nd.date);
+      const key = `${w.month}-${kw}`;
+      const mins = calculateWorkDuration(nd.start_time as string, nd.end_time as string, 0).net_minutes;
+      const existing = m.get(key) ?? { month: w.month, kw, count: 0, mins: 0, paid: 0, items: [] };
+      existing.count++;
+      existing.mins += mins;
+      if (nd.erledigt) existing.paid++;
+      existing.items.push({
+        date:     nd.date,
+        start:    nd.start_time as string,
+        end:      nd.end_time as string,
+        mins,
+        erledigt: Boolean(nd.erledigt),
+        kunde:    nd.kunde ?? null,
+      });
+      m.set(key, existing);
+    }
+    return Array.from(m.values()).sort((a, b) => a.month - b.month || a.kw - b.kw);
+  }, [ndEntries, mode]);
+
+  // Monthly breakdown for year mode (hafta-Pazar atfı ile)
   const monthlyBreakdown = useMemo(() => {
     if (mode==="month") return [];
     return Array.from({length:12}, (_,i) => {
@@ -547,6 +580,72 @@ export default function ReportsPage() {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Year mode — Notdienst KW Detay (açılır kapanır) */}
+            {mode === "year" && ndByWeek.length > 0 && (
+              <details className="card" style={{ padding:0, marginBottom:14, overflow:"hidden" }}>
+                <summary style={{
+                  padding:"14px 16px",
+                  cursor:"pointer",
+                  fontSize:12,
+                  fontWeight:700,
+                  color:"var(--text)",
+                  display:"flex", justifyContent:"space-between", alignItems:"center",
+                  listStyle:"none",
+                  userSelect:"none",
+                }}>
+                  <span>🚨 Notdienst-Details · {ndByWeek.length} Wochen</span>
+                  <span style={{ fontSize:10, color:"var(--muted)", fontWeight:600 }}>▼ Klicken</span>
+                </summary>
+                <div style={{ borderTop:"1px solid var(--border)" }}>
+                  {/* Table header */}
+                  <div style={{ padding:"10px 16px", fontSize:9, color:"var(--muted)", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", display:"grid", gridTemplateColumns:"50px 60px 1fr 80px", gap:8 }}>
+                    <span>Monat</span><span>KW</span><span>Nd</span><span style={{ textAlign:"right" }}>Überstd</span>
+                  </div>
+                  {ndByWeek.map(w => (
+                    <details key={`${w.month}-${w.kw}`} style={{ borderTop:"1px solid var(--surface2)" }}>
+                      <summary style={{
+                        padding:"10px 16px",
+                        display:"grid", gridTemplateColumns:"50px 60px 1fr 80px", gap:8,
+                        fontSize:12, alignItems:"center", cursor:"pointer", listStyle:"none",
+                      }}>
+                        <span style={{ fontWeight:700 }}>{MONTHS_SHORT[w.month - 1]}</span>
+                        <span style={{ color:"var(--muted)", fontSize:11 }}>KW {w.kw}</span>
+                        <span style={{ color:"var(--orange)", fontFamily:"'DM Mono',monospace", fontSize:11 }}>
+                          {w.count}× {minsToHMNoSign(w.mins)}
+                        </span>
+                        <span style={{ color:"var(--orange)", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:12, textAlign:"right" }}>
+                          +{minsToHMNoSign(w.mins)}
+                        </span>
+                      </summary>
+                      {/* Hafta içi tek tek nd entry'leri */}
+                      <div style={{ padding:"4px 16px 10px", display:"flex", flexDirection:"column", gap:4 }}>
+                        {w.items.map((it, idx) => (
+                          <div key={idx} style={{
+                            display:"grid", gridTemplateColumns:"110px 60px 60px 1fr 60px", gap:6,
+                            fontSize:11, padding:"4px 8px", borderRadius:6,
+                            background:"color-mix(in srgb, var(--orange) 6%, transparent)",
+                            alignItems:"center",
+                          }}>
+                            <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>
+                              {new Date(it.date).toLocaleDateString("de-DE", { weekday:"short", day:"2-digit", month:"2-digit" })}
+                            </span>
+                            <span style={{ fontFamily:"'DM Mono',monospace" }}>{it.start}</span>
+                            <span style={{ fontFamily:"'DM Mono',monospace" }}>{it.end}</span>
+                            <span style={{ color:"var(--muted)", fontSize:10, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                              {it.kunde ?? ""}
+                            </span>
+                            <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--orange)", fontWeight:700, textAlign:"right" }}>
+                              {minsToHMNoSign(it.mins)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </details>
             )}
 
             {mode==="month" ? (

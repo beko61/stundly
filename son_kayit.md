@@ -1576,4 +1576,30 @@ npx tsc --noEmit → 0 hata ✅
 ```
 
 ---
+
+## 2026-06-19 – Überstunden Hesabı Düzeltildi (v0.11.2)
+
+### Sorun
+- `/vacation` sayfasında "Überstunden → Urlaubstage" kartı 88T gibi absürt değerler gösteriyordu.
+- Kök neden 1: `workedMin` query'si yılın tamamını çekiyordu (`gte 01-01 .. lte 12-31`), ama `targetMin = 174 × 60 × monthsElapsed` sadece geçen ayları sayıyordu. Gelecek tarihli time_entries varsa overtime ezberden şişiyordu.
+- Kök neden 2: Hedef `174 × monthsElapsed` sabitiyle hesaplanıyordu. Almanya'da urlaub/krank/feiertag günleri hedeften düşmesi gerekir, ama düşülmüyordu — ay içinde 5 gün izin alınsa bile hedef aynı kalıyordu.
+
+### Yapılan
+- ✅ `apps/web/src/lib/vacation/overtime.ts` (YENİ) → Test edilebilir helper: `workdaysBetween`, `isWeekday`, `computeOvertime`.
+  - Hedef = (yıl başı .. bugüne kadar Mo-Fr) MINUS (bugüne kadar ücretli izin Mo-Fr) × 8h.
+  - workedMin sadece `e.date <= todayISO` ARBEITEN günleri.
+  - urlaubDays chart için yılın tamamı boyunca urlaub Mo-Fr sayılır.
+- ✅ `apps/web/src/app/(dashboard)/vacation/page.tsx` → `monthsElapsed` ve `174 × 60` kaldırıldı, `computeOvertime` helper'ı kullanıldı.
+- ✅ `apps/web/src/__tests__/unit/overtime.test.ts` (YENİ) → 17 test, hepsi pass:
+  - `isWeekday`: Mo-Fr / Sa-So.
+  - `workdaysBetween`: aralık, ters aralık, tek gün.
+  - `computeOvertime`: future entries hariç, urlaub yıllık say, paid absence hedef düşür, weekend urlaub düşürmez, frei ignore, night shift, regression bug (88T).
+
+### Versiyon
+- 0.11.1 → 0.11.2 (PATCH, bug fix).
+
+### Sonuç
+- TS clean, build temiz, 33/33 yeni unit test pass (overtime + companyAdmin), pre-existing salaryCalc fail'leri etkilenmedi.
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import type { VacationRequest } from "@workly/shared";
-import { calculateWorkDuration, DAY_TYPES } from "@workly/shared";
+import { computeOvertime, type OvertimeEntry } from "@/lib/vacation/overtime";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 
 const STATUS_LABELS: Record<VacationRequest["status"], string> = {
@@ -141,26 +141,25 @@ export default function VacationPage() {
       setRequests(reqs as VacationRequest[]);
     }
 
-    // Urlaub sayısı + overtime hesabı — TEK kaynak: time_entries (Zeiterfassung ile senkron)
-    const monthsElapsed = new Date().getMonth() + 1;
+    // Urlaub + overtime — ArbZG-uyumlu hesap.
+    // Hedef = (Yıl başından bugüne Mo-Fr) MINUS (ücretli izin Mo-Fr) × 8h.
+    // Gelecek tarihli time_entries hesap dışı tutulur.
+    const yearStartISO = `${year}-01-01`;
+    const todayISO     = new Date().toISOString().slice(0, 10);
     const { data: timeData } = await supabase
       .from("time_entries")
       .select("date, start_time, end_time, break_minutes, day_type")
       .eq("user_id", user.id)
-      .gte("date", `${year}-01-01`)
+      .gte("date", yearStartISO)
       .lte("date", `${year}-12-31`);
     if (timeData) {
-      let workedMin = 0;
-      let urlaubDays = 0;
-      for (const e of timeData) {
-        if (e.day_type === DAY_TYPES.URLAUB) urlaubDays++;
-        if (e.day_type === DAY_TYPES.ARBEITEN && e.start_time && e.end_time) {
-          workedMin += calculateWorkDuration(e.start_time, e.end_time, e.break_minutes as number).net_minutes;
-        }
-      }
+      const { urlaubDays, overtimeMin } = computeOvertime(
+        timeData as OvertimeEntry[],
+        yearStartISO,
+        todayISO,
+      );
       setYearUsedDays(urlaubDays);
-      const targetMin = 174 * 60 * monthsElapsed;
-      setOvertimeMin(Math.max(0, workedMin - targetMin));
+      setOvertimeMin(overtimeMin);
     }
     if (prof) {
       setProfile(prof as Profile);

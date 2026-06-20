@@ -12,12 +12,10 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setAll(cookiesToSet: any[]) {
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }: { name: string; value: string; options: unknown }) =>
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              cookieStore.set(name, value, options as any)
+            cookiesToSet.forEach(({ name, value, options }) =>
+              (cookieStore as unknown as { set: (n: string, v: string, o?: unknown) => void }).set(name, value, options)
             );
           } catch {
             // Server Component — cookies are read-only

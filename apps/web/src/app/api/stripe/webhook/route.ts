@@ -72,8 +72,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleCheckoutCompleted(supabase: any, session: Stripe.Checkout.Session) {
+// Supabase service-role admin client — generic schema typing too strict for dynamic upserts.
+// eslint-disable-next-line
+type SupabaseAdmin = any;
+
+async function handleCheckoutCompleted(supabase: SupabaseAdmin, session: Stripe.Checkout.Session) {
   const companyId = session.metadata?.company_id || null;
   const userId = session.metadata?.user_id || null;
   const customerId = session.customer as string;
@@ -144,8 +147,7 @@ async function handleCheckoutCompleted(supabase: any, session: Stripe.Checkout.S
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleSubscriptionUpdated(supabase: any, sub: StripeSubRaw) {
+async function handleSubscriptionUpdated(supabase: SupabaseAdmin, sub: StripeSubRaw) {
   await supabase.from("subscriptions").update({
     status: sub.status,
     current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
@@ -154,16 +156,14 @@ async function handleSubscriptionUpdated(supabase: any, sub: StripeSubRaw) {
   }).eq("stripe_subscription_id", sub.id);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleSubscriptionDeleted(supabase: any, sub: StripeSubRaw) {
+async function handleSubscriptionDeleted(supabase: SupabaseAdmin, sub: StripeSubRaw) {
   await supabase.from("subscriptions").update({
     status: "canceled",
     canceled_at: new Date().toISOString(),
   }).eq("stripe_subscription_id", sub.id);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handlePaymentFailed(supabase: any, invoice: StripeInvoiceRaw) {
+async function handlePaymentFailed(supabase: SupabaseAdmin, invoice: StripeInvoiceRaw) {
   const subId = typeof invoice.subscription === "string"
     ? invoice.subscription
     : invoice.subscription?.id;

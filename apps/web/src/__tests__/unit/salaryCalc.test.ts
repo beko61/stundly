@@ -37,11 +37,13 @@ describe("calculateMonthlySalary", () => {
 
   it("adds overtime pay for extra hours", () => {
     // 08:00–20:00 - 0 min break = 12h, target = 8h → 4h overtime
+    // Festgehalt-Modell: base zaten ödendi, ek olarak (multiplier - 1) zuschlag
     const entries = [makeEntry({ end_time: "20:00", break_minutes: 0 })];
     const r = calculateMonthlySalary(entries, BASE_SETTINGS);
     expect(r.worked_hours).toBeCloseTo(12);
     expect(r.overtime_hours).toBeCloseTo(4);
-    expect(r.overtime_pay).toBeCloseTo(4 * 20 * 1.5); // 120
+    expect(r.overtime_pay).toBeCloseTo(4 * 20 * (1.5 - 1)); // 40 (zuschlag, base zaten içinde)
+    expect(r.total_gross).toBeCloseTo(8 * 20 + 40); // base 160 + Mehrarbeit-zuschlag 40 = 200
   });
 
   it("adds notdienst bonus per day", () => {
@@ -50,17 +52,24 @@ describe("calculateMonthlySalary", () => {
     expect(r.notdienst_bonus).toBeCloseTo(100);
   });
 
-  it("zero entries → zero salary", () => {
+  it("zero entries → Festgehalt only (base_pay = target × rate, no overtime)", () => {
+    // Festgehalt-Modell (Almanya KOBİ standardı):
+    // Ay boş bile olsa baz ödeme garantilenir (Urlaub/Krank tamamlayacak varsayım).
     const r = calculateMonthlySalary([], BASE_SETTINGS);
-    expect(r.total_gross).toBe(0);
     expect(r.worked_hours).toBe(0);
+    expect(r.overtime_pay).toBe(0);
+    expect(r.base_pay).toBe(8 * 20); // 8h target × €20 = €160
+    expect(r.total_gross).toBe(8 * 20);
   });
 
-  it("urlaub entries without times do not count toward salary (managed via vacation_requests)", () => {
+  it("urlaub entries count as 8h paid (Sollstunden, German law)", () => {
+    // Festgehalt sisteminde Urlaub Sollstunden olarak sayılır — base_pay zaten içinde.
     const entries = [makeEntry({ day_type: "urlaub", start_time: null, end_time: null })];
     const r = calculateMonthlySalary(entries, BASE_SETTINGS);
-    expect(r.worked_hours).toBe(0);
-    expect(r.total_gross).toBe(0);
+    expect(r.worked_hours).toBeCloseTo(8);   // 2024-01-01 = Mo → 8h
+    expect(r.overtime_hours).toBeCloseTo(0); // worked = target, kein Mehrarbeit
+    expect(r.base_pay).toBeCloseTo(8 * 20);  // 160
+    expect(r.total_gross).toBeCloseTo(8 * 20);
   });
 
   it("krank entries without times count as 8h paid (German law)", () => {

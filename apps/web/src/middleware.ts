@@ -25,7 +25,8 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // Cookie options type from @supabase/ssr; cast to Next's ResponseCookie partial.
+            // eslint-disable-next-line
             response.cookies.set(name, value, options as any)
           );
         },

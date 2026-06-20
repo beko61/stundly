@@ -175,7 +175,7 @@ export function AutoFillReports() {
           Bestehende Einträge werden nicht überschrieben.
           {"\n\n"}
           Sobald alle Werktage befüllt sind, wird der Knopf grün
-          und deaktiviert. Nach „Daten zurücksetzen" oder einer
+          und deaktiviert. Nach „Daten zurücksetzen“ oder einer
           Reset-Aktion wird er wieder aktiv.
           {"\n\n"}
           PDF-Monatsberichte findest du in der App unter

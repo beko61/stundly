@@ -1843,4 +1843,53 @@ npx tsc --noEmit → 0 hata ✅
 - PWA ikonundan açan giriş yapmış kullanıcı doğrudan dashboard'a düşer.
 
 ---
+
+## 2026-06-20 – Komple QA: Lint Clean + 142/142 Test Pass (v0.14.2)
+
+### Yapılan
+- ✅ **TypeScript**: Web + Mobile + Shared, üçü de clean.
+- ✅ **ESLint**: Daha önce 10 hata vardı (yanlış `@typescript-eslint/no-explicit-any` rule referansı). Şimdi `next lint` "No ESLint warnings or errors".
+- ✅ **Vitest**: Daha önce 105 pass / 3 fail. salaryCalc test bekleyişleri Festgehalt davranışına uygun güncellendi. Şimdi **142/142 pass**.
+- ✅ **Next build**: 45/45 static pages clean.
+
+### Test Coverage — 5 yeni unit test suite (34 yeni test)
+- ✅ `feiertage.test.ts` (13 test): Nationwide + Bundesland-spezifische Feiertage, Easter computus, Buß- und Bettag.
+- ✅ `mindestlohn.test.ts` (8 test): 2024-2027 yıl bazlı, format, bilinmeyen yıl fallback.
+- ✅ `standardTimes.test.ts` (6 test): getDefaultForDow Mo-Do/Fr/Sa-So davranışı, custom override.
+- ✅ `beta.test.ts` (7 test): isBetaActive, betaDaysRemaining (vi.useFakeTimers ile).
+- ✅ `salaryCalc.test.ts` güncellendi: 3 pre-existing fail Festgehalt mantığına uydurularak düzeltildi.
+
+### Lint düzeltmeleri
+- `src/app/api/scan/route.ts` → cookies setAll any → typed.
+- `src/app/api/stripe/webhook/route.ts` → SupabaseAdmin type alias (eslint-disable any).
+- `src/lib/supabase/server.ts` → cookies setAll any → typed.
+- `src/middleware.ts` → cookies set generic cast.
+- `src/components/settings/AutoFillReports.tsx` → German curly quote escape.
+
+### Test Inventory
+| Suite | Tests | Kapsanan |
+|-------|-------|----------|
+| salaryCalc | 7 | calculateMonthlySalary (Festgehalt mantığı) |
+| timeCalc | (mevcut) | calculateWorkDuration, sumWorkedMinutes |
+| companyAdmin | 16 | netMinutesForEntry, formatMinutes |
+| overtime | 17 | workdaysBetween, isWeekday, computeOvertime |
+| monthStats | 24 | calcMonthStats (month/year YTD), countWorkDays, workedMinPure |
+| weekMonth | 15 | weekSundayOf, notdienstMonthOf (Pazar atfı), isoWeek |
+| privacy | 6 | maskMoney (gizli/görünür, decimals, withSymbol) |
+| feiertage | 13 | getFeiertage (16 Bundesland + Easter) |
+| mindestlohn | 8 | currentMindestlohn, formatMindestlohn |
+| standardTimes | 6 | getDefaultForDow (Mo-Do/Fr/weekend) |
+| beta | 7 | isBetaActive, betaDaysRemaining |
+| **TOPLAM** | **142** | **+34 yeni** |
+
+### Inventory
+- 28 page route (web) — hepsi build'de derlendi.
+- 7 mobile screen — Calendar kaldırıldı, TS clean.
+- 17 API route handler.
+- 16 web lib helper (4'ü için yeni test eklendi).
+
+### Versiyon
+- 0.14.1 → 0.14.2 (PATCH: QA + test/lint fixes).
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

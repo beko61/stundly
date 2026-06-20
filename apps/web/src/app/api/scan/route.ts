@@ -36,11 +36,9 @@ export async function POST(req: NextRequest) {
     {
       cookies: {
         getAll() { return cookieStore.getAll(); },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setAll(cookiesToSet: any[]) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          cookiesToSet.forEach(({ name, value, options }: any) =>
-            (cookieStore as any).set(name, value, options)
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            (cookieStore as unknown as { set: (n: string, v: string, o?: unknown) => void }).set(name, value, options)
           );
         },
       },

@@ -178,6 +178,7 @@ export default function VacationPage() {
     [year, profile?.bundesland]
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, []);
   // Body scroll lock when panel open
   useEffect(() => {

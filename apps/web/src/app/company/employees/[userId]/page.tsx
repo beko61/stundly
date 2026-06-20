@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
+import { VacationDecisionButtons } from "./VacationDecisionButtons";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const WEEKDAYS_SHORT = ["So","Mo","Di","Mi","Do","Fr","Sa"];
@@ -74,10 +75,12 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   // 4) Tüm Urlaubsanträge (zaman sınırı yok)
   const { data: vacations } = await admin
     .from("vacation_requests")
-    .select("id, start_date, end_date, days_count, reason, status, created_at")
+    .select("id, start_date, end_date, days_count, reason, status, created_at, urlaub_art, vertretung, approved_at, rejected_at, rejection_reason")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(20);
+
+  const pendingCount = (vacations ?? []).filter(v => v.status === "pending").length;
 
   // 5) Aggregate
   const entryMap = new Map((entries ?? []).map((e) => [e.date, e]));
@@ -233,9 +236,19 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       </div>
 
       {/* Urlaubsanträge */}
-      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
-        Urlaubsanträge
-      </h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>Urlaubsanträge</h2>
+        {pendingCount > 0 && (
+          <span style={{
+            background: "color-mix(in srgb, var(--yellow) 15%, transparent)",
+            color: "var(--yellow)",
+            fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999,
+            letterSpacing: "0.04em",
+          }}>
+            {pendingCount} ZU PRÜFEN
+          </span>
+        )}
+      </div>
       {(vacations?.length ?? 0) === 0 ? (
         <div className="card" style={{ padding: 24, color: "var(--muted)", fontSize: 13 }}>
           Noch keine Urlaubsanträge.
@@ -244,25 +257,65 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {(vacations ?? []).map((v) => {
             const st = VACATION_STATUS[v.status] ?? { label: v.status, color: "var(--muted)" };
+            const isPending = v.status === "pending";
             return (
               <div key={v.id} className="card" style={{
                 padding: "14px 18px",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
+                borderLeft: `3px solid ${st.color}`,
+                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
                 gap: 12, flexWrap: "wrap",
               }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>
-                    {new Date(v.start_date).toLocaleDateString("de-DE")} – {new Date(v.end_date).toLocaleDateString("de-DE")}
-                    {" · "}{v.days_count} Tage
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>
+                      {new Date(v.start_date).toLocaleDateString("de-DE")} – {new Date(v.end_date).toLocaleDateString("de-DE")}
+                      {" · "}{v.days_count} Tage
+                    </div>
+                    {v.urlaub_art && v.urlaub_art !== "Erholungsurlaub" && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
+                        background: "color-mix(in srgb, var(--accent2) 15%, transparent)",
+                        color: "var(--accent2)",
+                        letterSpacing: "0.04em",
+                      }}>
+                        {v.urlaub_art.toUpperCase()}
+                      </span>
+                    )}
                   </div>
+                  {v.vertretung && (
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                      Vertretung: <strong style={{ color: "var(--text)" }}>{v.vertretung}</strong>
+                    </div>
+                  )}
                   {v.reason && (
                     <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                      „{v.reason}“
+                      „{v.reason}&ldquo;
+                    </div>
+                  )}
+                  {v.status === "rejected" && v.rejection_reason && (
+                    <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>
+                      Begründung: {v.rejection_reason}
                     </div>
                   )}
                   <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>
                     Eingereicht: {new Date(v.created_at).toLocaleDateString("de-DE")}
+                    {v.status === "approved" && v.approved_at && (
+                      <> · Genehmigt: {new Date(v.approved_at).toLocaleDateString("de-DE")}</>
+                    )}
+                    {v.status === "rejected" && v.rejected_at && (
+                      <> · Abgelehnt: {new Date(v.rejected_at).toLocaleDateString("de-DE")}</>
+                    )}
                   </div>
+                  {isPending && (
+                    <div style={{ marginTop: 10 }}>
+                      <VacationDecisionButtons
+                        vacationId={v.id}
+                        startDate={v.start_date}
+                        endDate={v.end_date}
+                        daysCount={v.days_count}
+                      />
+                    </div>
+                  )}
                 </div>
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: "5px 10px", borderRadius: 8,

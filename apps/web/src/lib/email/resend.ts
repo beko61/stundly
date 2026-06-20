@@ -142,6 +142,91 @@ export async function sendWelcomeEmail({
   });
 }
 
+// Urlaubsantrag Entscheidung (Genehmigt/Abgelehnt) maili
+export async function sendVacationDecisionEmail({
+  to,
+  employeeName,
+  decision,
+  startDate,
+  endDate,
+  daysCount,
+  urlaubArt,
+  rejectionReason,
+  decidedByName,
+}: {
+  to: string;
+  employeeName: string;
+  decision: "approved" | "rejected";
+  startDate: string;       // YYYY-MM-DD
+  endDate:   string;
+  daysCount: number;
+  urlaubArt: string | null;
+  rejectionReason?: string | null;
+  decidedByName: string;
+}) {
+  const isApproved = decision === "approved";
+  const accent     = isApproved ? "#34d399" : "#f87171";
+  const title      = isApproved ? "Urlaubsantrag genehmigt" : "Urlaubsantrag abgelehnt";
+  const emoji      = isApproved ? "✅" : "❌";
+  const subject    = isApproved
+    ? `Ihr Urlaubsantrag wurde genehmigt`
+    : `Ihr Urlaubsantrag wurde abgelehnt`;
+
+  function fmt(iso: string): string {
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y}`;
+  }
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f13; color: #e8e8f0; padding: 40px 32px; border-radius: 16px;">
+        <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 32px;">STUNDLY</div>
+
+        <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 12px;">${emoji} ${title}</h1>
+        <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
+          Hallo ${employeeName}, Ihr Urlaubsantrag wurde von <strong style="color: #e8e8f0;">${decidedByName}</strong>
+          ${isApproved ? "<strong style=\"color: #34d399;\">genehmigt</strong>" : "<strong style=\"color: #f87171;\">abgelehnt</strong>"}.
+        </p>
+
+        <div style="background: #18181f; border: 1px solid #2e2e3d; border-left: 3px solid ${accent}; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+            <span style="color: #6b6b80;">Zeitraum</span>
+            <span style="font-weight: 700;">${fmt(startDate)} – ${fmt(endDate)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+            <span style="color: #6b6b80;">Arbeitstage</span>
+            <span style="font-weight: 700;">${daysCount} Tage</span>
+          </div>
+          ${urlaubArt ? `
+          <div style="display: flex; justify-content: space-between; font-size: 13px;">
+            <span style="color: #6b6b80;">Urlaubsart</span>
+            <span style="font-weight: 700;">${urlaubArt}</span>
+          </div>
+          ` : ""}
+        </div>
+
+        ${!isApproved && rejectionReason ? `
+        <div style="background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); border-radius: 12px; padding: 14px 18px; margin-bottom: 24px;">
+          <p style="font-size: 12px; color: #f87171; font-weight: 800; letter-spacing: 1px; margin: 0 0 6px;">BEGRÜNDUNG</p>
+          <p style="font-size: 13px; color: #e8e8f0; line-height: 1.6; margin: 0;">${rejectionReason}</p>
+        </div>
+        ` : ""}
+
+        <a href="${APP_URL}/vacation" style="display: inline-block; background: #7c6af7; color: #fff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 15px;">
+          Zu meinen Anträgen →
+        </a>
+
+        <p style="color: #6b6b80; font-size: 11px; margin-top: 32px; border-top: 1px solid #2e2e3d; padding-top: 16px;">
+          Stundly · DSGVO-konform · Daten in Deutschland (EU)
+        </p>
+      </div>
+    `,
+  });
+}
+
 // Abonelik başladı maili
 export async function sendSubscriptionConfirmationEmail({
   to,

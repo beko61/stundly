@@ -1,5 +1,84 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-21 (49) – v0.17.0: F4 — Admin Vacation Approval
+
+### Hedef
+F4 fazının ilk parçası: company_admin Urlaubsanträge'ı **employee detail page**'de görüp **onaylayabilsin/reddedebilsin**, mitarbeiter de **email** bildirimi alsın.
+
+### Eklenen / değişen
+
+**1) Migration 017 — `017_vacation_approval_fields.sql`**
+- 4 yeni kolon: `approved_at`, `approved_by` (uuid → auth.users), `rejected_at`, `rejection_reason`
+- Yeni RLS policy: `Company admin can update team vacations` — `is_company_member_of_admin(user_id)` helper'ını kullanır (Migration 015'te geldi). Admin AYNI ŞİRKETTEKİ çalışanın vacation_requests kaydını UPDATE edebilir.
+- Idempotent — manuel apply gerekli (Supabase Dashboard)
+
+**2) `lib/email/resend.ts` — yeni `sendVacationDecisionEmail`**
+- Approved + Rejected için tek fonksiyon
+- Stundly dark tema (purple accent), Zeitraum / Tage / Urlaubsart blok
+- Ret durumunda rejection_reason kırmızı blokta gösterilir
+- "Zu meinen Anträgen →" CTA → /vacation
+
+**3) `/api/vacation/[id]/decision` (yeni route)**
+- POST `{ decision: "approved" | "rejected", reason?: string }`
+- Güvenlik zinciri:
+  1. `getCompanyAdminContext` → 403 yoksa
+  2. Antrag bulunmazsa → 404
+  3. Antrag zaten karara bağlandıysa → 409
+  4. Antrag sahibi aynı şirkette değilse → 403
+- Update sonrası fire-and-forget email; email başarısız olsa karar geçerli kalır
+- Update hatasında 500, email gönderilmez
+
+**4) Employee detail page güncellendi**
+- Vacation select genişletildi: urlaub_art, vertretung, approved_at, rejected_at, rejection_reason
+- Pending sayısı header'da yellow chip ("3 ZU PRÜFEN")
+- Her vacation card'a sol kenar accent çubuğu status renginde
+- Pending vacationlar için `<VacationDecisionButtons>` client component:
+  - "✓ Genehmigen" tek tık
+  - "✕ Ablehnen" → açılır panel: reason textarea + Endgültig ablehnen
+  - Loading state + error display + router.refresh()
+- Approved'larda "Genehmigt: TT.MM.YYYY", rejected'larda red "Begründung: …"
+- Urlaubsart Erholungsurlaub harici chip olarak
+
+**5) Test — `decision/__tests__/route.test.ts` (9 case)**
+- 403 — admin değil
+- 400 — decision invalid
+- 404 — antrag yok
+- 409 — zaten karara bağlanmış
+- 403 — cross-company
+- 200 — approve (email gitti, approved_at + approved_by set)
+- 200 — reject (rejection_reason set)
+- 200 — email fail olsa bile karar geçerli
+- 500 — DB update hatası
+
+### Test sonuçları
+- Web TS: ✓ clean
+- ESLint: ✓ No warnings or errors (vacation page useEffect'e disable comment eklendi)
+- Vitest: ✓ **157/157 pass · 13 suite** (148 → 157 — 9 yeni decision route test)
+- Next build: ✓ 45 → 46 route (yeni decision route)
+
+### Değişen dosyalar
+- `supabase/migrations/017_vacation_approval_fields.sql` — YENİ
+- `apps/web/src/lib/email/resend.ts` — sendVacationDecisionEmail eklendi
+- `apps/web/src/app/api/vacation/[id]/decision/route.ts` — YENİ
+- `apps/web/src/app/api/vacation/[id]/decision/__tests__/route.test.ts` — YENİ
+- `apps/web/src/app/company/employees/[userId]/VacationDecisionButtons.tsx` — YENİ
+- `apps/web/src/app/company/employees/[userId]/page.tsx` — UI genişletildi
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — eslint warning fix
+- `apps/web/src/lib/version.ts` — 0.16.1 → 0.17.0 (MINOR — yeni admin özelliği)
+
+### Manuel adım (deploy'da)
+⚠ **Migration 017** Supabase Dashboard SQL Editor'da çalıştırılmalı. Yoksa onay/red butonu DB hatası verir.
+
+### Doğrulama (kullanıcı yapacak)
+1. Çalışan Urlaubsantrag açar
+2. Admin `/company/employees/{userId}` sayfasını açar
+3. Pending Urlaubsantrag'da "✓ Genehmigen" / "✕ Ablehnen" görmeli
+4. Genehmigen tıklayınca: status=approved, çalışan email alır
+5. Ablehnen → reason textarea → reason ile email gider
+6. Sayfa refresh sonrası status badge + tarihler güncel
+
+---
+
 ## 2026-06-21 (48) – v0.16.1: Überstunden Bug Fix (Notdienst + dyn. target)
 
 ### Bulgu (kullanıcı bildirimi: "überstunde hesaplanmamis")

@@ -1817,4 +1817,30 @@ npx tsc --noEmit → 0 hata ✅
 - KW (Kalenderwoche) konsepti weekMonth.ts, NotdienstWeekly.tsx, reports'ta kalmaya devam ediyor — bunlar Kalender route'undan bağımsız.
 
 ---
+
+## 2026-06-20 – Landing PWA Auto-Redirect (v0.14.1)
+
+### Kullanıcı geri bildirimi
+- PWA'yı telefon ekranına ekledi.
+- Uygulamayı tekrar açınca ana sayfa (landing) geliyor.
+- "Anmelden" tıklayınca direkt dashboard'a atıyor — yani **session zaten var**, ama landing kontrol etmiyordu.
+
+### Yapılan
+- ✅ `apps/web/src/app/page.tsx` → Landing artık async server component:
+  - Açılışta `supabase.auth.getUser()` ile session kontrol.
+  - Session varsa `profiles.role` çek:
+    - `super_admin`  → `/superadmin`
+    - `company_admin`→ `/company/dashboard`
+    - diğer (employee/individual) → `/dashboard`
+  - Session yoksa landing normal görünür.
+- Login page'deki aynı rol-bazlı yönlendirme mantığı ile tutarlı.
+
+### Versiyon
+- 0.14.0 → 0.14.1 (PATCH, UX bug fix).
+
+### Sonuç
+- TS clean, next build clean.
+- PWA ikonundan açan giriş yapmış kullanıcı doğrudan dashboard'a düşer.
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

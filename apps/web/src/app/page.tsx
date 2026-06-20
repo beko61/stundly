@@ -1,5 +1,7 @@
 ﻿import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { createClient } from "@/lib/supabase/server";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
 
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
@@ -198,7 +200,23 @@ const faqs = [
   { q: "Gibt es eine mobile App?", a: "Ja. Stundly ist als PWA für iOS und Android verfügbar und funktioniert auch offline." },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // PWA'da ana sayfayı tekrar açan giriş yapmış kullanıcıyı doğrudan rolüne göre yönlendir.
+  // (Telefon ekranından açan kişi "anmelden → dashboard"a gitmek zorunda kalmasın.)
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const role = (profile?.role as string | null) ?? "individual";
+    if (role === "super_admin")        redirect("/superadmin");
+    else if (role === "company_admin") redirect("/company/dashboard");
+    else                                redirect("/dashboard");
+  }
+
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif" }}>
 

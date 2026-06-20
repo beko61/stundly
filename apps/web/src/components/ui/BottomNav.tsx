@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, type CSSProperties } from "react";
 /**
  * Mobile BottomNav — 4 slot:
  *   1. Start              → /dashboard
- *   2. Zeit (grup)        → tıklayınca açılır: Zeit, Urlaub, Kalender
+ *   2. Zeit (grup)        → tıklayınca açılır: Zeit, Urlaub
  *   3. Berichte (grup)    → tıklayınca açılır: Berichte, Gehalt
  *   4. Profil             → /settings
  *
@@ -30,7 +30,6 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { href: "/tracker",  label: "Zeit",     icon: "⏱"  },
       { href: "/vacation", label: "Urlaub",   icon: "🏖" },
-      { href: "/calendar", label: "Kalender", icon: "📅" },
     ],
   },
   {

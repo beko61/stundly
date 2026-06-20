@@ -174,7 +174,7 @@ export default function PricingPage() {
                   "Notdienst-Verwaltung mit Kunden & Adressen",
                   "Lohn- & Steuerberechnung (Netto/Brutto, alle Steuerklassen)",
                   "PDF Monatsbericht — fertig zum Versenden",
-                  "Urlaubsantrag & Kalender",
+                  "Urlaubsantrag mit Signatur & PDF",
                   "JSON / CSV Datenexport",
                   "Mobile App (PWA) — auf jedem Handy installierbar",
                   "DSGVO-konform · EU-Server in Frankfurt",

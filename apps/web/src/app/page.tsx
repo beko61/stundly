@@ -151,7 +151,7 @@ function BrowserMock({ url, children }: { url: string; children: ReactNode }) {
 
 const features = [
   { icon: "⏱️", title: "Arbeitszeiterfassung", desc: "Start, Ende, Pausen – automatische Berechnung inklusive Überstunden und Nachtschichten." },
-  { icon: "📅", title: "Kalender & Übersicht", desc: "Tages-, Monats- und Jahresansicht. Urlaub, Krank, Feiertage auf einen Blick." },
+  { icon: "📊", title: "Monats- & Jahresübersicht", desc: "Detaillierte Auswertung mit Donut-Charts. Urlaub, Krank, Feiertage, Überstunden auf einen Blick." },
   { icon: "💰", title: "Lohnberechnung", desc: "Automatische Gehaltsberechnung mit Überstundenzuschlag, Notdienst und Nachtbonus." },
   { icon: "📄", title: "PDF Export", desc: "Professionelle Berichte und Urlaubsanträge als PDF – direkt per E-Mail versenden." },
   { icon: "🏖️", title: "Urlaubsverwaltung", desc: "Urlaubsanträge erstellen, unterschreiben und als PDF exportieren. BURLG-konform." },

@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TrackerScreen } from '../screens/TrackerScreen';
-import { CalendarScreen } from '../screens/CalendarScreen';
 import { SalaryScreen } from '../screens/SalaryScreen';
 import { ScanScreen } from '../screens/ScanScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -100,8 +99,6 @@ export function MainNavigator() {
     >
       <Tab.Screen name="Tracker" component={TrackerScreen}
         options={{ tabBarLabel: 'Tracker', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⏱️</Text> }} />
-      <Tab.Screen name="Calendar" component={CalendarScreen}
-        options={{ tabBarLabel: 'Kalender', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>📅</Text> }} />
       <Tab.Screen name="Scan" component={ScanScreen}
         options={{ tabBarLabel: 'Scan', tabBarIcon: () => (
           <View style={styles.scanIcon}><Text style={{ color: '#fff', fontSize: 16 }}>📷</Text></View>

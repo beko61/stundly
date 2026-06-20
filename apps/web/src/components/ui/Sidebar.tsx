@@ -20,7 +20,6 @@ const BASE_GROUPS: NavGroup[] = [
     title: "Erfassung",
     items: [
       { href: "/tracker",  label: "Zeiterfassung", icon: "⏱" },
-      { href: "/calendar", label: "Kalender",      icon: "📅" },
       { href: "/vacation", label: "Urlaub",        icon: "🏖" },
     ],
   },

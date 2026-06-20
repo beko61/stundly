@@ -663,11 +663,6 @@ export default function DashboardPage() {
               <span>Urlaub beantragen</span>
               <span className="dash-action-arrow">→</span>
             </Link>
-            <Link href="/calendar" className="dash-action">
-              <span className="dash-action-icon">📅</span>
-              <span>Kalender ansehen</span>
-              <span className="dash-action-arrow">→</span>
-            </Link>
           </div>
         </div>
       </div>

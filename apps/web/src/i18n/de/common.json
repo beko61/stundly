@@ -1,7 +1,6 @@
 {
   "nav": {
     "tracker":  "Tracker",
-    "calendar": "Kalender",
     "salary":   "Gehalt",
     "vacation": "Urlaub",
     "reports":  "Berichte",
@@ -73,11 +72,6 @@
       "approved": "Genehmigt",
       "rejected": "Abgelehnt"
     }
-  },
-  "calendar": {
-    "title":       "Kalender",
-    "monthView":   "Monatsansicht",
-    "yearView":    "Jahresansicht"
   },
   "reports": {
     "title":          "Berichte",

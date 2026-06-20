@@ -1788,4 +1788,33 @@ npx tsc --noEmit → 0 hata ✅
 - Dashboard `notdienstBelongsToMonth` üzerinden çağırıyor, otomatik Pazar atfına geçti.
 
 ---
+
+## 2026-06-20 – Kalender Sekmesi Kaldırıldı (v0.14.0)
+
+### Yapılan
+
+#### Web
+- ✅ `apps/web/src/app/(dashboard)/calendar/` route silindi.
+- ✅ `components/ui/Sidebar.tsx` → Kalender entry kaldırıldı.
+- ✅ `components/ui/BottomNav.tsx` → Zeit grup'tan Kalender child kaldırıldı + comment güncellendi.
+- ✅ `app/(dashboard)/dashboard/page.tsx` → "Kalender ansehen" quick action kaldırıldı.
+- ✅ `app/robots.ts` → `/calendar` disallow listesinden kaldırıldı.
+- ✅ `i18n/de/common.json` → `nav.calendar` ve `calendar` blokları kaldırıldı.
+- ✅ `app/page.tsx` → Landing'deki "Kalender & Übersicht" özellik kartı "Monats- & Jahresübersicht" oldu.
+- ✅ `app/pricing/page.tsx` → "Urlaubsantrag & Kalender" → "Urlaubsantrag mit Signatur & PDF".
+
+#### Mobile
+- ✅ `navigation/MainNavigator.tsx` → Calendar Tab.Screen ve import kaldırıldı.
+- ✅ `screens/CalendarScreen.tsx` silindi.
+- ✅ Mobile bottom tab artık: Tracker · Scan · Gehalt · Mehr (4 sekme).
+
+### Versiyon
+- 0.13.1 → 0.14.0 (MINOR: kullanıcı-görünür değişiklik, sekme kaldırıldı).
+
+### Sonuç
+- Web TS clean, next build clean, `/calendar` route artık yok.
+- Mobile TS clean.
+- KW (Kalenderwoche) konsepti weekMonth.ts, NotdienstWeekly.tsx, reports'ta kalmaya devam ediyor — bunlar Kalender route'undan bağımsız.
+
+---
 > Bu dosya her işlem sonrası otomatik güncellenir. Eski kayıtlar hiçbir zaman silinmez.

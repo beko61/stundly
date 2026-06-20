@@ -9,22 +9,45 @@ import { computeOvertime, type OvertimeEntry } from "@/lib/vacation/overtime";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 
-const STATUS_LABELS: Record<VacationRequest["status"], string> = {
-  pending:  "Ausstehend",
-  approved: "Genehmigt",
-  rejected: "Abgelehnt",
-};
-const STATUS_COLORS: Record<VacationRequest["status"], string> = {
-  pending:  "var(--yellow)",
-  approved: "var(--green)",
-  rejected: "var(--red)",
-};
-
 interface Profile {
   vorname: string; nachname: string; personal_nr: string;
   eintrittsdatum: string; abteilung: string; vorgesetzter: string;
   email: string; company_name: string | null; logo_data: string | null;
   signature_data: string | null; bundesland: string;
+}
+
+// ── Inline SVG Icons ────────────────────────────────────────────────────────
+function Icon({ name, size = 14, color = "currentColor", strokeWidth = 2 }: {
+  name: "plus" | "clock" | "calendar" | "user" | "check" | "chevron-right" | "x"
+      | "flag" | "hourglass" | "edit" | "trash" | "send" | "moon" | "briefcase"
+      | "umbrella" | "alert" | "info";
+  size?: number; color?: string; strokeWidth?: number;
+}) {
+  const paths: Record<string, React.ReactNode> = {
+    plus:        <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+    clock:       <><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></>,
+    calendar:    <><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></>,
+    user:        <><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></>,
+    check:       <polyline points="20 6 9 17 4 12"/>,
+    "chevron-right": <polyline points="9 6 15 12 9 18"/>,
+    x:           <><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></>,
+    flag:        <><path d="M5 21v-18"/><path d="M5 4h13l-2.5 4.5L18 13H5"/></>,
+    hourglass:   <><path d="M6 3h12"/><path d="M6 21h12"/><path d="M6 3v3a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/><path d="M6 21v-3a6 6 0 0 1 6-6 6 6 0 0 1 6 6v3"/></>,
+    edit:        <><path d="M11 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/><polygon points="18 2 22 6 12 16 8 16 8 12"/></>,
+    trash:       <><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
+    send:        <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+    moon:        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>,
+    briefcase:   <><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>,
+    umbrella:    <><path d="M12 2v3"/><path d="M2 12a10 10 0 0 1 20 0"/><path d="M12 12v7a3 3 0 0 1-6 0"/></>,
+    alert:       <><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></>,
+    info:        <><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></>,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0, display: "inline-block", verticalAlign: "middle" }}
+    >{paths[name]}</svg>
+  );
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -33,10 +56,20 @@ function fmtDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
 }
-function fmtDateTime(iso: string | null | undefined): string {
+function fmtDateShort(iso: string): string {
   if (!iso) return "";
   const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.`;
+}
+function fmtRelative(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days === 0) return "heute";
+  if (days === 1) return "gestern";
+  if (days < 7) return `vor ${days} Tagen`;
+  if (days < 30) return `vor ${Math.floor(days / 7)} Wochen`;
+  if (days < 365) return `vor ${Math.floor(days / 30)} Monaten`;
+  return fmtDate(iso);
 }
 function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -50,8 +83,6 @@ function isWeekendISO(iso: string): boolean {
   const d = new Date(iso).getDay();
   return d === 0 || d === 6;
 }
-
-/** Mo-Fr arası iş günleri; Feiertage düşülür (varsa). */
 function calcWorkdays(start: string, end: string, holidays?: Record<string, string>): number {
   if (!start || !end) return 0;
   let count = 0;
@@ -65,8 +96,6 @@ function calcWorkdays(start: string, end: string, holidays?: Record<string, stri
   }
   return count;
 }
-
-/** Date range içindeki Mo-Fr ISO date listesi (Feiertage dahil, tracker urlaub için). */
 function workdayDates(start: string, end: string): string[] {
   if (!start || !end) return [];
   const out: string[] = [];
@@ -79,13 +108,9 @@ function workdayDates(start: string, end: string): string[] {
   }
   return out;
 }
-
-/** [s1,e1] ∩ [s2,e2] var mı? */
 function rangesOverlap(s1: string, e1: string, s2: string, e2: string): boolean {
   return s1 <= e2 && s2 <= e1;
 }
-
-/** Sonraki Brückentag (köprü günü): hafta içi tek gün, bir yanı Feiertag bir yanı hafta sonu/Feiertag. */
 function nextBruckentag(fromISO: string, holidays: Record<string, string>): string | null {
   let cur = fromISO;
   for (let i = 0; i < 365; i++) {
@@ -100,193 +125,49 @@ function nextBruckentag(fromISO: string, holidays: Record<string, string>): stri
   return null;
 }
 
-// ── Donut chart ─────────────────────────────────────────────────────────────
-interface Slice { value: number; color: string; label: string; }
-function DonutChart({ slices, cx = 52, cy = 52, r = 40, stroke = 13 }: {
-  slices: Slice[]; cx?: number; cy?: number; r?: number; stroke?: number;
-}) {
-  const total = slices.reduce((s, sl) => s + sl.value, 0);
-  if (total === 0) return (
-    <svg width={cx * 2} height={cy * 2}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--surface2)" strokeWidth={stroke} />
-    </svg>
-  );
-  const circ = 2 * Math.PI * r;
-  let offset = 0;
-  return (
-    <svg width={cx * 2} height={cy * 2} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--surface2)" strokeWidth={stroke} />
-      {slices.filter(sl => sl.value > 0).map((sl, i) => {
-        const dash = (sl.value / total) * circ;
-        const gap  = circ - dash;
-        const el = (
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none"
-            stroke={sl.color} strokeWidth={stroke}
-            strokeDasharray={`${dash} ${gap}`}
-            strokeDashoffset={-offset}
-            strokeLinecap="butt"
-          />
-        );
-        offset += dash;
-        return el;
-      })}
-    </svg>
-  );
-}
+const URLAUB_ART_COLORS: Record<UrlaubArt, string> = {
+  "Erholungsurlaub":     "var(--accent2)",
+  "Sonderurlaub":        "var(--orange)",
+  "Bildungsurlaub":      "var(--blue)",
+  "Unbezahlter Urlaub":  "var(--muted)",
+  "Elternzeit":          "var(--green)",
+  "Überstundenabbau":    "var(--blue)",
+};
+const URLAUB_ART_SHORT: Record<UrlaubArt, string> = {
+  "Erholungsurlaub":     "ERHOLUNG",
+  "Sonderurlaub":        "SONDER",
+  "Bildungsurlaub":      "BILDUNG",
+  "Unbezahlter Urlaub":  "UNBEZAHLT",
+  "Elternzeit":          "ELTERN",
+  "Überstundenabbau":    "ÜBERSTD.",
+};
 
-// ── Mini Jahres-Kalender (heatmap) ────────────────────────────────────────
-const MONTH_NAMES = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+const STATUS_INFO: Record<VacationRequest["status"], { label: string; color: string; bg: string }> = {
+  pending:  { label: "Wartet",    color: "var(--yellow)", bg: "rgba(251,191,36,0.15)" },
+  approved: { label: "Genehmigt", color: "var(--green)",  bg: "rgba(52,211,153,0.15)" },
+  rejected: { label: "Abgelehnt", color: "var(--red)",    bg: "rgba(248,113,113,0.15)" },
+};
 
-function YearHeatmap({
-  year, urlaubDates, pendingDates, holidays, todayISO,
-}: {
-  year: number;
-  urlaubDates: Set<string>;
-  pendingDates: Set<string>;
-  holidays: Record<string, string>;
-  todayISO: string;
-}) {
-  // Jeder Monat eine Spalte (12), jede Zeile 1-31. Tek SVG; küçük rounded kareler.
-  const cell = 11;
-  const gap = 2;
-  const headerH = 16;
-  const W = 12 * (cell + gap) + 30; // +30 left labels
-  const H = 31 * (cell + gap) + headerH + 4;
-
-  return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-      {/* Month headers */}
-      {MONTH_NAMES.map((mn, m) => (
-        <text
-          key={mn}
-          x={30 + m * (cell + gap) + cell / 2}
-          y={11}
-          fontSize="8"
-          fill="var(--muted)"
-          textAnchor="middle"
-          fontWeight={700}
-        >{mn}</text>
-      ))}
-      {/* Day labels (every 5th) */}
-      {[1, 5, 10, 15, 20, 25, 30].map(day => (
-        <text
-          key={day}
-          x={24}
-          y={headerH + (day - 1) * (cell + gap) + cell / 2 + 3}
-          fontSize="7"
-          fill="var(--muted)"
-          textAnchor="end"
-          fontWeight={600}
-        >{day}</text>
-      ))}
-      {/* Cells */}
-      {Array.from({ length: 12 }, (_, m) => {
-        const daysInMonth = new Date(year, m + 1, 0).getDate();
-        return Array.from({ length: 31 }, (_, d) => {
-          const x = 30 + m * (cell + gap);
-          const y = headerH + d * (cell + gap);
-          if (d >= daysInMonth) return null;
-          const iso = `${year}-${String(m + 1).padStart(2, "0")}-${String(d + 1).padStart(2, "0")}`;
-          const dow = new Date(iso).getDay();
-          const isWE = dow === 0 || dow === 6;
-          const isHoliday = !!holidays[iso];
-          const isUrlaub = urlaubDates.has(iso);
-          const isPending = pendingDates.has(iso);
-          const isToday = iso === todayISO;
-
-          let fill = "var(--surface2)";
-          let stroke = "transparent";
-          let opacity = 1;
-          if (isUrlaub) fill = "var(--blue)";
-          else if (isPending) fill = "var(--yellow)";
-          else if (isHoliday) fill = "color-mix(in srgb, var(--yellow) 35%, transparent)";
-          else if (isWE) { fill = "var(--surface2)"; opacity = 0.45; }
-          if (isToday) stroke = "var(--accent2)";
-
-          const tip = isUrlaub ? `${fmtDate(iso)} — Urlaub`
-                    : isPending ? `${fmtDate(iso)} — Antrag ausstehend`
-                    : isHoliday ? `${fmtDate(iso)} — ${holidays[iso]}`
-                    : isWE ? `${fmtDate(iso)} — Wochenende`
-                    : fmtDate(iso);
-          return (
-            <rect
-              key={`${m}-${d}`}
-              x={x} y={y}
-              width={cell} height={cell}
-              rx={2}
-              fill={fill}
-              fillOpacity={opacity}
-              stroke={stroke}
-              strokeWidth={isToday ? 1.5 : 0}
-            >
-              <title>{tip}</title>
-            </rect>
-          );
-        });
-      })}
-    </svg>
-  );
-}
-
-// ── Status Timeline ─────────────────────────────────────────────────────────
-function StatusTimeline({ req }: { req: VacationRequest }) {
-  const items: { label: string; date: string | null; color: string; done: boolean }[] = [
-    { label: "Beantragt", date: req.created_at, color: "var(--accent2)", done: true },
-  ];
-  if (req.status === "approved") {
-    items.push({ label: "Genehmigt", date: req.approved_at ?? req.created_at, color: "var(--green)", done: true });
-  } else if (req.status === "rejected") {
-    items.push({ label: "Abgelehnt", date: req.rejected_at ?? req.created_at, color: "var(--red)", done: true });
-  } else {
-    const daysOpen = req.created_at
-      ? Math.floor((Date.now() - new Date(req.created_at).getTime()) / 86400000)
-      : 0;
-    items.push({ label: `Wartet seit ${daysOpen}T`, date: null, color: "var(--yellow)", done: false });
-  }
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-      {items.map((it, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{
-            width: 6, height: 6, borderRadius: "50%", background: it.color,
-            opacity: it.done ? 1 : 0.4,
-          }} />
-          <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>
-            {it.label}
-            {it.date && <span style={{ marginLeft: 4, color: it.color }}>· {fmtDateTime(it.date)}</span>}
-          </span>
-          {i < items.length - 1 && (
-            <span style={{ width: 14, height: 1, background: "var(--border)" }} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Main Page ──────────────────────────────────────────────────────────────
+// ── Page ────────────────────────────────────────────────────────────────────
 export default function VacationPage() {
   const [requests,  setRequests]  = useState<VacationRequest[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [showForm,  setShowForm]  = useState(false);
   const [profile,   setProfile]   = useState<Profile | null>(null);
-  const [showHeatmap, setShowHeatmap] = useState(true);
 
-  // Form state
   const [startDate,  setStartDate]  = useState("");
   const [endDate,    setEndDate]    = useState("");
   const [urlaubArt,  setUrlaubArt]  = useState<UrlaubArt>("Erholungsurlaub");
   const [vertretung, setVertretung] = useState("");
   const [bemerkung,  setBemerkung]  = useState("");
-  const [mailTo,        setMailTo]        = useState("");
-  const [saving,        setSaving]        = useState(false);
+  const [mailTo,     setMailTo]     = useState("");
+  const [saving,     setSaving]     = useState(false);
   const [yearUsedDays,  setYearUsedDays]  = useState(0);
   const [overtimeMin,   setOvertimeMin]   = useState(0);
   const [vacTotal,      setVacTotal]      = useState(30);
   const [allUrlaubDates, setAllUrlaubDates] = useState<Set<string>>(new Set());
   const VAC_TOTAL = vacTotal;
 
-  // Signature (draw only)
   const [sigData, setSigData] = useState<string | null>(null);
   const sigRef = useRef<SignatureCanvas>(null);
 
@@ -298,6 +179,15 @@ export default function VacationPage() {
   );
 
   useEffect(() => { void load(); }, []);
+  // Body scroll lock when panel open
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [showForm]);
 
   async function load() {
     setLoading(true);
@@ -316,7 +206,6 @@ export default function VacationPage() {
     if (salary?.urlaub_anspruch) setVacTotal(Number(salary.urlaub_anspruch));
     if (reqs) setRequests(reqs as VacationRequest[]);
 
-    // Urlaub + overtime
     const yearStartISO = `${year}-01-01`;
     const { data: timeData } = await supabase
       .from("time_entries")
@@ -324,7 +213,6 @@ export default function VacationPage() {
       .eq("user_id", user.id)
       .gte("date", yearStartISO)
       .lte("date", `${year}-12-31`);
-
     if (timeData) {
       const { urlaubDays, overtimeMin } = computeOvertime(
         timeData as OvertimeEntry[],
@@ -333,7 +221,6 @@ export default function VacationPage() {
       );
       setYearUsedDays(urlaubDays);
       setOvertimeMin(overtimeMin);
-      // Heatmap için tüm urlaub ISO setleri
       const s = new Set<string>();
       for (const e of timeData as { date: string; day_type: string | null }[]) {
         if (e.day_type === "urlaub") s.add(e.date);
@@ -348,7 +235,42 @@ export default function VacationPage() {
     setLoading(false);
   }
 
-  // ── Validation ─────────────────────────────────────────────────────────
+  // ── Computed ──────────────────────────────────────────────────────────────
+  const remainingDays = VAC_TOTAL - yearUsedDays;
+  const overtimeDays  = Math.floor(overtimeMin / 60 / 8);
+  const overtimeHours = Math.round(overtimeMin / 60 * 10) / 10;
+  const totalAvailable = remainingDays + overtimeDays;
+  const usedPercent = VAC_TOTAL > 0 ? Math.round((yearUsedDays / VAC_TOTAL) * 100) : 0;
+  const remainingPercent = 100 - usedPercent;
+
+  const pendingCount = requests.filter(r => r.status === "pending").length;
+
+  // Ay başına urlaub gün sayısı
+  const monthCounts = useMemo(() => {
+    const c = new Array(12).fill(0);
+    for (const iso of allUrlaubDates) {
+      const m = parseInt(iso.slice(5, 7), 10) - 1;
+      if (m >= 0 && m < 12) c[m]++;
+    }
+    return c;
+  }, [allUrlaubDates]);
+
+  const maxMonthCount = Math.max(1, ...monthCounts);
+  const currentMonth = new Date().getMonth();
+
+  // Sonraki urlaub (bugünden sonra, pending veya approved)
+  const nextVacation = useMemo(() => {
+    const future = requests
+      .filter(r => r.status !== "rejected" && r.start_date >= todayISO)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    return future[0] ?? null;
+  }, [requests, todayISO]);
+
+  const daysUntilNext = nextVacation
+    ? Math.ceil((new Date(nextVacation.start_date).getTime() - Date.now()) / 86400000)
+    : null;
+
+  // ── Validation ────────────────────────────────────────────────────────────
   interface Validation {
     kind: "ok" | "warn" | "error";
     rawWorkdays: number;
@@ -357,20 +279,17 @@ export default function VacationPage() {
     overlaps: VacationRequest[];
     inPast: boolean;
     insufficient: boolean;
-    totalAvailable: number;
-    msg: string;
+    totalAvailableForArt: number;
   }
   const validation = useMemo<Validation | null>(() => {
     if (!startDate || !endDate) return null;
-    const base: Validation = {
-      kind: "ok", rawWorkdays: 0, netWorkdays: 0,
-      feiertageInRange: [], overlaps: [], inPast: false,
-      insufficient: false, totalAvailable: 0, msg: "",
-    };
     if (endDate < startDate) {
-      return { ...base, kind: "error", msg: "Endedatum liegt vor Startdatum." };
+      return {
+        kind: "error", rawWorkdays: 0, netWorkdays: 0,
+        feiertageInRange: [], overlaps: [], inPast: false,
+        insufficient: false, totalAvailableForArt: 0,
+      };
     }
-
     const rawWorkdays = calcWorkdays(startDate, endDate);
     const netWorkdays = calcWorkdays(startDate, endDate, holidays);
     const feiertageInRange: string[] = [];
@@ -381,64 +300,42 @@ export default function VacationPage() {
       if (holidays[iso] && !isWeekendISO(iso)) feiertageInRange.push(`${holidays[iso]} (${fmtDate(iso)})`);
       cur.setDate(cur.getDate() + 1);
     }
-
     const overlaps = requests.filter(r =>
       r.status !== "rejected" && rangesOverlap(startDate, endDate, r.start_date, r.end_date)
     );
-
     const inPast = startDate < todayISO;
-
-    const remaining = VAC_TOTAL - yearUsedDays;
-    const overtimeDays = Math.floor(overtimeMin / 60 / 8);
-    const totalAvailable = urlaubArt === "Überstundenabbau" ? overtimeDays : remaining;
-    const insufficient = urlaubArt !== "Unbezahlter Urlaub"
-      && urlaubArt !== "Elternzeit"
-      && urlaubArt !== "Sonderurlaub"
-      && netWorkdays > totalAvailable;
-
+    const totalAvailableForArt = urlaubArt === "Überstundenabbau" ? overtimeDays : remainingDays;
+    const insufficient = !["Unbezahlter Urlaub", "Elternzeit", "Sonderurlaub"].includes(urlaubArt)
+      && netWorkdays > totalAvailableForArt;
     const kind: Validation["kind"] = (overlaps.length > 0 || insufficient) ? "error"
                 : (feiertageInRange.length > 0 || inPast) ? "warn"
                 : "ok";
-    return { kind, rawWorkdays, netWorkdays, feiertageInRange, overlaps, inPast, insufficient, totalAvailable, msg: "" };
-  }, [startDate, endDate, requests, holidays, yearUsedDays, overtimeMin, urlaubArt, todayISO, VAC_TOTAL]);
+    return { kind, rawWorkdays, netWorkdays, feiertageInRange, overlaps, inPast, insufficient, totalAvailableForArt };
+  }, [startDate, endDate, requests, holidays, urlaubArt, todayISO, remainingDays, overtimeDays]);
 
-  const days = validation && validation.kind !== "error"
-    ? validation.netWorkdays
-    : calcWorkdays(startDate, endDate, holidays);
+  const days = validation ? validation.netWorkdays : 0;
 
-  // ── Quick presets ──────────────────────────────────────────────────────
+  // ── Quick presets ─────────────────────────────────────────────────────────
   function applyPreset(kind: "today" | "tomorrow" | "1w" | "2w" | "bruecke") {
     if (kind === "today") {
-      setStartDate(todayISO);
-      setEndDate(todayISO);
+      setStartDate(todayISO); setEndDate(todayISO);
     } else if (kind === "tomorrow") {
-      const t = addDays(todayISO, 1);
-      setStartDate(t);
-      setEndDate(t);
+      const t = addDays(todayISO, 1); setStartDate(t); setEndDate(t);
     } else if (kind === "1w") {
-      const s = addDays(todayISO, 1);
-      setStartDate(s);
-      setEndDate(addDays(s, 6));
+      const s = addDays(todayISO, 1); setStartDate(s); setEndDate(addDays(s, 6));
     } else if (kind === "2w") {
-      const s = addDays(todayISO, 1);
-      setStartDate(s);
-      setEndDate(addDays(s, 13));
+      const s = addDays(todayISO, 1); setStartDate(s); setEndDate(addDays(s, 13));
     } else if (kind === "bruecke") {
       const b = nextBruckentag(todayISO, holidays);
-      if (b) {
-        setStartDate(b);
-        setEndDate(b);
-      } else {
-        alert("Kein Brückentag in den nächsten 12 Monaten gefunden.");
-      }
+      if (b) { setStartDate(b); setEndDate(b); }
+      else alert("Kein Brückentag in den nächsten 12 Monaten gefunden.");
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (validation?.kind === "error") {
-      const proceed = confirm("Es gibt Warnungen. Trotzdem einreichen?");
-      if (!proceed) return;
+      if (!confirm("Es gibt Warnungen. Trotzdem einreichen?")) return;
     }
     setSaving(true);
     const supabase = createClient();
@@ -456,26 +353,16 @@ export default function VacationPage() {
       vertretung: vertretung || null,
       status:     "pending",
     });
-
-    // time_entries sync
     const dates = workdayDates(startDate, endDate);
     if (dates.length > 0) {
       const rows = dates.map(date => ({
-        user_id:        userId,
-        date,
-        day_type:       "urlaub" as const,
-        start_time:     null,
-        end_time:       null,
-        break_minutes:  0,
-        is_night_shift: false,
-        note:           bemerkung || null,
-        tags:           [] as string[],
+        user_id: userId, date, day_type: "urlaub" as const,
+        start_time: null, end_time: null, break_minutes: 0,
+        is_night_shift: false, note: bemerkung || null, tags: [] as string[],
       }));
       await supabase.from("time_entries").upsert(rows, { onConflict: "user_id,date" });
     }
-
-    setSaving(false);
-    setShowForm(false);
+    setSaving(false); setShowForm(false);
     setStartDate(""); setEndDate(""); setBemerkung(""); setVertretung("");
     void load();
   }
@@ -490,8 +377,7 @@ export default function VacationPage() {
     if (toDelete && userId) {
       const dates = workdayDates(toDelete.start_date, toDelete.end_date);
       if (dates.length > 0) {
-        await supabase
-          .from("time_entries").delete()
+        await supabase.from("time_entries").delete()
           .eq("user_id", userId).eq("day_type", "urlaub").in("date", dates);
       }
     }
@@ -505,55 +391,35 @@ export default function VacationPage() {
   }
 
   function pdfRow(doc: import("jspdf").jsPDF, label: string, val: string, y: number) {
-    doc.setFontSize(9);
-    doc.setTextColor(107, 107, 128);
-    doc.text(label, 20, y);
-    doc.setTextColor(30, 30, 40);
-    doc.setFontSize(10);
-    doc.text(val, 75, y);
+    doc.setFontSize(9); doc.setTextColor(107, 107, 128); doc.text(label, 20, y);
+    doc.setTextColor(30, 30, 40); doc.setFontSize(10); doc.text(val, 75, y);
   }
 
   async function generatePDF() {
     const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const p = profile;
-
     doc.setFillColor(26, 26, 46);
     doc.rect(0, 0, 210, 38, "F");
     if (p?.logo_data) {
       try { doc.addImage(p.logo_data, "PNG", 160, 8, 32, 16); } catch { /* ignore */ }
     }
-    doc.setFontSize(10);
-    doc.setTextColor(196, 132, 252);
+    doc.setFontSize(10); doc.setTextColor(196, 132, 252);
     const companyLine = p?.company_name ? `STUNDLY — ${p.company_name}` : "STUNDLY";
     doc.text(companyLine, 20, 16);
-    doc.setFontSize(20);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.text("Urlaubsantrag", 20, 30);
-    doc.setFont("helvetica", "normal");
-
+    doc.setFontSize(20); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
+    doc.text("Urlaubsantrag", 20, 30); doc.setFont("helvetica", "normal");
     let y = 50;
-
-    doc.setFillColor(240, 240, 245);
-    doc.rect(15, y - 6, 180, 52, "F");
-    doc.setFontSize(8);
-    doc.setTextColor(107, 107, 128);
-    doc.text("MITARBEITER", 20, y);
-    y += 6;
+    doc.setFillColor(240, 240, 245); doc.rect(15, y - 6, 180, 52, "F");
+    doc.setFontSize(8); doc.setTextColor(107, 107, 128); doc.text("MITARBEITER", 20, y); y += 6;
     pdfRow(doc, "Name, Vorname:",  `${p?.nachname ?? ""}, ${p?.vorname ?? ""}`.replace(/^,\s*|,\s*$/, "").trim() || "—", y); y += 7;
     pdfRow(doc, "Personal-Nr.:",   p?.personal_nr    ?? "—", y); y += 7;
     pdfRow(doc, "Eintrittsdatum:", p?.eintrittsdatum ?? "—", y); y += 7;
     pdfRow(doc, "Abteilung:",      p?.abteilung      ?? "—", y); y += 7;
     pdfRow(doc, "Vorgesetzte/r:",  p?.vorgesetzter   ?? "—", y); y += 7;
     y += 6;
-
-    doc.setFillColor(240, 240, 245);
-    doc.rect(15, y - 6, 180, 59, "F");
-    doc.setFontSize(8);
-    doc.setTextColor(107, 107, 128);
-    doc.text("URLAUBSDATEN", 20, y);
-    y += 6;
+    doc.setFillColor(240, 240, 245); doc.rect(15, y - 6, 180, 59, "F");
+    doc.setFontSize(8); doc.setTextColor(107, 107, 128); doc.text("URLAUBSDATEN", 20, y); y += 6;
     pdfRow(doc, "Von:",          fmtDate(startDate),         y); y += 7;
     pdfRow(doc, "Bis:",          fmtDate(endDate),           y); y += 7;
     pdfRow(doc, "Arbeitstage:",  `${days} Tage`,             y); y += 7;
@@ -561,29 +427,21 @@ export default function VacationPage() {
     pdfRow(doc, "Vertretung:",   vertretung || "—",           y); y += 7;
     pdfRow(doc, "Bemerkungen:",  bemerkung || "—",            y); y += 7;
     y += 10;
-
     doc.setDrawColor(107, 107, 128);
-    doc.line(20, y + 20, 90, y + 20);
-    doc.line(120, y + 20, 190, y + 20);
-    doc.setFontSize(8);
-    doc.setTextColor(107, 107, 128);
+    doc.line(20, y + 20, 90, y + 20); doc.line(120, y + 20, 190, y + 20);
+    doc.setFontSize(8); doc.setTextColor(107, 107, 128);
     doc.text("Datum, Unterschrift Arbeitnehmer", 20, y + 25);
     doc.text("Datum, Unterschrift Arbeitgeber",  120, y + 25);
     if (sigData) {
       try { doc.addImage(sigData, "PNG", 20, y, 60, 18); } catch { /* ignore */ }
     }
     const heute = new Date().toLocaleDateString("de-DE");
-    doc.setFontSize(9);
-    doc.setTextColor(30, 30, 40);
+    doc.setFontSize(9); doc.setTextColor(30, 30, 40);
     doc.text(`${heute},`, 20, y + 30);
-
-    doc.setFontSize(8);
-    doc.setTextColor(107, 107, 128);
+    doc.setFontSize(8); doc.setTextColor(107, 107, 128);
     doc.text(`Erstellt am ${heute} · ${STUNDLY_VERSION_LABEL}`, 20, 285);
-
     const fname = `${p?.nachname ?? "Urlaub"}_${startDate}_${endDate}`.replace(/\s/g, "_");
     doc.save(`Urlaubsantrag_${fname}.pdf`);
-
     if (mailTo) {
       const subject = encodeURIComponent(`Urlaubsantrag ${p?.vorname ?? ""} ${p?.nachname ?? ""} — ${fmtDate(startDate)} bis ${fmtDate(endDate)}`);
       const body = encodeURIComponent(
@@ -593,460 +451,601 @@ export default function VacationPage() {
     }
   }
 
-  const remainingDays = VAC_TOTAL - yearUsedDays;
-  const overtimeDays  = Math.floor(overtimeMin / 60 / 8);
-  const totalDays     = remainingDays + overtimeDays;
-
-  const chart1Slices: Slice[] = [
-    { value: yearUsedDays,  color: "var(--accent2)", label: "Genommen" },
-    { value: remainingDays, color: "var(--green)",   label: "Verfügbar" },
-  ];
-  const chart2Slices: Slice[] = [
-    { value: yearUsedDays,  color: "var(--accent2)", label: "Genommen" },
-    { value: remainingDays, color: "var(--green)",   label: "Urlaub" },
-    { value: overtimeDays,  color: "var(--blue)",    label: "Überstunden" },
-  ];
-
-  // Pending dates set for heatmap
-  const pendingDates = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of requests) {
-      if (r.status !== "pending") continue;
-      const dates = workdayDates(r.start_date, r.end_date);
-      for (const d of dates) s.add(d);
-    }
-    return s;
-  }, [requests]);
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="page-header">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800 }}>Urlaubsanträge</h1>
-          <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ padding: "8px 14px", fontSize: 12 }}>
-            + Antrag
-          </button>
-        </div>
-      </div>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 16px 60px" }}>
 
-      {/* ── Vacation Charts ── */}
-      <div style={{ padding: "16px 16px 0", maxWidth: 960, margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {/* Chart 1 – Jahresurlaub */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 14 }}>
-            <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-              Jahresurlaub
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", fontFamily: "'Syne',sans-serif" }}>
+              URLAUB · {year}
             </div>
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <DonutChart slices={chart1Slices} />
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                pointerEvents: "none",
-              }}>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--green)", lineHeight: 1 }}>
-                  {remainingDays}
-                </span>
-                <span style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginTop: 2 }}>
-                  /{VAC_TOTAL}T
-                </span>
-              </div>
-            </div>
-            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
-              {chart1Slices.map(s => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>{s.label}</span>
-                  </div>
-                  <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: s.color }}>
-                    {s.value}T
-                  </span>
-                </div>
-              ))}
-            </div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 2, fontFamily: "'Syne',sans-serif" }}>
+              Deine freie Zeit
+            </h1>
           </div>
-
-          {/* Chart 2 – Gesamtguthaben */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 14 }}>
-            <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-              Gesamtguthaben
-            </div>
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <DonutChart slices={chart2Slices} />
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                pointerEvents: "none",
-              }}>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--blue)", lineHeight: 1 }}>
-                  {totalDays}
-                </span>
-                <span style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginTop: 2 }}>
-                  Tage
-                </span>
-              </div>
-            </div>
-            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
-              {chart2Slices.filter(s => s.value > 0).map(s => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>{s.label}</span>
-                  </div>
-                  <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: s.color }}>
-                    {s.value}T
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Overtime detail */}
-        {overtimeDays > 0 && (
-          <div style={{
-            marginTop: 10,
-            background: "color-mix(in srgb, var(--blue) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)",
-            borderRadius: 12, padding: "10px 14px",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-          }}>
-            <div>
-              <div style={{ fontSize: 10, color: "var(--blue)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Überstunden → Urlaubstage
-              </div>
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                {Math.round(overtimeMin / 60 * 10) / 10}h ÷ 8 = {overtimeDays} Zusatztage
-              </div>
-            </div>
-            <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 800, color: "var(--blue)" }}>
-              +{overtimeDays}T
-            </span>
-          </div>
-        )}
-
-        {/* ── Mini Jahres-Kalender (Heatmap) ── */}
-        <div style={{
-          marginTop: 12, background: "var(--surface)", border: "1px solid var(--border)",
-          borderRadius: 16, padding: 14,
-        }}>
           <button
-            onClick={() => setShowHeatmap(v => !v)}
+            onClick={() => setShowForm(true)}
             style={{
-              all: "unset", cursor: "pointer", width: "100%",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              marginBottom: showHeatmap ? 10 : 0,
+              padding: "10px 18px", background: "var(--accent2)", color: "#1a1a2e",
+              border: "none", borderRadius: 999, fontWeight: 800, fontSize: 12,
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              fontFamily: "'Syne',sans-serif",
+              boxShadow: "0 4px 16px color-mix(in srgb, var(--accent2) 35%, transparent)",
             }}
           >
-            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Jahresübersicht {year}
-            </div>
-            <span style={{ fontSize: 14, color: "var(--muted)" }}>{showHeatmap ? "▾" : "▸"}</span>
+            <Icon name="plus" size={14} color="#1a1a2e" strokeWidth={2.5} />
+            Neuer Antrag
           </button>
-          {showHeatmap && (
-            <>
-              <YearHeatmap
-                year={year}
-                urlaubDates={allUrlaubDates}
-                pendingDates={pendingDates}
-                holidays={holidays}
-                todayISO={todayISO}
-              />
-              <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 12, fontSize: 10, color: "var(--muted)" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--blue)" }} /> Urlaub genommen
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--yellow)" }} /> Antrag ausstehend
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "color-mix(in srgb, var(--yellow) 35%, transparent)" }} /> Feiertag
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--surface2)", opacity: 0.5 }} /> Wochenende
-                </span>
-              </div>
-            </>
-          )}
         </div>
-      </div>
 
-      <div style={{ padding: "14px 16px", paddingBottom: 40, maxWidth: 960, margin: "0 auto" }}>
+        {/* ── HERO CARD ─────────────────────────────────────────────────── */}
+        <div style={{
+          background: "linear-gradient(135deg, color-mix(in srgb, var(--accent2) 18%, var(--surface)) 0%, color-mix(in srgb, var(--blue) 12%, var(--surface)) 100%)",
+          border: "1px solid color-mix(in srgb, var(--accent2) 25%, transparent)",
+          borderRadius: 18, padding: "22px 24px", marginBottom: 14,
+          position: "relative", overflow: "hidden",
+        }}>
+          <div style={{
+            position: "absolute", top: -40, right: -30, width: 180, height: 180,
+            background: "radial-gradient(circle, color-mix(in srgb, var(--accent2) 35%, transparent) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }} />
+          <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div>
+              <div style={{ fontSize: 10, color: "color-mix(in srgb, var(--accent2) 75%, white)", fontWeight: 800, letterSpacing: "0.1em", marginBottom: 4 }}>
+                VERFÜGBAR
+              </div>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 64, fontWeight: 500, lineHeight: 1, color: "white" }}>
+                {totalAvailable}
+                <span style={{ fontSize: 22, color: "color-mix(in srgb, var(--accent2) 75%, white)", marginLeft: 6 }}>Tage</span>
+              </div>
+              <div style={{ fontSize: 12, color: "color-mix(in srgb, var(--accent2) 70%, white)", marginTop: 8 }}>
+                {yearUsedDays} genommen
+                {overtimeDays > 0 && (
+                  <>
+                    <span style={{ margin: "0 6px", opacity: 0.4 }}>·</span>
+                    <span style={{ color: "var(--blue)" }}>+{overtimeDays} aus Überstunden</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div style={{ position: "relative" }}>
+              <svg width="84" height="84" viewBox="0 0 84 84">
+                <circle cx="42" cy="42" r="36" fill="none"
+                  stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+                <circle cx="42" cy="42" r="36" fill="none"
+                  stroke="var(--accent2)" strokeWidth="6" strokeLinecap="round"
+                  strokeDasharray={`${(remainingPercent / 100) * 2 * Math.PI * 36} ${2 * Math.PI * 36}`}
+                  transform="rotate(-90 42 42)"
+                />
+                <text x="42" y="47" textAnchor="middle" fontSize="14" fill="white"
+                  fontWeight="700" fontFamily="'DM Mono', monospace">
+                  {remainingPercent}%
+                </text>
+              </svg>
+            </div>
+          </div>
+
+          {/* Progress pill bar */}
+          <div style={{
+            marginTop: 18, height: 6, background: "rgba(255,255,255,0.06)",
+            borderRadius: 999, overflow: "hidden", display: "flex",
+          }}>
+            <div style={{ width: `${usedPercent}%`, background: "var(--accent2)", borderRadius: 999 }} />
+          </div>
+          <div style={{
+            display: "flex", justifyContent: "space-between", marginTop: 6,
+            fontSize: 10, color: "var(--muted)", fontWeight: 600,
+          }}>
+            <span>{yearUsedDays} von {VAC_TOTAL}</span>
+            <span>{VAC_TOTAL} Tage Jahresanspruch</span>
+          </div>
+        </div>
+
+        {/* ── 12-MONTH BAR TIMELINE ────────────────────────────────────── */}
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 14, padding: "14px 16px", marginBottom: 14,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em" }}>
+              JAHR · {year}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--muted)" }}>
+              {allUrlaubDates.size} Urlaubstage gesamt
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 3, alignItems: "stretch", height: 56 }}>
+            {monthCounts.map((c, m) => {
+              const heightPct = c === 0 ? 0 : Math.max(8, (c / maxMonthCount) * 100);
+              const isCurrent = m === currentMonth;
+              return (
+                <div key={m} style={{
+                  flex: 1, position: "relative",
+                  background: isCurrent ? "color-mix(in srgb, var(--accent2) 18%, transparent)" : "rgba(255,255,255,0.04)",
+                  border: isCurrent ? "1px solid var(--accent2)" : "1px solid transparent",
+                  borderRadius: 4, display: "flex", flexDirection: "column", justifyContent: "flex-end",
+                }} title={`${c} Urlaubstage`}>
+                  {c > 0 && (
+                    <div style={{
+                      height: `${heightPct}%`,
+                      background: "var(--blue)",
+                      borderRadius: 4,
+                      display: "flex", alignItems: "flex-start", justifyContent: "center",
+                      paddingTop: heightPct > 30 ? 4 : 0,
+                    }}>
+                      {heightPct > 30 && (
+                        <span style={{ fontSize: 9, color: "#0f0f13", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{c}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{
+            display: "flex", justifyContent: "space-between", marginTop: 6,
+            fontSize: 9, color: "var(--muted)", fontWeight: 700,
+          }}>
+            {["J","F","M","A","M","J","J","A","S","O","N","D"].map((l, i) => (
+              <span key={i} style={{ flex: 1, textAlign: "center", color: i === currentMonth ? "var(--accent2)" : "var(--muted)" }}>{l}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 3 KPI CARDS ─────────────────────────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 18 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
+              <Icon name="clock" size={11} /> ÜBERSTUNDEN
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--blue)" }}>
+              {overtimeHours}h
+            </div>
+            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+              = {overtimeDays} Tag{overtimeDays === 1 ? "" : "e"}
+            </div>
+          </div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
+              <Icon name="hourglass" size={11} /> WARTEN
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: pendingCount > 0 ? "var(--yellow)" : "var(--muted)" }}>
+              {pendingCount}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+              {pendingCount === 1 ? "Antrag offen" : "Anträge offen"}
+            </div>
+          </div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
+              <Icon name="flag" size={11} /> NÄCHSTER
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--text)" }}>
+              {nextVacation ? (daysUntilNext === 0 ? "heute" : `in ${daysUntilNext}T`) : "—"}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+              {nextVacation ? fmtDateShort(nextVacation.start_date) : "Keiner geplant"}
+            </div>
+          </div>
+        </div>
+
+        {/* ── ANTRAG LIST ──────────────────────────────────────────────── */}
+        <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", marginBottom: 10, paddingLeft: 4 }}>
+          DEINE ANTRÄGE
+        </div>
+
         {loading ? (
           <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0" }}>Laden...</div>
         ) : requests.length === 0 ? (
           <div style={{
-            background: "linear-gradient(135deg, color-mix(in srgb, var(--blue) 12%, var(--surface)) 0%, color-mix(in srgb, var(--accent2) 8%, var(--surface)) 100%)",
-            border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)",
-            borderRadius: 16, padding: "28px 22px", textAlign: "center",
+            background: "color-mix(in srgb, var(--accent2) 8%, var(--surface))",
+            border: "1px dashed color-mix(in srgb, var(--accent2) 30%, transparent)",
+            borderRadius: 16, padding: "32px 22px", textAlign: "center",
           }}>
-            <div style={{ fontSize: 44, marginBottom: 12 }}>🏖</div>
-            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
-              Noch keine Urlaubsanträge
+            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: "50%", background: "color-mix(in srgb, var(--accent2) 15%, transparent)", marginBottom: 14 }}>
+              <Icon name="umbrella" size={28} color="var(--accent2)" />
             </div>
-            <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 18, maxWidth: 420, margin: "0 auto 18px" }}>
-              Erstelle deinen ersten Urlaubsantrag. Stundly generiert das PDF mit deiner Unterschrift und füllt automatisch die Tracker-Tage als <strong style={{ color: "var(--blue)" }}>Urlaub</strong>.
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Noch keine Anträge</div>
+            <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 18, maxWidth: 360, margin: "0 auto 18px" }}>
+              Plane deinen ersten Urlaub. Stundly generiert das PDF und füllt die Tracker-Tage automatisch.
             </p>
             <button
               onClick={() => setShowForm(true)}
               style={{
-                padding: "12px 24px", background: "var(--blue)", color: "white",
-                border: "none", borderRadius: 10, fontFamily: "'Syne',sans-serif",
-                fontSize: 13, fontWeight: 800, cursor: "pointer",
+                padding: "10px 20px", background: "var(--accent2)", color: "#1a1a2e",
+                border: "none", borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: "pointer",
+                fontFamily: "'Syne',sans-serif",
               }}
-            >
-              ➕ Ersten Antrag erstellen
-            </button>
+            >+ Ersten Antrag</button>
           </div>
         ) : (
-          requests.map((r) => (
-            <div key={r.id} className="card" style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                    {fmtDate(r.start_date)} – {fmtDate(r.end_date)}
-                  </div>
-                  <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                    {r.days_count} Tage
-                    {r.urlaub_art && r.urlaub_art !== "Erholungsurlaub" && (
-                      <span style={{
-                        marginLeft: 8,
-                        background: "color-mix(in srgb, var(--accent2) 15%, transparent)",
-                        color: "var(--accent2)", padding: "2px 8px", borderRadius: 10,
-                        fontSize: 10, fontWeight: 700,
-                      }}>
-                        {r.urlaub_art}
-                      </span>
-                    )}
-                  </div>
-                  {r.vertretung && (
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                      <span style={{ fontWeight: 700 }}>Vertretung:</span> {r.vertretung}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {requests.map(r => {
+              const status = STATUS_INFO[r.status];
+              const art = (r.urlaub_art as UrlaubArt) ?? "Erholungsurlaub";
+              const startD = new Date(r.start_date);
+              const monthLabel = startD.toLocaleString("de-DE", { month: "short" }).toUpperCase();
+              const dayNum = String(startD.getDate()).padStart(2, "0");
+              const sameMonth = r.start_date.slice(0, 7) === r.end_date.slice(0, 7);
+              const rangeLabel = sameMonth
+                ? `${startD.getDate()}. — ${new Date(r.end_date).getDate()}. ${startD.toLocaleString("de-DE", { month: "long" })}`
+                : `${fmtDateShort(r.start_date)} — ${fmtDateShort(r.end_date)}`;
+              const daysOpen = r.status === "pending" && r.created_at
+                ? Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86400000)
+                : 0;
+
+              return (
+                <div key={r.id} style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderLeft: `3px solid ${status.color}`,
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                  display: "flex", alignItems: "center", gap: 14,
+                }}>
+                  {/* Date block */}
+                  <div style={{ flexShrink: 0, textAlign: "center", minWidth: 48 }}>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 500, lineHeight: 1, color: "white" }}>
+                      {dayNum}
                     </div>
-                  )}
-                  {r.reason && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{r.reason}</div>}
-                  <StatusTimeline req={r} />
+                    <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginTop: 2 }}>
+                      {monthLabel}
+                    </div>
+                  </div>
+                  <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
+
+                  {/* Middle */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+                        {rangeLabel}
+                      </div>
+                      <span style={{
+                        fontSize: 9, padding: "2px 8px", borderRadius: 999, fontWeight: 700,
+                        background: `color-mix(in srgb, ${URLAUB_ART_COLORS[art]} 15%, transparent)`,
+                        color: URLAUB_ART_COLORS[art],
+                        letterSpacing: "0.04em",
+                      }}>
+                        {URLAUB_ART_SHORT[art]}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", display: "flex", gap: 14, flexWrap: "wrap" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <Icon name="calendar" size={11} /> {r.days_count} Tag{r.days_count === 1 ? "" : "e"}
+                      </span>
+                      {r.vertretung && (
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Icon name="user" size={11} /> {r.vertretung}
+                        </span>
+                      )}
+                      {r.reason && !r.vertretung && (
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
+                          {r.reason}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: status + delete */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: 10, padding: "4px 10px", borderRadius: 999, fontWeight: 700,
+                      background: status.bg, color: status.color,
+                      display: "flex", alignItems: "center", gap: 4,
+                    }}>
+                      {r.status === "approved" && <Icon name="check" size={10} strokeWidth={2.5} />}
+                      {r.status === "pending" ? `Wartet ${daysOpen}T` : status.label}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(r.id)}
+                      style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 2, opacity: 0.6 }}
+                      title="Löschen"
+                    >
+                      <Icon name="trash" size={13} />
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <span style={{
-                    background: `color-mix(in srgb, ${STATUS_COLORS[r.status]} 15%, transparent)`,
-                    color: STATUS_COLORS[r.status],
-                    padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                  }}>
-                    {STATUS_LABELS[r.status]}
-                  </span>
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    style={{
-                      background: "none", border: "none",
-                      color: "var(--muted)", fontSize: 18, cursor: "pointer",
-                      padding: "2px 4px", lineHeight: 1,
-                    }}
-                    title="Löschen"
-                  >×</button>
-                </div>
-              </div>
-            </div>
-          ))
+              );
+            })}
+          </div>
         )}
       </div>
 
+      {/* ── SLIDE-IN PANEL ─────────────────────────────────────────────── */}
       {showForm && (
-        <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowForm(false)}>
-          <div className="modal-sheet" style={{ maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800 }}>🏖 Urlaubsantrag</h2>
-              <button className="btn btn-ghost" onClick={() => setShowForm(false)} style={{ padding: "6px 10px" }}>✕</button>
-            </div>
-
-            {/* Mitarbeiter preview */}
-            {profile && (profile.vorname || profile.nachname) && (
-              <div style={{
-                background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 12,
-                padding: "12px 14px", marginBottom: 16,
-              }}>
-                <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
-                  Mitarbeiter
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>
-                  {profile.vorname} {profile.nachname}
-                  {profile.personal_nr && <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 8 }}>Nr. {profile.personal_nr}</span>}
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Quick presets */}
-              <div>
-                <div className="label" style={{ marginBottom: 6 }}>Schnellauswahl</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {[
-                    { k: "today" as const,    label: "Heute" },
-                    { k: "tomorrow" as const, label: "Morgen" },
-                    { k: "1w" as const,       label: "1 Woche" },
-                    { k: "2w" as const,       label: "2 Wochen" },
-                    { k: "bruecke" as const,  label: "Brückentag" },
-                  ].map(p => (
-                    <button
-                      key={p.k}
-                      type="button"
-                      onClick={() => applyPreset(p.k)}
-                      style={{
-                        padding: "6px 12px", borderRadius: 18,
-                        background: "var(--surface2)", border: "1px solid var(--border)",
-                        color: "var(--text)", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                        fontFamily: "'Syne',sans-serif",
-                      }}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <>
+          <div
+            onClick={() => setShowForm(false)}
+            style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+              backdropFilter: "blur(4px)", zIndex: 99,
+              animation: "fadeIn 180ms ease-out",
+            }}
+          />
+          <div style={{
+            position: "fixed", top: 0, right: 0, bottom: 0,
+            width: "min(440px, 100vw)",
+            background: "var(--bg)", borderLeft: "1px solid var(--border)",
+            zIndex: 100, overflowY: "auto",
+            animation: "slideInRight 240ms cubic-bezier(0.16, 1, 0.3, 1)",
+            boxShadow: "-12px 0 40px rgba(0,0,0,0.4)",
+          }}>
+            <div style={{ padding: "20px 22px 60px" }}>
+              {/* Panel header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <div>
-                  <label className="label">Von (Datum)</label>
-                  <input className="input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.1em" }}>NEUER ANTRAG</div>
+                  <h2 style={{ fontSize: 20, fontWeight: 700, marginTop: 2 }}>Urlaub planen</h2>
                 </div>
-                <div>
-                  <label className="label">Bis (Datum)</label>
-                  <input className="input" type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} required />
-                </div>
+                <button
+                  onClick={() => setShowForm(false)}
+                  style={{
+                    width: 36, height: 36, borderRadius: "50%",
+                    background: "var(--surface)", border: "1px solid var(--border)",
+                    color: "var(--text)", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <Icon name="x" size={16} />
+                </button>
               </div>
 
-              {/* Validation banner */}
-              {validation && (
+              {/* Mitarbeiter preview */}
+              {profile && (profile.vorname || profile.nachname) && (
                 <div style={{
-                  background: validation.kind === "error"
-                    ? "color-mix(in srgb, var(--red) 10%, transparent)"
-                    : validation.kind === "warn"
-                    ? "color-mix(in srgb, var(--yellow) 10%, transparent)"
-                    : "color-mix(in srgb, var(--green) 10%, transparent)",
-                  border: `1px solid color-mix(in srgb, ${
-                    validation.kind === "error" ? "var(--red)"
-                    : validation.kind === "warn" ? "var(--yellow)"
-                    : "var(--green)"
-                  } 30%, transparent)`,
-                  borderRadius: 10, padding: "10px 14px",
-                  display: "flex", flexDirection: "column", gap: 4,
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 12, padding: "10px 14px", marginBottom: 18,
+                  display: "flex", alignItems: "center", gap: 10,
                 }}>
                   <div style={{
-                    fontSize: 13, fontWeight: 700,
-                    color: validation.kind === "error" ? "var(--red)"
-                         : validation.kind === "warn" ? "var(--yellow)"
-                         : "var(--green)",
+                    width: 36, height: 36, borderRadius: "50%",
+                    background: "color-mix(in srgb, var(--accent2) 20%, transparent)",
+                    color: "var(--accent2)", fontWeight: 800, fontSize: 13,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
                   }}>
-                    {validation.kind === "ok" && `✅ ${validation.netWorkdays} Arbeitstage`}
-                    {validation.kind === "warn" && `⚠ ${validation.netWorkdays} Arbeitstage (${validation.rawWorkdays - validation.netWorkdays > 0 ? validation.rawWorkdays + " roh − " + (validation.rawWorkdays - validation.netWorkdays) + " Feiertage" : "kein Verlust"})`}
-                    {validation.kind === "error" && `❌ Bitte Eingaben prüfen`}
+                    {(profile.vorname?.[0] ?? "") + (profile.nachname?.[0] ?? "")}
                   </div>
-                  {validation.feiertageInRange.length > 0 && (
-                    <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                      Im Zeitraum: {validation.feiertageInRange.join(", ")}
-                    </div>
-                  )}
-                  {validation.inPast && (
-                    <div style={{ fontSize: 11, color: "var(--yellow)" }}>
-                      ℹ Startdatum liegt in der Vergangenheit
-                    </div>
-                  )}
-                  {validation.overlaps.length > 0 && (
-                    <div style={{ fontSize: 11, color: "var(--red)" }}>
-                      ⚠ Überlappt mit {validation.overlaps.length} Antrag/Anträgen ({validation.overlaps.map(o => fmtDate(o.start_date)).join(", ")})
-                    </div>
-                  )}
-                  {validation.insufficient && (
-                    <div style={{ fontSize: 11, color: "var(--red)" }}>
-                      ⚠ Guthaben reicht nicht: {validation.totalAvailable} verfügbar, {validation.netWorkdays} angefragt
-                    </div>
-                  )}
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{profile.vorname} {profile.nachname}</div>
+                    {profile.personal_nr && (
+                      <div style={{ fontSize: 10, color: "var(--muted)" }}>Nr. {profile.personal_nr}</div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              <div>
-                <label className="label">Urlaubsart</label>
-                <select
-                  className="input"
-                  value={urlaubArt}
-                  onChange={e => setUrlaubArt(e.target.value as UrlaubArt)}
-                >
-                  {URLAUB_ARTEN.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-              </div>
+              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-              <div>
-                <label className="label">Vertretung (optional)</label>
-                <input
-                  className="input" type="text" value={vertretung}
-                  onChange={e => setVertretung(e.target.value)}
-                  placeholder="z.B. Max Mustermann"
-                />
-              </div>
-
-              <div>
-                <label className="label">Bemerkungen (optional)</label>
-                <input className="input" type="text" value={bemerkung} onChange={e => setBemerkung(e.target.value)} placeholder="Optional..." />
-              </div>
-
-              <div>
-                <label className="label">📧 Mail-Empfänger</label>
-                <input className="input" type="email" value={mailTo} onChange={e => setMailTo(e.target.value)} />
-              </div>
-
-              {/* Signature */}
-              <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-                <div className="label" style={{ marginBottom: 10 }}>✍️ Unterschrift</div>
-                <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", background: "white" }}>
-                  <SignatureCanvas
-                    ref={sigRef}
-                    canvasProps={{ width: 340, height: 100, style: { width: "100%", height: 100, cursor: "crosshair", touchAction: "none" } }}
-                    backgroundColor="white"
-                  />
+                {/* Quick presets */}
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>
+                    SCHNELLAUSWAHL
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {[
+                      { k: "today" as const,    label: "Heute" },
+                      { k: "tomorrow" as const, label: "Morgen" },
+                      { k: "1w" as const,       label: "1 Woche" },
+                      { k: "2w" as const,       label: "2 Wochen" },
+                      { k: "bruecke" as const,  label: "Brückentag" },
+                    ].map(p => (
+                      <button
+                        key={p.k} type="button" onClick={() => applyPreset(p.k)}
+                        style={{
+                          padding: "7px 13px", borderRadius: 999,
+                          background: "var(--surface)", border: "1px solid var(--border)",
+                          color: "var(--text)", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                          fontFamily: "'Syne',sans-serif",
+                        }}
+                      >{p.label}</button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <button type="button" onClick={() => { sigRef.current?.clear(); setSigData(null); }} style={{
-                    flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--red)",
-                    background: "transparent", color: "var(--red)",
-                    fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                  }}>🗑 Löschen</button>
-                  <button type="button" onClick={handleSaveSignature} style={{
-                    flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--green)",
-                    background: "transparent", color: "var(--green)",
-                    fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                  }}>💾 Übernehmen</button>
+
+                {/* Dates */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label className="label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)" }}>VON</label>
+                    <input className="input" type="date" value={startDate}
+                      onChange={e => setStartDate(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label className="label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)" }}>BIS</label>
+                    <input className="input" type="date" value={endDate} min={startDate}
+                      onChange={e => setEndDate(e.target.value)} required />
+                  </div>
                 </div>
-                {sigData && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, marginBottom: 4 }}>✅ Unterschrift bereit</div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sigData} alt="Unterschrift" style={{ maxWidth: 180, maxHeight: 60, border: "1px solid var(--border)", borderRadius: 6, background: "white", padding: 4 }} />
+
+                {/* Validation banner */}
+                {validation && (
+                  <div style={{
+                    background: validation.kind === "error" ? "color-mix(in srgb, var(--red) 10%, transparent)"
+                              : validation.kind === "warn"  ? "color-mix(in srgb, var(--yellow) 10%, transparent)"
+                              :                                "color-mix(in srgb, var(--green) 10%, transparent)",
+                    border: `1px solid color-mix(in srgb, ${
+                      validation.kind === "error" ? "var(--red)"
+                      : validation.kind === "warn" ? "var(--yellow)"
+                      : "var(--green)"
+                    } 30%, transparent)`,
+                    borderRadius: 10, padding: "10px 14px",
+                    display: "flex", flexDirection: "column", gap: 4,
+                  }}>
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      fontSize: 13, fontWeight: 700,
+                      color: validation.kind === "error" ? "var(--red)"
+                           : validation.kind === "warn"  ? "var(--yellow)"
+                           :                                "var(--green)",
+                    }}>
+                      {validation.kind === "ok"    && <Icon name="check" size={14} strokeWidth={2.5} />}
+                      {validation.kind === "warn"  && <Icon name="alert" size={14} />}
+                      {validation.kind === "error" && <Icon name="x"     size={14} strokeWidth={2.5} />}
+                      {validation.netWorkdays} Arbeitstag{validation.netWorkdays === 1 ? "" : "e"}
+                      {validation.kind === "warn" && validation.rawWorkdays > validation.netWorkdays && (
+                        <span style={{ marginLeft: 4, fontWeight: 500 }}>
+                          ({validation.rawWorkdays - validation.netWorkdays} Feiertag{validation.rawWorkdays - validation.netWorkdays === 1 ? "" : "e"} entfallen)
+                        </span>
+                      )}
+                    </div>
+                    {validation.feiertageInRange.length > 0 && (
+                      <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                        {validation.feiertageInRange.join(" · ")}
+                      </div>
+                    )}
+                    {validation.inPast && (
+                      <div style={{ fontSize: 11, color: "var(--yellow)", display: "flex", alignItems: "center", gap: 4 }}>
+                        <Icon name="info" size={10} /> Startdatum in der Vergangenheit
+                      </div>
+                    )}
+                    {validation.overlaps.length > 0 && (
+                      <div style={{ fontSize: 11, color: "var(--red)" }}>
+                        Überlappt mit Antrag vom {validation.overlaps.map(o => fmtDateShort(o.start_date)).join(", ")}
+                      </div>
+                    )}
+                    {validation.insufficient && (
+                      <div style={{ fontSize: 11, color: "var(--red)" }}>
+                        Nur {validation.totalAvailableForArt} Tag{validation.totalAvailableForArt === 1 ? "" : "e"} verfügbar
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              {/* Actions */}
-              <button
-                type="button"
-                onClick={generatePDF}
-                disabled={!startDate || !endDate}
-                style={{
-                  width: "100%", padding: 14, background: "var(--blue)", border: "none",
-                  borderRadius: 12, color: "white", fontFamily: "'Syne',sans-serif",
-                  fontSize: 14, fontWeight: 800, cursor: "pointer",
-                }}
-              >
-                📄 PDF speichern &amp; per Mail senden
-              </button>
+                {/* Urlaubsart pills */}
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>
+                    URLAUBSART
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {URLAUB_ARTEN.map(a => {
+                      const active = urlaubArt === a;
+                      return (
+                        <button
+                          key={a} type="button" onClick={() => setUrlaubArt(a)}
+                          style={{
+                            padding: "9px 12px", borderRadius: 10,
+                            background: active ? `color-mix(in srgb, ${URLAUB_ART_COLORS[a]} 18%, var(--surface))` : "var(--surface)",
+                            border: `1px solid ${active ? URLAUB_ART_COLORS[a] : "var(--border)"}`,
+                            color: active ? URLAUB_ART_COLORS[a] : "var(--text)",
+                            fontSize: 11, fontWeight: 700, cursor: "pointer",
+                            textAlign: "left", fontFamily: "'Syne',sans-serif",
+                          }}
+                        >{a}</button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-              <button className="btn btn-primary" type="submit" disabled={saving || !startDate || !endDate} style={{ width: "100%" }}>
-                {saving ? "Senden..." : "💾 Antrag speichern"}
-              </button>
-            </form>
+                {/* Vertretung */}
+                <div>
+                  <label className="label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)" }}>
+                    VERTRETUNG (OPTIONAL)
+                  </label>
+                  <input className="input" type="text" value={vertretung}
+                    onChange={e => setVertretung(e.target.value)}
+                    placeholder="z. B. Max Mustermann" />
+                </div>
+
+                {/* Bemerkung */}
+                <div>
+                  <label className="label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)" }}>
+                    BEMERKUNGEN (OPTIONAL)
+                  </label>
+                  <input className="input" type="text" value={bemerkung}
+                    onChange={e => setBemerkung(e.target.value)}
+                    placeholder="..." />
+                </div>
+
+                {/* Mail */}
+                <div>
+                  <label className="label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <Icon name="send" size={10} /> MAIL-EMPFÄNGER
+                  </label>
+                  <input className="input" type="email" value={mailTo}
+                    onChange={e => setMailTo(e.target.value)} />
+                </div>
+
+                {/* Signature */}
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>
+                    UNTERSCHRIFT
+                  </div>
+                  <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", background: "white" }}>
+                    <SignatureCanvas
+                      ref={sigRef}
+                      canvasProps={{ width: 380, height: 100, style: { width: "100%", height: 100, cursor: "crosshair", touchAction: "none" } }}
+                      backgroundColor="white"
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                    <button type="button" onClick={() => { sigRef.current?.clear(); setSigData(null); }} style={{
+                      flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--border)",
+                      background: "var(--surface)", color: "var(--muted)",
+                      fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                    }}><Icon name="trash" size={12} /> Löschen</button>
+                    <button type="button" onClick={handleSaveSignature} style={{
+                      flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--green)",
+                      background: "color-mix(in srgb, var(--green) 12%, transparent)", color: "var(--green)",
+                      fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                    }}><Icon name="check" size={12} strokeWidth={2.5} /> Übernehmen</button>
+                  </div>
+                  {sigData && (
+                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                      <Icon name="check" size={12} color="var(--green)" strokeWidth={2.5} />
+                      <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 700 }}>Unterschrift bereit</span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={sigData} alt="Unterschrift" style={{ maxWidth: 80, maxHeight: 28, marginLeft: "auto", border: "1px solid var(--border)", borderRadius: 4, background: "white", padding: 2 }} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button" onClick={generatePDF}
+                    disabled={!startDate || !endDate}
+                    style={{
+                      width: "100%", padding: 12, background: "var(--surface)",
+                      border: "1px solid var(--border)", borderRadius: 12, color: "var(--text)",
+                      fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    }}
+                  >
+                    <Icon name="send" size={14} /> PDF + Mail erstellen
+                  </button>
+                  <button
+                    type="submit" disabled={saving || !startDate || !endDate}
+                    style={{
+                      width: "100%", padding: 14, background: "var(--accent2)",
+                      border: "none", borderRadius: 12, color: "#1a1a2e",
+                      fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      boxShadow: "0 4px 16px color-mix(in srgb, var(--accent2) 35%, transparent)",
+                    }}
+                  >
+                    {saving ? "Wird gespeichert..." : (
+                      <><Icon name="check" size={16} color="#1a1a2e" strokeWidth={2.5} /> Antrag einreichen</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+
+          <style jsx global>{`
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes slideInRight {
+              from { transform: translateX(100%); opacity: 0; }
+              to   { transform: translateX(0); opacity: 1; }
+            }
+          `}</style>
+        </>
       )}
     </>
   );

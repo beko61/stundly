@@ -1,5 +1,71 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-20 (47) – v0.16.0: Urlaubsanträge — modern redesign
+
+### Hedef
+"bu berbat hic begenmedim modern olsun" — mockup ile yön onaylandı, komple görsel rewrite.
+
+### Tasarım değişiklikleri (web)
+
+**Hero card (yeni)**
+- Tek büyük dramatik kart, gradient orb sağ üstte (accent2 → blue)
+- 64px monospace "X Tage" verfügbar (Urlaub + Überstunden toplamı)
+- Sağda 84×84 progress ring + ortada % değer
+- Alt pill progress bar `X von Y` + Jahresanspruch
+- Eski 2 yan yana donut chart **kaldırıldı**
+
+**12-ay dikey bar timeline (yeni)**
+- Heatmap 12×31 grid **kaldırıldı**
+- Yerine 12 dikey bar (ay başına yoğunluk), aktif ay accent2 highlight
+- 30%'den büyük barlarda gün sayısı içeride gösteriliyor
+- Alt monospace J F M A M J J A S O N D etiketleri
+
+**3 mini KPI kart**
+- Überstunden (saat + gün) · Wartende Anträge · Nächster Urlaub (kalan gün + tarih)
+- Tabler tarzı inline SVG icons (CDN yok)
+
+**Magazin tarzı antrag list**
+- Sol: büyük tarih `02 / JUL` monospace
+- Orta: `2. — 16. Juli` + URLAUBSART chip + meta (gün/Vertretung) icons ile
+- Sağ: status pill (`Wartet 3T` / `✓ Genehmigt` / `Abgelehnt`) + trash icon
+- Sol kenar accent çubuk status renginde
+- Eski card layout **kaldırıldı**
+
+**Slide-in panel (yeni)**
+- Modal-backdrop **kaldırıldı**, yerine sağdan kayan 440px panel
+- Backdrop blur(4px) + opacity
+- Smooth cubic-bezier slide animation
+- Body scroll lock when open
+- Yuvarlak X butonu üst sağda
+- Mitarbeiter chip: avatar daire içinde inisyaller
+
+**Urlaubsart pills (yeni)**
+- Dropdown **kaldırıldı**, yerine 6 pill (2 sütun grid)
+- Active: ilgili renkle border + bg highlight (Erholung=purple, Sonder=orange, Bildung=blue, Unbezahlt=muted, Elternzeit=green, Überstunden=blue)
+
+**Validation banner**
+- Tutuldu ama icon entegrasyonu yapıldı (check/alert/x icon + metin)
+
+**Quick presets**
+- Tutuldu (Heute/Morgen/1W/2W/Brückentag)
+
+### Yeni Icon Component
+- Inline SVG `<Icon name="..." />`, 18 named icons
+- Tabler tarzı 2px stroke, currentColor inherit
+- CDN bağımlılığı yok (Tabler font yüklemedi), production bundle eklenmedi
+
+### Test sonuçları
+- Web TS: ✓ clean
+- ESLint: ✓ clean
+- Vitest: ✓ **142/142 pass · 12 suite**
+- Next build: ✓ 45/45 (/vacation 10.8 → 14.9 kB)
+
+### Değişen dosyalar
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — komple rewrite (760 → ~880 satır)
+- `apps/web/src/lib/version.ts` — 0.15.0 → 0.16.0 (MINOR — visual redesign)
+
+---
+
 ## 2026-06-20 (46) – v0.15.0: Urlaubsanträge — profesyonelleştirme
 
 ### Hedef

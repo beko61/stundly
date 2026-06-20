@@ -180,6 +180,23 @@ export interface DailyLog {
   updated_at: string;
 }
 
+export type UrlaubArt =
+  | "Erholungsurlaub"
+  | "Sonderurlaub"
+  | "Bildungsurlaub"
+  | "Unbezahlter Urlaub"
+  | "Elternzeit"
+  | "Überstundenabbau";
+
+export const URLAUB_ARTEN: readonly UrlaubArt[] = [
+  "Erholungsurlaub",
+  "Sonderurlaub",
+  "Bildungsurlaub",
+  "Unbezahlter Urlaub",
+  "Elternzeit",
+  "Überstundenabbau",
+] as const;
+
 export interface VacationRequest {
   id: string;
   user_id: string;
@@ -192,6 +209,12 @@ export interface VacationRequest {
   pdf_url: string | null;
   email_sent_at: string | null;
   created_at: string;
+  urlaub_art?: UrlaubArt | null;
+  vertretung?: string | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  rejected_at?: string | null;
+  rejection_reason?: string | null;
 }
 
 export interface ActivityLog {

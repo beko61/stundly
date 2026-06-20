@@ -1,5 +1,71 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-20 (46) – v0.15.0: Urlaubsanträge — profesyonelleştirme
+
+### Hedef
+"daha profesyonel yapabilir miyiz" — modern Urlaubsverwaltung örneklerini (Personio / absence.io / Factorial / Kenjo) araştırdıktan sonra 5 büyük iyileştirme tek paket.
+
+### Eklenen özellikler (web)
+
+**1) Urlaubsart Dropdown + Vertretung alanı**
+- Düz text input → enum: Erholungsurlaub / Sonderurlaub / Bildungsurlaub / Unbezahlter Urlaub / Elternzeit / Überstundenabbau
+- Yeni `Vertretung` input (Handwerk standardı, yerimi kim alacak)
+- PDF'e Vertretung satırı eklendi, mail body'sine de
+- Liste card'larında Erholungsurlaub harici türler chip olarak gösteriliyor
+
+**2) Mini Jahres-Kalender (Heatmap)**
+- 12 ay × 31 gün SVG grid, native browser tooltip
+- Renkler: Urlaub (blue), Pending Antrag (yellow), Feiertag (yellow %35), Wochenende (muted), Bugün (accent2 stroke)
+- Collapsible (▾/▸ toggle)
+- Legend altında 4 renk açıklaması
+
+**3) Smart Validation (form içi banner)**
+- Real-time hesap: rawWorkdays, netWorkdays (Feiertag düşülmüş)
+- Feiertag uyarısı: "Im Zeitraum: Karfreitag (10.04.), Ostermontag (13.04.)"
+- Overlap check: Mevcut pending/approved antraglarla çakışma
+- Past warning: Vergangenheit'te tarih
+- Balance check: Erholungsurlaub/Bildungsurlaub için yeterli mi, Überstundenabbau için overtime kontingenti
+- Renkler: ok→green, warn→yellow, error→red
+
+**4) Status Timeline Cards**
+- Antrag listesinde sadece badge değil, mini timeline: ●Beantragt · 12.06.2026 → ●Genehmigt · 14.06.2026
+- Pending'lerde "Wartet seit Xt" sayacı
+
+**5) Quick Presets Butonları**
+- Heute / Morgen / 1 Woche / 2 Wochen / Brückentag
+- Brückentag: önümüzdeki 12 ayda bir hafta sonu + Feiertag arası tek hafta içi gün arar (Christi Himmelfahrt + Cuma vs.)
+
+### DB değişiklik
+- `supabase/migrations/016_vacation_urlaub_art_vertretung.sql` — idempotent, iki yeni text kolon
+- **Manuel apply** gerekli (Supabase Dashboard SQL editor)
+
+### Shared type güncellemesi
+- `VacationRequest`: `urlaub_art?`, `vertretung?`, `approved_at?`, `approved_by?`, `rejected_at?`, `rejection_reason?` (hepsi optional)
+- Yeni `UrlaubArt` union type + `URLAUB_ARTEN` readonly array export
+
+### Test sonuçları
+- Web TS: ✓ clean
+- Mobile TS: ✓ clean
+- Shared TS: ✓ clean
+- Web Next build: ✓ 45/45 static pages (/vacation 10.8 kB, eski ~3 kB)
+- ESLint: ✓ No warnings or errors
+- Vitest: ✓ **142/142 pass · 12 suite** (mevcut testler etkilenmedi)
+
+### Değişen dosyalar
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — komple rewrite (663 → 760 satır)
+- `apps/web/src/lib/version.ts` — 0.14.2 → 0.15.0 (MINOR — user-visible feature)
+- `packages/shared/src/types/index.ts` — UrlaubArt + URLAUB_ARTEN export, VacationRequest 6 yeni optional alan
+- `supabase/migrations/016_vacation_urlaub_art_vertretung.sql` — YENİ
+- `son_kayit.md` — güncellendi
+
+### Kullanılan referans (Web research)
+- Factorial HR / HoorayHR Urlaubsverwaltung 2026 vergleich
+- Cflow leave approval workflow best practices
+- Kenjo "Mehrfachanfragen" pattern
+- VacationTracker leave approval
+
+---
+
 ## 2026-06-14 (35) – v0.11.1: Faz 3 test pass + 2 bug fix
 
 ### Test sonuçları

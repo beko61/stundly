@@ -1,5 +1,63 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-21 (48) – v0.16.1: Überstunden Bug Fix (Notdienst + dyn. target)
+
+### Bulgu (kullanıcı bildirimi: "überstunde hesaplanmamis")
+
+Vacation sayfası Überstunden 0 gösteriyordu. İki bug tespit edildi:
+
+**Bug #1 — Notdienst saatleri sayılmıyordu**
+- `lib/vacation/overtime.ts` helper'ı sadece `time_entries.day_type=arbeiten` günlerini topluyordu
+- Notdienst saatleri ayrı tabloda (`notdienst_entries`) → hiç fetch edilmiyordu
+- Reports sayfasındaki `calcMonthStats` zaten Notdienst'i içeriyordu → iki sayfa farklı sayı gösteriyordu
+
+**Bug #2 — Sollstunden 8h hardcoded**
+- `hoursPerDay = 8` parametresi sabit
+- Kullanıcının `salary_settings.monthly_target_hours` kullanılmıyordu
+- Almanya KMU normali: 173h/ay = ~7.97h/gün. Bazı sözleşmelerde 160h/ay = 7.37h/gün → target yanlış (yüksek) → Überstunden gözükmez
+
+### Düzeltme
+
+**`lib/vacation/overtime.ts`**
+- Yeni `OvertimeNdEntry` interface (date, start_time, end_time)
+- Yeni `ComputeOvertimeOptions { ndEntries?, hoursPerDay? }`
+- 4. parametre overload (backward-compat): number olarak verildiyse hoursPerDay
+- Notdienst saatleri `ndMin` olarak ayrı toplanır, overtime hesabına dahil
+- Hafta sonu Notdienst saatleri de sayılır (gerçek çalışma)
+- Gelecek tarihli Notdienst sayılmaz
+
+**`vacation/page.tsx`**
+- `notdienst_entries` fetch eklendi (yıl bazlı)
+- `salary_settings.monthly_target_hours` fetch eklendi
+- `hoursPerDay = monthly_target_hours / 21.7` (ay başına Mo-Fr ortalaması)
+- Helper'a iki yeni opsiyon pas edildi
+
+**Yeni testler (`overtime.test.ts`)**
+- Backward-compat: 4. parametre number ile hâlâ çalışır
+- Notdienst saatleri workedMin'e değil ndMin'e gider
+- Kanıt test: 5h Notdienst eklenince overtime 0 → 5h olur
+- Hafta sonu Notdienst sayılır (cross-midnight gece)
+- Gelecek tarihli Notdienst sayılmaz
+- hoursPerDay parametresi target'i değiştirir
+
+### Test sonuçları
+- Web TS: ✓ clean
+- Lint: ✓ clean
+- Vitest: ✓ **148/148 pass · 12 suite** (önceki 142 + 6 yeni)
+
+### Değişen dosyalar
+- `apps/web/src/lib/vacation/overtime.ts` — Notdienst + options interface
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — fetch + helper call güncellendi
+- `apps/web/src/__tests__/unit/overtime.test.ts` — 6 yeni test
+- `apps/web/src/lib/version.ts` — 0.16.0 → 0.16.1 (PATCH — bug fix)
+
+### Doğrulama (kullanıcı yapacak)
+1. Reports sayfasında "Differenz" / "Überstunden" değerini not al
+2. Vacation sayfası hero kartında "+X aus Überstunden" eşit olmalı
+3. Notdienst yapan kullanıcılarda artık 0 değil gerçek saat görmeli
+
+---
+
 ## 2026-06-20 (47) – v0.16.0: Urlaubsanträge — modern redesign
 
 ### Hedef

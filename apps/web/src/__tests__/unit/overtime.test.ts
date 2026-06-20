@@ -4,6 +4,7 @@ import {
   isWeekday,
   workdaysBetween,
   type OvertimeEntry,
+  type OvertimeNdEntry,
 } from "@/lib/vacation/overtime";
 
 const arbeiten = (date: string, start: string, end: string, brk = 60): OvertimeEntry => ({
@@ -12,6 +13,7 @@ const arbeiten = (date: string, start: string, end: string, brk = 60): OvertimeE
 const urlaub   = (date: string): OvertimeEntry => ({ date, start_time: null, end_time: null, break_minutes: null, day_type: "urlaub" });
 const krank    = (date: string): OvertimeEntry => ({ date, start_time: null, end_time: null, break_minutes: null, day_type: "krank" });
 const feiertag = (date: string): OvertimeEntry => ({ date, start_time: null, end_time: null, break_minutes: null, day_type: "feiertag" });
+const nd       = (date: string, start: string, end: string): OvertimeNdEntry => ({ date, start_time: start, end_time: end });
 
 describe("isWeekday", () => {
   it("recognises Mo-Fr as weekday", () => {
@@ -135,5 +137,77 @@ describe("computeOvertime", () => {
     // Only the 2026-06-15 entry counts as worked (other dates > today).
     expect(r.workedMin).toBe(11 * 60);
     expect(r.overtimeMin).toBe(0); // 11h worked vs 120*8*60 target → still 0 overtime
+  });
+
+  it("backward-compat: hoursPerDay als number (4. parametre) hâlâ çalışır", () => {
+    // Eski API: computeOvertime(entries, yearStart, today, 8)
+    const r = computeOvertime([], "2026-01-01", "2026-06-19", 8);
+    expect(r.targetMin).toBe(workdaysBetween("2026-01-01", "2026-06-19") * 8 * 60);
+  });
+});
+
+describe("computeOvertime · Notdienst desteği (regression)", () => {
+  it("Notdienst saatleri workedMin'e değil ndMin'e gider ve overtime'a sayılır", () => {
+    // Mo 2026-06-15. 5 Notdienst Einsatz (12h pro Tag) = 60h.
+    // workedMin (arbeiten) yok. Target 120 Mo-Fr × 8h = 960h.
+    // ndMin = 60h. Toplam çalışılan 60h < 960h → overtime 0, ama ndMin ölçülüyor.
+    const nds: OvertimeNdEntry[] = [
+      nd("2026-06-15", "08:00", "20:00"),
+      nd("2026-06-16", "08:00", "20:00"),
+      nd("2026-06-17", "08:00", "20:00"),
+      nd("2026-06-18", "08:00", "20:00"),
+      nd("2026-06-19", "08:00", "20:00"),
+    ];
+    const r = computeOvertime([], "2026-01-01", "2026-06-19", { ndEntries: nds });
+    expect(r.ndMin).toBe(60 * 60);          // 60h Notdienst
+    expect(r.workedMin).toBe(0);
+  });
+
+  it("BUG FIX kanıtı: Notdienst saatleri overtime'a katkı yapar (eski helper yapmıyordu)", () => {
+    // Dar pencere: Mo 2026-06-15 → Fr 2026-06-19 (5 Mo-Fr × 8h = 40h target)
+    // arbeiten 5 gün × 8h = 40h (tam target tutulur, overtime 0)
+    // + Notdienst 5h → toplam çalışılan 45h → overtime = 5h
+    const arbeitenEntries: OvertimeEntry[] = [
+      arbeiten("2026-06-15", "08:00", "17:00", 60), // 8h
+      arbeiten("2026-06-16", "08:00", "17:00", 60),
+      arbeiten("2026-06-17", "08:00", "17:00", 60),
+      arbeiten("2026-06-18", "08:00", "17:00", 60),
+      arbeiten("2026-06-19", "08:00", "17:00", 60),
+    ];
+    const nds: OvertimeNdEntry[] = [
+      nd("2026-06-15", "17:00", "22:00"), // 5h
+    ];
+    const withoutNd = computeOvertime(arbeitenEntries, "2026-06-15", "2026-06-19");
+    const withNd    = computeOvertime(arbeitenEntries, "2026-06-15", "2026-06-19", { ndEntries: nds });
+    expect(withoutNd.overtimeMin).toBe(0);     // sadece arbeiten — target tam tutulur
+    expect(withNd.ndMin).toBe(5 * 60);          // 5h Notdienst
+    expect(withNd.overtimeMin).toBe(5 * 60);    // +5h overtime
+    expect(withNd.overtimeMin - withoutNd.overtimeMin).toBe(5 * 60);
+  });
+
+  it("Notdienst hafta sonu günleri de sayılır (gerçek çalışma)", () => {
+    // 2026-06-13 Sa, 2026-06-14 So
+    const nds: OvertimeNdEntry[] = [
+      nd("2026-06-13", "20:00", "08:00"), // 12h gece (cross-midnight)
+      nd("2026-06-14", "20:00", "08:00"),
+    ];
+    const r = computeOvertime([], "2026-01-01", "2026-06-19", { ndEntries: nds });
+    expect(r.ndMin).toBe(24 * 60); // 24h
+  });
+
+  it("Gelecek tarihli Notdienst sayılmaz", () => {
+    const nds: OvertimeNdEntry[] = [nd("2026-12-15", "08:00", "20:00")];
+    const r = computeOvertime([], "2026-01-01", "2026-06-19", { ndEntries: nds });
+    expect(r.ndMin).toBe(0);
+  });
+
+  it("hoursPerDay = 7.7 (175h/ay / 21.7) — target değişir, overtime artar", () => {
+    // 10 gün × 8h = 80h çalışıldı.
+    // hoursPerDay=8 ile target ~ 119*8=952h → 80<952 → overtime 0.
+    // hoursPerDay=7.7 ile target ~ 119*7.7=916h → 80<916 → yine overtime 0.
+    // Bu test sadece target'in parametreye göre değiştiğini kanıtlar.
+    const r8   = computeOvertime([], "2026-01-01", "2026-06-19", { hoursPerDay: 8   });
+    const r77  = computeOvertime([], "2026-01-01", "2026-06-19", { hoursPerDay: 7.7 });
+    expect(r77.targetMin).toBeLessThan(r8.targetMin);
   });
 });

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import type { VacationRequest, UrlaubArt } from "@workly/shared";
 import { URLAUB_ARTEN } from "@workly/shared";
-import { computeOvertime, type OvertimeEntry } from "@/lib/vacation/overtime";
+import { computeOvertime, type OvertimeEntry, type OvertimeNdEntry } from "@/lib/vacation/overtime";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 
@@ -196,28 +196,38 @@ export default function VacationPage() {
     const user = session?.user;
     if (!user) { setLoading(false); return; }
 
-    const [{ data: reqs }, { data: prof }, { data: salary }] = await Promise.all([
+    const yearStartISO = `${year}-01-01`;
+    const yearEndISO   = `${year}-12-31`;
+    const [{ data: reqs }, { data: prof }, { data: salary }, { data: timeData }, { data: ndData }] = await Promise.all([
       supabase.from("vacation_requests").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
       supabase.from("profiles").select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland").eq("user_id", user.id).single(),
-      supabase.from("salary_settings").select("urlaub_anspruch").eq("user_id", user.id)
+      supabase.from("salary_settings").select("urlaub_anspruch, monthly_target_hours").eq("user_id", user.id)
         .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("time_entries")
+        .select("date, start_time, end_time, break_minutes, day_type")
+        .eq("user_id", user.id).gte("date", yearStartISO).lte("date", yearEndISO),
+      supabase.from("notdienst_entries")
+        .select("date, start_time, end_time")
+        .eq("user_id", user.id).gte("date", yearStartISO).lte("date", yearEndISO),
     ]);
 
     if (salary?.urlaub_anspruch) setVacTotal(Number(salary.urlaub_anspruch));
     if (reqs) setRequests(reqs as VacationRequest[]);
 
-    const yearStartISO = `${year}-01-01`;
-    const { data: timeData } = await supabase
-      .from("time_entries")
-      .select("date, start_time, end_time, break_minutes, day_type")
-      .eq("user_id", user.id)
-      .gte("date", yearStartISO)
-      .lte("date", `${year}-12-31`);
+    // monthly_target_hours → günlük hedef (21.7 ortalama iş günü/ay).
+    // Default Almanya tam zamanlı: 173h/ay → ~7.97h/gün ≈ 8h.
+    const monthlyHours = salary?.monthly_target_hours ? Number(salary.monthly_target_hours) : 173;
+    const hoursPerDay  = monthlyHours / 21.7;
+
     if (timeData) {
       const { urlaubDays, overtimeMin } = computeOvertime(
         timeData as OvertimeEntry[],
         yearStartISO,
         todayISO,
+        {
+          ndEntries: (ndData ?? []) as OvertimeNdEntry[],
+          hoursPerDay,
+        },
       );
       setYearUsedDays(urlaubDays);
       setOvertimeMin(overtimeMin);

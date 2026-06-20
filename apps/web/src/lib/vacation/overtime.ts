@@ -8,8 +8,16 @@ export interface OvertimeEntry {
   day_type:       DayType | null;
 }
 
+/** Notdienst tablosu girdisi (notdienst_entries) — saatleri workedMin'e eklenir. */
+export interface OvertimeNdEntry {
+  date:       string;
+  start_time: string | null;
+  end_time:   string | null;
+}
+
 export interface OvertimeResult {
   workedMin:    number;
+  ndMin:        number;
   urlaubDays:   number;
   targetMin:    number;
   overtimeMin:  number;
@@ -48,18 +56,33 @@ export function workdaysBetween(startISO: string, endISO: string): number {
   return count;
 }
 
+export interface ComputeOvertimeOptions {
+  /** Notdienst entries — saatleri workedMin'e eklenir (geçmiş tarihler). */
+  ndEntries?: OvertimeNdEntry[];
+  /** Günlük Sollstunden (default 8). monthly_target_hours / 21.7 kullanılabilir. */
+  hoursPerDay?: number;
+}
+
 /**
- * Hedef = (yıl başından bugüne Mo-Fr) MINUS (ücretli izin Mo-Fr) × 8h.
- * Workedmin sadece bugüne kadar arbeiten günleri sayar.
+ * Hedef = (yıl başından bugüne Mo-Fr) MINUS (ücretli izin Mo-Fr) × hoursPerDay.
+ * Worked  = arbeiten entries (geçmiş) + notdienst entries (geçmiş)
  * Urlaub chart için YILIN tamamı boyunca urlaub Mo-Fr sayılır.
  */
 export function computeOvertime(
   entries: OvertimeEntry[],
   yearStartISO: string,
   todayISO: string,
-  hoursPerDay = 8,
+  optsOrHoursPerDay: ComputeOvertimeOptions | number = {},
 ): OvertimeResult {
+  // Backward-compat: 4. parametre number olarak verildiyse hoursPerDay'dir.
+  const opts: ComputeOvertimeOptions = typeof optsOrHoursPerDay === "number"
+    ? { hoursPerDay: optsOrHoursPerDay }
+    : optsOrHoursPerDay;
+  const hoursPerDay = opts.hoursPerDay ?? 8;
+  const ndEntries   = opts.ndEntries  ?? [];
+
   let workedMin        = 0;
+  let ndMin            = 0;
   let paidAbsencePast  = 0;
   let urlaubDaysYearly = 0;
 
@@ -77,10 +100,18 @@ export function computeOvertime(
     }
   }
 
+  // Notdienst saatleri — sadece geçmiş tarihler, hafta sonu dahil (gerçek çalışma).
+  for (const n of ndEntries) {
+    if (n.date > todayISO) continue;
+    if (!n.start_time || !n.end_time) continue;
+    ndMin += calculateWorkDuration(n.start_time, n.end_time, 0).net_minutes;
+  }
+
   const workdaysTotal = workdaysBetween(yearStartISO, todayISO);
   const expectedDays  = Math.max(0, workdaysTotal - paidAbsencePast);
   const targetMin     = expectedDays * hoursPerDay * 60;
-  const overtimeMin   = Math.max(0, workedMin - targetMin);
+  const totalWorked   = workedMin + ndMin;
+  const overtimeMin   = Math.max(0, totalWorked - targetMin);
 
-  return { workedMin, urlaubDays: urlaubDaysYearly, targetMin, overtimeMin };
+  return { workedMin, ndMin, urlaubDays: urlaubDaysYearly, targetMin, overtimeMin };
 }

@@ -1,5 +1,85 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-21 (50) – v0.18.0: F4 son parça — Admin Monatsberichte (PDF + CSV)
+
+### Hedef
+F4'ün son parçası: `/company/reports` GoBD-uyumlu, ay bazlı PDF + CSV export.
+
+### Eklenen / değişen
+
+**1) `lib/export/csvExport.ts` (YENİ)**
+- `buildCsvDetail` — tek çalışan için ay gün gün dökümü + Notdienst bölümü + toplam
+- `buildCsvSummary` — bulk export, çalışan başına tek satır (KPI'lar)
+- UTF-8 BOM + Semikolon-Trenner (Excel Almanca uyumlu)
+- RFC 4180 escape (";", `"`, CR, LF için tırnak + içerde `"`→`""`)
+- HH:MM hem ondalık dakika hem human-readable iki sütun (GoBD)
+- Gece vardiyası (end < start) cross-midnight handle
+- `csvDownload` — blob + filename, browser indirme
+
+**2) `/api/company/reports/data` (YENİ route)**
+- GET year, month, userId? → JSON data dump
+- `getCompanyAdminContext` gate
+- userId verilirse: tek çalışan + same-company kontrolü
+- userId yoksa: tüm aktif çalışanlar (bulk)
+- Time entries + Notdienst entries + Feiertage (Bundesland'a göre) + Firma + Profile
+- PDF helper'ın beklediği tüm profile field'ları (vorname, nachname, signature_data, logo_data, firma_*)
+
+**3) `ReportExportButtons` client component (YENİ)**
+- `EmployeeExportButtons`: tek çalışan için PDF + CSV detail butonları
+- `BulkCsvButton`: tüm çalışanlar için summary CSV
+- Loading state per format + error display
+- exactOptionalPropertyTypes safe property assignment
+
+**4) `/company/reports` redesign**
+- Ay nav (önceki / şimdiki / sonraki) URL ?year=&month= search params
+- 3 KPI: Mitarbeiter sayısı / Gesamt Arbeit / Toplam Notdienst
+- Her çalışan card'ı: ad + email + 5 stat grid (Arbeit / Arbeitstage / Urlaub / Krank / Notdienst)
+- Her card'a EmployeeExportButtons (PDF + CSV)
+- Üstte BulkCsvButton (tüm çalışanlar tek dosya)
+- GoBD-bilgi notu altta
+- Çalışan adına tıklayınca employee detail page (aynı ay+yıl ile)
+- Notdienst: ndCount + ndPaid (b = bezahlt) gösterilir
+
+**5) Yeni testler — `csvExport.test.ts` (12 case)**
+- BOM + Excel uyumlu format
+- DE semikolon-Trenner doğru sütun sayısı
+- Header metadata içerir (ay, yıl, isim)
+- Arbeiten net dakika + toplam
+- Gece vardiyası cross-midnight
+- Notdienst section + bezahlt sayısı
+- RFC 4180 escape ("," " içeren notlar)
+- Bulk: çalışan başına tek satır + agreggate
+- Boş rows → sadece header
+
+### Test sonuçları
+- Web TS: ✓ clean
+- ESLint: ✓ No warnings or errors
+- Vitest: ✓ **169/169 pass · 14 suite** (157 → 169, 12 yeni csv test)
+- Next build: ✓ 46 → 47 route (`/api/company/reports/data` eklendi)
+- /company/reports: 200B → 5.36 kB (yeni UI)
+
+### Değişen dosyalar
+- `apps/web/src/lib/export/csvExport.ts` — YENİ
+- `apps/web/src/app/api/company/reports/data/route.ts` — YENİ
+- `apps/web/src/app/company/reports/ReportExportButtons.tsx` — YENİ
+- `apps/web/src/app/company/reports/page.tsx` — komple redesign
+- `apps/web/src/__tests__/unit/csvExport.test.ts` — YENİ
+- `apps/web/src/lib/version.ts` — 0.17.0 → 0.18.0 (MINOR)
+
+### F4 STATUS
+- [x] Admin Vacation Approval UI + email (v0.17.0)
+- [x] Aylık PDF + CSV export GoBD-uyumlu (v0.18.0)
+
+**F4 KOMPLE TAMAM** 🎉
+
+### Sıradaki: F5 (Billing & Operations)
+- [ ] Stripe `quantity = seat_count` + proration
+- [ ] Multi-admin desteği
+- [ ] Soft-delete inaktif Mitarbeiter
+- [ ] Audit log tablosu
+
+---
+
 ## 2026-06-21 (49) – v0.17.0: F4 — Admin Vacation Approval
 
 ### Hedef

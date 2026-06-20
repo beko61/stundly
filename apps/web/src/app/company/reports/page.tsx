@@ -1,99 +1,214 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { redirect, notFound } from "next/navigation";
+import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
+import { EmployeeExportButtons, BulkCsvButton } from "./ReportExportButtons";
 
-export default async function CompanyReportsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 
-  const { data: profile } = await supabase
-    .from("profiles").select("company_id").eq("user_id", user.id).single();
+interface Props {
+  searchParams: Promise<{ month?: string; year?: string }>;
+}
 
-  if (!profile?.company_id) redirect("/company/dashboard");
+export default async function CompanyReportsPage({ searchParams }: Props) {
+  const ctx = await getCompanyAdminContext();
+  if (!ctx) redirect("/onboarding/type");
+  const { admin, companyId } = ctx;
 
-  // Bu ay çalışan verilerini çek
+  const sp = await searchParams;
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+  const rawYear  = parseInt(sp.year  ?? "", 10);
+  const rawMonth = parseInt(sp.month ?? "", 10);
+  const year  = Number.isInteger(rawYear)  && rawYear  >= 2020 && rawYear  <= 2100 ? rawYear  : now.getFullYear();
+  const month = Number.isInteger(rawMonth) && rawMonth >= 1    && rawMonth <= 12   ? rawMonth : now.getMonth() + 1;
 
-  const { data: employees } = await supabase
+  const daysIn = new Date(year, month, 0).getDate();
+  const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay  = `${year}-${String(month).padStart(2, "0")}-${String(daysIn).padStart(2, "0")}`;
+
+  const { data: employees } = await admin
     .from("profiles")
-    .select("user_id, full_name, email")
-    .eq("company_id", profile.company_id)
-    .eq("is_active", true);
+    .select("user_id, full_name, email, personal_nr")
+    .eq("company_id", companyId)
+    .eq("is_active", true)
+    .order("nachname", { ascending: true });
 
-  const employeeIds = employees?.map(e => e.user_id) ?? [];
+  if (!employees) notFound();
+  const userIds = employees.map(e => e.user_id);
 
-  const { data: timeEntries } = employeeIds.length > 0
-    ? await supabase
-      .from("time_entries")
-      .select("user_id, date, start_time, end_time, break_minutes, day_type")
-      .in("user_id", employeeIds)
-      .gte("date", firstDay)
-      .lte("date", lastDay)
+  const { data: timeEntries } = userIds.length > 0
+    ? await admin
+        .from("time_entries")
+        .select("user_id, date, start_time, end_time, break_minutes, day_type")
+        .in("user_id", userIds)
+        .gte("date", firstDay).lte("date", lastDay)
     : { data: [] };
 
-  // Her çalışan için toplam saat hesapla
-  const summaries = employees?.map((emp) => {
-    const entries = (timeEntries ?? []).filter(e => e.user_id === emp.user_id);
-    const totalMinutes = entries.reduce((sum, e) => {
-      if (!e.start_time || !e.end_time) return sum;
-      const [sh, sm] = e.start_time.split(":").map(Number);
-      const [eh, em] = e.end_time.split(":").map(Number);
-      let mins = (eh * 60 + em) - (sh * 60 + sm);
-      if (mins < 0) mins += 24 * 60; // gece vardiyası
-      return sum + Math.max(0, mins - (e.break_minutes ?? 0));
-    }, 0);
+  const { data: ndEntries } = userIds.length > 0
+    ? await admin
+        .from("notdienst_entries")
+        .select("user_id, date, start_time, end_time, erledigt")
+        .in("user_id", userIds)
+        .gte("date", firstDay).lte("date", lastDay)
+    : { data: [] };
 
+  const summaries = employees.map(emp => {
+    const entries = (timeEntries ?? []).filter(e => e.user_id === emp.user_id);
+    const nd      = (ndEntries  ?? []).filter(n => n.user_id === emp.user_id);
+    const workMin = entries.reduce((s, e) =>
+      s + netMinutesForEntry({
+        date: e.date,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        break_minutes: e.break_minutes,
+        day_type: e.day_type,
+      }), 0);
+    const ndMin = nd.reduce((s, n) => {
+      if (!n.start_time || !n.end_time) return s;
+      const [sh, sm] = n.start_time.split(":").map(Number);
+      const [eh, em] = n.end_time.split(":").map(Number);
+      let m = (eh * 60 + em) - (sh * 60 + sm);
+      if (m < 0) m += 24 * 60;
+      return s + Math.max(0, m);
+    }, 0);
     return {
       ...emp,
-      totalHours: (totalMinutes / 60).toFixed(1),
-      workDays: entries.filter(e => e.day_type === "arbeiten").length,
-      vacationDays: entries.filter(e => e.day_type === "urlaub").length,
-      sickDays: entries.filter(e => e.day_type === "krank").length,
+      workMin, ndMin,
+      arbeitstage: entries.filter(e => e.day_type === "arbeiten").length,
+      urlaubstage: entries.filter(e => e.day_type === "urlaub").length,
+      kranktage:   entries.filter(e => e.day_type === "krank").length,
+      ndCount: nd.length,
+      ndPaid:  nd.filter(n => n.erledigt).length,
     };
-  }) ?? [];
+  });
 
-  const monthName = now.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  const totalWork = summaries.reduce((s, e) => s + e.workMin, 0);
+  const totalNd   = summaries.reduce((s, e) => s + e.ndMin,   0);
+
+  const prev = month === 1  ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
+  const next = month === 12 ? { y: year + 1, m: 1  } : { y: year, m: month + 1 };
 
   return (
-    <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Berichte</h1>
-      <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 28 }}>
-        Arbeitszeitauswertung aller Mitarbeiter – {monthName}
-      </p>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 4px 60px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, gap: 14, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em" }}>
+            UNTERNEHMENSBERICHTE
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 2 }}>Monatsauswertung</h1>
+        </div>
+        <BulkCsvButton year={year} month={month} />
+      </div>
 
+      {/* Month nav */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        marginBottom: 22, padding: "10px 14px",
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 12,
+      }}>
+        <Link href={`/company/reports?year=${prev.y}&month=${prev.m}`}
+          className="btn" style={{ padding: "6px 10px", fontSize: 12 }}>‹</Link>
+        <div style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 700 }}>
+          {MONTHS[month - 1]} {year}
+        </div>
+        <Link href={`/company/reports?year=${next.y}&month=${next.m}`}
+          className="btn" style={{ padding: "6px 10px", fontSize: 12 }}>›</Link>
+      </div>
+
+      {/* Totals */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+        <div style={kpiCard}>
+          <div style={kpiLabel}>MITARBEITER</div>
+          <div style={kpiValue("var(--text)")}>{employees.length}</div>
+        </div>
+        <div style={kpiCard}>
+          <div style={kpiLabel}>GESAMT</div>
+          <div style={kpiValue("var(--accent2)")}>{formatMinutes(totalWork)}</div>
+        </div>
+        <div style={kpiCard}>
+          <div style={kpiLabel}>NOTDIENST</div>
+          <div style={kpiValue("var(--blue)")}>{formatMinutes(totalNd)}</div>
+        </div>
+      </div>
+
+      {/* Employee list */}
       {summaries.length === 0 ? (
-        <div className="card" style={{ padding: 32, textAlign: "center", color: "var(--muted)" }}>
-          Keine Mitarbeiter gefunden.
+        <div className="card" style={{ padding: 28, textAlign: "center", color: "var(--muted)" }}>
+          Keine aktiven Mitarbeiter gefunden.
         </div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                {["Mitarbeiter", "Arbeitsstunden", "Arbeitstage", "Urlaub", "Krank"].map(h => (
-                  <th key={h} style={{ textAlign: "left", padding: "10px 14px", color: "var(--muted)", fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {summaries.map((emp, i) => (
-                <tr key={emp.user_id} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
-                  <td style={{ padding: "12px 14px" }}>
-                    <div style={{ fontWeight: 700 }}>{emp.full_name ?? "–"}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted)" }}>{emp.email}</div>
-                  </td>
-                  <td style={{ padding: "12px 14px", fontWeight: 700, color: "var(--accent2)" }}>{emp.totalHours}h</td>
-                  <td style={{ padding: "12px 14px" }}>{emp.workDays}</td>
-                  <td style={{ padding: "12px 14px", color: "var(--blue)" }}>{emp.vacationDays}</td>
-                  <td style={{ padding: "12px 14px", color: "var(--red)" }}>{emp.sickDays}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {summaries.map(emp => (
+            <div key={emp.user_id} className="card" style={{ padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                <Link href={`/company/employees/${emp.user_id}?year=${year}&month=${month}`}
+                  style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                    {emp.full_name ?? "—"}
+                    {emp.personal_nr && (
+                      <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 8, fontWeight: 500 }}>
+                        Nr. {emp.personal_nr}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>{emp.email}</div>
+                </Link>
+                <EmployeeExportButtons
+                  userId={emp.user_id} fullName={emp.full_name ?? "Mitarbeiter"}
+                  year={year} month={month}
+                />
+              </div>
+
+              <div style={{
+                display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8,
+                marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)",
+              }}>
+                <Stat label="Arbeit"     value={formatMinutes(emp.workMin)} color="var(--accent2)" />
+                <Stat label="Arbeitstage" value={emp.arbeitstage}             color="var(--text)" />
+                <Stat label="Urlaub"     value={emp.urlaubstage}              color="var(--blue)" />
+                <Stat label="Krank"      value={emp.kranktage}                color="var(--red)" />
+                <Stat label="Notdienst"  value={emp.ndCount > 0 ? `${emp.ndCount} (${emp.ndPaid}b)` : "—"} color="var(--blue)" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
+
+      {/* GoBD note */}
+      <div style={{
+        marginTop: 24, padding: "12px 14px",
+        background: "color-mix(in srgb, var(--muted) 8%, transparent)",
+        border: "1px solid var(--border)", borderRadius: 10,
+        fontSize: 11, color: "var(--muted)", lineHeight: 1.6,
+      }}>
+        PDF und CSV enthalten Tagesdetails, Notdienst-Übersicht und Unterschriftfelder
+        gemäß GoBD-Empfehlungen. Generierungszeitpunkt wird im Dokument vermerkt.
+      </div>
     </div>
   );
 }
+
+function Stat({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.04em" }}>
+        {label.toUpperCase()}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color, marginTop: 2, fontFamily: "'DM Mono',monospace" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+const kpiCard: React.CSSProperties = {
+  background: "var(--surface)", border: "1px solid var(--border)",
+  borderRadius: 12, padding: "12px 14px",
+};
+const kpiLabel: React.CSSProperties = {
+  fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em",
+};
+const kpiValue = (color: string): React.CSSProperties => ({
+  fontSize: 18, fontWeight: 700, color, marginTop: 4, fontFamily: "'DM Mono',monospace",
+});

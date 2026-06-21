@@ -241,21 +241,22 @@ export default async function LandingPage() {
         </div>
       )}
 
-      {/* NAV */}
+      {/* NAV — auf engen Mobiles nur Brand + CTA, "Anmelden"/"Preise" werden ausgeblendet */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
         background: "rgba(15,15,19,0.85)", backdropFilter: "blur(16px)",
         borderBottom: "1px solid var(--border)",
-        padding: "0 24px", height: 60,
+        padding: "0 16px", height: 60,
         display: "flex", alignItems: "center", justifyContent: "space-between",
+        gap: 8,
       }}>
         <span style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3 }}>STUNDLY</span>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {!BETA_MODE && (
-            <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Preise</Link>
+            <Link href="/pricing" className="landing-nav-link" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Preise</Link>
           )}
-          <Link href="/login" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Anmelden</Link>
-          <Link href="/register" className="btn btn-primary" style={{ padding: "8px 16px", fontSize: 13 }}>
+          <Link href="/login" className="landing-nav-link" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Anmelden</Link>
+          <Link href="/register" className="btn btn-primary" style={{ padding: "8px 16px", fontSize: 13, whiteSpace: "nowrap" }}>
             Kostenlos starten
           </Link>
         </div>
@@ -291,16 +292,16 @@ export default async function LandingPage() {
             <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 28px" }}>
               {BETA_MODE ? "3 Monate gratis starten" : "14 Tage gratis testen"}
             </Link>
-            <Link href={BETA_MODE ? "#features" : "/pricing"} className="btn" style={{
+            <Link href="/demo" className="btn" style={{
               fontSize: 16, padding: "14px 28px",
               background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)",
             }}>
-              {BETA_MODE ? "Features ansehen" : "Preise ansehen"}
+              👀 Live-Demo ansehen
             </Link>
           </div>
 
           <p style={{ marginTop: 16, fontSize: 12, color: "var(--muted)" }}>
-            Keine Kreditkarte · Keine Verpflichtung · Jederzeit kündbar
+            Keine Kreditkarte · Keine Verpflichtung · Demo ohne Anmeldung
           </p>
         </div>
       </section>

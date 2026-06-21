@@ -733,6 +733,62 @@ body:has(.floating-scan) .support-fab {
 }
 
 /* ═══════════════════════════════════════════════
+   DEMO PAGE — desktop grid expansions
+   ═══════════════════════════════════════════════ */
+@media (min-width: 640px) {
+  .demo-hero-grid { grid-template-columns: 1.4fr 1fr !important; }
+  .demo-kpi-grid  { grid-template-columns: repeat(4, 1fr) !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   LANDING NAV — sehr enge Mobiles: "Anmelden"/"Preise" verstecken,
+   nur Brand + CTA bleibt (User kann sich vom Register-Screen aus einloggen).
+   ═══════════════════════════════════════════════ */
+@media (max-width: 380px) {
+  .landing-nav-link { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   COOKIE BANNER — responsive (text inline desktop, stack mobile)
+   ═══════════════════════════════════════════════ */
+.cookie-banner-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.cookie-banner-text {
+  flex: 1 1 320px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.cookie-banner-buttons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cookie-banner-btn {
+  padding: 10px 18px;
+  font-size: 13px;
+}
+@media (max-width: 560px) {
+  .cookie-banner-text { font-size: 13px; }
+  .cookie-banner-buttons {
+    width: 100%;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .cookie-banner-btn {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+
+/* ═══════════════════════════════════════════════
    DASHBOARD (Übersicht) — Linear/Vercel inspired
    ═══════════════════════════════════════════════ */
 .dash-wrapper {

@@ -146,7 +146,16 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
               </span>
             )}
             {entry && (
-              <button style={{ background:"none", border:"none", color:"var(--muted)", fontSize:18, cursor:"pointer", padding:"2px 4px" }}
+              <button
+                aria-label="Eintrag löschen"
+                style={{
+                  background:"none", border:"none", color:"var(--muted)",
+                  fontSize:22, lineHeight:1, cursor:"pointer",
+                  // 44×44 tap-target (WCAG)
+                  minWidth:44, minHeight:44,
+                  display:"inline-flex", alignItems:"center", justifyContent:"center",
+                  borderRadius:8,
+                }}
                 onClick={async e => { e.stopPropagation(); await onDelete(entry.id); setNdEntries([]); }}>×</button>
             )}
           </div>
@@ -255,15 +264,19 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
                         incrementNdVersion();
                       }
                     }}
+                    aria-label={nd.erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
                     title={nd.erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
                     style={{
                       background: "transparent",
                       border: "none",
                       color: nd.erledigt ? "var(--green)" : "var(--muted)",
-                      fontSize: 16,
+                      fontSize: 20,
+                      lineHeight: 1,
                       cursor: "pointer",
-                      padding: "4px 6px",
-                      borderRadius: 6,
+                      // 44×44 tap-target (WCAG)
+                      minWidth: 44, minHeight: 44,
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      borderRadius: 8,
                     }}
                   >
                     {nd.erledigt ? "✅" : "⏳"}

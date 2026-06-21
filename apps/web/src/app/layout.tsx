@@ -56,8 +56,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom bewusst erlaubt (WCAG 1.4.4 — Resize text)
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#7c6af7" },

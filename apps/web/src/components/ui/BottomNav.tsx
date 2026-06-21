@@ -153,6 +153,9 @@ export function BottomNav() {
                   left:           "50%",
                   transform:      "translateX(-50%)",
                   minWidth:       150,
+                  // Prevent off-screen clip on narrow viewports:
+                  maxWidth:       "min(90vw, 280px)",
+                  width:          "max-content",
                   background:     "var(--surface)",
                   border:         "1px solid var(--border)",
                   borderRadius:   12,

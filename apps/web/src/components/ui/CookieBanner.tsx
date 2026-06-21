@@ -36,30 +36,14 @@ export function CookieBanner() {
         right: 0,
         background: "rgba(15,15,19,0.98)",
         borderTop: "1px solid var(--border)",
-        padding: "20px 24px",
+        padding: "16px 16px calc(16px + env(safe-area-inset-bottom))",
         zIndex: 9999,
         backdropFilter: "blur(10px)",
         boxShadow: "0 -4px 24px rgba(0,0,0,0.3)",
       }}
     >
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 16,
-        }}
-      >
-        <div
-          style={{
-            flex: "1 1 320px",
-            color: "var(--text)",
-            fontSize: 14,
-            lineHeight: 1.6,
-          }}
-        >
+      <div className="cookie-banner-inner">
+        <div className="cookie-banner-text">
           <strong style={{ display: "block", marginBottom: 4 }}>🍪 Cookies & Datenschutz</strong>
           Wir verwenden technisch notwendige Cookies (Login, Spracheinstellung) und optional
           Analyse-Cookies, um Stundly zu verbessern. Du kannst deine Auswahl jederzeit ändern.{" "}
@@ -70,20 +54,18 @@ export function CookieBanner() {
             Datenschutzerklärung
           </Link>
         </div>
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <div className="cookie-banner-buttons">
           <button
             type="button"
             onClick={() => handle("rejected")}
-            className="btn"
-            style={{ padding: "10px 18px", fontSize: 13 }}
+            className="btn cookie-banner-btn"
           >
             Nur notwendige
           </button>
           <button
             type="button"
             onClick={() => handle("accepted")}
-            className="btn btn-primary"
-            style={{ padding: "10px 18px", fontSize: 13 }}
+            className="btn btn-primary cookie-banner-btn"
           >
             Alle akzeptieren
           </button>

@@ -32,11 +32,20 @@ function detectPlatform(): Platform {
  *    install API; user must use the Share menu).
  *  • Desktop / standalone (already installed) → nothing shown.
  */
+/** Pfade mit BottomNav → Banner muss höher sitzen, sonst überlappt es die Nav. */
+const HAS_BOTTOM_NAV = /^\/(dashboard|tracker|reports|salary|vacation|settings|team)/;
+
 export function InstallPrompt() {
   const [platform, setPlatform] = useState<Platform>("other");
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [howto, setHowto] = useState<"ios" | "android" | null>(null);
+  const [hasBottomNav, setHasBottomNav] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setHasBottomNav(HAS_BOTTOM_NAV.test(window.location.pathname));
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -138,7 +147,10 @@ export function InstallPrompt() {
           aria-label="Stundly App installieren"
           style={{
             position: "fixed",
-            bottom: "calc(80px + env(safe-area-inset-bottom))",
+            // BottomNav var → üstüne yerleştir; landing/auth → düşük bırak
+            bottom: hasBottomNav
+              ? "calc(96px + env(safe-area-inset-bottom))"
+              : "calc(12px + env(safe-area-inset-bottom))",
             left: 12,
             right: 12,
             zIndex: 200,

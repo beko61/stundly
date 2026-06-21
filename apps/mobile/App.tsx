@@ -15,44 +15,43 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [blocked, setBlocked] = useState<BlockedReason>(null);
 
-  // Soft-delete / deaktiviert gate — session değiştiğinde profile.deleted_at + is_active çek.
-  // Gate fail → signOut + reason göster.
-  async function gateSession(s: Session | null): Promise<{ session: Session | null; blocked: BlockedReason }> {
-    if (!s?.user) return { session: null, blocked: null };
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_active, deleted_at')
-      .eq('user_id', s.user.id)
-      .single();
-    if (profile?.deleted_at) {
-      await supabase.auth.signOut();
-      return { session: null, blocked: 'deleted' };
-    }
-    if (profile?.is_active === false) {
-      await supabase.auth.signOut();
-      return { session: null, blocked: 'inactive' };
-    }
-    return { session: s, blocked: null };
-  }
-
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      const r = await gateSession(s);
-      setSession(r.session);
-      setBlocked(r.blocked);
+    // Tek listener — INITIAL_SESSION mount sonrası, SIGNED_IN/OUT/TOKEN_REFRESHED sonrası tetiklenir.
+    // signOut() sonrası gelecek SIGNED_OUT event'inde blocked state'i SİLMİYORUZ ki Alert görünsün.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       setLoading(false);
-    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
-      const r = await gateSession(s);
-      setSession(r.session);
-      setBlocked(r.blocked);
+      if (event === 'SIGNED_OUT' || !s?.user) {
+        setSession(null);
+        return; // blocked korunur
+      }
+
+      // Gate: SIGNED_IN / INITIAL_SESSION / TOKEN_REFRESHED
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_active, deleted_at')
+        .eq('user_id', s.user.id)
+        .single();
+
+      if (profile?.deleted_at) {
+        setBlocked('deleted');
+        void supabase.auth.signOut(); // SIGNED_OUT trigger, yukarıda blocked korunur
+        return;
+      }
+      if (profile?.is_active === false) {
+        setBlocked('inactive');
+        void supabase.auth.signOut();
+        return;
+      }
+
+      setSession(s);
+      setBlocked(null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Login sonrası blocked mesajını göster (Alert) — bir kez
+  // Blocked mesajını Alert ile bir kez göster
   useEffect(() => {
     if (blocked === 'deleted') {
       Alert.alert(

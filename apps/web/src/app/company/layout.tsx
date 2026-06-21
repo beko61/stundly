@@ -17,9 +17,19 @@ export default async function CompanyLayout({ children }: { children: React.Reac
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name, company_id")
+    .select("role, full_name, company_id, is_active, deleted_at")
     .eq("user_id", user.id)
     .single();
+
+  // Soft-delete / deaktiviert gate
+  if (profile?.deleted_at) {
+    await supabase.auth.signOut();
+    redirect("/login?blocked=deleted");
+  }
+  if (profile?.is_active === false) {
+    await supabase.auth.signOut();
+    redirect("/login?blocked=inactive");
+  }
 
   if (profile?.role !== "company_admin" && profile?.role !== "super_admin") {
     redirect("/tracker");

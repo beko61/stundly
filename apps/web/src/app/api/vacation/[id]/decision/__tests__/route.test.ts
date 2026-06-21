@@ -16,6 +16,11 @@ vi.mock("@/lib/email/resend", () => ({
   sendVacationDecisionEmail: (...args: unknown[]) => mockSendEmail(...args),
 }));
 
+const mockLogAudit = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/audit/logger", () => ({
+  logAudit: (...args: unknown[]) => mockLogAudit(...args),
+}));
+
 // admin.from(...).select(...).eq(...).single() ya da .from().update().eq() chain'i için
 // basit bir factory: from() çağrısı tablo ismine göre konfigürasyona göre döner.
 function makeAdminClient(opts: {

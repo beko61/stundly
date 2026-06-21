@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
+import { logAudit } from "@/lib/audit/logger";
 
 /**
  * POST /api/company/employees/toggle
@@ -48,6 +49,16 @@ export async function POST(req: NextRequest) {
   if (updateErr) {
     return NextResponse.json({ error: "Update fehlgeschlagen" }, { status: 500 });
   }
+
+  await logAudit({
+    admin,
+    actorUserId:  ctx.user.id,
+    companyId,
+    action:       newState ? "employee.activated" : "employee.deactivated",
+    resourceType: "profile",
+    resourceId:   userId,
+    payload: { target_role: target.role },
+  });
 
   return NextResponse.json({ ok: true, is_active: newState });
 }

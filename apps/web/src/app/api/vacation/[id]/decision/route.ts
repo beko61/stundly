@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { sendVacationDecisionEmail } from "@/lib/email/resend";
+import { logAudit } from "@/lib/audit/logger";
 
 /**
  * POST /api/vacation/[id]/decision
@@ -74,7 +75,25 @@ export async function POST(
     return NextResponse.json({ error: "Update fehlgeschlagen", detail: updateErr.message }, { status: 500 });
   }
 
-  // 4) Email (fire-and-forget — başarısızsa karar geçerli)
+  // 4) Audit log (fire-and-forget)
+  await logAudit({
+    admin,
+    actorUserId:  ctx.user.id,
+    companyId,
+    action:       decision === "approved" ? "vacation.approved" : "vacation.rejected",
+    resourceType: "vacation_request",
+    resourceId:   id,
+    payload: {
+      employee_user_id: vacation.user_id,
+      start_date:       vacation.start_date,
+      end_date:         vacation.end_date,
+      days_count:       vacation.days_count,
+      urlaub_art:       vacation.urlaub_art ?? null,
+      ...(reason ? { rejection_reason: reason } : {}),
+    },
+  });
+
+  // 5) Email (fire-and-forget — başarısızsa karar geçerli)
   if (target.email) {
     try {
       await sendVacationDecisionEmail({

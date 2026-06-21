@@ -1,5 +1,78 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-21 (51) – v0.19.0: F5 başlangıç — Audit Log altyapısı
+
+### Hedef
+F5'in ilk parçası: DSGVO + GoBD denetlenebilirlik. Kim ne zaman ne yaptı?
+Soft-delete + Stripe + multi-admin sonradan bu altyapıyı kullanacak.
+
+### Eklenen / değişen
+
+**1) Migration 018 — `018_audit_log.sql`**
+- `audit_log` tablosu: id, created_at, actor_user_id, company_id, action,
+  resource_type, resource_id, payload (jsonb)
+- 3 indeks (company+created, actor, resource)
+- RLS: company_admin/super_admin sadece kendi şirketinin audit'ini SELECT eder
+- INSERT/UPDATE/DELETE policy YOK → sadece service-role yazar (immutable trail)
+- Idempotent — manuel apply gerekli
+
+**2) `lib/audit/logger.ts` (YENİ)**
+- `logAudit({ admin, actorUserId, companyId, action, resourceType?, resourceId?, payload? })`
+- Fire-and-forget: hatalar console.error'a, throw etmez, ana işlemi durdurmaz
+- snake_case action convention: `vacation.approved`, `vacation.rejected`,
+  `employee.activated`, `employee.deactivated`, vs.
+
+**3) Mevcut admin route'lara entegre edildi**
+- `/api/vacation/[id]/decision` — `vacation.approved` veya `vacation.rejected`
+  payload: employee_user_id, dates, days, urlaub_art, rejection_reason
+- `/api/company/employees/toggle` — `employee.activated` veya `employee.deactivated`
+  payload: target_role
+
+**4) `/company/audit` (YENİ sayfa)**
+- Aktivite zaman çizgisi (son 50/sayfa)
+- Sayfalama (?page=N, count exact)
+- Her satır: action ikonu + label + actor adı + target adı + relative time
+- 6 action label/icon/color map (vacation/employee approve/reject/activate/deactivate)
+- Vacation action'larda tarih aralığı ve rejection_reason inline
+- Hover'da absolute timestamp tooltip
+
+**5) Sidebar nav güncellendi**
+- "Audit-Log 🔒" item Berichte ile Abonnement arasına eklendi
+
+**6) Testler**
+- `auditLogger.test.ts` — 4 case: insert payload, default null, DB hata fire-and-forget, exception yutma
+- `decision/route.test.ts` — yeni `vi.mock("@/lib/audit/logger")` (mevcut testler çalışsın diye)
+
+### Test sonuçları
+- Web TS: ✓ clean
+- ESLint: ✓ No warnings or errors (audit page'de „...&ldquo; escape)
+- Vitest: ✓ **173/173 pass · 15 suite** (169 → 173, 4 yeni audit test)
+- Next build: ✓ 47/47 (yeni `/company/audit` route 195B)
+
+### Değişen dosyalar
+- `supabase/migrations/018_audit_log.sql` — YENİ
+- `apps/web/src/lib/audit/logger.ts` — YENİ
+- `apps/web/src/app/company/audit/page.tsx` — YENİ
+- `apps/web/src/__tests__/unit/auditLogger.test.ts` — YENİ
+- `apps/web/src/app/api/vacation/[id]/decision/route.ts` — audit log eklendi
+- `apps/web/src/app/api/company/employees/toggle/route.ts` — audit log eklendi
+- `apps/web/src/app/api/vacation/[id]/decision/__tests__/route.test.ts` — vi.mock("@/lib/audit/logger") eklendi
+- `apps/web/src/app/company/layout.tsx` — nav item eklendi
+- `apps/web/src/lib/version.ts` — 0.18.0 → 0.19.0 (MINOR — F5 başlangıç)
+
+### Manuel adım (deploy'da)
+⚠ **Migration 018** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+Yoksa /company/audit boş gözükür ve decision/toggle route'ları console.error verir
+(ama ana işlem devam eder — fire-and-forget).
+
+### F5 ilerleme
+- [x] v0.19.0 — Audit log altyapısı + entegrasyon
+- [ ] Soft-delete + audit entegrasyonu
+- [ ] Multi-admin desteği
+- [ ] Stripe seat-based billing
+
+---
+
 ## 2026-06-21 (50) – v0.18.0: F4 son parça — Admin Monatsberichte (PDF + CSV)
 
 ### Hedef

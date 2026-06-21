@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
       .select("user_id, full_name, email, vorname, nachname, personal_nr, abteilung, vorgesetzter, signature_data, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, bundesland")
       .eq("company_id", companyId)
       .eq("is_active", true)
+      .is("deleted_at", null)
       .order("nachname", { ascending: true });
     employees = list ?? [];
   }

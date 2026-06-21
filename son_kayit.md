@@ -1,5 +1,88 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-21 (52) – v0.20.0: F5 #2 — Soft-delete Mitarbeiter
+
+### Hedef
+Mitarbeiter "silinsin" ama time_entries / vacation_requests / notdienst kalsın
+(GoBD 10 yıl saklama). Audit log entegrasyonu ile kim ne zaman sildi izlenir.
+Kazara silmede restore butonu.
+
+### Mimari karar — soft-delete vs hard-delete
+
+- **Soft-delete** (`/api/company/employees/delete`) — admin günlük kullanım için
+  - profile.deleted_at + deleted_by set
+  - profile.is_active=false (login engellenir)
+  - Bağlı tablolar (time_entries vs.) DOKUNULMAZ
+  - Geri al butonu var
+- **Hard-delete** (`/api/dsgvo/delete`) — sadece kullanıcı kendi kendini siler
+  - Mevcut DSGVO route, anonymize + erase
+  - Bu PR'da DEĞİŞMEDİ
+
+### Eklenen / değişen
+
+**1) Migration 019 — `019_profiles_soft_delete.sql`**
+- `profiles.deleted_at timestamptz` ve `deleted_by uuid → auth.users` kolonları
+- `profiles_active_idx` partial index `(company_id) where deleted_at is null`
+  → aktif sorgular hızlı kalır
+- Idempotent, manuel apply gerekli
+
+**2) `/api/company/employees/delete` (YENİ)**
+- POST `{ userId }` — company_admin gate
+- Güvenlik: same-company + self-lockout (admin kendini silemez) + 409 already-deleted
+- `deleted_at = now()`, `deleted_by = admin.user.id`, `is_active = false` set
+- Audit: `employee.soft_deleted` payload: target_full_name, target_email, target_role
+
+**3) `/api/company/employees/restore` (YENİ)**
+- POST `{ userId }` — same gates
+- `deleted_at = null`, `deleted_by = null`, `is_active = true`
+- Audit: `employee.restored`
+
+**4) Query'lere `is null deleted_at` filter eklendi**
+- `/api/company/team-summary` → `?includeDeleted=true` ile override edilebilir
+  (UI bunu kullanır soft-deleted'i ayrı listede göstermek için)
+- `/company/reports/page.tsx` → server-side employees fetch
+- `/api/company/reports/data` → bulk path
+
+**5) `/company/employees` UI**
+- "Deaktivieren" (mevcut, yellow) + "Löschen" (yeni, red) butonları
+- "Gelöschte Mitarbeiter (N) ▾" toggle bölümü altta
+- Silinmiş card'lar: opacity 0.55, red left border, gelöscht-tarihi
+- "Wiederherstellen" yeşil buton
+- Löschen onayı: confirm dialog (Zeitdaten bleiben erhalten mesajı)
+- includeDeleted=true query → frontend deleted_at'a göre 2 listeye ayırır
+
+**6) Testler (YENİ 13 case)**
+- DELETE: 403/400/404/cross-company/self-protect/409 already-deleted/200 success/500 DB error
+- RESTORE: 403/400/cross-company/409 already-active/200 success
+- Audit log mock'lanır + assert edilir
+
+### Test sonuçları
+- Web TS: ✓ clean
+- ESLint: ✓ clean
+- Vitest: ✓ **186/186 pass · 16 suite** (173 → 186)
+
+### Değişen dosyalar
+- `supabase/migrations/019_profiles_soft_delete.sql` — YENİ
+- `apps/web/src/app/api/company/employees/delete/route.ts` — YENİ
+- `apps/web/src/app/api/company/employees/restore/route.ts` — YENİ
+- `apps/web/src/app/api/company/employees/__tests__/softDelete.test.ts` — YENİ (13 test)
+- `apps/web/src/app/api/company/team-summary/route.ts` — includeDeleted flag
+- `apps/web/src/app/company/reports/page.tsx` — deleted_at filter
+- `apps/web/src/app/api/company/reports/data/route.ts` — deleted_at filter
+- `apps/web/src/app/company/employees/page.tsx` — Löschen + Wiederherstellen UI
+- `apps/web/src/lib/version.ts` — 0.19.0 → 0.20.0 (MINOR — F5 #2)
+
+### Manuel adım (deploy'da)
+⚠ **Migration 019** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+
+### F5 ilerleme
+- [x] v0.19.0 — Audit log altyapısı
+- [x] v0.20.0 — Soft-delete + audit entegrasyonu
+- [ ] Multi-admin desteği
+- [ ] Stripe seat-based billing
+
+---
+
 ## 2026-06-21 (51) – v0.19.0: F5 başlangıç — Audit Log altyapısı
 
 ### Hedef

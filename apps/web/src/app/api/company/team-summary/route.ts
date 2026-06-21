@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
 
   const url   = new URL(req.url);
   const month = url.searchParams.get("month"); // "YYYY-MM"
+  // ?includeDeleted=true → soft-deleted Mitarbeiter de döner (Geloeschte UI sekmesi için)
+  const includeDeleted = url.searchParams.get("includeDeleted") === "true";
   const now   = new Date();
   const [y, m] = month
     ? month.split("-").map(Number)
@@ -32,12 +34,14 @@ export async function GET(req: NextRequest) {
   const firstDay = `${y}-${String(m).padStart(2, "0")}-01`;
   const lastDay  = new Date(y, m, 0).toISOString().split("T")[0];
 
-  // 1) Şirket çalışanları
-  const { data: employees } = await admin
+  // 1) Şirket çalışanları — soft-deleted by default haric tutulur
+  let empQuery = admin
     .from("profiles")
-    .select("user_id, full_name, email, role, is_active, last_seen_at, created_at")
+    .select("user_id, full_name, email, role, is_active, last_seen_at, created_at, deleted_at, deleted_by")
     .eq("company_id", companyId)
     .order("created_at", { ascending: true });
+  if (!includeDeleted) empQuery = empQuery.is("deleted_at", null);
+  const { data: employees } = await empQuery;
 
   const empList = employees ?? [];
   const userIds = empList.map((e) => e.user_id);
@@ -73,6 +77,7 @@ export async function GET(req: NextRequest) {
       role:           emp.role,
       is_active:      emp.is_active,
       last_seen_at:   emp.last_seen_at,
+      deleted_at:     emp.deleted_at,
       monthlyMinutes,
       workDays:       entries.filter((e) => e.day_type === "arbeiten").length,
       vacationDays:   entries.filter((e) => e.day_type === "urlaub").length,

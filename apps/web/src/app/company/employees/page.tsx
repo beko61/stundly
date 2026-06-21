@@ -11,6 +11,7 @@ interface EmployeeSummary {
   role:            string;
   is_active:       boolean;
   last_seen_at:    string | null;
+  deleted_at:      string | null;
   monthlyMinutes:  number;
   workDays:        number;
   vacationDays:    number;
@@ -35,6 +36,8 @@ function fmtMinutes(mins: number): string {
 
 export default function EmployeesPage() {
   const [employees, setEmployees]     = useState<EmployeeSummary[]>([]);
+  const [deletedEmployees, setDeletedEmployees] = useState<EmployeeSummary[]>([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [companyId, setCompanyId]     = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -55,9 +58,9 @@ export default function EmployeesPage() {
     if (!profile?.company_id) return;
     setCompanyId(profile.company_id);
 
-    // Team summary (employees + saatler) — admin client server-side fetch
+    // Team summary — includeDeleted=true ile soft-deleted da gelir, frontend ayırır
     const [summaryRes, { data: invs }] = await Promise.all([
-      fetch("/api/company/team-summary"),
+      fetch("/api/company/team-summary?includeDeleted=true"),
       supabase.from("invitations")
         .select("*")
         .eq("company_id", profile.company_id)
@@ -66,7 +69,9 @@ export default function EmployeesPage() {
 
     if (summaryRes.ok) {
       const summary = await summaryRes.json();
-      setEmployees(summary.employees ?? []);
+      const all: EmployeeSummary[] = summary.employees ?? [];
+      setEmployees(all.filter(e => !e.deleted_at));
+      setDeletedEmployees(all.filter(e => e.deleted_at));
     }
     setInvitations(invs ?? []);
     setLoading(false);
@@ -134,6 +139,39 @@ export default function EmployeesPage() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Aktion fehlgeschlagen");
+      return;
+    }
+    load();
+  }
+
+  async function deleteEmployee(userId: string, name: string) {
+    if (!confirm(`„${name}" wirklich löschen?\n\nDie Zeitdaten bleiben erhalten (GoBD). Du kannst den Mitarbeiter später wiederherstellen.`)) {
+      return;
+    }
+    setError(null);
+    const res = await fetch("/api/company/employees/delete", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ userId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Löschen fehlgeschlagen");
+      return;
+    }
+    load();
+  }
+
+  async function restoreEmployee(userId: string) {
+    setError(null);
+    const res = await fetch("/api/company/employees/restore", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ userId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Wiederherstellen fehlgeschlagen");
       return;
     }
     load();
@@ -236,21 +274,93 @@ export default function EmployeesPage() {
                   <span style={{ fontSize: 18, color: "var(--muted)", flexShrink: 0 }}>›</span>
                 </Link>
 
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={() => toggleEmployee(emp.user_id)}
+                    className="btn"
+                    style={{
+                      fontSize: 11, padding: "6px 12px",
+                      background: emp.is_active
+                        ? "color-mix(in srgb, var(--yellow) 12%, transparent)"
+                        : "color-mix(in srgb, var(--green) 12%, transparent)",
+                      color: emp.is_active ? "var(--yellow)" : "var(--green)",
+                      border: `1px solid ${emp.is_active
+                        ? "color-mix(in srgb, var(--yellow) 25%, transparent)"
+                        : "color-mix(in srgb, var(--green) 25%, transparent)"}`,
+                    }}
+                    title={emp.is_active ? "Vorübergehend deaktivieren — Daten bleiben" : "Wieder aktivieren"}
+                  >
+                    {emp.is_active ? "Deaktivieren" : "Aktivieren"}
+                  </button>
+                  <button
+                    onClick={() => deleteEmployee(emp.user_id, emp.full_name ?? emp.email ?? "Mitarbeiter")}
+                    className="btn"
+                    style={{
+                      fontSize: 11, padding: "6px 12px",
+                      background: "transparent",
+                      color: "var(--red)",
+                      border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
+                    }}
+                    title="Soft-Delete — Zeitdaten bleiben erhalten (GoBD)"
+                  >
+                    Löschen
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Soft-deleted toggle */}
+        {deletedEmployees.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              style={{
+                background: "transparent", border: "none",
+                color: "var(--muted)", fontSize: 12, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 6,
+                fontFamily: "'Syne',sans-serif",
+              }}
+            >
+              {showDeleted ? "▾" : "▸"} Gelöschte Mitarbeiter ({deletedEmployees.length})
+            </button>
+          </div>
+        )}
+
+        {/* Soft-deleted list */}
+        {showDeleted && deletedEmployees.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+            {deletedEmployees.map((emp) => (
+              <div
+                key={emp.user_id}
+                className="card"
+                style={{
+                  padding: "12px 16px",
+                  display: "flex", alignItems: "center", gap: 12,
+                  opacity: 0.55,
+                  borderLeft: "3px solid var(--red)",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {emp.full_name ?? emp.email ?? "–"}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                    {emp.email} · gelöscht am {emp.deleted_at ? new Date(emp.deleted_at).toLocaleDateString("de-DE") : "—"}
+                  </div>
+                </div>
                 <button
-                  onClick={() => toggleEmployee(emp.user_id)}
+                  onClick={() => restoreEmployee(emp.user_id)}
                   className="btn"
                   style={{
                     fontSize: 11, padding: "6px 12px", flexShrink: 0,
-                    background: emp.is_active
-                      ? "color-mix(in srgb, var(--red) 12%, transparent)"
-                      : "color-mix(in srgb, var(--green) 12%, transparent)",
-                    color: emp.is_active ? "var(--red)" : "var(--green)",
-                    border: `1px solid ${emp.is_active
-                      ? "color-mix(in srgb, var(--red) 25%, transparent)"
-                      : "color-mix(in srgb, var(--green) 25%, transparent)"}`,
+                    background: "color-mix(in srgb, var(--green) 12%, transparent)",
+                    color: "var(--green)",
+                    border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)",
                   }}
                 >
-                  {emp.is_active ? "Deaktivieren" : "Aktivieren"}
+                  Wiederherstellen
                 </button>
               </div>
             ))}

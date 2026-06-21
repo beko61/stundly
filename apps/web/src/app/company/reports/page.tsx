@@ -30,6 +30,7 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
     .select("user_id, full_name, email, personal_nr")
     .eq("company_id", companyId)
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("nachname", { ascending: true });
 
   if (!employees) notFound();

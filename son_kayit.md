@@ -1,5 +1,191 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-22 (55) – v0.22.0: Direkt-Mitarbeiter erstellen + must_change_password gate
+
+### Bağlam
+Önceki sohbette yarım kalmış iş + tamamlanma. Admin'in mitarbeiter'i email-davet
+beklemeden direkt oluşturabilmesi için akış (geçici şifre + zorla değiştirme).
+
+### Eklenen / değişen
+
+**1) Migration 020 — `020_profiles_must_change_password.sql`**
+- `profiles.must_change_password` boolean default false, idempotent
+- Manuel apply gerekli (Supabase Dashboard SQL Editor)
+
+**2) `/api/company/employees/create` (YENİ)**
+- POST `{ email, password, full_name, role }` — company_admin gate
+- supabase.auth.admin.createUser (email_confirm: true)
+- profiles UPDATE: company_id, role, full_name, must_change_password=true, is_active=true
+- Hata durumunda rollback (auth.admin.deleteUser)
+- Audit log: `employee.created` (payload.method = "direct_create")
+- Validasyon: email regex, password ≥ 8, name boş değil, role employee|company_admin
+
+**3) `/api/account/change-password` (YENİ)**
+- POST, login zorunlu
+- Service-role ile profiles.must_change_password=false set (RLS bypass — user
+  kendi flag'ini değiştiremez, sadece admin policy var)
+
+**4) `/password-change` page + form (YENİ)**
+- Server-component: user login değilse /login, flag set değilse role-home,
+  silinmiş/deaktive ise /login?blocked=...
+- Client form: 2 şifre input (new + confirm), validasyon, auth.updateUser →
+  fetch flag-clear → router.push role-home
+
+**5) 3 layout gate eklendi:**
+- `(dashboard)/layout.tsx` — flag set ise /password-change
+- `company/layout.tsx` — aynı
+- `superadmin/layout.tsx` — aynı
+
+**6) `/company/employees/page.tsx` UI değişti** (önceki sohbet yarım kalan iş)
+- "Mitarbeiter einladen" → "Direkt erstellen" akışı
+- `genPassword()` 12-char A-Za-z0-9 (1/I/O/0 hariç)
+- Form: name + email + role + pwd (auto-fill button)
+- handleCreate → POST /api/company/employees/create
+- Başarılı sonra modal: admin şifreyi mitarbeiter'a güvenli iletir
+
+### Akış (tam)
+1. Admin /company/employees → "Direkt erstellen"
+2. Email + temp şifre + name + role → POST create
+3. Endpoint: auth user + profile.must_change_password=true + audit
+4. Admin şifreyi mitarbeiter'a iletir (WhatsApp / yüz yüze)
+5. Mitarbeiter login → middleware allow → layout gate → /password-change
+6. Yeni şifre → auth.updateUser → flag clear → role-home
+
+### Edge cases test edildi (mantıken)
+- Mitarbeiter direkt /tracker → (dashboard) layout gate ✓
+- Mitarbeiter direkt /password-change ama flag false → role-home redirect ✓
+- super_admin must_change_password=true → /password-change ✓
+- Silinmiş user /password-change'e gelirse → sign-out + /login?blocked=deleted ✓
+
+### Test sonuçları
+- Web TS: ✓ clean
+- ESLint: ✓ clean
+- Vitest: ✓ **186/186 pass · 16 suite**
+- Next build: ✓ 3 yeni route (/password-change 1.8kB, /api/account/change-password 214B, /api/company/employees/create 214B)
+
+### Değişen dosyalar (10 dosya, +533 / -52)
+- `supabase/migrations/020_profiles_must_change_password.sql` — YENİ
+- `apps/web/src/app/api/company/employees/create/route.ts` — YENİ
+- `apps/web/src/app/api/account/change-password/route.ts` — YENİ
+- `apps/web/src/app/password-change/page.tsx` — YENİ (server)
+- `apps/web/src/app/password-change/form.tsx` — YENİ (client)
+- `apps/web/src/app/company/employees/page.tsx` — MODIFIED (yeni akış UI)
+- `apps/web/src/app/(dashboard)/layout.tsx` — gate eklendi
+- `apps/web/src/app/company/layout.tsx` — gate eklendi
+- `apps/web/src/app/superadmin/layout.tsx` — gate eklendi
+- `apps/web/src/lib/version.ts` — 0.21.0 → 0.22.0 (MINOR)
+
+### Manuel adım (deploy'da)
+⚠ **Migration 020** Supabase Dashboard SQL Editor'da çalıştırılmalı —
+yoksa create endpoint 500 patlar, gate sorgusu null döner.
+
+### Commit
+`6ecef44 v0.22.0: Direkt-Mitarbeiter erstellen + must_change_password gate`
+Push → Vercel auto-deploy ✓ (https://stundly.de/demo → 200)
+
+---
+
+## 2026-06-21 (54) – v0.21.0: FAZ 2 — Mobile UX fixes + Demo Mode
+
+### Hedef
+FAZ 2 (Pazarlanabilir hale): mobile audit + fix, kayıt olmadan tryout için
+/demo route, Reddit r/Selbststaendig + LinkedIn outreach playbook.
+
+### Mobile Audit (12 bulgu, 3 critical + 4 significant + 5 polish)
+
+**Critical:**
+- Pinch-zoom kapalıydı (`layout.tsx` viewport `maximumScale:1 + userScalable:false`)
+  → WCAG 1.4.4 ihlali, Android'de zoom blok. Fix: 2 satır kaldır.
+- DayEntry delete `×` tap-target ~22×22 → 44×44 WCAG min
+- DayEntry bezahlt ✅/⏳ tap-target ~24×24 → 44×44
+
+**Significant:**
+- InstallPrompt landing'de `bottom: 80px` boşa alan (BottomNav var sanıyordu).
+  Context-aware: HAS_BOTTOM_NAV regex ile pathname kontrol → 96px vs 12px.
+- CookieBanner dar mobile (<560px) buton sıkışırdı → full-width column-reverse stack.
+- Landing nav <380px sıkış → `.landing-nav-link` class, "Anmelden"/"Preise" gizli, sadece brand + CTA.
+- BottomNav popover sağ köşeden taşabilirdi → `max-width: min(90vw, 280px)`.
+
+**Polish (atlandı):**
+- Hero CTA mobile stack sırası
+- Mockup phone `translateX(38%)` çok dar viewport
+- Tracker "bugüne dön" floating buton
+- Hero h1 clamp dual definition (globals + inline)
+
+### Demo Mode (/demo)
+**Pragmatic tercih: read-only showcase, tam ürün görünümü.**
+- Single page, tab-based: Übersicht / Zeit / Lohn / Urlaub
+- Juni 2026 seed data (10 günlük tracker, 6 abzug breakdown, 3 vacation request)
+- Sticky DEMO banner üstte (gradient + "Kostenlos starten" CTA)
+- Conversion CTA kart altta
+- Mobile-first, desktop 2-col hero grid
+- Public (middleware PUBLIC_PATHS'e eklendi)
+- Sitemap entry (priority 0.9)
+- Landing hero: "Features ansehen" → "👀 Live-Demo ansehen"
+- Build: 4.41 kB static prerender
+
+**Hedef metrik:** Reddit launch (v0.8.2) 68 visitor → 2 register = %1.5.
+Demo Mode ile %5+ hedefleniyor (kayıt sürtünmesini düşürmek).
+
+### Outreach Playbook (outreach_templates.md)
+**r/Selbststaendig** — ban'leri öğrendik (v0.8.2 r/Hannover permaban):
+- 3 ban-safe post-tipi:
+  A) "Build in public" hikaye postu (en güvenli, link yorumda)
+  B) "Frage stellen" — sorunu paylaş, çözümü tartışmada anlat
+  C) Çarşamba Werbe-Thread (açık reklam, sadece burada)
+- Cadence: 2-3 hafta sadece yorum → Type A → Çarşamba thread → Type B her 2 ayda
+
+**LinkedIn** — Direct B2B DM:
+- Hedef: NRW + NI + HE Handwerk KOBİ sahipleri (Geschäftsführer, 2-50 MA)
+- 3 mesajlık sequence: cold → demo isteyene → 1 hafta follow-up
+- Tone notları: Du, Solo-Indie pozisyonu, PS satırı önemli
+- Demo link her zaman `/demo` (login yok = friction yok)
+
+**FAQ** — 7 yaygın itiraz cevabı (Excel, fiyat, DSGVO, lohn-programı entegrasyonu vb.)
+
+**Metrics framework** — Reddit + LinkedIn benchmark + target tablosu.
+
+### Bonus: Mobile audit'in 7 fix'i tek commit'te uygulandı
+- layout.tsx viewport
+- DayEntry × + ✅/⏳ → 44×44
+- InstallPrompt context-aware
+- CookieBanner + globals.css (cookie-banner-* classes + 560px breakpoint)
+- Landing nav class + 380px breakpoint
+- BottomNav popover clip-protection
+
+### Test sonuçları
+- Web TS: ✓ clean
+- ESLint: ✓ clean
+- Vitest: ✓ **186/186 pass**
+- Next build: ✓ (/demo static prerender 4.41 kB)
+
+### Değişen dosyalar (13 dosya, +874 / -41)
+**Yeni:**
+- `apps/web/src/app/demo/page.tsx` + `layout.tsx`
+- `outreach_templates.md` (repo root)
+
+**Modified:**
+- `apps/web/src/app/layout.tsx` (viewport)
+- `apps/web/src/app/page.tsx` (hero CTA + nav class)
+- `apps/web/src/app/globals.css` (+ cookie-banner-*, landing-nav-link, demo-hero-grid)
+- `apps/web/src/app/sitemap.ts` (/demo entry)
+- `apps/web/src/components/tracker/DayEntry.tsx` (tap targets)
+- `apps/web/src/components/ui/BottomNav.tsx` (popover clip)
+- `apps/web/src/components/ui/CookieBanner.tsx` (CSS class refactor)
+- `apps/web/src/components/ui/InstallPrompt.tsx` (HAS_BOTTOM_NAV)
+- `apps/web/src/middleware.ts` (/demo public)
+- `apps/web/src/lib/version.ts` (0.20.3 → 0.21.0)
+
+### Commit
+`7658033 v0.21.0: FAZ 2 — Mobile UX fixes + Demo Mode`
+
+### Kullanıcı tarafı kaldı
+- ⏳ Browser'da mobile test (Chrome MCP bağlı değildi, gerçek telefonda doğrula)
+- ⏳ r/Selbststaendig posting (önce 2-3 hafta sadece yorum cadence)
+- ⏳ LinkedIn DM batch (ilk 50 hedef profil)
+
+---
+
 ## 2026-06-21 (53) – v0.20.1: HOTFIX — Soft-delete auth gate (web + mobile)
 
 ### Bulgu (kullanıcı soru: "bu degisiklik hem webde hem mobilde dimi")

@@ -1,5 +1,59 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-21 (53) – v0.20.1: HOTFIX — Soft-delete auth gate (web + mobile)
+
+### Bulgu (kullanıcı soru: "bu degisiklik hem webde hem mobilde dimi")
+
+v0.20.0 sonrası **kritik açık**: profile.is_active=false ve deleted_at set olsa bile
+Supabase auth bu alanları bilmiyor → silinmiş bir mitarbeiter hem web hem mobile'a
+hâlâ login yapıp tracker'ı kullanabiliyordu.
+
+### Düzeltme
+
+**Web — `middleware.ts`**
+- Her authenticated istek için profile fetch'i COMPANY_ADMIN_PATHS'e bağlıydı
+- Şimdi: TÜM authenticated istek `(role, is_active, deleted_at)` çeker
+- `deleted_at != null` veya `is_active = false` → `signOut()` + `/login?blocked=deleted|inactive` redirect
+- Tek ekstra DB roundtrip per request (cookie cache'leniyor, OK)
+
+**Web — `/login/page.tsx`**
+- `?blocked=deleted` veya `?blocked=inactive` query → ön-doldurulmuş hata mesajı
+- Client login flow'da da gate eklendi: signIn başarılı sonrası profile check;
+  engelse `signOut()` + hata mesajı (middleware kaçırırsa fallback)
+
+**Mobile — `App.tsx`**
+- `gateSession(session)` helper: profile fetch + deleted_at/is_active check
+- `getSession()` + `onAuthStateChange` event listener — ikisinde de gate çalışır
+- Gate fail → `signOut()` + `Alert.alert("Konto gelöscht/deaktiviert", ...)`
+- subscription.unsubscribe() cleanup
+
+### Test sonuçları
+- Web TS: ✓ clean
+- Mobile TS: ✓ clean
+- ESLint: ✓ clean
+- Vitest: ✓ **186/186 pass · 16 suite**
+
+### Değişen dosyalar
+- `apps/web/src/middleware.ts` — gate her authenticated request için
+- `apps/web/src/app/(auth)/login/page.tsx` — blocked query mesajı + client-side gate
+- `apps/mobile/App.tsx` — gateSession helper + Alert
+- `apps/web/src/lib/version.ts` — 0.20.0 → 0.20.1 (PATCH — güvenlik hotfix)
+
+### Soft-delete kapsam özeti (artık tam)
+| Katman | Durum |
+|--------|-------|
+| DB schema (migration 019) | ✓ |
+| Web admin UI Löschen/Wiederherstellen | ✓ |
+| Web admin endpoints + audit log | ✓ |
+| Web middleware login gate | ✓ HOTFIX |
+| Web login sayfası gate + mesaj | ✓ HOTFIX |
+| Mobile auth gate (App.tsx) | ✓ HOTFIX |
+
+Mobile admin paneli yok (mobile sadece tracker/scan/gehalt/mehr). Bu yüzden
+mobile tarafında Löschen UI gerekmiyor — sadece silinmiş user'ı içeri almama gerekiyordu.
+
+---
+
 ## 2026-06-21 (52) – v0.20.0: F5 #2 — Soft-delete Mitarbeiter
 
 ### Hedef

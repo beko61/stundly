@@ -43,32 +43,36 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Giriş yapmış → login/register'a gitmeye çalışırsa yönlendir
-  if (user && (pathname === "/login" || pathname === "/register")) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  // Rol koruması — giriş yapmışsa profile'ı çek
+  // Giriş yapmış → access gate (soft-delete + deaktiviert) + rol koruması
   if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, is_active, deleted_at")
+      .eq("user_id", user.id)
+      .single();
+
+    // Soft-deleted veya deaktiviert → signOut + /login (mesaj ile)
+    if (profile?.deleted_at || profile?.is_active === false) {
+      await supabase.auth.signOut();
+      const url = new URL("/login", request.url);
+      url.searchParams.set("blocked", profile.deleted_at ? "deleted" : "inactive");
+      return NextResponse.redirect(url);
+    }
+
+    // Giriş yapmış → login/register'a gitmeye çalışırsa yönlendir
+    if (pathname === "/login" || pathname === "/register") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     const isCompanyPath = COMPANY_ADMIN_PATHS.some((p) => pathname.startsWith(p));
     const isSuperAdminPath = SUPER_ADMIN_PATHS.some((p) => pathname.startsWith(p));
+    const role = profile?.role ?? "individual";
 
-    if (isCompanyPath || isSuperAdminPath) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      const role = profile?.role ?? "individual";
-
-      if (isSuperAdminPath && role !== "super_admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-
-      if (isCompanyPath && role !== "company_admin" && role !== "super_admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
+    if (isSuperAdminPath && role !== "super_admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    if (isCompanyPath && role !== "company_admin" && role !== "super_admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 

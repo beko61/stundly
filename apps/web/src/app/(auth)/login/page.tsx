@@ -8,11 +8,16 @@ import { createClient } from "@/lib/supabase/client";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const token  = params.get("token");
+  const token   = params.get("token");
+  const blocked = params.get("blocked");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    blocked === "deleted"  ? "Dein Konto wurde gelöscht. Bitte wende dich an deinen Administrator."
+  : blocked === "inactive" ? "Dein Konto ist deaktiviert. Bitte wende dich an deinen Administrator."
+  : null
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
@@ -31,6 +36,25 @@ function LoginForm() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
+
+    // Soft-delete / deaktiviert gate
+    const { data: gateProfile } = await supabase
+      .from("profiles")
+      .select("is_active, deleted_at")
+      .eq("user_id", user.id)
+      .single();
+    if (gateProfile?.deleted_at) {
+      await supabase.auth.signOut();
+      setError("Dein Konto wurde gelöscht. Bitte wende dich an deinen Administrator.");
+      setLoading(false);
+      return;
+    }
+    if (gateProfile?.is_active === false) {
+      await supabase.auth.signOut();
+      setError("Dein Konto ist deaktiviert. Bitte wende dich an deinen Administrator.");
+      setLoading(false);
+      return;
+    }
 
     // Davet token'i ile geldiyse önce kabul akışını çalıştır
     if (token) {

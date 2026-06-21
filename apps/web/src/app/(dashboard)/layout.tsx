@@ -13,10 +13,11 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  // Soft-delete / deaktiviert gate — fail-open: profile fetch fail olursa engelleme.
+  // Soft-delete / deaktiviert / must_change_password gate
+  // — fail-open: profile fetch fail olursa engelleme.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_active, deleted_at")
+    .select("is_active, deleted_at, must_change_password")
     .eq("user_id", user.id)
     .single();
   if (profile?.deleted_at) {
@@ -26,6 +27,9 @@ export default async function DashboardLayout({
   if (profile?.is_active === false) {
     await supabase.auth.signOut();
     redirect("/login?blocked=inactive");
+  }
+  if (profile?.must_change_password) {
+    redirect("/password-change");
   }
 
   return (

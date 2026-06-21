@@ -42,10 +42,23 @@ export default function EmployeesPage() {
   const [companyId, setCompanyId]     = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole]   = useState<"employee" | "company_admin">("employee");
+  const [inviteName, setInviteName]   = useState("");
+  const [invitePwd, setInvitePwd]     = useState("");
   const [loading, setLoading]         = useState(true);
   const [inviting, setInviting]       = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const [success, setSuccess]         = useState<string | null>(null);
+  const [created, setCreated]         = useState<{ email: string; password: string; name: string } | null>(null);
+
+  function genPassword(): string {
+    // 12 char: A-Z + a-z + 0-9 + special — easy to type
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghjkmnpqrstuvwxyz";
+    let pwd = "";
+    for (let i = 0; i < 12; i++) {
+      pwd += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return pwd;
+  }
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -79,46 +92,36 @@ export default function EmployeesPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleInvite(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!companyId) return;
     setInviting(true);
     setError(null);
     setSuccess(null);
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const res = await fetch("/api/company/employees/create", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        email:     inviteEmail,
+        password:  invitePwd,
+        full_name: inviteName,
+        role:      inviteRole,
+      }),
+    });
+    const json = await res.json();
 
-    const { data: created, error: invErr } = await supabase
-      .from("invitations")
-      .insert({
-        company_id: companyId,
-        invited_by: user?.id,
-        email:      inviteEmail,
-        role:       inviteRole,
-      })
-      .select("id")
-      .single();
-
-    if (invErr || !created) {
-      setError(invErr?.code === "23505" ? "Diese E-Mail wurde bereits eingeladen." : "Fehler beim Einladen.");
+    if (!res.ok) {
+      setError(json.error ?? "Mitarbeiter konnte nicht erstellt werden");
       setInviting(false);
       return;
     }
 
-    const mailRes = await fetch("/api/email/invite", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ invitationId: created.id }),
-    });
-
-    if (mailRes.ok) {
-      setSuccess(`✓ Einladung an ${inviteEmail} versendet.`);
-    } else {
-      setSuccess(`⚠️ Einladung gespeichert, aber E-Mail-Versand fehlgeschlagen — Link manuell teilen.`);
-    }
-
+    // Başarılı — şifreyi modal'da göster (admin mitarbeiter'a güvenli iletir)
+    setCreated({ email: inviteEmail, password: invitePwd, name: inviteName });
     setInviteEmail("");
+    setInviteName("");
+    setInvitePwd("");
+    setInviteRole("employee");
     load();
     setInviting(false);
   }
@@ -188,35 +191,147 @@ export default function EmployeesPage() {
         Team verwalten und Stunden im Blick behalten · {monthName}
       </p>
 
-      {/* Einladen */}
+      {/* Direkt erstellen */}
       <div className="card" style={{ padding: "24px", marginBottom: 32 }}>
-        <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Mitarbeiter einladen</h2>
-        <form onSubmit={handleInvite} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Mitarbeiter direkt erstellen</h2>
+        <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
+          Du legst ein vorläufiges Passwort fest. Beim ersten Login muss der Mitarbeiter es ändern.
+        </p>
+        <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <input
+              className="input" type="text" value={inviteName}
+              onChange={(e) => setInviteName(e.target.value)}
+              placeholder="Vor- und Nachname"
+              required
+              style={{ flex: 2, minWidth: 180 }}
+            />
+            <select
+              className="input"
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as "employee" | "company_admin")}
+              style={{ flex: 1, minWidth: 130 }}
+            >
+              <option value="employee">Mitarbeiter</option>
+              <option value="company_admin">Admin</option>
+            </select>
+          </div>
           <input
-            className="input"
-            type="email"
-            value={inviteEmail}
+            className="input" type="email" value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="mitarbeiter@firma.de"
             required
-            style={{ flex: 2, minWidth: 200 }}
           />
-          <select
-            className="input"
-            value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as "employee" | "company_admin")}
-            style={{ flex: 1, minWidth: 140 }}
-          >
-            <option value="employee">Mitarbeiter</option>
-            <option value="company_admin">Admin</option>
-          </select>
-          <button className="btn btn-primary" type="submit" disabled={inviting} style={{ whiteSpace: "nowrap" }}>
-            {inviting ? "..." : "Einladen"}
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              className="input" type="text" value={invitePwd}
+              onChange={(e) => setInvitePwd(e.target.value)}
+              placeholder="Temporäres Passwort (min. 8 Zeichen)"
+              required
+              minLength={8}
+              style={{ flex: 1, fontFamily: "'DM Mono',monospace" }}
+            />
+            <button
+              type="button"
+              onClick={() => setInvitePwd(genPassword())}
+              className="btn"
+              style={{ whiteSpace: "nowrap", fontSize: 12 }}
+              title="Sicheres Passwort generieren"
+            >
+              ⟲ Generieren
+            </button>
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={inviting}>
+            {inviting ? "Wird erstellt..." : "+ Mitarbeiter erstellen"}
           </button>
         </form>
         {error && <p style={{ color: "var(--red)", fontSize: 12, marginTop: 8 }}>{error}</p>}
         {success && <p style={{ color: "var(--green)", fontSize: 12, marginTop: 8 }}>{success}</p>}
       </div>
+
+      {/* Erfolgs-Modal: Passwort anzeigen + kopieren */}
+      {created && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setCreated(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(4px)", zIndex: 100,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 16, padding: "24px 22px", maxWidth: 440, width: "100%",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
+          }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: 44, height: 44, borderRadius: "50%",
+              background: "color-mix(in srgb, var(--green) 18%, transparent)",
+              color: "var(--green)", fontSize: 20, fontWeight: 800, marginBottom: 14,
+            }}>✓</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>
+              Mitarbeiter erstellt
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 18, lineHeight: 1.6 }}>
+              Teile diese Zugangsdaten <strong style={{ color: "var(--text)" }}>sicher</strong> mit
+              {" "}<strong style={{ color: "var(--text)" }}>{created.name}</strong>.
+              Sie erscheinen nur jetzt — beim ersten Login wird ein neues Passwort gesetzt.
+            </p>
+
+            <div style={{
+              background: "var(--surface2)", border: "1px solid var(--border)",
+              borderRadius: 10, padding: "12px 14px", marginBottom: 8,
+              display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
+            }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em" }}>EMAIL</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {created.email}
+                </div>
+              </div>
+              <button
+                onClick={() => navigator.clipboard.writeText(created.email)}
+                className="btn" style={{ fontSize: 11, padding: "5px 10px", flexShrink: 0 }}
+              >Kopieren</button>
+            </div>
+            <div style={{
+              background: "var(--surface2)", border: "1px solid var(--border)",
+              borderRadius: 10, padding: "12px 14px", marginBottom: 18,
+              display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8,
+            }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em" }}>PASSWORT</div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2, fontFamily: "'DM Mono',monospace", color: "var(--accent2)" }}>
+                  {created.password}
+                </div>
+              </div>
+              <button
+                onClick={() => navigator.clipboard.writeText(created.password)}
+                className="btn" style={{ fontSize: 11, padding: "5px 10px", flexShrink: 0 }}
+              >Kopieren</button>
+            </div>
+
+            <button
+              onClick={() => {
+                const text = `Stundly-Zugang für ${created.name}\nE-Mail: ${created.email}\nPasswort: ${created.password}\n\nBeim ersten Login musst du ein neues Passwort setzen.`;
+                navigator.clipboard.writeText(text);
+                setSuccess("Zugangsdaten in Zwischenablage kopiert.");
+              }}
+              className="btn" style={{ width: "100%", fontSize: 12, marginBottom: 8 }}
+            >
+              Alles kopieren (für WhatsApp / SMS)
+            </button>
+            <button
+              onClick={() => setCreated(null)}
+              className="btn btn-primary" style={{ width: "100%" }}
+            >
+              Fertig
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Çalışanlar — tıklanabilir liste */}
       <div style={{ marginBottom: 32 }}>

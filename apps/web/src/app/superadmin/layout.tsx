@@ -15,9 +15,10 @@ export default async function SuperAdminLayout({ children }: { children: React.R
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase
-    .from("profiles").select("role").eq("user_id", user.id).single();
+    .from("profiles").select("role, must_change_password").eq("user_id", user.id).single();
 
   if (profile?.role !== "super_admin") redirect("/tracker");
+  if (profile?.must_change_password) redirect("/password-change");
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>

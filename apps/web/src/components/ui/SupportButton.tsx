@@ -7,14 +7,15 @@ import { useState, useRef, useEffect } from "react";
  *
  * Reihenfolge der Bevorzugung:
  *   1. WhatsApp (wenn NEXT_PUBLIC_SUPPORT_WHATSAPP gesetzt) — grüner Kreis, direkt-Link
- *   2. E-Mail   (wenn NEXT_PUBLIC_SUPPORT_EMAIL gesetzt)    — accent2 Kreis, Popover mit 3 Optionen
- *      (mailto:, Gmail web, Adresse kopieren — robust für Windows ohne Mail-Client)
- *   3. Nichts (kein Button)
+ *   2. Form    — accent2 Kreis, Link auf /kontakt (Default, immer verfügbar)
+ *   3. E-Mail   (NEXT_PUBLIC_SUPPORT_EMAIL_MODE=popover + NEXT_PUBLIC_SUPPORT_EMAIL)
+ *      — Legacy-Popover mit mailto:, Gmail web, Adresse kopieren
  */
 
-const RAW_NUMBER = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "";
-const NUMBER     = RAW_NUMBER.replace(/\D/g, "");
-const EMAIL      = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
+const RAW_NUMBER     = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "";
+const NUMBER         = RAW_NUMBER.replace(/\D/g, "");
+const EMAIL          = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
+const EMAIL_POPOVER  = process.env.NEXT_PUBLIC_SUPPORT_EMAIL_MODE === "popover";
 
 const WA_MSG    = encodeURIComponent("Hallo, ich brauche Hilfe mit Stundly");
 const MAIL_SUBJ = encodeURIComponent("Frage zu Stundly");
@@ -188,7 +189,22 @@ export function SupportButton() {
     );
   }
 
-  if (EMAIL) return <EmailPopover />;
+  if (EMAIL_POPOVER && EMAIL) return <EmailPopover />;
 
-  return null;
+  // Default: /kontakt formu — her zaman aktif (kod-built-in, env gerek yok)
+  return (
+    <a
+      href="/kontakt"
+      aria-label="Kontakt aufnehmen"
+      title="Kontakt aufnehmen"
+      className="support-fab"
+      style={{ ...BTN_BASE, background: "var(--accent2)" }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+    >
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </a>
+  );
 }

@@ -227,6 +227,69 @@ export async function sendVacationDecisionEmail({
   });
 }
 
+// Kontakt-Form mesajı (site içi /kontakt formu → operatöre)
+export async function sendContactFormEmail({
+  fromName,
+  fromEmail,
+  subject,
+  message,
+  meta,
+}: {
+  fromName:  string;
+  fromEmail: string;
+  subject:   string;
+  message:   string;
+  meta?:     { ip?: string; userAgent?: string; referer?: string };
+}) {
+  const to = process.env.SUPPORT_TO_EMAIL;
+  if (!to) throw new Error("SUPPORT_TO_EMAIL ist nicht konfiguriert");
+
+  const esc = (s: string) => s
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  const safeBody = esc(message).replace(/\n/g, "<br/>");
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    replyTo: fromEmail,
+    subject: `[Stundly Kontakt] ${subject || "Neue Nachricht"}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f13; color: #e8e8f0; padding: 32px 28px; border-radius: 16px;">
+        <div style="color: #c084fc; font-weight: 800; font-size: 14px; letter-spacing: 3px; margin-bottom: 24px;">STUNDLY · KONTAKT</div>
+
+        <div style="background: #18181f; border: 1px solid #2e2e3d; border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+          <div style="font-size: 11px; color: #6b6b80; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Von</div>
+          <div style="font-size: 14px; font-weight: 700;">${esc(fromName)}</div>
+          <div style="font-size: 12px; color: #c084fc; margin-top: 2px;">${esc(fromEmail)}</div>
+        </div>
+
+        <div style="background: #18181f; border: 1px solid #2e2e3d; border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+          <div style="font-size: 11px; color: #6b6b80; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Betreff</div>
+          <div style="font-size: 14px; font-weight: 700;">${esc(subject || "(kein Betreff)")}</div>
+        </div>
+
+        <div style="background: #18181f; border: 1px solid #2e2e3d; border-left: 3px solid #c084fc; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;">
+          <div style="font-size: 11px; color: #6b6b80; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Nachricht</div>
+          <div style="font-size: 14px; line-height: 1.7; color: #e8e8f0;">${safeBody}</div>
+        </div>
+
+        ${meta ? `
+        <div style="font-size: 10px; color: #6b6b80; line-height: 1.6; border-top: 1px solid #2e2e3d; padding-top: 12px;">
+          ${meta.ip      ? `<div>IP: ${esc(meta.ip)}</div>` : ""}
+          ${meta.referer ? `<div>Ref: ${esc(meta.referer)}</div>` : ""}
+          ${meta.userAgent ? `<div>UA: ${esc(meta.userAgent.slice(0, 200))}</div>` : ""}
+        </div>
+        ` : ""}
+
+        <p style="color: #6b6b80; font-size: 11px; margin-top: 18px;">
+          💬 Antworten geht direkt an ${esc(fromEmail)} (Reply-To gesetzt).
+        </p>
+      </div>
+    `,
+  });
+}
+
 // Abonelik başladı maili
 export async function sendSubscriptionConfirmationEmail({
   to,

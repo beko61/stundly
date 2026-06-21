@@ -719,7 +719,8 @@ export default async function LandingPage() {
         maxWidth: 1100, margin: "0 auto",
       }}>
         <span style={{ color: "var(--accent2)", fontWeight: 800, letterSpacing: 2 }}>STUNDLY</span>
-        <div style={{ display: "flex", gap: 24 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
+          <Link href="/kontakt" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Kontakt</Link>
           <Link href="/impressum" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Impressum</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
           <Link href="/agb" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AGB</Link>

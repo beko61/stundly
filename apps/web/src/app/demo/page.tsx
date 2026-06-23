@@ -52,14 +52,14 @@ export default function DemoPage() {
       }}>
         {hasEdits ? (
           <>
-            <span>🎉 <strong>Du hast eigene Daten!</strong> Lokal — sicher dir dein Konto.</span>
+            <span>🎉 <strong>Du hast eigene Daten!</strong> Bei Anmeldung werden sie automatisch übernommen.</span>
             <Link href="/register" style={{
               background: "white", color: "var(--accent)",
               padding: "7px 14px", borderRadius: 8,
               textDecoration: "none", fontWeight: 800, fontSize: 13,
               whiteSpace: "nowrap",
             }}>
-              💾 Konto erstellen →
+              💾 Daten sichern →
             </Link>
           </>
         ) : (

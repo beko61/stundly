@@ -124,6 +124,43 @@ export function useDemoState(): UseDemoStateResult {
 }
 
 /* ════════════════════════════════════════════════════════════
+   MIGRATION HELPERS — kayıt sonrası entry'leri Supabase'e taşımak için
+   ════════════════════════════════════════════════════════════ */
+
+/** Demo'da kullanıcı kendi entry'lerini girmiş mi? (localStorage'da seed dışında veri var mı?) */
+export function hasDemoEdits(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    return raw !== JSON.stringify(SEED_STATE);
+  } catch {
+    return false;
+  }
+}
+
+/** Import için entry'leri oku — Supabase time_entries formatına yakın. */
+export function getDemoEntriesForImport(): DemoEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Partial<DemoState>;
+    return Array.isArray(parsed.entries) ? parsed.entries : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Import sonrası localStorage'ı temizle — kullanıcı tekrar girmez. */
+export function clearDemoStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch { /* yoksay */ }
+}
+
+/* ════════════════════════════════════════════════════════════
    COMPUTATIONS — entries'den live KPI çıkar
    ════════════════════════════════════════════════════════════ */
 

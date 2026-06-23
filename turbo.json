@@ -1,9 +1,32 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_SUPPORT_WHATSAPP",
+        "NEXT_PUBLIC_SUPPORT_EMAIL",
+        "NEXT_PUBLIC_SUPPORT_EMAIL_MODE",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "RESEND_API_KEY",
+        "SUPPORT_TO_EMAIL",
+        "ANTHROPIC_API_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_PRICE_INDIVIDUAL_MONTHLY",
+        "STRIPE_PRICE_INDIVIDUAL_YEARLY",
+        "STRIPE_PRICE_TEAM_MONTHLY",
+        "STRIPE_PRICE_TEAM_YEARLY",
+        "STRIPE_PRICE_BUSINESS_MONTHLY",
+        "STRIPE_PRICE_BUSINESS_YEARLY"
+      ]
     },
     "dev": {
       "persistent": true,

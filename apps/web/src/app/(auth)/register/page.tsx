@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 
 function mapError(msg: string): string {
   if (msg.includes("already registered") || msg.includes("already been registered"))
@@ -149,13 +150,15 @@ function RegisterForm() {
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
         {token ? "Einladung annehmen" : "Konto erstellen"}
       </h1>
-      <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
+      <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>
         {token && companyName
           ? `Trete ${companyName} bei.`
           : token
             ? "Trete deinem Team auf Stundly bei."
             : "Starte dein Stundly-Konto."}
       </p>
+
+      <DemoDataBadge />
 
       <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useRouter } from "next/navigation";
+import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 
 const options = [
   {
@@ -34,6 +35,8 @@ export default function OnboardingTypePage() {
           }} />
         ))}
       </div>
+
+      <DemoDataBadge />
 
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
         Wie möchtest du Stundly nutzen?

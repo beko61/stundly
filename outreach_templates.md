@@ -48,7 +48,20 @@ Erfahrung. Keine Werbung — fragt einfach.
 Cheers, Yusuf (Handwerk, NI)
 ```
 
-→ Kimse linkı sormuyorsa yorumda **`Falls jemand mal reinschauen will: stundly.de — kein Login nötig, /demo zeigt alles`** yaz. Çok kişi sorarsa profile bio'na koy.
+→ Kimse linkı sormuyorsa yorumda **`Falls jemand mal reinschauen will: stundly.de/demo — kein Login, eigene Daten eingeben, beim Anmelden werden sie automatisch übernommen`** yaz. Çok kişi sorarsa profile bio'na koy.
+
+### Shareable Demo URLs (FAZ 2 v0.26+)
+
+Her demo tab'i artık ayrı link:
+- **Tüm demo (default Zeit)**: `https://stundly.de/demo`
+- **Brutto-Netto vurgusu**: `https://stundly.de/demo?tab=lohn` ← LinkedIn DM'lerde "schau dir die Lohnberechnung an"
+- **Dashboard hero**: `https://stundly.de/demo?tab=uebersicht`
+- **Urlaubsantrag**: `https://stundly.de/demo?tab=urlaub`
+
+LinkedIn DM'inde branch-specific link gönder:
+- Handwerk Inhaber → **`/demo?tab=lohn`** (Brutto-Netto en güçlü ürün)
+- KOBİ admin → **`/demo?tab=uebersicht`** (KPI dashboard görsün)
+- Pflegedienst → **`/demo?tab=zeit`** (default — Notdienst flow daha sonra demo'ya eklenecek)
 
 #### B) "Frage stellen" — orta güvenli
 > Sorunu paylaş, çözümünü kendin tartışma içinde söyle.

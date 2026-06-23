@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 
 const BUNDESLAENDER = [
   { code: "BB", name: "Brandenburg" },
@@ -128,6 +129,8 @@ function SetupForm() {
           }} />
         ))}
       </div>
+
+      <DemoDataBadge />
 
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
         {isCompany ? "Unternehmen einrichten" : "Dein Profil einrichten"}

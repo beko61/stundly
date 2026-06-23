@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useDemoState, computeStats } from "./state";
 import { UebersichtTab } from "./UebersichtTab";
@@ -22,6 +23,7 @@ import { UrlaubTab } from "./UrlaubTab";
  */
 
 type Tab = "uebersicht" | "zeit" | "lohn" | "urlaub";
+const VALID_TABS: Tab[] = ["uebersicht", "zeit", "lohn", "urlaub"];
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "uebersicht", label: "Übersicht", icon: "🏠" },
@@ -30,10 +32,43 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "urlaub",     label: "Urlaub",    icon: "🏖" },
 ];
 
-export default function DemoPage() {
-  const [tab, setTab] = useState<Tab>("zeit"); // Default: Zeit (en interactive tab)
+function isTab(s: string | null): s is Tab {
+  return !!s && (VALID_TABS as string[]).includes(s);
+}
+
+export default function DemoPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: 60, textAlign: "center", color: "var(--muted)" }}>Laden…</div>
+    }>
+      <DemoPage />
+    </Suspense>
+  );
+}
+
+function DemoPage() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const initialTab = isTab(params.get("tab")) ? (params.get("tab") as Tab) : "zeit";
+
+  const [tab, setTabState] = useState<Tab>(initialTab); // Default: Zeit (interactive)
   const { state, upsertEntry, removeEntry, resetAll, hasEdits, ready } = useDemoState();
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // Tab değişince URL ?tab=X ile senkron (shareable link)
+  function setTab(next: Tab) {
+    setTabState(next);
+    const sp = new URLSearchParams(window.location.search);
+    sp.set("tab", next);
+    router.replace(`/demo?${sp.toString()}`, { scroll: false });
+  }
+
+  // Browser back/forward'da URL → tab sync
+  useEffect(() => {
+    const fromUrl = params.get("tab");
+    if (isTab(fromUrl) && fromUrl !== tab) setTabState(fromUrl as Tab);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   const stats = useMemo(() => computeStats(state), [state]);
 

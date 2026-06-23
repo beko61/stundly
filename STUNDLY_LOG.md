@@ -7,25 +7,53 @@
 
 ## ⚡ HIZLI BAŞLANGIÇ (yeni sohbet için)
 
-**Mevcut durum (13.06.2026):**
-- ✅ Stundly canlıda: **https://stundly.de**
-- ✅ **Beta Phase aktif** (BETA_MODE=true) — 07.06.2026 → 07.09.2026, 3 ay 100% ücretsiz, Pricing/Stripe gizli
-- ✅ Dashboard tamamen yeniden tasarlandı (ay seçici + yıllık kart + 12 ay trend + 7 gün grafik)
-- ✅ Resend email kurulumu TAMAM (3 trigger: welcome / invite / subscription)
-- ✅ Stripe Test mode TAMAM (Beta sonrası kullanılacak: ürünler + checkout + webhook + BETA30 coupon)
-- ✅ Yasal sayfalar: Impressum + Datenschutz (Yusuf Bektas, Tiergarten 122, 30559 Hannover) + AGB + Widerrufsbelehrung
-- ✅ Pricing strategy (Beta sonrası): Individual €5,99/€59 · Team €19,99/€199 · Business €49,99/€499
-- ✅ Sollstunden artık sabit (Mo-Fr 8h flat, Sa/So 0) — eskiden Mo-Do 8:15h/Fr 6:15h idi
-- ✅ Notdienst hafta-ay atfı (haftanın Pazartesisi hangi aydaysa hafta o aya)
-- ✅ Settings tüm kişisel + firma bilgileri tek yerde, PDF için tam Briefkopf
+**Mevcut durum (22.06.2026 · v0.26.0):**
+- ✅ Stundly canlıda: **https://stundly.de** · Vercel auto-deploy main branch
+- ✅ **Beta Phase aktif** — 07.06.2026 → 07.09.2026, 3 ay 100% ücretsiz, Pricing/Stripe gizli
+- ✅ FAZ 2 KOMPLE TAMAM — bkz. son_kayit.md #54-59 (v0.21 → v0.26 detayları)
 
-**FAZ 1 KAPATILDI — kullanıcı tarafında 2 offline iş kaldı:**
+**v0.21 → v0.26 (FAZ 2 paketi, 1 günlük büyük sprint):**
+- ✅ **Mobile audit + 7 fix** — pinch-zoom açıldı, tap-targets 44×44, cookie banner mobile-stack, landing nav clip
+- ✅ **`/demo` route** — kayıt olmadan tryout, interactive (gün tıkla → entry ekle), 4 tab (Übersicht/Zeit/Lohn/Urlaub), localStorage persist
+- ✅ **Demo → Konto data migration** — onboarding/done'da "übernehmen?" prompt → batch upsert time_entries, en kritik conversion booster
+- ✅ **Shareable Demo URLs** — `/demo?tab=lohn` direkt link, outreach DM'lerinde branch-specific
+- ✅ **DemoDataBadge** — register + onboarding sayfalarında "N entry werden übernommen" rozeti
+- ✅ **`/kontakt` page + form** — WhatsApp olmadan support, Resend → bktasyusuf@gmail.com
+- ✅ **Direkt-Mitarbeiter** — admin temp şifre ile employee oluşturur, ilk login `/password-change` zorla
+- ✅ **outreach_templates.md** — r/Selbststaendig 3 ban-safe post-tipi + LinkedIn 3-mesajlık DM playbook + 7 itiraz FAQ
+
+**Mimari iyileştirmeler:**
+- Demo state: `apps/web/src/app/demo/state.ts` (DemoEntry, useDemoState hook, computeStats)
+- Demo migration helpers: `hasDemoEdits()`, `getDemoEntriesForImport()`, `clearDemoStorage()`
+- Email helpers: `sendContactFormEmail` (`lib/email/resend.ts`)
+- Audit log: tüm admin actionları payload + actor tracked
+- Gate trio: `(dashboard)`, `company`, `superadmin` layout'larda must_change_password kontrolü
+
+**Test coverage:**
+- Vitest 17 suite · **210/210 pass** (önce 186 idi, +24 demo state tests)
+- TS clean · ESLint clean · Next build success
+
+**Kullanıcı tarafında bekleyen offline iş:**
 1. ⏳ **Gewerbe Anmeldung** (Hannover Gewerbeamt) — pazarlamadan önce şart
-2. ⏳ **info@stundly.de email forwarding** (ImprovMX önerildi) — yasal şart, Impressum'da bu adres var
+2. ⏳ **info@stundly.de forwarding** (ImprovMX) — Impressum yasal, ama yeni `/kontakt` formu Resend ile bypass ediyor; pratikte düşük öncelik
+3. ⏳ **Test demo→register→migration flow** (son_kayit.md #58'de adımlar)
+4. ⏳ **Reddit r/Selbststaendig posting** — outreach_templates.md'deki cadence
+5. ⏳ **LinkedIn DM batch** — ilk 50 hedef profil
+
+**Vercel env (manuel set edilmiş):**
+- `SUPPORT_TO_EMAIL=bktasyusuf@gmail.com` ✓
+- `RESEND_API_KEY` ✓ (eski)
+- `SUPABASE_*` ✓ (eski)
+- `STRIPE_*` ✓ (eski)
+
+**Supabase migration'lar (manuel apply edilmiş):**
+- 013-019 ✓
+- 020 (must_change_password) ✓
 
 **Sonraki sohbette ilk adım:**
-> "Stundly devam ediyoruz. FAZ 2'ye geçelim — demo video, landing iyileştirmeleri, ilk beta müşteriler."
-> Veya: "Gewerbe açtım, Stripe live mode'a geçelim."
+> "Stundly devam ediyoruz. FAZ 3'e geçelim — ilk 10 müşteri."
+> Veya: "Outreach başlayalım — Reddit/LinkedIn DM batch'i hazırla."
+> Veya: "Aktivasyon iyileştir — onboarding sonrası tour ekle."
 > Veya: "Beta mode'u kapatalım, ücretli plana geçelim." (BETA_MODE=false yeterli)
 
 **✅ TÜM MIGRATION'LAR ÇALIŞTI (2026-06-13):**

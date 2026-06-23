@@ -1,5 +1,156 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-06-22 (59) – v0.26.0: Demo shareability + trust polish
+
+### Hedef
+Outreach assets güçlensin + kayıt akışında "verim kaybolur mu?" paniği kalksın.
+
+### 3 değişiklik
+
+**1) Shareable Demo URLs**
+- `/demo?tab=zeit|lohn|uebersicht|urlaub` direkt linklenebilir
+- Tab değişince `router.replace(?tab=X)` URL sync, browser back/forward destekli
+- Suspense wrapper useSearchParams için zorunlu (Next.js 15 static prerender)
+
+**2) DemoDataBadge component** (`components/ui/DemoDataBadge.tsx`)
+- Register + onboarding/type + onboarding/setup sayfalarına inject
+- `hasDemoEdits()` true ise: "💾 N Demo-Einträge werden nach der Registrierung übernommen"
+- Yoksa render etmez
+
+**3) outreach_templates.md güncel**
+- "Shareable Demo URLs" bölümü + persona-tab eşleşmesi:
+  - Handwerk Inhaber → `/demo?tab=lohn` (Brutto-Netto en güçlü)
+  - KOBİ admin → `/demo?tab=uebersicht` (KPI dashboard)
+- r/Selbststaendig yorum metni güncellendi
+
+### Conversion mantığı
+Önce: kayıt akışında demo data sessizce arka planda, son adımda sürpriz prompt
+Şimdi: register → onboarding/type → onboarding/setup → onboarding/done, her sayfada
+"N entry hazır" rozeti → expectation set → "übernehmen" prompt'una gelene kadar
+kullanıcı zaten biliyor.
+
+### Validation
+TS clean · ESLint clean · Vitest 186/186 · Next build
+(/demo 7.38 → 7.84 kB, register +badge, onboarding setup/type +badge)
+
+### Commit
+`de71901 v0.26.0: Demo shareability + trust polish` · auto-deploy ✓
+
+---
+
+## 2026-06-22 (58) – v0.25.0: Demo → Konto data migration
+
+### Hedef (kritik conversion booster)
+Demo'da 5 dk emek harcayan user kayıt olunca verisini kaybetmesin. Önceki: %50
+abandon riski. Sonrası: onboarding/done'da prompt + batch upsert.
+
+### Akış (yeni)
+1. /demo → kullanıcı entry'leri girer (localStorage)
+2. Banner: "💾 Daten sichern →" (eski "Konto erstellen")
+3. /register → DemoDataBadge ("N entry werden übernommen")
+4. /onboarding/type, /onboarding/setup → DemoDataBadge devam (v0.26.0'da eklendi)
+5. /onboarding/done → import prompt: "N Einträge übernehmen? [Verwerfen | ✓ Übernehmen]"
+6. Übernehmen → supabase.upsert(time_entries) onConflict user_id+date
+7. "✅ N Einträge übernommen" yeşil banner → "Jetzt starten" → /dashboard
+
+### state.ts helpers (yeni)
+- `hasDemoEdits()` — localStorage SEED'den farklı mı?
+- `getDemoEntriesForImport()` — DemoEntry[] çek
+- `clearDemoStorage()` — import sonrası cleanup
+
+### onboarding/done page modifiye
+- useState importStatus: checking | idle | prompt | importing | done | failed
+- useEffect mount'ta hasDemoEdits check
+- handleImport: supabase.from("time_entries").upsert(rows, { onConflict: "user_id,date" })
+- handleDiscard: clearDemoStorage + status=idle
+- "Jetzt starten" butonu importing sırasında disabled
+
+### demo banner enhance
+- hasEdits varsa eski: "Lokal — sicher dir dein Konto"
+- Yeni: "Bei Anmeldung werden Daten automatisch übernommen" + "💾 Daten sichern →"
+
+### Validation
+TS clean · ESLint clean · Vitest 186/186 · Next build
+(/onboarding/done 1.53 → 3.68 kB import logic)
+
+### Commit
+`379e5e9 v0.25.0: Demo → Konto data migration` · auto-deploy ✓
+
+---
+
+## 2026-06-22 (57) – v0.24.0: Demo Mode v2 — Interactive
+
+### Hedef
+v0.21.0'da çıkan read-only showcase'in conversion zayıflığını çözmek. Hedef: %1.5 → %3-4.
+
+### Yeni mimari (6 dosya)
+- `demo/state.ts` — DemoEntry/Settings types, useDemoState hook, localStorage persist,
+  computeStats (Brutto × 0.68 Netto factor — simplified)
+- `demo/EntryModal.tsx` — gün tıkla → bottom-sheet modal (Arbeiten/Urlaub/Krank/Frei
+  chips + Start/Ende/Pause inputs + Löschen), 44×44 tap-targets, ESC close
+- `demo/ZeitTab.tsx` — 30 gün Juni 2026 list, click → modal, live Soll/Ist/Diff bar
+- `demo/UebersichtTab.tsx` — 2 hero KPI + 4 KPI (Stundensaldo + Brutto + counts), live
+- `demo/LohnTab.tsx` — Brutto → Netto hero + 5 Abzug breakdown (LSt, RV, KV, AV, PV)
+- `demo/UrlaubTab.tsx` — Anspruch/Genommen/Übrig live (Urlaub count state'ten), Beispiel-Anträge showcase
+
+### page.tsx yeniden yazıldı
+- Default tab artık "zeit" (Übersicht değil)
+- Sticky banner context-aware: hasEdits varsa yeşil "Du hast eigene Daten!" + "Daten sichern" CTA
+- Header'a "↻ Reset" buton (sadece hasEdits true ise) + confirm modal
+- Conversion CTA bottom da hasEdits ile metni değişir
+
+### UX kazanımları
+- Kayıt olmadan tam tryout
+- KPI'lar live recompute → feedback loop
+- localStorage persist → sayfayı kapatıp tekrar açınca kaldığı yerden
+- Reset butonu → seed'e dönüş
+
+### Validation
+TS clean · ESLint clean · Vitest 186/186 · Next build (/demo 4.41 → 7.38 kB)
+
+### Commit
+`46bdbd3 v0.24.0: Demo Mode v2 — Interactive` · auto-deploy ✓
+
+---
+
+## 2026-06-22 (56) – v0.23.0: Kontakt-Form
+
+### Hedef
+WhatsApp olmadan da iletişim — info@stundly.de email forwarding gereksiz, site içi
+form Resend ile direkt bktasyusuf@gmail.com'a düşer.
+
+### Yeni
+- `/kontakt` page + form.tsx — name+email+subject+message, honeypot, validasyon
+- `/api/contact` — POST, validation, honeypot, Resend send, replyTo=ziyaretçi
+- `sendContactFormEmail` helper (`lib/email/resend.ts`)
+
+### SupportButton güncelleme
+- Sıra: WhatsApp (NUMBER varsa) → /kontakt link (default, her zaman çalışır) →
+  EmailPopover (NEXT_PUBLIC_SUPPORT_EMAIL_MODE=popover gerekli)
+
+### Footer
+- Landing footer'a "Kontakt" linki en başa eklendi
+
+### Env değişkeni (manuel, Vercel'de eklendi)
+- `SUPPORT_TO_EMAIL = bktasyusuf@gmail.com` ← yapılmazsa 503 döner
+
+### Bug fix sonrası (commit 8fb655e)
+- `/api/contact` PUBLIC_PATHS'a eklendi (middleware 307 redirect ediyordu)
+- Curl test sonrası bulundu
+
+### turbo.json fix (commit c0c4d7c)
+- Vercel build uyarısı: env vars deklare değildi → build task env:[]'a 18 değişken
+- Runtime'da problemse yoktu ama Turbo cache invalidation için lazımdı
+
+### Validation
+TS clean · ESLint clean · Vitest 186/186 · Next build
+(/kontakt 1.69 kB static, /api/contact dynamic)
+
+### Commit
+`30a41a3 v0.23.0: Kontakt-Form (/kontakt + /api/contact + Resend)` · auto-deploy ✓
+
+---
+
 ## 2026-06-22 (55) – v0.22.0: Direkt-Mitarbeiter erstellen + must_change_password gate
 
 ### Bağlam

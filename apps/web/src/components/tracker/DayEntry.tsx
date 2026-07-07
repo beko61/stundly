@@ -182,7 +182,7 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
             )}
             {entry.note && (
               <div className="time-chip">
-                <span style={{ color:"var(--muted)", fontSize:10 }}>📝 {entry.note}</span>
+                <span style={{ color:"var(--muted)", fontSize:10, whiteSpace:"pre-line" }}>📝 {entry.note}</span>
               </div>
             )}
           </div>
@@ -214,7 +214,7 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
             )}
             {entry.note && (
               <div className="time-chip">
-                <span style={{ color:"var(--muted)", fontSize:10 }}>📝 {entry.note}</span>
+                <span style={{ color:"var(--muted)", fontSize:10, whiteSpace:"pre-line" }}>📝 {entry.note}</span>
               </div>
             )}
           </div>

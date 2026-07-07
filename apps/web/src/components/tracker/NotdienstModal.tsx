@@ -220,8 +220,14 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
           {/* Notiz */}
           <div>
             <label className="label">Notiz (optional)</label>
-            <input className="input" type="text" value={note} onChange={e => setNote(e.target.value)}
-              placeholder="Kurze Notiz..." />
+            <textarea
+              className="input"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Kurze Notiz... (Enter = neue Zeile)"
+              rows={2}
+              style={{ resize: "vertical", minHeight: 44, fontFamily: "'Syne', sans-serif" }}
+            />
           </div>
 
           {/* Bezahlt-Toggle (Lohn wird oft erst nächsten Monat ausgezahlt) */}

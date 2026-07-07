@@ -220,7 +220,7 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
                       {e.beginn} – {e.ende}
                     </span>
                     <span style={{ fontSize: 11, color: "var(--muted)" }}>Pause: {e.pause_minuten} min</span>
-                    {e.notiz && <span style={{ fontSize: 11, color: "var(--muted)" }}>📝 {e.notiz}</span>}
+                    {e.notiz && <span style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "pre-line" }}>📝 {e.notiz}</span>}
                   </div>
                 ))}
 

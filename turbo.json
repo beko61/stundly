@@ -25,7 +25,8 @@
         "STRIPE_PRICE_TEAM_MONTHLY",
         "STRIPE_PRICE_TEAM_YEARLY",
         "STRIPE_PRICE_BUSINESS_MONTHLY",
-        "STRIPE_PRICE_BUSINESS_YEARLY"
+        "STRIPE_PRICE_BUSINESS_YEARLY",
+        "CRON_SECRET"
       ]
     },
     "dev": {

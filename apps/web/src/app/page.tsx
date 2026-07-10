@@ -723,6 +723,7 @@ export default async function LandingPage() {
           <Link href="/kontakt" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Kontakt</Link>
           <Link href="/impressum" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Impressum</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
+          <Link href="/avv" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AVV</Link>
           <Link href="/agb" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AGB</Link>
           {!BETA_MODE && (
             <Link href="/pricing" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Preise</Link>

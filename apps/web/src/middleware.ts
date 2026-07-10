@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 // Herkesin erişebileceği rotalar (giriş gerektirmez)
-const PUBLIC_PATHS = ["/login", "/register", "/onboarding", "/", "/pricing", "/impressum", "/datenschutz", "/agb", "/demo", "/kontakt", "/api/contact"];
+const PUBLIC_PATHS = ["/login", "/register", "/onboarding", "/", "/pricing", "/impressum", "/datenschutz", "/agb", "/avv", "/demo", "/kontakt", "/api/contact", "/api/cron"];
 
 // Sadece company_admin veya super_admin erişebilir
 const COMPANY_ADMIN_PATHS = ["/company", "/team"];

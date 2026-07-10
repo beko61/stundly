@@ -1,7 +1,29 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { TimeEntry } from "@workly/shared";
+
+// DSGVO Art. 6 (1) a — Einwilligung für OCR-Verarbeitung durch Anthropic (USA).
+// v1 Schema: `{ granted: true, timestamp: ISO }`. Erneute Änderung → v2 key.
+const OCR_CONSENT_STORAGE_KEY = "stundly_ocr_consent_v1";
+
+interface OcrConsent { granted: boolean; timestamp: string; }
+
+function loadConsent(): OcrConsent | null {
+  try {
+    const raw = localStorage.getItem(OCR_CONSENT_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as OcrConsent;
+  } catch { return null; }
+}
+function saveConsent(): OcrConsent {
+  const c: OcrConsent = { granted: true, timestamp: new Date().toISOString() };
+  try { localStorage.setItem(OCR_CONSENT_STORAGE_KEY, JSON.stringify(c)); } catch {}
+  return c;
+}
+function revokeConsent() {
+  try { localStorage.removeItem(OCR_CONSENT_STORAGE_KEY); } catch {}
+}
 
 interface ScanEntry {
   datum:           string;
@@ -31,8 +53,12 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
   const [applying,   setApplying]   = useState(false);
   const [applied,    setApplied]    = useState<number>(0);
   const [error,      setError]      = useState<string | null>(null);
+  const [consent,    setConsent]    = useState<OcrConsent | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
   const cameraRef  = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setConsent(loadConsent()); }, []);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -53,6 +79,11 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
 
   async function handleScan() {
     if (!imageData) return;
+    // §DSGVO Art. 6 (1) a: Ohne Einwilligung keine OCR-Verarbeitung an Anthropic (USA).
+    if (!consent?.granted) {
+      setError("Bitte erst der OCR-Verarbeitung zustimmen.");
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -159,8 +190,61 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
           </div>
         )}
 
+        {/* DSGVO Art. 6 — OCR-Einwilligung (vor erstem Scan) */}
+        {imageData && !loading && !result && !consent?.granted && (
+          <div
+            style={{
+              background: "color-mix(in srgb, var(--accent2) 8%, var(--surface))",
+              border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+              borderRadius: 12,
+              padding: "12px 14px",
+              marginBottom: 12,
+              fontSize: 12,
+              lineHeight: 1.55,
+            }}
+          >
+            <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 8, fontSize: 13 }}>
+              🔒 Einwilligung: Foto an Anthropic (USA) senden
+            </div>
+            <div style={{ color: "var(--muted)", marginBottom: 10 }}>
+              Für die OCR-Erkennung wird dein Foto an <strong style={{ color: "var(--text)" }}>Anthropic PBC (Claude API, USA)</strong> übertragen.
+              Anthropic verarbeitet das Bild ausschließlich zur Textextraktion,
+              speichert es nicht dauerhaft und nutzt es nicht zum Training.
+              Rechtsgrundlage: <strong style={{ color: "var(--text)" }}>Art. 6 (1) a DSGVO</strong> (Einwilligung).
+              Datenübermittlung in Drittland USA erfolgt auf Basis EU-US Data Privacy Framework.
+              Details in der <a href="/datenschutz" target="_blank" rel="noopener" style={{ color: "var(--accent2)", textDecoration: "underline" }}>Datenschutzerklärung</a>.
+              Widerruf jederzeit möglich (unten in diesem Dialog nach Zustimmung).
+            </div>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", marginBottom: 10 }}>
+              <input
+                type="checkbox"
+                checked={consentChecked}
+                onChange={(e) => setConsentChecked(e.target.checked)}
+                style={{ marginTop: 2, width: 16, height: 16, accentColor: "var(--accent)" }}
+              />
+              <span style={{ fontSize: 12, color: "var(--text)" }}>
+                Ich willige ein, dass mein Foto zur automatischen Texterkennung an Anthropic (USA) übertragen wird.
+              </span>
+            </label>
+            <button
+              onClick={() => { setConsent(saveConsent()); setError(null); }}
+              disabled={!consentChecked}
+              style={{
+                width: "100%", padding: 12,
+                background: consentChecked ? "var(--accent)" : "var(--surface2)",
+                border: "none", borderRadius: 10,
+                color: consentChecked ? "white" : "var(--muted)",
+                fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                cursor: consentChecked ? "pointer" : "not-allowed",
+              }}
+            >
+              Zustimmen und fortfahren
+            </button>
+          </div>
+        )}
+
         {/* Scan button */}
-        {imageData && !loading && !result && (
+        {imageData && !loading && !result && consent?.granted && (
           <button
             onClick={handleScan}
             style={{
@@ -171,6 +255,21 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
           >
             🔍 KI scannen
           </button>
+        )}
+        {imageData && !loading && !result && consent?.granted && (
+          <div style={{ fontSize: 10, color: "var(--muted)", textAlign: "center", marginBottom: 10, lineHeight: 1.5 }}>
+            🔒 OCR-Einwilligung erteilt am {new Date(consent.timestamp).toLocaleDateString("de-DE")}
+            {" · "}
+            <button
+              onClick={() => { revokeConsent(); setConsent(null); setConsentChecked(false); }}
+              style={{
+                background: "none", border: "none", color: "var(--accent2)",
+                textDecoration: "underline", cursor: "pointer", fontSize: 10, padding: 0,
+              }}
+            >
+              widerrufen
+            </button>
+          </div>
         )}
 
         {/* Loading */}

@@ -1,5 +1,114 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-10 (65) – v0.31.0: Audit Week 2 KOMPLE — P4 + Datenschutz + AVV + DSGVO cron
+
+### Hedef
+Week 2'nin son 3 maddesi tek commit'te: OCR consent (DSGVO Art. 6),
+Datenschutz Drittländer düzeltmesi + AVV template sayfası, DSGVO
+delete cron worker (Art. 17). **Week 2 tamam** 🎉
+
+### P4 — OCR consent screen (DSGVO Art. 6)
+- `PhotoScanModal.tsx`:
+  - Yeni `OCR_CONSENT_STORAGE_KEY = "stundly_ocr_consent_v1"`
+  - `loadConsent()` / `saveConsent()` / `revokeConsent()` helpers
+  - Yeni `useEffect` mount'ta consent oku
+  - `handleScan()` başında consent check — yoksa error, scan blocklu
+  - Foto seçildikten sonra ama scan butonundan önce **consent gate UI**:
+    - Anthropic PBC (USA) açıklaması, Art. 6 (1) a DSGVO rechtsgrundlage,
+      EU-US DPF referansı, Datenschutz link, checkbox zorunlu
+    - "Zustimmen und fortfahren" butonu (checkbox olmadan disabled)
+  - Consent verildikten sonra scan butonu görünür + altında
+    "Zustimmung erteilt am TT.MM.YYYY · widerrufen" küçük satır
+
+### Datenschutz — Drittländer düzeltmesi
+- **Bölüm 5** — komple yeniden yazıldı: "Wir übermitteln keine Daten in
+  Drittländer" YANLIŞ ifadesi kaldırıldı. Doğru: Anthropic USA (OCR),
+  Stripe US Konzern, Vercel Frankfurt. Rechtsgrundlage EU-US DPF
+  Angemessenheitsbeschluss 10.07.2023 + SCC 2021/914.
+- **Bölüm 8** — Drittanbieter genişletildi: Supabase, Vercel, Stripe,
+  Resend, Anthropic — hepsi Art. 28 DSGVO Auftragsverarbeiter olarak
+  listelendi. AVV notu eklendi.
+- **Bölüm 9 (YENİ)** — Foto-Scan / OCR / KI-Verarbeitung açıklaması,
+  Art. 6 (1) a Rechtsgrundlage, widerruf yolu
+- **Bölüm 10** (eski 9) — Cookies
+- **Bölüm 11** (eski 10) — Beschwerderecht: Berlin YANLIŞ. Hannover =
+  Niedersachsen → Landesbeauftragte für den Datenschutz Niedersachsen,
+  Prinzenstraße 5, 30159 Hannover. Doğru adres, tel, email.
+- Stand: April 2026 → Juli 2026
+
+### AVV — `/avv` YENİ sayfa
+- Server component, `metadata` title/description
+- 5 bölüm:
+  1. "Für wen relevant?" — B2B Team/Business müşteri
+  2. "Inhalt der Vereinbarung" — Art. 28 DSGVO parametreleri liste
+  3. "Unterauftragsverarbeiter" — tablo (Anbieter/Zweck/Region), 5 anbieter
+  4. "AVV anfordern" — mailto:datenschutz@stundly.de?subject=..., 2 Werktag
+  5. "TOM" — kısa özet + Datenschutz link
+- **sitemap.ts** — /avv priority 0.3
+- **middleware.ts** PUBLIC_PATHS — /avv eklendi
+- **landing page footer** — Datenschutz | AVV | AGB sıra
+
+### DSGVO cron worker — `/api/cron/dsgvo-process`
+- YENİ route: `apps/web/src/app/api/cron/dsgvo-process/route.ts`
+- GET method, `Authorization: Bearer $CRON_SECRET` gate
+- runtime nodejs, dynamic force-dynamic, maxDuration 300s (5dk batch)
+- Akış:
+  1. `deletion_requests` where status='pending' AND scheduled_for <= now()
+     (limit 100 per run)
+  2. Her request için `admin.auth.admin.deleteUser(user_id)` → CASCADE
+     profil + time_entries + notdienst + vacation + salary_settings +...
+  3. `deletion_requests.status='completed', completed_at=now()`
+  4. `audit_logs` insert `action='deletion_processed'` (fire-and-forget)
+- Return JSON: `{ ran_at, total, processed, failed, results[] }`
+- **vercel.json** — `crons: [{ path: /api/cron/dsgvo-process, schedule: "0 3 * * *" }]`
+- **middleware.ts** PUBLIC_PATHS — /api/cron eklendi
+- **turbo.json** — CRON_SECRET env eklendi (cache invalidation için)
+
+### Validation
+- TS clean · ESLint clean · Vitest 311/311 (değişmedi, UI/config değişikliği)
+
+### Değişen dosyalar (9 file)
+- `apps/web/src/components/tracker/PhotoScanModal.tsx` — OCR consent
+- `apps/web/src/app/datenschutz/page.tsx` — 4 bölüm rewrite + 1 yeni
+- `apps/web/src/app/avv/page.tsx` — YENİ (~180 LOC)
+- `apps/web/src/app/api/cron/dsgvo-process/route.ts` — YENİ (~110 LOC)
+- `apps/web/src/app/sitemap.ts` — /avv
+- `apps/web/src/middleware.ts` — /avv + /api/cron
+- `apps/web/src/app/page.tsx` — footer AVV link
+- `vercel.json` — cron schedule
+- `turbo.json` — CRON_SECRET env
+- `apps/web/src/lib/version.ts` — 0.30.0 → 0.31.0 (MINOR)
+
+### Manuel adım (deploy'da)
+⚠ **CRON_SECRET env var'ı Vercel Dashboard'da ayarla**:
+Settings → Environment Variables → CRON_SECRET (rastgele string, örn:
+`openssl rand -base64 32`). Production ortamında lazım.
+
+**Vercel Cron otomatik aktif olur** deploy sonrası. İlk çalışma
+02.06.2026 saat 03:00 UTC (bir sonraki gün). Log'lar Vercel Dashboard →
+Cron'da görünür.
+
+### 🎉 WEEK 2 KOMPLE
+
+**Toplam 9 madde 4 commit'te**:
+- v0.28.0: L3 + L2 (ArbZG hardening)
+- v0.29.0: L10 (SFN-Zuschläge steuerfrei)
+- v0.30.0: L5 + L6 + L7 (EntgFG + BUrlG)
+- v0.31.0: P4 + Datenschutz + AVV + DSGVO cron
+
+**Migration çalıştırıldı**: 021 (Week 1), 022 (SFN), 023 (BUrlG)
+
+### Kalan (Week 3-4 UX/Dönüşüm, Week 5-6 Kod Sağlığı)
+Audit'te detay. Örnek Week 3:
+- MonthNav 44×44 tap targets
+- Modal focus trap + aria-modal
+- Weekly digest email
+- DATEV CSV export
+- Beta pricing anchor
+- 2 SEO landing
+
+---
+
 ## 2026-07-10 (64) – v0.30.0: Audit Week 2 — L5+L6+L7 EntgFG + BUrlG
 
 ### Hedef

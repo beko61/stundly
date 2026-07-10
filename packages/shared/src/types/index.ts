@@ -168,6 +168,13 @@ export interface SalarySettings {
   manuell_abzug?: number;
   /** Jährlicher Urlaubsanspruch in Tagen (default 30). */
   urlaub_anspruch?: number;
+  /**
+   * §3b EStG SFN-Zuschläge (Sonntag/Feiertag/Nacht) aktiv?
+   * Wenn true, werden steuerfreie Zuschläge automatisch aus start/end
+   * Zeitstempeln berechnet und zum Brutto addiert. Steuerbasis und
+   * SV-Basis werden entsprechend reduziert. Default: false.
+   */
+  sfn_enabled?: boolean;
 }
 
 export interface DailyLog {

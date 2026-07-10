@@ -1,12 +1,19 @@
 import type { SalarySettings, TimeEntry, MonthSummary } from "../types";
 import { DAY_TYPES } from "../constants/dayTypes";
 import { calculateWorkDuration, minutesToHours, sumWorkedMinutes } from "./timeCalc";
+import { calcMonthlySfn } from "./sfn";
 
 export interface SalaryBreakdown {
   base_pay: number;
   overtime_pay: number;
   night_shift_bonus: number;
   notdienst_bonus: number;
+  /** §3b EStG Zuschlag Brutto (0, wenn `sfn_enabled` false) */
+  sfn_zuschlag: number;
+  /** §3b EStG Anteil, der von der Lohnsteuer-Basis abgezogen wird */
+  sfn_lst_frei: number;
+  /** §1 SvEV Anteil, der von der SV-Basis abgezogen wird */
+  sfn_sv_frei: number;
   total_gross: number;
   worked_hours: number;
   overtime_hours: number;
@@ -39,7 +46,11 @@ function getDayStdMinutes(dateStr: string): number {
 export function calculateMonthlySalary(
   entries: TimeEntry[],
   settings: SalarySettings,
-  options?: { notdienstDaysOverride?: number }
+  options?: {
+    notdienstDaysOverride?: number;
+    /** SFN hesabı için gerekli — settings.sfn_enabled=true ise geçirilmeli */
+    feiertage?: Record<string, string>;
+  }
 ): SalaryBreakdown {
   const targetMinutes = settings.monthly_target_hours * 60;
   void targetMinutes; // ileride hour-bazlı kullanım için, şimdilik sadece base_pay = targetHours × rate
@@ -102,13 +113,26 @@ export function calculateMonthlySalary(
   const effectiveNotdienstDays = options?.notdienstDaysOverride ?? notdienstDays;
   const notdienst_bonus = effectiveNotdienstDays * settings.notdienst_bonus;
 
-  const total_gross = base_pay + overtime_pay + night_bonus + notdienst_bonus;
+  // §3b EStG SFN-Zuschläge — sadece settings.sfn_enabled=true ise hesaplanır
+  let sfn_zuschlag = 0, sfn_lst_frei = 0, sfn_sv_frei = 0;
+  if (settings.sfn_enabled) {
+    const feiertage = options?.feiertage ?? {};
+    const sfn = calcMonthlySfn(entries, feiertage, settings.hourly_rate);
+    sfn_zuschlag = sfn.totalZuschlag;
+    sfn_lst_frei = sfn.lstFrei;
+    sfn_sv_frei  = sfn.svFrei;
+  }
+
+  const total_gross = base_pay + overtime_pay + night_bonus + notdienst_bonus + sfn_zuschlag;
 
   return {
     base_pay,
     overtime_pay,
     night_shift_bonus: night_bonus,
     notdienst_bonus,
+    sfn_zuschlag,
+    sfn_lst_frei,
+    sfn_sv_frei,
     total_gross,
     worked_hours:   workedHours,
     overtime_hours: overtimeHours,

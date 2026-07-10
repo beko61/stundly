@@ -48,6 +48,16 @@ export interface NettoCalcInput {
    * Bilinmeyen yıllar için en yakın küçük yıl kullanılır.
    */
   year?: number;
+  /**
+   * §3b EStG steuerfreier SFN-Anteil (im monthBrutto enthalten).
+   * Lohnsteuer wird auf `monthBrutto - sfnLstFrei` berechnet.
+   */
+  sfnLstFrei?: number;
+  /**
+   * §1 SvEV sv-freier SFN-Anteil (im monthBrutto enthalten).
+   * SV-Beiträge auf `monthBrutto - sfnSvFrei` berechnet.
+   */
+  sfnSvFrei?: number;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -315,7 +325,7 @@ export function calcSoliMonat(lohnsteuerMonat: number, stk: Steuerklasse, year?:
 // Ana fonksiyon: Brutto → Netto + tüm abzüg detayı
 // ═══════════════════════════════════════════════════════════════
 export function calcNettoFromBrutto(input: NettoCalcInput): NettoBreakdown {
-  const { monthBrutto, steuerklasse, kirchensteuer, hatKinder, taxMode, manuellAbzug, year } = input;
+  const { monthBrutto, steuerklasse, kirchensteuer, hatKinder, taxMode, manuellAbzug, year, sfnLstFrei, sfnSvFrei } = input;
 
   if (monthBrutto <= 0) {
     return {
@@ -326,7 +336,10 @@ export function calcNettoFromBrutto(input: NettoCalcInput): NettoBreakdown {
 
   if (taxMode === "manual") {
     const pct = (manuellAbzug ?? 0) / 100;
-    const abzug = monthBrutto * pct;
+    // manuell mode: SFN steuer/sv-frei tam brutto'dan çıkarılır önce
+    const sfnLst = sfnLstFrei ?? 0;
+    const basis = Math.max(0, monthBrutto - sfnLst);
+    const abzug = basis * pct;
     return {
       netto: monthBrutto - abzug,
       abzuege: {
@@ -339,8 +352,13 @@ export function calcNettoFromBrutto(input: NettoCalcInput): NettoBreakdown {
     };
   }
 
-  const sv   = calcSV(monthBrutto, hatKinder, year);
-  const lst  = calcLohnsteuerMonat(monthBrutto, steuerklasse, hatKinder, year);
+  const lstFrei = sfnLstFrei ?? 0;
+  const svFrei  = sfnSvFrei  ?? 0;
+  const lstBasis = Math.max(0, monthBrutto - lstFrei);
+  const svBasis  = Math.max(0, monthBrutto - svFrei);
+
+  const sv   = calcSV(svBasis, hatKinder, year);
+  const lst  = calcLohnsteuerMonat(lstBasis, steuerklasse, hatKinder, year);
   const soli = calcSoliMonat(lst, steuerklasse, year);
   const ks   = lst * kirchensteuer;
   const gesamt = sv.total + lst + soli + ks;

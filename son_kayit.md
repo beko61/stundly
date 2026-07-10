@@ -1,5 +1,88 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-10 (63) – v0.29.0: Audit Week 2 — L10 §3b EStG SFN-Zuschläge
+
+### Hedef
+§3b EStG steuerfreie Zuschläge otomatik hesabı. User Sonntag/Feiertag/Nacht
+çalıştığında ürünle görünmüyordu → fazla vergi ödüyordu. Şimdi opt-in
+toggle (default OFF), aktif olunca Brutto'ya eklenir + LSt/SV basisından
+düşülür. Netto yükselir.
+
+### Ne değişti
+
+**`packages/shared/src/utils/sfn.ts`** — YENİ modül
+- Constants: `SFN_LST_CAP_PER_HOUR=50`, `SFN_SV_CAP_PER_HOUR=25`,
+  `SFN_NIGHT_PERCENT=25`, `SONNTAG=50`, `FEIERTAG=125`
+- `classifyEntryMinutes(date, start, end, isNight, isFeiertag)` — entry'yi
+  dakika-dakika ayırır: night / sonntag / feiertag / sonntagNight / feiertagNight
+  (overlap additive)
+- `classifyEntryMinutesWithFeiertagMap()` — overnight shift'te day2 Feiertag'ı
+  da doğru kategorize eder (Feiertage map ile)
+- `calcSfnZuschlag(minutes, grundlohnPerHour)` — total zuschlag + LSt-frei +
+  SV-frei ayrı, Grundlohn cap uygulanır (min(grundlohn, 50/25 €/h) × %)
+- `calcMonthlySfn(entries, feiertage, grundlohn)` — aylık toplam
+- Vereinfacht (dokümante): 40% Kernnacht 00-04 yok, Feiertag %150 special
+  days yok, Sonntag "0-4 Uhr Folgetag" yok — hepsi user'a güvenli sapma
+
+**`salaryCalc.ts`**
+- `SalaryBreakdown` genişletildi: `sfn_zuschlag`, `sfn_lst_frei`, `sfn_sv_frei`
+- `calculateMonthlySalary()` yeni `options.feiertage` alır
+- `settings.sfn_enabled=true` ise SFN Brutto'ya eklenir
+
+**`taxCalc.ts`**
+- `NettoCalcInput` yeni opsiyonel: `sfnLstFrei`, `sfnSvFrei`
+- LSt basis = monthBrutto − sfnLstFrei
+- SV basis  = monthBrutto − sfnSvFrei
+- Manual mode: basis = monthBrutto − sfnLstFrei (SFN steuerfrei)
+
+**Types**: `SalarySettings.sfn_enabled?: boolean`
+
+**Migration 022** — `salary_settings.sfn_enabled boolean default false`
+- Idempotent, manuel apply gerekli
+- ⚠ Yoksa: sfn_enabled toggle DB save 500 patlar (auto-save)
+
+**Salary page** (`/salary`)
+- Bundesland profile'dan yüklenir, feiertage useMemo hesaplanır
+- calculateMonthlySalary/calcNettoFromBrutto 3 yerde de yeni parametrelerle
+- Steuer section'ına yeni "§3b Zuschlag (SFN)" toggle (AN/AUS switch,
+  InfoTooltip ile detay: %25/%50/%125, Grundlohn cap €50/€25)
+- Breakdown display: sfn_enabled=true ve zuschlag>0 ise yeni satır
+  "§3b Zuschlag (SFN, steuerfrei-Anteil)"
+
+### Bilinen sınırlar (dokümante)
+- Kernnacht %40 (00-04 wenn Nachtarbeit vor 24:00 begonnen) yok — sadece %25
+- Feiertag %150 special days (1.Weihn/Neujahr/1.Mai) yok — sadece %125
+- Sonntag "Erweiterung 0-4 Uhr Folgetag §3b II Nr.1" yok
+- Beta müşteride kesin payroll için Steuerberater warn'ı Info tooltip'te
+
+### Validation
+- TS clean (web + shared) · ESLint clean · Vitest **268/268** (246 → 268, +22)
+- sfn.test.ts: 22 case (constants + classify + calc + monthly integration)
+
+### Değişen dosyalar (7 file, +XXX/-YY)
+- `packages/shared/src/utils/sfn.ts` — YENİ (185 satır)
+- `packages/shared/src/index.ts` — export
+- `packages/shared/src/types/index.ts` — sfn_enabled
+- `packages/shared/src/utils/salaryCalc.ts` — SFN Brutto'ya + breakdown alanları
+- `packages/shared/src/utils/taxCalc.ts` — sfnLstFrei/svFrei input
+- `apps/web/src/app/(dashboard)/salary/page.tsx` — bundesland/feiertage +
+  3 çağrıya parametre + toggle UI + breakdown satırı
+- `apps/web/src/__tests__/unit/sfn.test.ts` — YENİ (22 case)
+- `supabase/migrations/022_salary_sfn_enabled.sql` — YENİ
+- `apps/web/src/lib/version.ts` — 0.28.0 → 0.29.0 (MINOR)
+
+### Manuel adım (deploy'da)
+⚠ **Migration 022** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+Yoksa: SFN toggle "AN" yapan user'da salary_settings save error verir.
+
+### Kalan Week 2
+- L5 Krankheit 6-Wochen limit
+- L6 Urlaub Zwölftelung
+- L7 Übertragung + 31.03 Verfall
+- P4 OCR consent, Datenschutz Drittländer, DSGVO cron
+
+---
+
 ## 2026-07-10 (62) – v0.28.0: Audit Week 2 — L3 + L2 ArbZG hardening
 
 ### Hedef

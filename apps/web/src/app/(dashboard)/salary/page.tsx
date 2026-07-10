@@ -11,6 +11,7 @@ import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { useTrackerStore } from "@/store/trackerStore";
 import { usePrivacyMode, maskMoney } from "@/lib/privacy";
+import { getFeiertage } from "@/lib/utils/feiertage";
 
 const STEUERKLASSEN: { value: Steuerklasse; label: string; hint: string }[] = [
   { value: "I",   label: "I",   hint: "Ledig" },
@@ -54,6 +55,7 @@ const DEFAULT_SETTINGS: SalarySettings = {
   tax_mode:                 "auto",
   manuell_abzug:            0,
   urlaub_anspruch:          30,
+  sfn_enabled:              false,
 };
 
 function loadLocalSettings(): SalarySettings {
@@ -122,6 +124,7 @@ export default function SalaryPage() {
           tax_mode:                 (data.tax_mode as TaxMode | null) ?? "auto",
           manuell_abzug:            Number(data.manuell_abzug ?? 0),
           urlaub_anspruch:          Number(data.urlaub_anspruch ?? 30),
+          sfn_enabled:              Boolean(data.sfn_enabled ?? false),
         };
         setSettings(loaded);
         localStorage.setItem(LS_KEY, JSON.stringify(loaded));
@@ -155,6 +158,7 @@ export default function SalaryPage() {
           tax_mode:                 settings.tax_mode ?? "auto",
           manuell_abzug:            settings.manuell_abzug ?? 0,
           urlaub_anspruch:          settings.urlaub_anspruch ?? 30,
+          sfn_enabled:              settings.sfn_enabled ?? false,
         };
         if (settingsRowId.current) {
           await supabase.from("salary_settings").update(payload).eq("id", settingsRowId.current);
@@ -176,6 +180,23 @@ export default function SalaryPage() {
 
   // ALL entries for the year (for monthly auto-netto chart)
   const [yearEntries, setYearEntries] = useState<TimeEntry[]>([]);
+  const [bundesland,  setBundesland]  = useState("NI");
+
+  // Bundesland aus Profil (Feiertage-Lookup für SFN §3b)
+  useEffect(() => {
+    async function loadBundesland() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await supabase
+        .from("profiles").select("bundesland")
+        .eq("id", session.user.id).maybeSingle();
+      if (data?.bundesland) setBundesland(data.bundesland as string);
+    }
+    void loadBundesland();
+  }, []);
+
+  const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
 
   // Yıl boyunca tüm Notdienst entry'lerinin tarihleri (sadece date kolonu)
   // — Notdienst bir önceki ayın işidir, bu ayın brutto'suna gider
@@ -238,7 +259,7 @@ export default function SalaryPage() {
         return d.getMonth() + 1 === m && d.getFullYear() === year;
       });
       const ndDays = notdienstDaysForBilling(year, m);
-      const bd = calculateMonthlySalary(monthEntries, settings, { notdienstDaysOverride: ndDays });
+      const bd = calculateMonthlySalary(monthEntries, settings, { notdienstDaysOverride: ndDays, feiertage });
       const nc = calcNettoFromBrutto({
         monthBrutto:   bd.total_gross,
         steuerklasse:  settings.steuerklasse  ?? "I",
@@ -246,11 +267,13 @@ export default function SalaryPage() {
         hatKinder:     settings.hat_kinder    ?? false,
         taxMode:       settings.tax_mode      ?? "auto",
         manuellAbzug:  settings.manuell_abzug ?? 0,
+        sfnLstFrei:    bd.sfn_lst_frei,
+        sfnSvFrei:     bd.sfn_sv_frei,
       });
       return { month: m, brutto: bd.total_gross, netto: nc.netto, ndDays };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yearEntries, year, settings, yearNotdienstDates]);
+  }, [yearEntries, year, settings, yearNotdienstDates, feiertage]);
 
   const yearlyAutoMax = Math.max(...yearlyAuto.map(a => a.brutto), 1);
   const yearlyAutoBruttoTotal = yearlyAuto.reduce((s, a) => s + a.brutto, 0);
@@ -279,8 +302,8 @@ export default function SalaryPage() {
   /** Bu ay brutto = bu ay çalışma + ÖNCEKI ay Notdienst (ödeme gecikmesi). */
   const currentMonthNotdienstDays = notdienstDaysForBilling(year, month);
   const breakdown = useMemo(
-    () => calculateMonthlySalary(entries, settings, { notdienstDaysOverride: currentMonthNotdienstDays }),
-    [entries, settings, currentMonthNotdienstDays],
+    () => calculateMonthlySalary(entries, settings, { notdienstDaysOverride: currentMonthNotdienstDays, feiertage }),
+    [entries, settings, currentMonthNotdienstDays, feiertage],
   );
 
   // Otomatik Netto-Berechnung (Almanya 2024)
@@ -291,14 +314,17 @@ export default function SalaryPage() {
     hatKinder:     settings.hat_kinder    ?? false,
     taxMode:       settings.tax_mode      ?? "auto",
     manuellAbzug:  settings.manuell_abzug ?? 0,
-  }), [breakdown.total_gross, settings.steuerklasse, settings.kirchensteuer,
+    sfnLstFrei:    breakdown.sfn_lst_frei,
+    sfnSvFrei:     breakdown.sfn_sv_frei,
+  }), [breakdown.total_gross, breakdown.sfn_lst_frei, breakdown.sfn_sv_frei,
+       settings.steuerklasse, settings.kirchensteuer,
        settings.hat_kinder, settings.tax_mode, settings.manuell_abzug]);
 
   /** What-if simülatörü: Stundenlohn +1 € senaryosu, aylık Netto farkı.
    *  Kullanıcının pazarlık değeri için: "+1 €/h ne kazandırır?" */
   const whatIfPlusOne = useMemo(() => {
     const settingsPlus = { ...settings, hourly_rate: settings.hourly_rate + 1 };
-    const bdPlus = calculateMonthlySalary(entries, settingsPlus, { notdienstDaysOverride: currentMonthNotdienstDays });
+    const bdPlus = calculateMonthlySalary(entries, settingsPlus, { notdienstDaysOverride: currentMonthNotdienstDays, feiertage });
     const ncPlus = calcNettoFromBrutto({
       monthBrutto:   bdPlus.total_gross,
       steuerklasse:  settings.steuerklasse  ?? "I",
@@ -306,12 +332,14 @@ export default function SalaryPage() {
       hatKinder:     settings.hat_kinder    ?? false,
       taxMode:       settings.tax_mode      ?? "auto",
       manuellAbzug:  settings.manuell_abzug ?? 0,
+      sfnLstFrei:    bdPlus.sfn_lst_frei,
+      sfnSvFrei:     bdPlus.sfn_sv_frei,
     });
     return {
       bruttoDelta: bdPlus.total_gross - breakdown.total_gross,
       nettoDelta:  ncPlus.netto       - nettoCalc.netto,
     };
-  }, [entries, settings, currentMonthNotdienstDays, breakdown.total_gross, nettoCalc.netto]);
+  }, [entries, settings, currentMonthNotdienstDays, feiertage, breakdown.total_gross, nettoCalc.netto]);
 
   const [moneyHidden, togglePrivacy] = usePrivacyMode();
   const fmtEur    = (n: number) => maskMoney(n, moneyHidden);
@@ -649,6 +677,47 @@ export default function SalaryPage() {
             )}
           </div>
 
+          {/* §3b EStG SFN-Zuschläge */}
+          <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, marginTop: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", display: "inline-flex", alignItems: "center" }}>
+                  §3b Zuschlag (SFN)
+                  <InfoTooltip title="Sonntag/Feiertag/Nacht-Zuschläge">
+                    §3b EStG: Zuschläge für Arbeit an Sonntagen, Feiertagen und in der Nacht
+                    (20-06 Uhr) sind steuer- und teilweise sv-frei.{"\n\n"}
+                    • Nacht 20-06 Uhr: 25 %{"\n"}
+                    • Sonntag: 50 %{"\n"}
+                    • Feiertag: 125 %{"\n"}
+                    • Überschneidung: additiv (z.B. Sonntag+Nacht = 75 %){"\n\n"}
+                    Grundlohn-Cap: 50 €/h steuerfrei, 25 €/h sv-frei.{"\n\n"}
+                    Wenn aktiv: automatisch aus deinen Arbeitszeiten berechnet und
+                    zum Brutto addiert. Netto wird höher (weniger Lohnsteuer + SV).{"\n\n"}
+                    Vereinfacht — exakte Payroll nur mit Steuerberater.
+                  </InfoTooltip>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>Steuerfreie Zuschläge automatisch berechnen</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettings(s => ({ ...s, sfn_enabled: !s.sfn_enabled }))}
+                style={{
+                  padding: "6px 14px",
+                  background: settings.sfn_enabled ? "var(--accent)" : "var(--surface)",
+                  border: `1px solid ${settings.sfn_enabled ? "var(--accent)" : "var(--border)"}`,
+                  borderRadius: 999,
+                  color: settings.sfn_enabled ? "white" : "var(--muted)",
+                  fontFamily: "'Syne',sans-serif",
+                  fontWeight: 700,
+                  fontSize: 11,
+                  cursor: "pointer",
+                }}
+              >
+                {settings.sfn_enabled ? "AN" : "AUS"}
+              </button>
+            </div>
+          </div>
+
           <div style={{
             marginTop: 12,
             padding: "10px 12px",
@@ -828,7 +897,7 @@ export default function SalaryPage() {
               <div className="label" style={{ marginBottom: 10 }}>📊 Verdienst-Aufschlüsselung</div>
               {(() => {
                 const prevMonthName = MONTHS[(month - 2 + 12) % 12]!;
-                return [
+                const rows: Array<{ key: string; label: string; value: string; clickable: boolean }> = [
                   { key: "hours",     label: "Gearbeitete Stunden",   value: formatDuration(Math.round(breakdown.worked_hours * 60)), clickable: false },
                   { key: "base",      label: "Grundgehalt",           value: fmtEur(breakdown.base_pay),           clickable: false },
                   { key: "overtime",  label: "Überstundenvergütung",  value: fmtEur(breakdown.overtime_pay),       clickable: false },
@@ -842,6 +911,15 @@ export default function SalaryPage() {
                     clickable: currentMonthNotdienstDays > 0,
                   },
                 ];
+                if (settings.sfn_enabled && breakdown.sfn_zuschlag > 0) {
+                  rows.push({
+                    key: "sfn",
+                    label: "§3b Zuschlag (SFN, steuerfrei-Anteil)",
+                    value: fmtEur(breakdown.sfn_zuschlag),
+                    clickable: false,
+                  });
+                }
+                return rows;
               })().map(({ key, label, value, clickable }) => {
                 const onClick = clickable && key === "notdienst" ? () => {
                   const prevMonth = month === 1 ? 12 : month - 1;

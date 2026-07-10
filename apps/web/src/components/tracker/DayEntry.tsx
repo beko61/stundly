@@ -37,6 +37,8 @@ const STATUS_ICON: Record<DayType, string> = {
 interface Props {
   date:       string;
   entry?:     TimeEntry | null;
+  /** Vortag-Eintrag für §5 ArbZG Ruhezeit-Check im Modal. */
+  previousEntry?: TimeEntry | null;
   isToday?:   boolean;
   dayOfWeek:  number;
   feiertag?:  string | undefined; // holiday name if applicable
@@ -45,7 +47,7 @@ interface Props {
   onDelete:   (id:string) => Promise<void>;
 }
 
-export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, onUpdate, onDelete }: Props) {
+export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, onCreate, onUpdate, onDelete }: Props) {
   const [modalOpen, setModalOpen]   = useState(false);
   const [ndModal, setNdModal]       = useState<"new" | NotdienstEntry | null>(null);
   const [ndEntries, setNdEntries]   = useState<NotdienstEntry[]>([]);
@@ -301,6 +303,7 @@ export function DayEntry({ date, entry, isToday, dayOfWeek, feiertag, onCreate, 
 
       {modalOpen && (
         <TimeEntryModal date={date} dayOfWeek={dayOfWeek} feiertag={feiertag || undefined} entry={entry}
+          previousEntry={previousEntry ?? null}
           onCreate={onCreate} onUpdate={onUpdate} onClose={() => setModalOpen(false)} />
       )}
 

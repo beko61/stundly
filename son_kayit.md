@@ -1,5 +1,66 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-10 (62) – v0.28.0: Audit Week 2 — L3 + L2 ArbZG hardening
+
+### Hedef
+Week 2'nin ilk iki maddesi: Alman Arbeitszeitgesetz'in iki bel kemiği kuralı için
+UI uyarıları. Selbstständige-Modus block etmez, sadece uyarır — Team-Modus'ta
+Betriebsprüfung frühwarnung.
+
+### L3 — §3 ArbZG 10h/gün cap
+- **`packages/shared/src/utils/arbzg.ts`** — YENİ modül
+  - `ARBZG_MAX_DAILY_MINUTES = 600`, `ARBZG_STANDARD_MINUTES = 480`,
+    `ARBZG_ROLLING_WINDOW_MONTHS = 6`
+  - `isDailyCapViolation(netMinutes)` — netto > 10h
+  - `findDailyCapViolations(entries)` — o ay içinde 10h aşan günlerin listesi
+  - `calcRolling6MonthAvg(entries, referenceISO)` — Ausgleichszeitraum Ø hesabı
+    (BAG 27.4.2000 içtihat: Urlaub/Krank/Feiertag Nenner'den düşülür)
+- **`TimeEntryModal.tsx`** — netto > 10h → 🚫 kırmızı §3 ArbZG banner
+  (Pause turuncu warn'ın altına)
+- **`monthStats.ts`** — output'a `dailyCapViolations: string[]` alanı
+- **`MonthlySummary.tsx`** — ay üstünde: "An N Tagen 10h überschritten (14., 20., …)"
+
+### L2 — §5 ArbZG Ruhezeit 11h
+- **arbzg.ts** — `ARBZG_RUHEZEIT_MIN_MINUTES = 660`,
+  `calcRuhezeitMinutes(prevEnd, prevOvernight, todayStart)`,
+  `isRuhezeitViolation(min)`
+- **`TimeEntryModal.tsx`** — yeni `previousEntry` prop, ruhezeitCheck useMemo,
+  ⚠️ turuncu §5 banner (Ausnahmen §5 II var, kırmızı yerine turuncu)
+- **`DayEntry.tsx`** — `previousEntry` prop pass-through
+- **`tracker/page.tsx`** — `days.map` içinde `days[i-1].entry` geçilir
+  (aynı ay içi bakar, ay ilk günü için null → sessiz — cross-month sonraki iter)
+
+### Bilinen sınır
+6-ay rolling avg display (`calcRolling6MonthAvg`) helper hazır ama UI'da
+gösterilmedi — tracker sadece 1 ay yükler, 6 ay için ek fetch gerek.
+Ayrı görev olarak açık kaldı.
+
+### Validation
+- TS clean (web + shared) · ESLint clean · Vitest **246/246** (211 → 246, +35)
+- Yeni testler: `arbzg.test.ts` (30 case: constants + isDailyCap + rolling avg +
+  ruhezeit) + `monthStats.test.ts` dailyCapViolations (5 case)
+
+### Değişen dosyalar (9 file, +170/-8)
+- `packages/shared/src/utils/arbzg.ts` — YENİ
+- `packages/shared/src/index.ts` — export
+- `apps/web/src/components/tracker/TimeEntryModal.tsx` — L3+L2 banner
+- `apps/web/src/components/tracker/DayEntry.tsx` — prop pass-through
+- `apps/web/src/components/tracker/MonthlySummary.tsx` — L3 monthly banner
+- `apps/web/src/app/(dashboard)/tracker/page.tsx` — previousEntry
+- `apps/web/src/lib/utils/monthStats.ts` — dailyCapViolations
+- `apps/web/src/__tests__/unit/arbzg.test.ts` — YENİ (30 case)
+- `apps/web/src/__tests__/unit/monthStats.test.ts` — +5 dailyCap
+- `apps/web/src/lib/version.ts` — 0.27.0 → 0.28.0 (MINOR)
+
+### Kalan Week 2
+- L10 SFN-Zuschläge steuerfrei (sonraki — user'a net kazanç, ~1-2h)
+- L5 Krankheit 6-Wochen limit
+- L6 Urlaub Zwölftelung
+- L7 Übertragung + 31.03 Verfall
+- P4 OCR consent, Datenschutz Drittländer, DSGVO cron
+
+---
+
 ## 2026-07-09 (61) – v0.27.0: Audit Week 1 ship-blocker fixes (10 madde)
 
 ### Hedef

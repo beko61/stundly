@@ -14,7 +14,11 @@
  *   - Notdienst: kullanıcı entry'leri toplanır, Differenz'e dahil
  */
 
-import { calculateWorkDuration, DAY_TYPES } from "@workly/shared";
+import {
+  calculateWorkDuration,
+  DAY_TYPES,
+  ARBZG_MAX_DAILY_MINUTES,
+} from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 
 export interface NdEntry {
@@ -74,6 +78,8 @@ export interface MonthStatsResult {
   diffMin: number;
   /** targetHoursPerMonth × ay sayısı (month null → 12) × 60 */
   targetMin: number;
+  /** §3 ArbZG — netto > 10h ARBEITEN günlerinin tarih listesi (chronological) */
+  dailyCapViolations: string[];
 }
 
 /** Tarih → 0 (Pazar) ... 6 (Cumartesi). UTC sorunu çıkmasın diye lokal kullanıyoruz. */
@@ -125,6 +131,7 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   let paidAbsenceMin = 0;
   let urlaubMin = 0, krankMin = 0;
   let urlaubDays = 0, krankDays = 0, feiertagDays = 0, arbeitenEntries = 0;
+  const dailyCapViolations: string[] = [];
 
   const entryDates = new Set(entries.map(e => e.date));
 
@@ -164,6 +171,11 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
     const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
     workedMin     += net_minutes;
     workedMinPure += net_minutes;
+
+    // §3 ArbZG cap flag
+    if (net_minutes > ARBZG_MAX_DAILY_MINUTES) {
+      dailyCapViolations.push(e.date);
+    }
   }
 
   // Auto-Feiertag: feiertage map'inde olan ama DB'de entry'si olmayan günler
@@ -203,6 +215,8 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   }
   const diffMin = workedMin + ndMin - targetMin;
 
+  dailyCapViolations.sort();
+
   return {
     workedMin, workedMinPure, paidAbsenceMin,
     ndMin, ndCount, ndPaid,
@@ -210,5 +224,6 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
     feiertagDays, arbeitenEntries,
     workDaysInPeriod,
     diffMin, targetMin,
+    dailyCapViolations,
   };
 }

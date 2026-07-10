@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { DAY_TYPES, DAY_TYPE_LABELS } from "@workly/shared";
+import {
+  DAY_TYPES,
+  DAY_TYPE_LABELS,
+  ARBZG_MAX_DAILY_MINUTES,
+  ARBZG_RUHEZEIT_MIN_MINUTES,
+  calcRuhezeitMinutes,
+  isRuhezeitViolation,
+} from "@workly/shared";
 import type { TimeEntry, DayType } from "@workly/shared";
 import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
 
@@ -34,6 +41,8 @@ interface Props {
   dayOfWeek: number;
   feiertag?: string | undefined;
   entry?: TimeEntry | null | undefined;
+  /** Vortag-Eintrag für §5 ArbZG Ruhezeit-Check (nur ARBEITEN Einträge relevant). */
+  previousEntry?: TimeEntry | null | undefined;
   onCreate: (entry: Omit<TimeEntry, "id" | "user_id" | "created_at" | "updated_at" | "synced_at">) => Promise<{ error: string | null } | undefined>;
   onUpdate: (id: string, patch: Partial<TimeEntry>) => Promise<{ error: string | null }>;
   onClose: () => void;
@@ -81,7 +90,7 @@ function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: 
   };
 }
 
-export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, onCreate, onUpdate, onClose }: Props) {
+export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry, onCreate, onUpdate, onClose }: Props) {
   const defaults = getDefaults(dayOfWeek, entry, feiertag);
 
   const [dayType,      setDayType]      = useState<DayType>(defaults.dayType);
@@ -104,6 +113,30 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, onCreate, onU
     if (breakMinutes >= required) return null;
     return { required, brutto };
   }, [needsTime, startTime, endTime, isNightShift, breakMinutes]);
+
+  // §3 ArbZG uyarısı — netto (brutto - pause) > 10h ise kırmızı warn
+  const dailyCapCheck = useMemo(() => {
+    if (!needsTime) return null;
+    const brutto = calcBruttoMinutes(startTime, endTime, isNightShift);
+    const netto = Math.max(0, brutto - breakMinutes);
+    if (netto <= ARBZG_MAX_DAILY_MINUTES) return null;
+    return { netto };
+  }, [needsTime, startTime, endTime, isNightShift, breakMinutes]);
+
+  // §5 ArbZG Ruhezeit — Vortag end → heute start arası < 11h ise turuncu warn
+  const ruhezeitCheck = useMemo(() => {
+    if (!needsTime) return null;
+    if (!previousEntry) return null;
+    if (previousEntry.day_type !== DAY_TYPES.ARBEITEN) return null;
+    if (!previousEntry.end_time) return null;
+    const ruhezeit = calcRuhezeitMinutes(
+      previousEntry.end_time,
+      previousEntry.is_night_shift,
+      startTime,
+    );
+    if (!isRuhezeitViolation(ruhezeit)) return null;
+    return { ruhezeit };
+  }, [needsTime, previousEntry, startTime]);
 
   async function handleSave() {
     setSaving(true);
@@ -204,6 +237,47 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, onCreate, onU
                   >
                     ⚠️ §4 ArbZG: Bei über {pauseCheck.brutto > 9 * 60 ? "9 h" : "6 h"} Arbeit sind
                     mindestens <strong>{pauseCheck.required} Min. Pause</strong> Pflicht (für Arbeitnehmer).
+                  </div>
+                )}
+                {dailyCapCheck && (
+                  <div
+                    role="alert"
+                    style={{
+                      marginTop: 6,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "color-mix(in srgb, var(--red, #ef4444) 12%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--red, #ef4444) 40%, transparent)",
+                      fontSize: 11,
+                      color: "var(--red, #ef4444)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    🚫 §3 ArbZG: Werktägliche Arbeitszeit von <strong>10 h</strong> überschritten
+                    ({Math.floor(dailyCapCheck.netto / 60)}h {dailyCapCheck.netto % 60}m netto).
+                    Nur zulässig, wenn Ø innerhalb 6 Monaten ≤ 8h/Werktag.
+                  </div>
+                )}
+                {ruhezeitCheck && (
+                  <div
+                    role="alert"
+                    style={{
+                      marginTop: 6,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "color-mix(in srgb, var(--orange, #f59e0b) 12%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--orange, #f59e0b) 35%, transparent)",
+                      fontSize: 11,
+                      color: "var(--orange, #f59e0b)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    ⚠️ §5 ArbZG: Nur{" "}
+                    <strong>
+                      {Math.floor(ruhezeitCheck.ruhezeit / 60)}h {ruhezeitCheck.ruhezeit % 60}m
+                    </strong>{" "}
+                    Ruhezeit zwischen Vorschicht und Schichtbeginn — mindestens{" "}
+                    <strong>{ARBZG_RUHEZEIT_MIN_MINUTES / 60} h</strong> Pflicht (Ausnahmen §5 II).
                   </div>
                 )}
               </div>

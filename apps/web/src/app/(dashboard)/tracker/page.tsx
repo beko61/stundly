@@ -92,11 +92,12 @@ export default function TrackerPage() {
             Laden...
           </div>
         ) : (
-          days.map(({ dateStr, dow, entry }) => (
+          days.map(({ dateStr, dow, entry }, i) => (
             <div id={dateStr === todayStr ? "today-entry" : undefined} key={dateStr}>
               <DayEntry
                 date={dateStr}
                 entry={entry}
+                previousEntry={i > 0 ? (days[i - 1]?.entry ?? null) : null}
                 isToday={dateStr === todayStr}
                 dayOfWeek={dow}
                 feiertag={feiertage[dateStr] || undefined}

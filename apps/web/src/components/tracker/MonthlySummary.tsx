@@ -126,6 +126,7 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
       krankMin:     r.krankMin,
       diffMin:      r.diffMin,
       targetMin:    r.targetMin,
+      dailyCapViolations: r.dailyCapViolations,
     };
   }, [entries, ndEntries, targetHours, feiertage, year, month]);
 
@@ -183,6 +184,29 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
 
   return (
     <div className="summary-wrapper">
+      {stats.dailyCapViolations.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 10,
+            padding: "8px 12px",
+            borderRadius: 10,
+            background: "color-mix(in srgb, var(--red) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--red) 35%, transparent)",
+            fontSize: 12,
+            color: "var(--red)",
+            lineHeight: 1.45,
+          }}
+        >
+          🚫 <strong>§3 ArbZG:</strong> An {stats.dailyCapViolations.length}{" "}
+          {stats.dailyCapViolations.length === 1 ? "Tag" : "Tagen"} wurde die
+          werktägliche Höchst­arbeits­zeit von <strong>10 h</strong> überschritten
+          {" — "}
+          {stats.dailyCapViolations.slice(0, 3).map(iso => iso.slice(8)).join(", ")}
+          {stats.dailyCapViolations.length > 3 && ` +${stats.dailyCapViolations.length - 3}`}
+          . Ausgleich innerhalb 6 Monaten (Ø ≤ 8h/Werktag) nötig.
+        </div>
+      )}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",

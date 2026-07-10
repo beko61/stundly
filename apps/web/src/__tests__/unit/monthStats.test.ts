@@ -291,3 +291,48 @@ describe("workedMinPure / paidAbsenceMin (saat ayrımı)", () => {
     expect(r.paidAbsenceMin).toBe(4 * 8 * 60); // 3 entry + 1 auto
   });
 });
+
+describe("calcMonthStats: §3 ArbZG dailyCapViolations", () => {
+  it("kein Verstoß → leeres Array", () => {
+    const r = calcMonthStats({
+      entries: [arbeiten("2026-06-15", "08:00", "17:00", 60)], // 8h
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.dailyCapViolations).toEqual([]);
+  });
+  it("601 min netto → Verstoß gelistet", () => {
+    const r = calcMonthStats({
+      entries: [arbeiten("2026-06-15", "08:00", "18:01", 0)], // 10h01m
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.dailyCapViolations).toEqual(["2026-06-15"]);
+  });
+  it("600 min (Grenze) → kein Verstoß", () => {
+    const r = calcMonthStats({
+      entries: [arbeiten("2026-06-15", "08:00", "18:00", 0)], // exakt 10h
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.dailyCapViolations).toEqual([]);
+  });
+  it("Mehrere Verstöße → chronologisch sortiert", () => {
+    const r = calcMonthStats({
+      entries: [
+        arbeiten("2026-06-20", "07:00", "20:00", 30), // 12h30m
+        arbeiten("2026-06-15", "07:00", "19:30", 30), // 12h
+      ],
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.dailyCapViolations).toEqual(["2026-06-15", "2026-06-20"]);
+  });
+  it("Urlaub/Krank/Feiertag Einträge nicht als Verstoß", () => {
+    const r = calcMonthStats({
+      entries: [
+        urlaub("2026-06-15"),   // 8h Sollstunden aber kein Arbeitstag
+        krank("2026-06-16"),
+        feiertag("2026-06-17"),
+      ],
+      feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
+    });
+    expect(r.dailyCapViolations).toEqual([]);
+  });
+});

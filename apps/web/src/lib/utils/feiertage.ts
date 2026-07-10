@@ -68,18 +68,20 @@ export function getFeiertage(year: number, bundesland = "NI"): Record<string, st
   const bl = bundesland.toUpperCase();
 
   const holidays: Record<string, string> = {
-    // ── Nationwide ────────────────────────────────────────────────
+    // ── Nationwide (gesetzlich in ALLEN Bundesländern) ────────────
     [`${year}-01-01`]:              "Neujahr",
     [fmt(addDays(easter, -2))]:     "Karfreitag",
-    [fmt(easter)]:                  "Ostersonntag",
     [fmt(addDays(easter,  1))]:     "Ostermontag",
     [`${year}-05-01`]:              "Tag der Arbeit",
     [fmt(addDays(easter, 39))]:     "Christi Himmelfahrt",
-    [fmt(addDays(easter, 49))]:     "Pfingstsonntag",
     [fmt(addDays(easter, 50))]:     "Pfingstmontag",
     [`${year}-10-03`]:              "Tag der Deutschen Einheit",
     [`${year}-12-25`]:              "1. Weihnachtstag",
     [`${year}-12-26`]:              "2. Weihnachtstag",
+    // NOT: Ostersonntag ve Pfingstsonntag YALNIZCA Brandenburg'da
+    // gesetzlicher Feiertag'dır. Aşağıda BB-specific bölümünde eklenir.
+    // (Audit L4 — daha önce tüm eyaletlerde Feiertag olarak işaretleniyordu,
+    // PDF'te yanlış Feiertag-Zuschlag hesabına yol açıyordu.)
   };
 
   // ── State-specific ────────────────────────────────────────────
@@ -94,9 +96,12 @@ export function getFeiertage(year: number, bundesland = "NI"): Record<string, st
     holidays[`${year}-03-08`] = "Internationaler Frauentag";
   }
 
-  // Karsamstag (Holy Saturday): BB only
+  // Karsamstag + Ostersonntag + Pfingstsonntag: BB only
+  // (Ostersonntag/Pfingstsonntag Brandenburg dışında sadece Sonntag'dır.)
   if (bl === "BB") {
     holidays[fmt(addDays(easter, -1))] = "Karsamstag";
+    holidays[fmt(easter)]              = "Ostersonntag";
+    holidays[fmt(addDays(easter, 49))] = "Pfingstsonntag";
   }
 
   // Fronleichnam (Corpus Christi, 60 days after Easter): BW, BY, HE, NW, RP, SL + parts of SN/TH

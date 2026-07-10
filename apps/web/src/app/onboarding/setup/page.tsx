@@ -54,66 +54,39 @@ function SetupForm() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
+    // GÜVENLİK: role/company_id direkt client'tan yazılmaz. Migration 021'deki
+    // enforce_profile_privileges trigger'ı bunu bloklar. Server route'lar
+    // service_role ile bu değişikliği yapar.
     if (isCompany) {
-      // 1. Şirket oluştur
-      const { data: company, error: companyError } = await supabase
-        .from("companies")
-        .insert({
+      const res = await fetch("/api/onboarding/create-company", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: companyName,
           bundesland,
-          vat_id: vatId || null,
-          city: city || null,
-          owner_id: user.id,
-          country_code: "DE",
-        })
-        .select("id")
-        .single();
-
-      if (companyError) {
-        setError("Fehler beim Erstellen des Unternehmens.");
+          vat_id: vatId || undefined,
+          city:   city  || undefined,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(j.error ?? "Fehler beim Erstellen des Unternehmens.");
         setLoading(false);
         return;
       }
-
-      // 2. Profili company_admin olarak güncelle
-      await supabase
-        .from("profiles")
-        .update({
-          role: "company_admin",
-          company_id: company.id,
-          bundesland,
-        })
-        .eq("user_id", user.id);
-
-      // 3. Trial subscription oluştur
-      await supabase.from("subscriptions").insert({
-        company_id: company.id,
-        plan: "trial",
-        status: "trialing",
-        currency: "eur",
-        trial_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-
       router.push("/onboarding/done?type=company");
     } else {
-      // Bireysel kullanıcı — sadece bundesland güncelle
-      await supabase
-        .from("profiles")
-        .update({
-          role: "individual",
-          bundesland,
-        })
-        .eq("user_id", user.id);
-
-      // Trial subscription
-      await supabase.from("subscriptions").insert({
-        user_id: user.id,
-        plan: "trial",
-        status: "trialing",
-        currency: "eur",
-        trial_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      const res = await fetch("/api/onboarding/set-bundesland", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bundesland }),
       });
-
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(j.error ?? "Fehler beim Speichern.");
+        setLoading(false);
+        return;
+      }
       router.push("/onboarding/done?type=individual");
     }
   }

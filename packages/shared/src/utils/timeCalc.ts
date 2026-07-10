@@ -96,6 +96,13 @@ export function sumWorkedMinutes(
 
 /**
  * Get the number of working days in a month (Mon–Fri, excluding given holidays).
+ *
+ * L8 fix: Önceki versiyonda `date.toISOString().split("T")[0]` kullanılıyordu.
+ * `new Date(year, month-1, day)` yerel saatte (Europe/Berlin = UTC+1/+2).
+ * toISOString UTC'ye çeviriyor, bu da 01.01.2026 → "2025-12-31" gibi
+ * off-by-one bug'a yol açıyordu. Holiday-set lookup silently miss oluyordu.
+ * Şimdi ISO string yerel component'lerden kuruluyor (feiertage.ts:fmt ile
+ * aynı pattern).
  */
 export function getWorkingDaysInMonth(
   year: number,
@@ -104,12 +111,13 @@ export function getWorkingDaysInMonth(
 ): number {
   const holidays = new Set(holidayDates);
   const daysInMonth = new Date(year, month, 0).getDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
   let count = 0;
 
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month - 1, day);
     const dow = date.getDay(); // 0=Sun, 6=Sat
-    const iso = date.toISOString().split("T")[0]!;
+    const iso = `${year}-${pad(month)}-${pad(day)}`;
     if (dow !== 0 && dow !== 6 && !holidays.has(iso)) {
       count++;
     }

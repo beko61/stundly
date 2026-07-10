@@ -1,9 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DAY_TYPES, DAY_TYPE_LABELS } from "@workly/shared";
 import type { TimeEntry, DayType } from "@workly/shared";
 import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
+
+/**
+ * §4 ArbZG — Pausenregelung
+ * - Arbeitszeit > 6h  → mindestens 30 min Pause
+ * - Arbeitszeit > 9h  → mindestens 45 min Pause
+ *
+ * Selbstständige'ler ArbZG'ye tabi değil ama Arbeitnehmer'ler için Pflicht.
+ * Warn-only (block değil) — Stundly hem Solo hem Team modunda çalışıyor.
+ */
+function requiredPauseMinutes(bruttoMinutes: number): number {
+  if (bruttoMinutes > 9 * 60) return 45;
+  if (bruttoMinutes > 6 * 60) return 30;
+  return 0;
+}
+
+function calcBruttoMinutes(start: string, end: string, isOvernight: boolean): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  if (sh === undefined || sm === undefined || eh === undefined || em === undefined) return 0;
+  const s = sh * 60 + sm;
+  const e = eh * 60 + em;
+  if (isOvernight || e < s) return 24 * 60 - s + e;
+  return e - s;
+}
 
 interface Props {
   date: string;
@@ -70,6 +94,16 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, onCreate, onU
   const [error,        setError]        = useState<string | null>(null);
 
   const needsTime  = dayType === DAY_TYPES.ARBEITEN || dayType === DAY_TYPES.NOTDIENST;
+
+  // §4 ArbZG uyarısı — brutto süreye göre gerekli pause
+  const pauseCheck = useMemo(() => {
+    if (!needsTime) return null;
+    const brutto = calcBruttoMinutes(startTime, endTime, isNightShift);
+    const required = requiredPauseMinutes(brutto);
+    if (required === 0) return null;
+    if (breakMinutes >= required) return null;
+    return { required, brutto };
+  }, [needsTime, startTime, endTime, isNightShift, breakMinutes]);
 
   async function handleSave() {
     setSaving(true);
@@ -152,8 +186,26 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, onCreate, onU
 
               <div>
                 <label className="label">Pause (Minuten)</label>
-                <input className="input" type="number" min={0} max={240}
+                <input className="input" type="number" min={0} max={240} inputMode="numeric"
                   value={breakMinutes} onChange={(e) => setBreakMinutes(parseInt(e.target.value, 10) || 0)} />
+                {pauseCheck && (
+                  <div
+                    role="alert"
+                    style={{
+                      marginTop: 6,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "color-mix(in srgb, var(--orange, #f59e0b) 12%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--orange, #f59e0b) 35%, transparent)",
+                      fontSize: 11,
+                      color: "var(--orange, #f59e0b)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    ⚠️ §4 ArbZG: Bei über {pauseCheck.brutto > 9 * 60 ? "9 h" : "6 h"} Arbeit sind
+                    mindestens <strong>{pauseCheck.required} Min. Pause</strong> Pflicht (für Arbeitnehmer).
+                  </div>
+                )}
               </div>
 
               <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>

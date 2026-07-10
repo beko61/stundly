@@ -27,7 +27,7 @@ export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [loading, setLoading] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [confirm, setConfirm] = useState<{ id: string; name: string; email: string } | null>(null);
 
   const filtered = users.filter(u => {
     const matchSearch =
@@ -63,9 +63,12 @@ export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
     setLoading(null);
   }
 
-  async function deleteUser(userId: string) {
+  async function deleteUser(userId: string, email: string) {
     setLoading(userId + "_delete");
-    const res = await fetch(`/api/superadmin/users/${userId}`, { method: "DELETE" });
+    // GÜVENLİK: ?confirm=<email> zorunlu (server-side double-check).
+    // Yanlış kullanıcıyı silmeyi imkansızlaştırır.
+    const url = `/api/superadmin/users/${userId}?confirm=${encodeURIComponent(email)}`;
+    const res = await fetch(url, { method: "DELETE" });
     if (res.ok) {
       setUsers(prev => prev.filter(u => u.user_id !== userId));
     }
@@ -175,7 +178,7 @@ export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
                 {/* Sil butonu */}
                 <td style={{ padding: "10px 12px" }}>
                   <button
-                    onClick={() => setConfirm({ id: u.user_id, name: u.full_name ?? u.email ?? u.user_id })}
+                    onClick={() => setConfirm({ id: u.user_id, name: u.full_name ?? u.email ?? u.user_id, email: u.email ?? "" })}
                     disabled={loading === u.user_id + "_delete"}
                     style={{
                       padding: "3px 10px", borderRadius: 6, border: "none",
@@ -224,7 +227,7 @@ export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
                 İptal
               </button>
               <button
-                onClick={() => deleteUser(confirm.id)}
+                onClick={() => deleteUser(confirm.id, confirm.email)}
                 disabled={loading === confirm.id + "_delete"}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 10,

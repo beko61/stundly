@@ -41,11 +41,35 @@ export async function POST(req: NextRequest) {
 
   const supabase = getAdminClient();
 
-  await supabase.from("stripe_webhook_events").insert({
-    stripe_event_id: event.id,
-    event_type: event.type,
-    payload: event as unknown as Record<string, unknown>,
-  });
+  // R1 fix — Idempotency guard.
+  // Stripe retry mekanizması aynı event.id ile bir daha gelirse:
+  //  - Eğer processed=true ise handler'ı yeniden çalıştırma (duplicate email
+  //    + duplicate plan flip önle) → 200 early return.
+  //  - Eğer henüz processed=false ise (bir önceki denemede yarıda kalmış)
+  //    yeniden dene.
+  const { data: existing } = await supabase
+    .from("stripe_webhook_events")
+    .select("processed")
+    .eq("stripe_event_id", event.id)
+    .maybeSingle();
+
+  if (existing?.processed) {
+    // Zaten işlenmiş — Stripe'a OK dön, tekrar retry etmesin.
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
+  if (!existing) {
+    // İlk defa görüyoruz — insert. Race condition olursa unique constraint
+    // yakalayacak; ignore edip devam et.
+    const { error: insertErr } = await supabase.from("stripe_webhook_events").insert({
+      stripe_event_id: event.id,
+      event_type: event.type,
+      payload: event as unknown as Record<string, unknown>,
+    });
+    if (insertErr && !String(insertErr.message).includes("duplicate")) {
+      console.error("[stripe/webhook] event insert failed:", insertErr.message);
+    }
+  }
 
   try {
     switch (event.type) {

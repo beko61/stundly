@@ -11,26 +11,36 @@ describe("getFeiertage — nationwide holidays", () => {
     expect(f["2026-12-26"]).toBe("2. Weihnachtstag");
   });
 
-  it("Easter 2026 = 5 April (Ostersonntag)", () => {
+  it("Karfreitag + Ostermontag 2026 (Ostersonntag NUR in BB, siehe unten)", () => {
     // 2026: Karfreitag 3 Nisan, Ostersonntag 5 Nisan, Ostermontag 6 Nisan
     const f = getFeiertage(2026, "NI");
     expect(f["2026-04-03"]).toBe("Karfreitag");
-    expect(f["2026-04-05"]).toBe("Ostersonntag");
     expect(f["2026-04-06"]).toBe("Ostermontag");
+    // Ostersonntag NI'de gesetzlich Feiertag DEĞİLDİR (sadece Sonntag).
+    expect(f["2026-04-05"]).toBeUndefined();
   });
 
-  it("Easter 2025 = 20 April", () => {
+  it("Easter 2025 = 20 April — Karfreitag + Ostermontag NI (Ostersonntag NUR BB)", () => {
     const f = getFeiertage(2025, "NI");
     expect(f["2025-04-18"]).toBe("Karfreitag");
-    expect(f["2025-04-20"]).toBe("Ostersonntag");
     expect(f["2025-04-21"]).toBe("Ostermontag");
+    expect(f["2025-04-20"]).toBeUndefined();
   });
 
-  it("Pfingsten = Easter + 49 / +50", () => {
+  it("Pfingstmontag nationwide, Pfingstsonntag NUR BB", () => {
     // 2026: Pfingstsonntag 24 Mai, Pfingstmontag 25 Mai
     const f = getFeiertage(2026, "NI");
-    expect(f["2026-05-24"]).toBe("Pfingstsonntag");
     expect(f["2026-05-25"]).toBe("Pfingstmontag");
+    // Pfingstsonntag NI'de gesetzlich Feiertag DEĞİLDİR (sadece Sonntag).
+    expect(f["2026-05-24"]).toBeUndefined();
+  });
+
+  it("Ostersonntag + Pfingstsonntag NUR Brandenburg (L4 fix)", () => {
+    // Brandenburg spesifik: hem Ostersonntag hem Pfingstsonntag gesetzlich Feiertag
+    const bb = getFeiertage(2026, "BB");
+    expect(bb["2026-04-05"]).toBe("Ostersonntag");
+    expect(bb["2026-05-24"]).toBe("Pfingstsonntag");
+    expect(bb["2026-04-04"]).toBe("Karsamstag"); // BB'ye özgü zaten
   });
 
   it("Christi Himmelfahrt = Easter + 39", () => {

@@ -10,7 +10,7 @@ function mapError(msg: string): string {
   if (msg.includes("already registered") || msg.includes("already been registered"))
     return "Diese E-Mail-Adresse ist bereits registriert.";
   if (msg.includes("Password should be at least"))
-    return "Das Passwort muss mindestens 6 Zeichen lang sein.";
+    return "Das Passwort muss mindestens 10 Zeichen lang sein.";
   if (msg.includes("Unable to validate email") || msg.includes("invalid email"))
     return "Bitte eine gültige E-Mail-Adresse eingeben.";
   if (msg.includes("rate limit") || msg.includes("too many"))
@@ -29,10 +29,21 @@ function RegisterForm() {
   const [fullName, setFullName]   = useState("");
   const [email, setEmail]         = useState(inviteEmail ?? "");
   const [password, setPassword]   = useState("");
+  const [agbAccepted, setAgbAccepted] = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [loading, setLoading]     = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
   const [companyName, setCompanyName]   = useState<string | null>(null);
+
+  // P1 fix — Password strength: min 10 karakter + en az 1 rakam veya
+  // özel karakter. Payroll-adjacent SaaS için 6 karakter compliance riski.
+  function passwordStrengthError(pw: string): string | null {
+    if (pw.length < 10) return "Passwort muss mindestens 10 Zeichen lang sein.";
+    if (!/[0-9]/.test(pw) && !/[^A-Za-z0-9]/.test(pw)) {
+      return "Passwort muss mindestens eine Zahl oder ein Sonderzeichen enthalten.";
+    }
+    return null;
+  }
 
   // Davet linki varsa şirket adını çek (UI'da göster)
   useEffect(() => {
@@ -57,15 +68,31 @@ function RegisterForm() {
     setLoading(true);
     setError(null);
 
+    // P2 fix — AGB akzeptiert Pflicht (Abmahn-Prävention)
+    if (!agbAccepted) {
+      setError("Bitte AGB und Datenschutzerklärung akzeptieren.");
+      setLoading(false);
+      return;
+    }
+
+    // P1 fix — Password strength server-side signup öncesi
+    const pwErr = passwordStrengthError(password);
+    if (pwErr) {
+      setError(pwErr);
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
 
-    // Davet linki üzerinden gelen kullanıcılar için company_id + role metadata'da geçer
-    // (handle_new_user trigger bunu okuyup profile'ı doğru company'ye bağlar)
-    let inviteMeta: { role?: string; company_id?: string } = {};
+    // Davet linki varsa client-side pre-flight email eşleşme kontrolü.
+    // GÜVENLİK: role/company_id metadata'ya KOYULMAZ. Trigger metadata'ya
+    // güvenmez (migration 021). Invitation apply'ı /api/invitations/accept
+    // server-side'da service_role ile yapılır.
     if (token) {
       const { data: inv } = await supabase
         .from("invitations")
-        .select("company_id, role, email")
+        .select("email")
         .eq("token", token)
         .eq("status", "pending")
         .gt("expires_at", new Date().toISOString())
@@ -82,14 +109,12 @@ function RegisterForm() {
         setLoading(false);
         return;
       }
-
-      inviteMeta = { role: inv.role, company_id: inv.company_id };
     }
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, ...inviteMeta } },
+      options: { data: { full_name: fullName } },
     });
 
     if (signUpError) {
@@ -201,12 +226,31 @@ function RegisterForm() {
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            placeholder="Mindestens 6 Zeichen"
+            placeholder="Mindestens 10 Zeichen inkl. Zahl"
             required
-            minLength={6}
+            minLength={10}
             autoComplete="new-password"
           />
+          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+            Mindestens 10 Zeichen, mit mindestens einer Zahl oder einem Sonderzeichen.
+          </p>
         </div>
+
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+          <input
+            type="checkbox"
+            checked={agbAccepted}
+            onChange={(e) => setAgbAccepted(e.target.checked)}
+            required
+            style={{ width: 18, height: 18, marginTop: 1, accentColor: "var(--accent)", flexShrink: 0 }}
+          />
+          <span>
+            Ich akzeptiere die{" "}
+            <Link href="/agb" target="_blank" style={{ color: "var(--accent2)", fontWeight: 600 }}>AGB</Link>
+            {" "}und die{" "}
+            <Link href="/datenschutz" target="_blank" style={{ color: "var(--accent2)", fontWeight: 600 }}>Datenschutzerklärung</Link>.
+          </span>
+        </label>
 
         {error && (
           <p style={{

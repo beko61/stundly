@@ -175,6 +175,12 @@ export interface SalarySettings {
    * SV-Basis werden entsprechend reduziert. Default: false.
    */
   sfn_enabled?: boolean;
+  /** §5 BUrlG Beschäftigungsbeginn — Zwölftelung des Urlaubsanspruchs. */
+  employment_start_date?: string | null;
+  /** §5 BUrlG Beschäftigungsende (letzter Arbeitstag). */
+  employment_end_date?: string | null;
+  /** §7 III BUrlG Übertrag aus Vorjahr (Tage). Muss bis 31.03 genommen werden. */
+  urlaub_carry_over?: number;
 }
 
 export interface DailyLog {

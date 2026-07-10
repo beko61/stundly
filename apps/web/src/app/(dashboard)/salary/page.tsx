@@ -4,8 +4,16 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { calculateMonthlySalary, formatDuration, calcNettoFromBrutto } from "@workly/shared";
-import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode } from "@workly/shared";
+import {
+  calculateMonthlySalary,
+  formatDuration,
+  calcNettoFromBrutto,
+  calcKrankheitEpisodes,
+  ENTGFG_KRANKHEIT_LIMIT_DAYS,
+  calcAnnualEntitlement,
+  calcUrlaubskonto,
+} from "@workly/shared";
+import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode, KrankheitEpisode } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
 import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -56,6 +64,9 @@ const DEFAULT_SETTINGS: SalarySettings = {
   manuell_abzug:            0,
   urlaub_anspruch:          30,
   sfn_enabled:              false,
+  employment_start_date:    null,
+  employment_end_date:      null,
+  urlaub_carry_over:        0,
 };
 
 function loadLocalSettings(): SalarySettings {
@@ -125,6 +136,9 @@ export default function SalaryPage() {
           manuell_abzug:            Number(data.manuell_abzug ?? 0),
           urlaub_anspruch:          Number(data.urlaub_anspruch ?? 30),
           sfn_enabled:              Boolean(data.sfn_enabled ?? false),
+          employment_start_date:    (data.employment_start_date as string | null) ?? null,
+          employment_end_date:      (data.employment_end_date   as string | null) ?? null,
+          urlaub_carry_over:        Number(data.urlaub_carry_over ?? 0),
         };
         setSettings(loaded);
         localStorage.setItem(LS_KEY, JSON.stringify(loaded));
@@ -159,6 +173,9 @@ export default function SalaryPage() {
           manuell_abzug:            settings.manuell_abzug ?? 0,
           urlaub_anspruch:          settings.urlaub_anspruch ?? 30,
           sfn_enabled:              settings.sfn_enabled ?? false,
+          employment_start_date:    settings.employment_start_date ?? null,
+          employment_end_date:      settings.employment_end_date ?? null,
+          urlaub_carry_over:        settings.urlaub_carry_over ?? 0,
         };
         if (settingsRowId.current) {
           await supabase.from("salary_settings").update(payload).eq("id", settingsRowId.current);
@@ -340,6 +357,34 @@ export default function SalaryPage() {
       nettoDelta:  ncPlus.netto       - nettoCalc.netto,
     };
   }, [entries, settings, currentMonthNotdienstDays, feiertage, breakdown.total_gross, nettoCalc.netto]);
+
+  // §3 EntgFG — Krank-Episoden auf yearEntries (kalenderdays)
+  const krankheitEpisodes = useMemo<KrankheitEpisode[]>(
+    () => calcKrankheitEpisodes(yearEntries),
+    [yearEntries],
+  );
+  const krankheitOverLimit = krankheitEpisodes.filter(e => e.days > ENTGFG_KRANKHEIT_LIMIT_DAYS);
+
+  // §5 + §7 BUrlG — Urlaubskonto (Zwölftelung + Übertrag/Verfall 31.03)
+  const urlaubskonto = useMemo(() => {
+    const entitlement = calcAnnualEntitlement({
+      annualAnspruch:  settings.urlaub_anspruch ?? 30,
+      employmentStart: settings.employment_start_date ?? null,
+      employmentEnd:   settings.employment_end_date ?? null,
+      year,
+    });
+    const usedThisYear = yearEntries.filter(e => e.day_type === "urlaub").length;
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const konto = calcUrlaubskonto({
+      thisYearEntitlement:   entitlement.anspruch,
+      thisYearUsed:          usedThisYear,
+      previousYearRemaining: settings.urlaub_carry_over ?? 0,
+      refDate:               todayISO,
+      year,
+    });
+    return { entitlement, usedThisYear, konto };
+  }, [settings.urlaub_anspruch, settings.employment_start_date, settings.employment_end_date,
+      settings.urlaub_carry_over, yearEntries, year]);
 
   const [moneyHidden, togglePrivacy] = usePrivacyMode();
   const fmtEur    = (n: number) => maskMoney(n, moneyHidden);
@@ -526,6 +571,62 @@ export default function SalaryPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* ── Beschäftigung & Urlaub (BUrlG) ── */}
+        <div className="card">
+          <div className="label" style={{ marginBottom: 12 }}>💼 Beschäftigung & Urlaub</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+            <div>
+              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
+                Beschäftigt seit
+                <InfoTooltip title="§5 BUrlG Zwölftelung">
+                  Datum, an dem dein Arbeitsverhältnis begonnen hat.{"\n\n"}
+                  Wenn im laufenden Jahr, wird der Urlaubsanspruch anteilig
+                  gekürzt (1/12 pro fehlendem Kalendermonat).{"\n\n"}
+                  Nach 6 Monaten Wartezeit (§4 BUrlG) besteht der volle Anspruch.
+                </InfoTooltip>
+              </label>
+              <input
+                className="input" type="date"
+                value={settings.employment_start_date ?? ""}
+                onChange={(e) => setSettings(s => ({ ...s, employment_start_date: e.target.value || null }))}
+              />
+            </div>
+            <div>
+              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
+                Beschäftigt bis (optional)
+                <InfoTooltip title="Beschäftigungsende">
+                  Datum, an dem dein Arbeitsverhältnis endet (letzter Arbeitstag).
+                  Nur ausfüllen wenn befristet oder Kündigung ausgesprochen.
+                  Leer = weiterhin aktiv.
+                </InfoTooltip>
+              </label>
+              <input
+                className="input" type="date"
+                value={settings.employment_end_date ?? ""}
+                onChange={(e) => setSettings(s => ({ ...s, employment_end_date: e.target.value || null }))}
+              />
+            </div>
+            <div>
+              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
+                Übertrag Vorjahr (Tage)
+                <InfoTooltip title="§7 III BUrlG Übertrag">
+                  Übertragene Urlaubstage aus dem Vorjahr, die noch nicht
+                  genommen wurden.{"\n\n"}
+                  Diese Tage verfallen am 31.03. des laufenden Jahres, wenn
+                  sie bis dahin nicht genommen wurden (§7 III S. 2 BUrlG).{"\n\n"}
+                  Übertragung ist nur bei dringenden betrieblichen oder
+                  persönlichen Gründen zulässig — Abstimmung mit AG.
+                </InfoTooltip>
+              </label>
+              <input
+                className="input" type="number" step="0.5" min={0} max={60}
+                value={settings.urlaub_carry_over ?? 0}
+                onChange={(e) => setSettings(s => ({ ...s, urlaub_carry_over: parseFloat(e.target.value) || 0 }))}
+              />
+            </div>
           </div>
         </div>
 
@@ -891,6 +992,117 @@ export default function SalaryPage() {
                 {nettoCalc.abzuege.manuell && <> (manuell {nettoCalc.abzuege.manuellProzent}%)</>}
               </div>
             </div>
+
+            {/* §5+§7 BUrlG — Urlaubskonto (Zwölftelung + Verfall 31.03) */}
+            {(urlaubskonto.entitlement.isProrated || urlaubskonto.konto.carryOverAvailable > 0 || urlaubskonto.konto.verfallWarning) && (
+              <div
+                className="card"
+                style={{
+                  background: urlaubskonto.konto.verfallWarning
+                    ? "color-mix(in srgb, var(--red) 10%, var(--surface))"
+                    : "color-mix(in srgb, var(--accent2) 8%, var(--surface))",
+                  border: urlaubskonto.konto.verfallWarning
+                    ? "1px solid color-mix(in srgb, var(--red) 35%, transparent)"
+                    : "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 8, display: "inline-flex", alignItems: "center" }}>
+                  🏖 Urlaubskonto {year}
+                  <InfoTooltip title="BUrlG Zwölftelung + Verfall">
+                    §5 BUrlG (Zwölftelung): Wenn dein Arbeitsverhältnis nicht das
+                    ganze Jahr besteht, verringert sich der Anspruch um 1/12 pro
+                    fehlendem Kalendermonat.{"\n\n"}
+                    §7 III BUrlG (Übertrag): Urlaub muss im Kalenderjahr genommen
+                    werden. Übertrag aus dem Vorjahr verfällt am 31.03.
+                    des laufenden Jahres, wenn er bis dahin nicht genommen wurde.{"\n\n"}
+                    Einstellungen unten:
+                    {" "}Beschäftigungsbeginn/-ende + Übertrag aus Vorjahr.
+                  </InfoTooltip>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, fontSize: 12 }}>
+                  <div>
+                    <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Anspruch</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
+                      {urlaubskonto.entitlement.anspruch} Tage
+                    </div>
+                    {urlaubskonto.entitlement.isProrated && (
+                      <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                        {urlaubskonto.entitlement.fullMonths}/12 Monate (§5)
+                      </div>
+                    )}
+                  </div>
+                  {urlaubskonto.konto.carryOverAvailable > 0 && (
+                    <div>
+                      <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Übertrag</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
+                        +{urlaubskonto.konto.carryOverAvailable}
+                      </div>
+                      <div style={{ fontSize: 10, color: urlaubskonto.konto.verfallWarning ? "var(--red)" : "var(--muted)" }}>
+                        Verfall {urlaubskonto.konto.verfallDate}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Genommen</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
+                      {urlaubskonto.usedThisYear} Tage
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Rest</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: urlaubskonto.konto.remaining < 0 ? "var(--red)" : "var(--green)" }}>
+                      {urlaubskonto.konto.remaining} Tage
+                    </div>
+                  </div>
+                </div>
+                {urlaubskonto.konto.verfallWarning && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: "var(--red)", fontWeight: 700 }}>
+                    ⚠️ {urlaubskonto.konto.carryOverAvailable} Übertrag-Tag(e) verfallen in {urlaubskonto.konto.daysUntilVerfall} Tagen (31.03.)
+                  </div>
+                )}
+                {urlaubskonto.entitlement.waitingPeriodActive && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
+                    ℹ️ §4 BUrlG Wartezeit: Voller Urlaubsanspruch erst nach 6 Monaten Beschäftigung.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* §3 EntgFG — Krankheit über 6 Wochen */}
+            {krankheitOverLimit.length > 0 && (
+              <div
+                role="alert"
+                className="card"
+                style={{
+                  background: "color-mix(in srgb, var(--red) 10%, var(--surface))",
+                  border: "1px solid color-mix(in srgb, var(--red) 35%, transparent)",
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--red)", marginBottom: 6, display: "inline-flex", alignItems: "center" }}>
+                  🩺 §3 EntgFG — Lohnfortzahlung endet
+                  <InfoTooltip title="6 Wochen Lohnfortzahlung">
+                    §3 EntgFG: Der Arbeitgeber zahlt bei Krankheit maximal
+                    6 Wochen (42 Kalendertage) das volle Gehalt weiter.{"\n\n"}
+                    Ab dem 43. Tag zahlt die Krankenkasse Krankengeld:{"\n"}
+                    • 70 % des Bruttos{"\n"}
+                    • Höchstens 90 % des Nettos{"\n\n"}
+                    Diese Anzeige nutzt eine vereinfachte Kettenlogik
+                    (kalendarisch aufeinanderfolgende Krank-Einträge).
+                    Fortsetzungserkrankung nach §3 II EntgFG wird nicht modelliert.
+                  </InfoTooltip>
+                </div>
+                {krankheitOverLimit.map(ep => (
+                  <div key={ep.start} style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.55 }}>
+                    <strong style={{ color: "var(--text)" }}>{ep.start} — {ep.end}</strong>
+                    {" · "}{ep.days} Kalendertage{" · "}
+                    <span style={{ color: "var(--red)" }}>
+                      {ep.excessDates.length} Tag{ep.excessDates.length === 1 ? "" : "e"} über Limit
+                    </span>
+                    {" · ab "}{ep.excessDates[0]}{" Krankengeld"}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Verdienst breakdown */}
             <div className="card">

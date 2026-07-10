@@ -5,3 +5,5 @@ export * from "./utils/salaryCalc";
 export * from "./utils/taxCalc";
 export * from "./utils/arbzg";
 export * from "./utils/sfn";
+export * from "./utils/entgfg";
+export * from "./utils/burlg";

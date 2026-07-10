@@ -1,5 +1,104 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-10 (64) – v0.30.0: Audit Week 2 — L5+L6+L7 EntgFG + BUrlG
+
+### Hedef
+İşçi hukuku 3 madde: 6 hafta Krankheit Fortzahlung + yıl içi giriş
+Zwölftelung + Übertrag Verfall 31.03. Hepsi salary page'de banner
++ input olarak.
+
+### L5 — §3 EntgFG 6 Wochen Krankheit
+**`packages/shared/src/utils/entgfg.ts`** — YENİ modül
+- `ENTGFG_KRANKHEIT_LIMIT_DAYS = 42`
+- `calcKrankheitEpisodes(entries)` — art arda gelen Krank-Einträge tek episode.
+  Gap günü yeni episode başlatır. Excess dates 43. günden itibaren.
+- `findKrankheitExcessDays(entries)` — 42 aşan tüm tarihler
+- `longestKrankheitStreak(entries)` — en uzun kesintisiz Krank streak
+- Duplicate-safe, kronolojik-independent input
+
+**Salary page**: yearEntries üzerinde episodes hesaplanır. > 42 gün episode
+varsa kırmızı banner:
+- Tarih aralığı + gün sayısı + excess gün + "ab TT.MM Krankengeld"
+- InfoTooltip'te §3 EntgFG + §44 SGB V açıklaması
+
+### L6 — §5 BUrlG Zwölftelung
+**`packages/shared/src/utils/burlg.ts`** — YENİ modül
+- `BURLG_MIN_URLAUB_DAYS = 20` (§3), `WARTEZEIT = 6 ay` (§4)
+- `countFullMonthsInYear(start, end, year)` — bir ay "tam" sayılır:
+  start ≤ ayın 1'i ve end ≥ ayın son günü. Angebrochene Monate 0/12.
+- `calcAnnualEntitlement({annual, start, end, year})` → `{ anspruch,
+  fullMonths, isProrated, waitingPeriodActive }`. Anspruch = round(annual × m/12)
+
+### L7 — §7 III BUrlG Übertrag + Verfall
+**burlg.ts** devamı
+- `BURLG_VERFALL_CUTOFF = 31.03`
+- `calcUrlaubskonto({thisYearEntitlement, thisYearUsed, previousYearRemaining,
+  refDate, year})` → `{ carryOverAvailable, carryOverExpired, verfallDate,
+  daysUntilVerfall, totalEntitlement, remaining, verfallWarning }`
+- refDate > 31.03 → carryOver 0'a düşer. Ondan önce nutzbar.
+- verfallWarning: ≤ 30 gün + remaining > 0
+
+### Migration 023 (manuel apply gerekli)
+- `salary_settings.employment_start_date date`
+- `salary_settings.employment_end_date   date`
+- `salary_settings.urlaub_carry_over     numeric(5,2) default 0` (check 0-60)
+- Idempotent
+
+### Salary page (`/salary`)
+- Yeni "💼 Beschäftigung & Urlaub" settings card (Grundeinstellungen ile
+  Steuer & Abzüge arasında)
+  - Beschäftigt seit (date input, §5 tooltip)
+  - Beschäftigt bis optional (date input)
+  - Übertrag Vorjahr (number input 0-60, §7 III tooltip)
+- Yeni Urlaubskonto banner (HERO sonrası, breakdown öncesi):
+  - 4 stat: Anspruch / Übertrag / Genommen / Rest (chip'lerde)
+  - Zwölftelung fullMonths göstergesi
+  - Verfall date + "verfallen in N Tagen" kırmızı warn
+  - §4 BUrlG Wartezeit info (< 6 ay)
+  - Sadece isProrated OR carryOverAvailable > 0 OR verfallWarning ise render
+- Yeni Krankheit banner (Urlaubskonto sonrası):
+  - Episodes > 42 gün, tarih aralığı + excess gün + Krankengeld tarihi
+
+### Types
+- `SalarySettings.employment_start_date?: string | null`
+- `SalarySettings.employment_end_date?: string | null`
+- `SalarySettings.urlaub_carry_over?: number`
+
+### Vereinfachungen (kod ve tooltip'te dokümante)
+- L5: "Fortsetzungserkrankung §3 II EntgFG" (6 ay içi aynı Krankheit toplanır)
+  MODELIZE EDİLMEDİ — sadece kalendarische Kette
+- L6: sadece VOLLE Kalendermonate sayılır (angebrochene → 0), konservativ
+- L7: "dringende Gründe" Übertrag onayı kullanıcının işi — sistem sadece
+  rakam okur/uyarır
+
+### Validation
+- TS clean · ESLint clean · Vitest **311/311** (268 → 311, +43)
+  - entgfg.test.ts: 18 case (constants + episodes + excess + streak + edge)
+  - burlg.test.ts: 25 case (countFullMonths + entitlement + urlaubskonto
+    + verfall Grenze case)
+
+### Değişen dosyalar (7 file)
+- `packages/shared/src/utils/entgfg.ts` — YENİ (~85 LOC)
+- `packages/shared/src/utils/burlg.ts` — YENİ (~180 LOC)
+- `packages/shared/src/index.ts` — 2 export
+- `packages/shared/src/types/index.ts` — 3 yeni SalarySettings alan
+- `apps/web/src/app/(dashboard)/salary/page.tsx` — settings + banner + save/load
+- `apps/web/src/__tests__/unit/entgfg.test.ts` — YENİ
+- `apps/web/src/__tests__/unit/burlg.test.ts` — YENİ
+- `supabase/migrations/023_salary_burlg_fields.sql` — YENİ
+- `apps/web/src/lib/version.ts` — 0.29.0 → 0.30.0 (MINOR)
+
+### Manuel adım (deploy'da)
+⚠ **Migration 023** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+Yoksa: Beschäftigung tarihi kaydeden user'da salary_settings save 500 verir.
+
+### Kalan Week 2
+- P4 OCR consent screen
+- Datenschutz + AVV
+- DSGVO cron
+
+---
+
 ## 2026-07-10 (63) – v0.29.0: Audit Week 2 — L10 §3b EStG SFN-Zuschläge
 
 ### Hedef

@@ -1,5 +1,167 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-09 (61) – v0.27.0: Audit Week 1 ship-blocker fixes (10 madde)
+
+### Hedef
+6 uzman tester audit'i (Güvenlik, İş Hukuku, UX, Ürün, Kod, Reliability) →
+21 kritik + 56 major + 51 minor bulgu. Week 1 ship-blocker'ı 10 madde
+kapatıldı, tek büyük commit ile prod'a gitti.
+
+### Audit sonucu
+`AUDIT_2026-07-09.md` (10 KB) tam rapor: kategori, dosya:satır, süre tahmini,
+sprint planı. Not: bu dosya bilerek yayında değil, sadece internal.
+
+**Genel:** kodbase median üstü bootstrap. Üç kırık:
+1. Yetki modeli patlak — signup ile super_admin, employee → company_admin
+2. Alman iş hukuku hesap hataları (10 madde) — Betriebsprüfung riski
+3. Ürün-pazarı boşluğu — mühendislik 3× marketing'den iyi
+
+### 10 fix
+
+**GÜVENLİK** — Migration 021_privilege_escalation_hardening.sql (✅ prod'a apply edildi)
+- **S1**: `profiles` UPDATE trigger — role/company_id/plan/is_active/deleted_at/
+  must_change_password sadece service_role değiştirebilir. `enforce_profile_privileges()`
+  BEFORE UPDATE trigger her satırda kontrol.
+- **S2**: `handle_new_user` trigger — `raw_user_meta_data.role/company_id` ARTIK
+  okunmuyor. Her signup 'individual' başlar. Attacker `{role: super_admin}`
+  metadata gönderemez.
+- **S3**: `invitations` "Company admin can manage" policy — role predicate geri
+  kondu (011'de düşmüştü). Employee kendini company_admin invite edemez.
+- Yeni server route'lar: `/api/onboarding/create-company` +
+  `/api/onboarding/set-bundesland` (service_role ile privilege trigger bypass)
+- `register/page.tsx` — metadata payload'undan role/company_id kaldırıldı
+- `onboarding/setup/page.tsx` — direct client `.update({role: ...})` yerine
+  yeni server route çağırıyor
+
+**P5**: `/api/email/test` route SİLİNDİ — auth'lu herkes Resend quota patlatabiliyordu
+
+**R6**: Superadmin DELETE user
+- `?confirm=<email>` zorunlu query param, server-side email eşleşme
+- `audit_log`'a `superadmin.user_deleted` action + resource_id + email payload
+- `UsersTable.tsx` confirm state'e email eklendi, `deleteUser(id, email)` signature
+
+**L4**: Ostersonntag + Pfingstsonntag SADECE Brandenburg'da Feiertag
+- `feiertage.ts`: national listeden çıkarıldı, BB spesifik bloguna eklendi
+- Test güncellendi: NI'de `undefined`, BB'de tanımlı (yeni test eklendi)
+- PDF/Zuschlag hesaplarında yanlış Feiertag işaretlenmesi bitti
+
+**L8**: Timezone bug `getWorkingDaysInMonth`
+- `toISOString()` UTC'ye çeviriyordu → 01.01.2026 = "2025-12-31" off-by-one
+- Yerel string kuruluyor: `${y}-${pad(m)}-${pad(d)}`
+- (feiertage.ts:fmt ile aynı pattern)
+
+**L9**: Tax constants → YILLIK MAP
+- `TAX_CONSTANTS_BY_YEAR: Record<number, TaxConstants>` — 2024, 2025, 2026
+- Grundfreibetrag / BBG KV/RV / PV oranı / KV Zusatzbeitrag / Soli Freigrenze
+  hepsi yıl bazlı
+- Public API: `calcNettoFromBrutto({..., year})` optional param, verilmezse
+  current year, unknown year için en yakın küçük yıl fallback
+- calcSV / calcLohnsteuerMonat / calcSoliMonat / calcVorsorgePauschale /
+  estGrundtabelle hepsi `year?` param aldı
+- Netto sapması €100+ 2024 sabitlerinden geliyordu, artık doğru
+- **Not**: 2026 rakamları Bundesregierung Entwurf 15.10.2025 + SV-Rechengrößen.
+  Steuerberater verify şart.
+
+**L1**: §4 ArbZG Pause warn (block değil)
+- `TimeEntryModal.tsx`: `requiredPauseMinutes(bruttoMin)` hesabı
+- Brutto > 6h → 30dk, > 9h → 45dk
+- Pause input altında `role="alert"` soft warning banner (turuncu)
+- Selbstständige-Modus'unda block etmiyor, sadece bilgi verir
+
+**R1**: Stripe webhook idempotency
+- Insert öncesi `processed=true` check → early return 200 (Stripe retry'a "OK")
+- Duplicate confirmation email + duplicate plan flip engellendi
+- Unique constraint race condition graceful handle
+
+**R2+R3**: Error boundaries + monitoring foundation
+- 4 dosya: `global-error.tsx`, `(dashboard)/error.tsx`, `company/error.tsx`,
+  `superadmin/error.tsx` (brand-styled retry buton, digest ID, Fehler-ID)
+- `lib/monitoring/reportError.ts` — console + placeholder Sentry hook
+  (`@sentry/nextjs` kurulunca `TODO(sentry)` yorumunda wire edilecek)
+
+**P1+P2**: Signup güçlendirme
+- Password 6 → 10 karakter + rakam veya özel karakter zorunlu
+- `passwordStrengthError()` client validation
+- **AGB + Datenschutzerklärung akzeptieren checkbox** (mandatory, Abmahn koruma)
+- `mapError` "6 Zeichen" → "10 Zeichen" güncellendi
+
+### Kullanıcı yaptı
+- ✅ Supabase Dashboard → SQL Editor'da migration 021 çalıştırıldı (2026-07-09)
+- Böylece prod DB tarafında da güvenlik açıkları KAPALI
+
+### Validation
+- TS clean · ESLint clean · Vitest **211/211** (feiertage +1 yeni test)
+- Next build success (Vercel auto-deploy trigger cff5baa)
+
+### Commit
+`cff5baa v0.27.0 — Audit Week 1: 10 ship-blocker fix` · 21 dosya, +1309/-197 · auto-deploy ✓
+
+### Kalan iş — Week 2-6 (audit'te detay)
+**Week 2 — Yasal Sağlamlaştırma:**
+- L2 §5 Ruhezeit 11h validation
+- L3 §3 10h/gün cap + Ø 8h/6-Monats-Rolling
+- L5 Krankheit 6-Wochen §3 EntgFG limit
+- L6 Urlaub §5 BUrlG Zwölftelung
+- L7 §7 III BUrlG Übertragung + 31.03 Verfall
+- L10 §3b EStG SFN-Zuschläge (Sonntag 50%, Feiertag 125%)
+- P4 OCR consent screen (DSGVO Art. 6)
+- Datenschutz "Drittländer" düzelt + AVV template
+- DSGVO delete cron worker (`/api/dsgvo/delete` process eden yok)
+
+**Week 3-4 — UX + Dönüşüm:**
+- MonthNav 26×26 → 44×44 tap targets
+- Modal focus trap + aria-modal + ESC
+- Skeleton primitive ("Laden..." replace)
+- Global `*:focus-visible`
+- Light mode tokens
+- `100vh` → `100dvh`
+- Weekly digest email (Monday) — retention #1
+- Monthly PDF report email
+- Landing testimonial strip
+- DATEV CSV export
+- `/vergleich/clockodo` + 2 SEO landing
+- Beta anchor pricing "€19,99 → €5,99"
+- Onboarding sample data injection
+
+**Week 5-6 — Kod Sağlığı:**
+- `salary/page.tsx` refactor (1148 LOC → 6 component)
+- Zod schemas 4 admin write route
+- React Query time_entries + vacation
+- Migration 022: 6 DB index
+- CI: tests + build restore (`.github/workflows/ci.yml`)
+- Middleware role JWT'ye taşı
+- Stripe webhook integration test
+- `next/image` + `next/dynamic`
+
+---
+
+## 2026-07-09 (60) – v0.26.1: Notiz textarea + komple test suite
+
+### Hedef
+Kullanıcı bildirdi: "not kısmına Enter'a bastığımda alta geçmiyor". Fix +
+kod tabanının bütünsel testi.
+
+### Değişiklikler
+**Fix**: `TimeEntryModal` + `NotdienstModal` — `<input type=text>` → `<textarea>`,
+rows=2, resize=vertical, minHeight=44 (WCAG). Placeholder: "(Enter = neue Zeile)".
+Görüntülemede `whiteSpace: "pre-line"` (`DayEntry` + `PhotoScanModal` chip'leri).
+
+**Shared vitest fix**: `packages/shared/package.json` — `vitest run` →
+`vitest run --passWithNoTests` (turbo test pipeline'ı kırmıyor).
+
+### Komple test
+- ✅ TypeScript: PASS (5s)
+- ✅ Lint: PASS (0 warning)
+- ✅ Vitest: 210/210 (17 dosya, 33.5s)
+- ✅ Build: PASS 55/55 static page (63.7s)
+- Bundle: `/demo` 113 KB, `/tracker` 181 KB, Middleware 86.9 KB
+
+### Commits
+- `0174d52 v0.26.1 — Notiz textarea`
+- `e06040e chore(shared): passWithNoTests`
+
+---
+
 ## 2026-06-22 (59) – v0.26.0: Demo shareability + trust polish
 
 ### Hedef

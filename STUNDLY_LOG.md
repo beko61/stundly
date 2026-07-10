@@ -7,10 +7,33 @@
 
 ## ⚡ HIZLI BAŞLANGIÇ (yeni sohbet için)
 
-**Mevcut durum (22.06.2026 · v0.26.0):**
+**Mevcut durum (09.07.2026 · v0.27.0):**
 - ✅ Stundly canlıda: **https://stundly.de** · Vercel auto-deploy main branch
-- ✅ **Beta Phase aktif** — 07.06.2026 → 07.09.2026, 3 ay 100% ücretsiz, Pricing/Stripe gizli
-- ✅ FAZ 2 KOMPLE TAMAM — bkz. son_kayit.md #54-59 (v0.21 → v0.26 detayları)
+- ✅ **Beta Phase aktif** — 07.06.2026 → 07.09.2026, 3 ay 100% ücretsiz
+- ✅ **AUDIT 2026-07-09 tamamlandı** — 6 uzman tester → 21 kritik + 56 major + 51 minor bulgu.
+  Rapor: `AUDIT_2026-07-09.md` (internal, git tracked).
+- ✅ **Week 1 ship-blocker 10 madde KAPATILDI** — v0.27.0 · commit `cff5baa`
+- ✅ **Migration 021 prod'da apply edildi (2026-07-09)** — privilege escalation açıkları KAPALI
+
+**v0.27.0 Week 1 (10 fix):**
+- 🔒 **S1+S2+S3 RLS privilege escalation** — Migration 021: profiles UPDATE
+  trigger + handle_new_user hardcode 'individual' + invitations role predicate.
+  Signup ile super_admin exploit'i, employee → company_admin exploit'i KAPALI.
+- 🔒 **P5** — `/api/email/test` silindi (Resend quota patlatma vektörü)
+- 🔒 **R6** — Superadmin DELETE `?confirm=<email>` + audit log
+- ⚖️ **L4** — Ostersonntag/Pfingstsonntag SADECE BB (feiertage.ts)
+- ⚖️ **L8** — Timezone bug fix (`getWorkingDaysInMonth`)
+- ⚖️ **L9** — `TAX_CONSTANTS_BY_YEAR` (2024/2025/2026) — Netto sapması €100+ → doğru
+- ⚖️ **L1** — §4 ArbZG Pause soft warning (block değil)
+- 🛠️ **R1** — Stripe webhook idempotency (early return processed=true)
+- 🛠️ **R2+R3** — 4× `error.tsx` + `lib/monitoring/reportError.ts` (Sentry-ready)
+- 🎨 **P1+P2** — Password 6→10 + AGB akzeptieren checkbox
+
+**v0.21 → v0.26 (önceki FAZ 2 paketi):**
+- ✅ Mobile audit + 7 fix · `/demo` interactive · Demo → Konto migration
+- ✅ Shareable Demo URLs · DemoDataBadge · `/kontakt` + Resend
+- ✅ Direkt-Mitarbeiter + must_change_password gate
+- ✅ outreach_templates.md (r/Selbststaendig + LinkedIn playbook)
 
 **v0.21 → v0.26 (FAZ 2 paketi, 1 günlük büyük sprint):**
 - ✅ **Mobile audit + 7 fix** — pinch-zoom açıldı, tap-targets 44×44, cookie banner mobile-stack, landing nav clip
@@ -30,7 +53,7 @@
 - Gate trio: `(dashboard)`, `company`, `superadmin` layout'larda must_change_password kontrolü
 
 **Test coverage:**
-- Vitest 17 suite · **210/210 pass** (önce 186 idi, +24 demo state tests)
+- Vitest 17 suite · **211/211 pass** (yeni Feiertage BB test'i eklendi)
 - TS clean · ESLint clean · Next build success
 
 **Kullanıcı tarafında bekleyen offline iş:**
@@ -49,12 +72,29 @@
 **Supabase migration'lar (manuel apply edilmiş):**
 - 013-019 ✓
 - 020 (must_change_password) ✓
+- **021 (privilege escalation hardening) ✓** — 2026-07-09 kullanıcı SQL Editor'da çalıştırdı
 
-**Sonraki sohbette ilk adım:**
-> "Stundly devam ediyoruz. FAZ 3'e geçelim — ilk 10 müşteri."
-> Veya: "Outreach başlayalım — Reddit/LinkedIn DM batch'i hazırla."
-> Veya: "Aktivasyon iyileştir — onboarding sonrası tour ekle."
-> Veya: "Beta mode'u kapatalım, ücretli plana geçelim." (BETA_MODE=false yeterli)
+**Sonraki sohbette ilk adım — 4 seçenek:**
+> **A) "Audit Week 2 devam edelim — yasal sağlamlaştırma."**
+>    (L2 Ruhezeit, L3 10h cap, L5 Krankheit 6-Wochen, L6 Zwölftelung,
+>     L7 §7 Verfall, L10 SFN §3b, OCR consent, Datenschutz düzelt,
+>     DSGVO delete cron. Detay: `AUDIT_2026-07-09.md`)
+>
+> **B) "Audit Week 3-4 UX + dönüşüm."**
+>    (MonthNav 44×44, modal focus-trap, Skeleton, light mode, weekly
+>     digest email, monthly PDF email, DATEV CSV, `/vergleich/clockodo`,
+>     landing testimonial strip, beta anchor pricing)
+>
+> **C) "Outreach + müşteri bul."**
+>    (Reddit r/Selbststaendig, LinkedIn DM batch. Playbook:
+>     `outreach_templates.md`. Ürün production-ready, güvenlik açıkları kapalı.)
+>
+> **D) "Beta mode'u kapat, ücretli plana geç."** (BETA_MODE=false yeterli)
+
+**Not**: Audit sonrası kod tabanı median üstü ve güvenlik açıkları kapalı.
+Yeni feature'a girmeden önce Week 2 hukuk fix'leri (özellikle L5 Krankheit
+6-Wochen ve L9 tax constants) müşteri güvenilirliği için ÇOK ÖNEMLİ — beta
+müşterileri Steuerberater'e Stundly rakamlarını götürecek.
 
 **✅ TÜM MIGRATION'LAR ÇALIŞTI (2026-06-13):**
 - `013_urlaub_anspruch.sql` ✓ (salary_settings.urlaub_anspruch eklendi)

@@ -71,7 +71,7 @@ function SuccessContent() {
 
 export default function BillingSuccessPage() {
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh", display: "flex", alignItems: "center", padding: 24 }}>
+    <div style={{ background: "var(--bg)", minHeight: "100dvh", display: "flex", alignItems: "center", padding: 24 }}>
       <Suspense fallback={<div className="card" style={{ padding: 32, textAlign: "center" }}>Laden...</div>}>
         <SuccessContent />
       </Suspense>

@@ -21,12 +21,12 @@ export default async function SuperAdminLayout({ children }: { children: React.R
   if (profile?.must_change_password) redirect("/password-change");
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+    <div style={{ display: "flex", minHeight: "100dvh", background: "var(--bg)" }}>
       <aside style={{
         width: 220, flexShrink: 0,
         background: "var(--surface)", borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column", padding: "20px 0",
-        position: "sticky", top: 0, height: "100vh",
+        position: "sticky", top: 0, height: "100dvh",
       }}>
         <div style={{ padding: "0 20px 20px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2 }}>STUNDLY</div>

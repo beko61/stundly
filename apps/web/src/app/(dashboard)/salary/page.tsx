@@ -17,6 +17,7 @@ import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMod
 import { YearPicker } from "@/components/ui/YearPicker";
 import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useTrackerStore } from "@/store/trackerStore";
 import { usePrivacyMode, maskMoney } from "@/lib/privacy";
 import { getFeiertage } from "@/lib/utils/feiertage";
@@ -469,9 +470,9 @@ export default function SalaryPage() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <button onClick={prevMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>‹</button>
+          <button onClick={prevMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 44, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Vorheriger Monat">‹</button>
           <h1 style={{ fontSize: 18, fontWeight: 800, minWidth: 90, textAlign: "center" }}>{MONTHS[month - 1]}</h1>
-          <button onClick={nextMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>›</button>
+          <button onClick={nextMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 44, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Nächster Monat">›</button>
         </div>
       </div>
 
@@ -909,7 +910,15 @@ export default function SalaryPage() {
 
         {/* ── Monatsberechnung ── */}
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0" }}>Laden...</div>
+          <div
+            role="status"
+            aria-label="Gehaltsdaten werden geladen"
+            style={{ display: "flex", flexDirection: "column", gap: 12, padding: "6px 0" }}
+          >
+            <Skeleton fullWidth height={120} radius={12} />
+            <Skeleton fullWidth height={180} radius={12} />
+            <Skeleton fullWidth height={80}  radius={12} />
+          </div>
         ) : entries.length === 0 && yearEntries.length === 0 ? (
           /* Yeni kullanıcı: bu yıl henüz hiç entry yok → setup hint */
           <div style={{

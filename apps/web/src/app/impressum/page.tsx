@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ImpressumPage() {
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh", padding: "40px 24px" }}>
+    <div style={{ background: "var(--bg)", minHeight: "100dvh", padding: "40px 24px" }}>
       <div style={{ maxWidth: 700, margin: "0 auto" }}>
         <Link
           href="/"

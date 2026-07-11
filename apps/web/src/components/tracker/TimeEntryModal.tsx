@@ -11,6 +11,7 @@ import {
 } from "@workly/shared";
 import type { TimeEntry, DayType } from "@workly/shared";
 import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 /**
  * §4 ArbZG — Pausenregelung
@@ -91,6 +92,7 @@ function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: 
 }
 
 export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry, onCreate, onUpdate, onClose }: Props) {
+  const modalRef = useModalA11y<HTMLDivElement>({ onClose });
   const defaults = getDefaults(dayOfWeek, entry, feiertag);
 
   const [dayType,      setDayType]      = useState<DayType>(defaults.dayType);
@@ -169,15 +171,27 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
 
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet">
+      <div
+        ref={modalRef}
+        className="modal-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-entry-modal-title"
+        tabIndex={-1}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 800 }}>
+            <h2 id="time-entry-modal-title" style={{ fontSize: 18, fontWeight: 800 }}>
               {entry ? "Eintrag bearbeiten" : "Eintrag hinzufügen"}
             </h2>
             <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{date}</p>
           </div>
-          <button className="btn btn-ghost" onClick={onClose} style={{ padding: "6px 10px" }}>✕</button>
+          <button
+            className="btn btn-ghost"
+            onClick={onClose}
+            aria-label="Schließen"
+            style={{ padding: "6px 10px" }}
+          >✕</button>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { TimeEntry } from "@workly/shared";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 // DSGVO Art. 6 (1) a — Einwilligung für OCR-Verarbeitung durch Anthropic (USA).
 // v1 Schema: `{ granted: true, timestamp: ISO }`. Erneute Änderung → v2 key.
@@ -44,6 +45,7 @@ interface Props {
 }
 
 export function PhotoScanModal({ onCreate, onClose }: Props) {
+  const modalRef = useModalA11y<HTMLDivElement>({ onClose });
   const [preview,    setPreview]    = useState<string | null>(null);
   const [imageData,  setImageData]  = useState<string | null>(null);
   const [mediaType,  setMediaType]  = useState("image/jpeg");
@@ -141,14 +143,22 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet" style={{ maxHeight: "90vh", overflowY: "auto" }}>
+      <div
+        ref={modalRef}
+        className="modal-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="photo-scan-modal-title"
+        tabIndex={-1}
+        style={{ maxHeight: "90dvh", overflowY: "auto" }}
+      >
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 800 }}>📷 Foto scannen</h2>
+            <h2 id="photo-scan-modal-title" style={{ fontSize: 18, fontWeight: 800 }}>📷 Foto scannen</h2>
             <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>KI liest Stundenzettel automatisch ein</p>
           </div>
-          <button className="btn btn-ghost" onClick={onClose} style={{ padding: "6px 10px" }}>✕</button>
+          <button className="btn btn-ghost" onClick={onClose} aria-label="Schließen" style={{ padding: "6px 10px" }}>✕</button>
         </div>
 
         {/* Photo preview */}

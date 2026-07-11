@@ -27,7 +27,7 @@ export default function GlobalError({
         background: "#0f0f13",
         color: "#e5e5e5",
         fontFamily: "system-ui, -apple-system, sans-serif",
-        minHeight: "100vh",
+        minHeight: "100dvh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

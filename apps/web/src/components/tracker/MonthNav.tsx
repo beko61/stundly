@@ -44,8 +44,9 @@ export function MonthNav() {
     background:        "var(--accent)",
     border:            "1px solid var(--accent)",
     color:             "white",
-    padding:           "4px 22px 4px 10px",
+    padding:           "10px 28px 10px 14px",
     borderRadius:      8,
+    minHeight:         44,
     cursor:            "pointer",
     fontFamily:        "'Syne',sans-serif",
     fontSize:          12,
@@ -59,15 +60,16 @@ export function MonthNav() {
     backgroundSize:    "10px",
   };
 
+  // WCAG 2.5.5 Target Size — min 44×44 CSS px
   const arrowBtnStyle: React.CSSProperties = {
     background:     "var(--surface2)",
     border:         "1px solid var(--border)",
     color:          "var(--text)",
-    width:          26,
-    height:         26,
-    borderRadius:   7,
+    width:          44,
+    height:         44,
+    borderRadius:   10,
     cursor:         "pointer",
-    fontSize:       13,
+    fontSize:       18,
     display:        "flex",
     alignItems:     "center",
     justifyContent: "center",

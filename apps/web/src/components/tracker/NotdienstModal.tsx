@@ -4,6 +4,7 @@ import { useState } from "react";
 import type React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration } from "@workly/shared";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 export interface NotdienstEntry {
   id: string;
@@ -53,6 +54,7 @@ function defaultEnd(start: string): string {
 }
 
 export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props) {
+  const modalRef = useModalA11y<HTMLDivElement>({ onClose });
   const initStart = entry?.start_time ?? defaultStart();
   const [start,    setStart]    = useState(initStart);
   const [end,      setEnd]      = useState(entry?.end_time   ?? defaultEnd(initStart));
@@ -135,15 +137,23 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
 
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet" style={{ maxHeight: "90vh", overflowY: "auto" }}>
+      <div
+        ref={modalRef}
+        className="modal-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notdienst-modal-title"
+        tabIndex={-1}
+        style={{ maxHeight: "90dvh", overflowY: "auto" }}
+      >
 
         {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
           <div>
-            <h2 style={{ fontSize:18, fontWeight:800, color:"var(--orange)" }}>🚨 Notdienst</h2>
+            <h2 id="notdienst-modal-title" style={{ fontSize:18, fontWeight:800, color:"var(--orange)" }}>🚨 Notdienst</h2>
             <p style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{date}</p>
           </div>
-          <button className="btn btn-ghost" onClick={onClose} style={{ padding:"6px 10px" }}>✕</button>
+          <button className="btn btn-ghost" onClick={onClose} aria-label="Schließen" style={{ padding:"6px 10px" }}>✕</button>
         </div>
 
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>

@@ -1,5 +1,83 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (68) – v0.34.0: A11y baseline (Week 3-4)
+
+### Hedef
+Week 3-4'ün mekanik erişilebilirlik maddeleri tek commit'te.
+WCAG 2.4.7 (focus visible), 2.5.5 (target size), 2.1.2 (no keyboard
+trap), 2.4.3 (focus order). iOS Safari address bar bug fix (dvh).
+
+### 1. WCAG 2.5.5 — MonthNav 44×44 tap targets
+- `MonthNav.tsx`: ok tuşları 26×26 → 44×44 (borderRadius 10)
+- Yıl select: minHeight 44, padding büyültüldü
+- `salary/page.tsx`: kendi ay-nav butonları 30×30 → 44×44
+  (replace_all, 4 button + aria-label eklendi)
+
+### 2. WCAG 2.4.7 — Global `:focus-visible`
+- `globals.css`: `:where(a, button, input, select, textarea, [role="button"],
+  [tabindex]):focus-visible` — 2px accent outline
+- `focus:not(:focus-visible)` outline none (mouse click ring göstermez)
+
+### 3. iOS Safari — `100vh` → `100dvh` (15 dosya)
+- 15 dosyada replace-all: `100vh` → `100dvh`
+- Modal sheet'lerde `maxHeight: 90vh` → `90dvh`
+- Sebep: iOS Safari address bar açık/kapalı → viewport shift bug
+- `dvh` = dynamic viewport height (address bar dahil)
+
+### 4. Skeleton primitive
+- YENİ `components/ui/Skeleton.tsx`:
+  * Props: width, height, fullWidth, lines, radius, style
+  * `lines >= 2` ise satırlar (son satır %70 genişlik)
+  * `role="status"` + `aria-live="polite"` + `aria-label`
+- YENİ CSS `.skeleton`: shimmer gradient (var(--surface2) base, 200% bg-size)
+  * `@keyframes skeleton-shimmer` 1.4s ease-in-out infinite
+  * `@media (prefers-reduced-motion: reduce)` → no animation
+- `tracker/page.tsx` loading state: 12 satır skeleton (row placeholder)
+- `salary/page.tsx` loading state: 3 skeleton block (KPI+breakdown+chart)
+
+### 5. Modal a11y — WCAG 2.1.2 + 2.4.3
+- YENİ `hooks/useModalA11y.ts`:
+  * Ref-based, focus'u ilk focusable'a odaklar (rAF ile layout settle sonrası)
+  * Escape → onClose
+  * Tab / Shift+Tab focus trap (ilk↔son element döngü)
+  * Modal kapanınca opener elemente focus döner
+  * `getFocusables()` a[href], button, input, select, textarea, [tabindex]
+- 4 modal update:
+  * `TimeEntryModal.tsx`: ref, role=dialog, aria-modal, aria-labelledby
+  * `NotdienstModal.tsx`: aynı
+  * `PhotoScanModal.tsx`: aynı
+  * `demo/EntryModal.tsx`: eski manuel ESC handler kaldırıldı, hook geldi
+
+### Validation
+- TS clean · ESLint clean · Vitest 319/319 (test değişmedi, UI-only)
+
+### Değişen dosyalar (11 file)
+- `components/ui/Skeleton.tsx` — YENİ
+- `hooks/useModalA11y.ts` — YENİ
+- `components/tracker/MonthNav.tsx` — 44×44
+- `app/(dashboard)/salary/page.tsx` — 44×44 + Skeleton
+- `app/(dashboard)/tracker/page.tsx` — Skeleton
+- `app/globals.css` — focus-visible + .skeleton
+- `components/tracker/TimeEntryModal.tsx` — a11y
+- `components/tracker/NotdienstModal.tsx` — a11y + 90dvh
+- `components/tracker/PhotoScanModal.tsx` — a11y + 90dvh
+- `app/demo/EntryModal.tsx` — a11y (manuel ESC kaldırıldı)
+- 15 dosya `100vh` → `100dvh` mekanik replace
+- `lib/version.ts` 0.33.0 → 0.34.0
+
+### Kalan Week 3-4 (9 madde)
+- Weekly digest email (Vercel Cron Mo 06:00)
+- Monthly PDF report email
+- Landing testimonial strip
+- DATEV/Lodas CSV export
+- `/vergleich/clockodo` + 2 SEO landing
+- Beta anchor pricing "€19,99 → €5,99"
+- Onboarding sample data injection
+- Light mode tokens
+- (Skeleton kalan 11 yerde replace — sonraki iter)
+
+---
+
 ## 2026-07-11 (67) – v0.33.0: Chef-Fokus Update — company_admin dashboard redesign
 
 ### Hedef

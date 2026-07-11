@@ -114,7 +114,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif", minHeight: "100vh" }}>
+    <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif", minHeight: "100dvh" }}>
       {/* NAV */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function DatenschutzPage() {
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh", padding: "40px 24px" }}>
+    <div style={{ background: "var(--bg)", minHeight: "100dvh", padding: "40px 24px" }}>
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, textDecoration: "none" }}>← STUNDLY</Link>
         <h1 style={{ fontSize: 32, fontWeight: 800, margin: "28px 0 8px" }}>Datenschutzerklärung</h1>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { DemoEntry, DemoDayType } from "./state";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 interface Props {
   date:    string;
@@ -22,17 +23,11 @@ const DAY_TYPES: { id: DemoDayType; label: string; icon: string; color: string }
 ];
 
 export function EntryModal({ date, initial, onSave, onDelete, onClose }: Props) {
+  const modalRef = useModalA11y<HTMLDivElement>({ onClose });
   const [type,  setType]  = useState<DemoDayType>(initial?.day_type ?? "arbeiten");
   const [start, setStart] = useState(initial?.start_time ?? "07:45");
   const [end,   setEnd]   = useState(initial?.end_time   ?? "17:00");
   const [pause, setPause] = useState(initial?.break_minutes ?? 60);
-
-  // ESC to close
-  useEffect(() => {
-    function onEsc(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("keydown", onEsc);
-    return () => document.removeEventListener("keydown", onEsc);
-  }, [onClose]);
 
   const d = new Date(date);
   const dow = d.getDay();
@@ -54,8 +49,6 @@ export function EntryModal({ date, initial, onSave, onDelete, onClose }: Props) 
 
   return (
     <div
-      role="dialog"
-      aria-label="Eintrag bearbeiten"
       onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 1000,
@@ -65,6 +58,11 @@ export function EntryModal({ date, initial, onSave, onDelete, onClose }: Props) 
       }}
     >
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Eintrag bearbeiten"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--surface)",

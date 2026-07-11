@@ -73,7 +73,7 @@ function DemoPage() {
   const stats = useMemo(() => computeStats(state), [state]);
 
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
+    <div style={{ background: "var(--bg)", minHeight: "100dvh", color: "var(--text)" }}>
 
       {/* DEMO BANNER — context-aware */}
       <div style={{

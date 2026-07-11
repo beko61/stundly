@@ -8,6 +8,7 @@ import { NotdienstWeekly } from "@/components/tracker/NotdienstWeekly";
 import { DayEntry } from "@/components/tracker/DayEntry";
 import { PhotoScanModal } from "@/components/tracker/PhotoScanModal";
 import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useTimeEntries } from "@/hooks/useTimeEntries";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { createClient } from "@/lib/supabase/client";
@@ -88,8 +89,14 @@ export default function TrackerPage() {
 
       <div style={{ padding: "14px 16px 0", maxWidth: 960, margin: "0 auto" }}>
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0", fontSize: 14 }}>
-            Laden...
+          <div
+            role="status"
+            aria-label="Einträge werden geladen"
+            style={{ display: "flex", flexDirection: "column", gap: 6, padding: "6px 0" }}
+          >
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton key={i} fullWidth height={56} radius={10} />
+            ))}
           </div>
         ) : (
           days.map(({ dateStr, dow, entry }, i) => (

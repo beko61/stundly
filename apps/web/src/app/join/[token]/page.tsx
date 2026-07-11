@@ -24,7 +24,7 @@ export default async function JoinPage({ params }: Props) {
 
   if (!invitation) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: 24 }}>
+      <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: 24 }}>
         <div className="card" style={{ maxWidth: 420, width: "100%", padding: "40px 32px", textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
           <h1 style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>Einladung ungültig</h1>
@@ -40,7 +40,7 @@ export default async function JoinPage({ params }: Props) {
   const companyName = (invitation.companies as { name: string } | null)?.name ?? "Ihr Unternehmen";
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: 24 }}>
+    <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: 24 }}>
       <div className="card" style={{ maxWidth: 420, width: "100%", padding: "40px 32px", textAlign: "center" }}>
         <div style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, marginBottom: 28 }}>STUNDLY</div>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>

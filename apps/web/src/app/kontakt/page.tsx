@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function KontaktPage() {
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
+    <div style={{ background: "var(--bg)", minHeight: "100dvh", color: "var(--text)" }}>
       {/* NAV (lite) */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,

@@ -38,7 +38,7 @@ export default async function PasswordChangePage() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "var(--bg)",
+      minHeight: "100dvh", background: "var(--bg)",
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: "20px 16px",
     }}>

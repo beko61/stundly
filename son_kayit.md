@@ -1,9 +1,77 @@
 ﻿# Stundly – Son Kayıt
 
-## 2026-07-10 (65) – v0.31.0: Audit Week 2 KOMPLE — P4 + Datenschutz + AVV + DSGVO cron
+## 2026-07-11 (66) – v0.32.0: R4+R5 rate limit (Supabase persistent)
 
 ### Hedef
-Week 2'nin son 3 maddesi tek commit'te: OCR consent (DSGVO Art. 6),
+Audit'te kalan **son kritik madde**. In-memory rate limiter kırıktı
+(serverless her instance kendi Map'ı) — persistent Supabase-backed
+sliding window ile değiştirildi. Ship-blocker %100 tamamlandı.
+
+### R4 — /api/scan rate limit
+- Eski: in-memory `Map<userId, {count,resetAt}>` — 5/dk. Vercel yeni
+  instance boot ediyorsa Map boş, kullanıcı bypass.
+- Yeni: `checkRateLimit({ bucket: "scan:userId", limit: 20, windowSec: 3600 })`.
+  Anthropic cost için 20/saat sıkı limit. Retry-After header.
+
+### R5 — /api/contact rate limit
+- Yeni: IP başına 5 mesaj/saat (Resend quota koruması).
+  `bucket: contact:${ip}`. Honeypot + validasyon üstüne katman.
+
+### Yeni altyapı
+- **Migration 024** `rate_limit_events (bucket, created_at)` + 2 index
+  (bucket+created_at, created_at). RLS default deny (sadece service_role).
+- **`lib/rateLimit/check.ts`** — Sliding window helper:
+  1. `count` sorgusu `where bucket=X and created_at >= now-windowSec`
+  2. count >= limit → 429 + retryAfterSec = windowSec
+  3. Aksi → insert event, allowed=true, count+1
+  - **Fail-open** on DB error: kullanıcıyı Postgres arızasında kilitlemek
+    yerine izin ver + console.error. Cost patlaması riski var ama nadir.
+- **`/api/cron/rate-limit-cleanup`** YENİ route: günlük 24h öncesini siler.
+  Bearer $CRON_SECRET gate.
+- **vercel.json** — 2. cron eklendi (04:00 UTC)
+
+### Test
+- **`rateLimit.test.ts`** — 8 case (@supabase/supabase-js mocklu):
+  * Boş bucket, limit altı, sınırda 429, üstü 429
+  * Count query error → fail-open (log ile)
+  * Insert error → fail-open
+  * Bucket string doğru geçiyor
+  * Missing env → throw
+- **`scan/route.test.ts`** — eski in-memory test'i `checkRateLimit` mock'u
+  ile güncelledim. `mockResolvedValueOnce({ allowed: false, ... })` ile
+  429 + Retry-After header kontrolü.
+
+### Validation
+- TS clean · ESLint clean · Vitest **319/319** (311 → 319, +8)
+
+### Değişen dosyalar (7 file)
+- `supabase/migrations/024_rate_limit_events.sql` — YENİ
+- `apps/web/src/lib/rateLimit/check.ts` — YENİ
+- `apps/web/src/app/api/cron/rate-limit-cleanup/route.ts` — YENİ
+- `apps/web/src/app/api/scan/route.ts` — in-memory kaldırıldı, helper wired
+- `apps/web/src/app/api/contact/route.ts` — rate limit + IP bucket eklendi
+- `apps/web/src/app/api/scan/__tests__/route.test.ts` — mock update
+- `apps/web/src/__tests__/unit/rateLimit.test.ts` — YENİ (8 case)
+- `vercel.json` — 2. cron
+- `apps/web/src/lib/version.ts` — 0.31.0 → 0.32.0
+
+### Manuel adım (deploy'da)
+⚠ **Migration 024** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+Yoksa hem scan hem contact 429/500 verecek (fail-open olduğu için 500
+değil aslında; sadece rate limit hiç işlemez → cost riski).
+
+### 🎉 KRİTİK LİSTE %100 KAPALI
+- Week 1: 10 ship-blocker (v0.27.0)
+- Week 2: 9 madde (v0.28.0-v0.31.0)
+- **R4+R5**: son kritik (v0.32.0)
+- **Toplam 21/21 kritik madde bitti**
+
+### Sırada
+Week 3-4 UX + Dönüşüm (13 madde) veya Week 5-6 Kod Sağlığı (8 madde).
+
+---
+
+## 2026-07-10 (65) – v0.31.0: Audit Week 2 KOMPLE — P4 + Datenschutz + AVV + DSGVO cron
 Datenschutz Drittländer düzeltmesi + AVV template sayfası, DSGVO
 delete cron worker (Art. 17). **Week 2 tamam** 🎉
 

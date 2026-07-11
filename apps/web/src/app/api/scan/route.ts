@@ -2,27 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { checkRateLimit } from "@/lib/rateLimit/check";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-// In-memory rate limiter: 5 requests per user per minute.
-// NOTE: For multi-instance deployments, replace with Redis/Upstash.
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60_000;
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
+// Persistent rate limit (R4 fix): serverless-safe.
+// Anthropic API çağrısı $$: dar limitler.
+const SCAN_LIMIT_PER_HOUR = 20;
+const SCAN_WINDOW_SEC     = 3600;
 
 // Max image size: 4 MB base64 string (~3 MB actual image)
 const MAX_IMAGE_B64_LENGTH = 4 * 1024 * 1024;
@@ -50,11 +38,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nicht authentifiziert." }, { status: 401 });
   }
 
-  // 2. Rate limit check
-  if (!checkRateLimit(user.id)) {
+  // 2. Rate limit check — persistent (R4)
+  const rl = await checkRateLimit({
+    bucket:    `scan:${user.id}`,
+    limit:     SCAN_LIMIT_PER_HOUR,
+    windowSec: SCAN_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
     return NextResponse.json(
-      { error: "Zu viele Anfragen. Bitte warte eine Minute." },
-      { status: 429 }
+      { error: `Zu viele Scans. Limit ${SCAN_LIMIT_PER_HOUR}/Stunde erreicht.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
     );
   }
 

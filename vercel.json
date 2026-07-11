@@ -5,6 +5,10 @@
     {
       "path": "/api/cron/dsgvo-process",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/rate-limit-cleanup",
+      "schedule": "0 4 * * *"
     }
   ]
 }

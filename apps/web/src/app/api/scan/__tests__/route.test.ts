@@ -19,6 +19,11 @@ vi.mock('@supabase/ssr', () => ({
   })),
 }));
 
+// Rate limit helper — testte her zaman allowed dön
+vi.mock('@/lib/rateLimit/check', () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, count: 1, limit: 20, retryAfterSec: 0 }),
+}));
+
 const mockAnthropicCreate = vi.fn();
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(() => ({
@@ -120,21 +125,19 @@ describe('POST /api/scan', () => {
 
   // ── Rate limiting ──
 
-  it('429 — aynı kullanıcıdan dakikada 5 üzeri istek reddedilmeli', async () => {
-    const userId = `rate-limit-test-${Date.now()}`; // unique per test run
+  it('429 — rateLimit helper allowed=false dönerse 429 döner', async () => {
+    const userId = `rate-limit-test-${Date.now()}`;
     mockGetUser.mockResolvedValue({ data: { user: { id: userId } } });
-    mockAnthropicCreate.mockResolvedValue(ANTHROPIC_SUCCESS);
+    // Mock'u geçici olarak bu test için "blocked" yap
+    const { checkRateLimit } = await import('@/lib/rateLimit/check');
+    (checkRateLimit as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ allowed: false, count: 20, limit: 20, retryAfterSec: 3600 });
 
-    // İlk 5 istek başarılı olmalı
-    for (let i = 0; i < 5; i++) {
-      const res = await POST(makeRequest(VALID_BODY));
-      expect(res.status).not.toBe(429);
-    }
-    // 6. istek rate limit'e takılmalı
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(429);
     const json = await res.json() as { error: string };
-    expect(json.error).toContain('Anfragen');
+    expect(json.error).toMatch(/Scan|Anfragen|Limit/);
+    expect(res.headers.get('Retry-After')).toBe('3600');
   });
 
   // ── Anthropic API ──

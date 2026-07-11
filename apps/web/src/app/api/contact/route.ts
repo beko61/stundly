@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendContactFormEmail } from "@/lib/email/resend";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// Persistent rate limit (R5 fix): 5 mesaj/saat per IP.
+// Anonim endpoint, Resend quota koruması.
+const CONTACT_LIMIT_PER_HOUR = 5;
+const CONTACT_WINDOW_SEC     = 3600;
 
 /**
  * POST /api/contact
@@ -32,6 +38,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Rate limit — IP başına saatte 5 mesaj (R5)
+  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0]!.trim();
+  const rl = await checkRateLimit({
+    bucket:    `contact:${ip}`,
+    limit:     CONTACT_LIMIT_PER_HOUR,
+    windowSec: CONTACT_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Nachrichten. Bitte später erneut versuchen." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   const name    = typeof body.name    === "string" ? body.name.trim()    : "";
   const email   = typeof body.email   === "string" ? body.email.trim().toLowerCase() : "";
   const subject = typeof body.subject === "string" ? body.subject.trim() : "";
@@ -51,11 +71,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const ip        = req.headers.get("x-forwarded-for");
     const userAgent = req.headers.get("user-agent");
     const referer   = req.headers.get("referer");
     const meta: { ip?: string; userAgent?: string; referer?: string } = {};
-    if (ip)        meta.ip = ip;
+    if (ip && ip !== "unknown") meta.ip = ip;
     if (userAgent) meta.userAgent = userAgent;
     if (referer)   meta.referer = referer;
 

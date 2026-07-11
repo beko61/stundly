@@ -1,5 +1,87 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (70) – v0.36.0: Landing polish (Chef-Fokus + anchor pricing)
+
+### Hedef
+Beta conversion boost. Audit'te 3 madde:
+- P3 "Sıfır social proof — DE B2B'de dönüşüm %1 altı"
+- "Landing headline generic — rakip aynısını söylüyor"
+- "Beta'da pricing anchor kayıp — Clockodo (€12) avantajı görünmüyor"
+
+Fake customer testimonial'ları UWG §5 (irreführende Werbung) riski
+taşıdığı için **trust badges** kullanıldı (doğrulanabilir teknik/hukuki
+markers).
+
+### Değişiklikler
+
+**1. Kill "Europa" positioning (audit)**
+- Hero badge: "🇩🇪 Für Deutschland & Europa" → "🇩🇪 Made in Germany · Für Handwerksbetriebe"
+- Compliance banner alt satırı: "deutsches und europäischen Markt" →
+  "deutschen Handwerksmarkt entwickelt — DSGVO, ArbZG, BUrlG, EntgFG"
+
+**2. Sharper H1 — unique wedge messaging**
+- Eski (generic): "Arbeitszeit einfach erfassen & verwalten"
+- Yeni: "Zeiterfassung für Handwerker mit Notdienst & Brutto→Netto live"
+- İki accent kelime: "Handwerker" + "Brutto→Netto live"
+- Rakiplerden (Clockodo, TimeSprint) net ayrılan iki unique wedge:
+  * Notdienst-Bonus mit Wochen-Zuordnung
+  * Brutto→Netto live (SFN + Steuerklasse)
+
+**3. Yeni subtitle**
+- Eski: "moderne Zeiterfassungssoftware für Einzelpersonen und Unternehmen"
+- Yeni: "Die einzige App, die deinen Notdienst-Bonus richtig zuordnet und
+  deinen Netto live berechnet. Für Solo-Handwerker und KMU-Betriebe."
+- "einzige" iddiası dürüst: rakiplerde Notdienst wochen-Zuordnung yok
+
+**4. Beta anchor pricing (2 yer)**
+- Hero CTA altı fine print (BETA_MODE):
+  "Beta-Preis lebenslang: ~~€19,99~~ **€5,99/Monat** · nach 3 Monaten gratis"
+- Beta-Phase kartında ayrı anchor pricing chip:
+  Danach nur ~~€19,99~~ **€5,99**/Monat (görsel highlight, dashed border)
+
+**5. YENİ Trust Strip section (hero altı)**
+- 6 badge, 3-col responsive grid:
+  * 🔒 DSGVO-konform · EU-Server Frankfurt
+  * ⚖ Deutsches Arbeitsrecht · ArbZG · EntgFG · BUrlG
+  * 📊 DATEV-Export · Für deinen Steuerberater
+  * 🚨 Notdienst-Verwaltung · Wochen-Zuordnung, Bonus-Berechnung
+  * 💶 Brutto→Netto live · Steuerklasse & SV automatisch
+  * 📱 Web + Mobile · Ein Login, alle Geräte
+- Card style (icon + label + hint), 12px hint minör tona
+- **Fake testimonial YOK** — sadece doğrulanabilir feature/legal claims
+
+### Neden anchor pricing kritik
+- Behavioral economics "reference price effect"
+- Beta müşteri kaydolduktan sonra bir "lifetime discount" alacağını görür
+- €19,99 → €5,99 = %70 tasarruf çıkışta, aciliyet duygusu
+- Clockodo €12 arka planda karşılaştırılabiliyor (mental math)
+
+### Neden trust strip, testimonial değil
+DE Wettbewerbsrecht (UWG §5):
+- Fake veya alakasız kunde-Zitat'ları irreführend
+- Beta modunda gerçek Kunde referansı yok
+- Trust badges = fake değil, doğrulanabilir claim
+- DATEV/DSGVO/ArbZG hepsi bizim yaptığımız iş
+- Legal risk = 0
+
+### Değişen dosyalar (2 file)
+- `apps/web/src/app/page.tsx` — hero + subtitle + trust strip + anchor
+  pricing (2 yer) + compliance banner alt satırı
+- `apps/web/src/lib/version.ts` — 0.35.0 → 0.36.0
+
+### Validation
+- TS clean · ESLint clean · Vitest 339/339 (UI-only)
+
+### Kalan Week 3-4 (6 madde)
+- Weekly digest email (retention #1, Vercel Cron Mo 06:00)
+- Monthly PDF report email
+- `/vergleich/clockodo` + 2 SEO landing pages
+- Onboarding sample data injection
+- Light mode tokens
+- Skeleton kalan 11 yerde replace
+
+---
+
 ## 2026-07-11 (69) – v0.35.0: DATEV/Lodas CSV Export (B2B killer)
 
 ### Hedef

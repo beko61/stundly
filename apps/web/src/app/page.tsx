@@ -276,16 +276,18 @@ export default async function LandingPage() {
             borderRadius: 20, padding: "6px 14px", marginBottom: 32,
             fontSize: 12, fontWeight: 700, color: "var(--accent2)",
           }}>
-            🇩🇪 Für Deutschland & Europa entwickelt
+            🇩🇪 Made in Germany · Für Handwerksbetriebe
           </div>
 
           <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 24 }}>
-            Arbeitszeit einfach<br />
-            <span style={{ color: "var(--accent2)" }}>erfassen & verwalten</span>
+            Zeiterfassung für <span style={{ color: "var(--accent2)" }}>Handwerker</span><br />
+            mit Notdienst & <span style={{ color: "var(--accent2)" }}>Brutto→Netto live</span>
           </h1>
 
-          <p style={{ fontSize: 18, color: "var(--muted)", lineHeight: 1.7, marginBottom: 40, maxWidth: 520, margin: "0 auto 40px" }}>
-            Stundly ist die moderne Zeiterfassungssoftware für Einzelpersonen und Unternehmen – DSGVO-konform, ArbZG-ready, mobil nutzbar.
+          <p style={{ fontSize: 18, color: "var(--muted)", lineHeight: 1.7, marginBottom: 32, maxWidth: 560, margin: "0 auto 32px" }}>
+            Die einzige App, die deinen <strong style={{ color: "var(--text)" }}>Notdienst-Bonus</strong> richtig zuordnet
+            und deinen <strong style={{ color: "var(--text)" }}>Netto live</strong> berechnet.
+            Für Solo-Handwerker und KMU-Betriebe. DSGVO-konform, ArbZG-ready.
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -300,9 +302,45 @@ export default async function LandingPage() {
             </Link>
           </div>
 
-          <p style={{ marginTop: 16, fontSize: 12, color: "var(--muted)" }}>
-            Keine Kreditkarte · Keine Verpflichtung · Demo ohne Anmeldung
-          </p>
+          {BETA_MODE ? (
+            <p style={{ marginTop: 18, fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
+              Beta-Preis lebenslang: <span style={{ textDecoration: "line-through", color: "var(--muted)", opacity: 0.7 }}>€19,99</span>{" "}
+              <strong style={{ color: "var(--accent2)", fontSize: 15 }}>€5,99/Monat</strong>
+              <span style={{ color: "var(--muted)" }}> · nach 3 Monaten gratis · Keine Kreditkarte</span>
+            </p>
+          ) : (
+            <p style={{ marginTop: 16, fontSize: 12, color: "var(--muted)" }}>
+              Keine Kreditkarte · Keine Verpflichtung · Demo ohne Anmeldung
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* TRUST STRIP */}
+      <section style={{ padding: "0 24px 64px", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{
+          display: "grid", gap: 10,
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        }}>
+          {[
+            { icon: "🔒", label: "DSGVO-konform",         hint: "EU-Server · Frankfurt" },
+            { icon: "⚖",  label: "Deutsches Arbeitsrecht", hint: "ArbZG · EntgFG · BUrlG" },
+            { icon: "📊", label: "DATEV-Export",           hint: "Für deinen Steuerberater" },
+            { icon: "🚨", label: "Notdienst-Verwaltung",   hint: "Wochen-Zuordnung, Bonus-Berechnung" },
+            { icon: "💶", label: "Brutto→Netto live",      hint: "Steuerklasse & SV automatisch" },
+            { icon: "📱", label: "Web + Mobile",           hint: "Ein Login, alle Geräte" },
+          ].map((b) => (
+            <div key={b.label} className="card" style={{
+              padding: "12px 14px",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{b.icon}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{b.label}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{b.hint}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -545,7 +583,7 @@ export default async function LandingPage() {
             Konform mit deutschem Recht
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 40 }}>
-            Stundly wurde speziell für den deutschen und europäischen Markt entwickelt.
+            Stundly wurde speziell für den deutschen Handwerksmarkt entwickelt — DSGVO, ArbZG, BUrlG, EntgFG.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             {[
@@ -585,12 +623,27 @@ export default async function LandingPage() {
               du <strong>alle Funktionen</strong> ohne Einschränkung — keine Kreditkarte, keine
               versteckten Kosten.
             </p>
-            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 28 }}>
+            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>
               Beta-Tester erhalten danach <strong style={{ color: "var(--accent2)" }}>50% lebenslangen Rabatt</strong> als Dankeschön.
             </p>
-            <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 32px", display: "inline-block" }}>
-              Jetzt kostenlos starten →
-            </Link>
+            {/* Beta anchor pricing */}
+            <div style={{
+              display: "inline-flex", alignItems: "baseline", gap: 10,
+              padding: "10px 18px",
+              background: "color-mix(in srgb, var(--accent2) 12%, transparent)",
+              border: "1px dashed color-mix(in srgb, var(--accent2) 40%, transparent)",
+              borderRadius: 12, marginBottom: 24,
+            }}>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>Danach nur</span>
+              <span style={{ fontSize: 14, textDecoration: "line-through", color: "var(--muted)", opacity: 0.65 }}>€19,99</span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "var(--accent2)" }}>€5,99</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>/Monat</span>
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 32px", display: "inline-block" }}>
+                Jetzt kostenlos starten →
+              </Link>
+            </div>
           </div>
         </section>
       ) : (

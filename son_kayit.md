@@ -1,5 +1,103 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (77) – v0.42.0: Migration 027 (DB indexes) + CI restore
+
+### Hedef
+Week 5-6 Kod Sağlığı ilk 2 madde: DB performance indexes + CI otomasyonu.
+
+### Ustaca kontrol
+Audit'te "20 migration'da 0 CREATE INDEX" iddiası **yanlış**tı.
+26 migration'da 13 index zaten mevcut:
+- 002: `time_entries_user_date_idx`
+- 003: `vacation_requests_user_idx`, `daily_logs_user_date_idx`
+- 004: `notdienst_entries_user_date_idx`
+- 009: 8 index (companies, subscriptions, invitations, audit_logs)
+- 018: 3 index (audit_log)
+- 019: `profiles_active_idx` (partial where deleted_at is null)
+- 024: 2 index (rate_limit_events)
+- 025 + 026: 2 partial index (weekly_digest, monthly_report)
+
+Ama **gerçek gap'lar** vardı — sample data delete yavaş (tags GIN yok),
+pending Urlaub filter (status kolonu tek başına query pattern'a uygun
+değil), latest salary_settings, day_type filter.
+
+### Migration 027 — 4 hedefe yönelik index
+
+**1. `idx_time_entries_tags_gin` — GIN index üzerinde tags**
+```sql
+create index if not exists idx_time_entries_tags_gin
+  on public.time_entries using gin (tags);
+```
+- **Kritik**: `contains("tags", ["sample"])` DELETE sample data endpoint
+  full-table scan yapıyordu (v0.39.0 sample data feature'ı)
+- 100+ user'da fark hissedilir olur
+
+**2. `idx_vacation_requests_user_status`**
+```sql
+create index if not exists idx_vacation_requests_user_status
+  on public.vacation_requests (user_id, status);
+```
+- Company dashboard `WHERE user_id IN (...) AND status = 'pending'`
+- Vacation page `WHERE user_id = $1 AND status = 'pending'`
+- Weekly digest, monthly report queries
+
+**3. `idx_salary_settings_user_created`**
+```sql
+create index if not exists idx_salary_settings_user_created
+  on public.salary_settings (user_id, created_at desc);
+```
+- `WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1` (latest settings)
+- Dashboard, salary, /api/company/reports/data, weekly-digest hepsi
+  bu pattern'ı kullanıyor
+
+**4. `idx_time_entries_user_daytype_date`**
+```sql
+create index if not exists idx_time_entries_user_daytype_date
+  on public.time_entries (user_id, day_type, date);
+```
+- Urlaub/Krank/Arbeiten sayacı
+- MonthlySummary, dashboard, reports pages
+- Mevcut `(user_id, date)` yeterli değil çünkü day_type filter var,
+  Postgres query planner index-only scan yapamıyor
+
+### CI restore — GitHub Actions
+
+`ci.yml` restore:
+- Öncesi (v0.27.0 sonrası): sadece `npm run typecheck`
+- Sonrası:
+  1. `npm run typecheck` — turbo run typecheck
+  2. `npm run lint` — turbo run lint (Next 15 next lint)
+  3. `npm test` — turbo run test (vitest 365/365)
+
+**Bilinçli çıkarılan**: `npm run build`
+- Vercel deploy pipeline zaten üretim build'i doğru env ile çalıştırır
+- CI'da mock Supabase env + redundant + yavaş
+- Yorum satırında bunu belirttik
+
+### Manuel adım (deploy'da)
+⚠ **Migration 027** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+Yoksa sample data DELETE + pending Urlaub query'leri yavaş kalır
+(hâlâ çalışır, sadece yavaş).
+
+### Validation
+- Root `npm run typecheck` (turbo) → 2/2 successful
+- CI YAML syntax valid
+
+### Değişen dosyalar (3 file + son_kayit)
+- `supabase/migrations/027_performance_indexes.sql` — YENİ
+- `.github/workflows/ci.yml` — test + lint aktifleştirildi
+- `apps/web/src/lib/version.ts` — 0.41.0 → 0.42.0
+
+### Kalan — Week 5-6 (6 madde)
+- salary/page 1148 LOC refactor → 6 component
+- Zod schemas 4 admin write route
+- React Query time_entries + vacation
+- Middleware role → JWT
+- Stripe webhook integration test
+- next/image + next/dynamic
+
+---
+
 ## 2026-07-11 (76) – v0.41.0: Light mode + Skeleton kalan yerler
 
 ### Hedef

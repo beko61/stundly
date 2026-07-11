@@ -8,6 +8,7 @@ on:
 
 jobs:
   test:
+    name: Test + Lint + Typecheck
     runs-on: ubuntu-latest
 
     steps:
@@ -24,8 +25,14 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      # NOTE: lint, unit tests, and build temporarily disabled in CI.
-      # - next lint is deprecated (Next.js 16); ESLint CLI migration pending
-      # - @workly/shared vitest config needs CI tsconfig path fix
-      # - Build requires Supabase env vars; Vercel handles production builds
-      #   directly with the correct env, so a separate CI build is redundant.
+      - name: Lint (Next.js ESLint)
+        # Next 15'te next lint çalışır. Next 16'da ESLint CLI'ya geçilecek.
+        run: npm run lint
+
+      - name: Unit tests (Vitest)
+        # @workly/shared vitest --passWithNoTests, @workly/web full suite.
+        run: npm test
+
+    # NOT: `next build` bilerek CI'da atlandı — Vercel deploy pipeline
+    # zaten üretim build'i doğru env değişkenleriyle çalıştırır. CI'da build
+    # + Supabase env mock etmek redundant + yavaş.

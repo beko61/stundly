@@ -775,6 +775,8 @@ export default async function LandingPage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
           <Link href="/kontakt" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Kontakt</Link>
           <Link href="/impressum" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Impressum</Link>
+          <Link href="/handwerker" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Für Handwerker</Link>
+          <Link href="/notdienst-verwaltung" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Notdienst</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
           <Link href="/avv" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AVV</Link>
           <Link href="/agb" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AGB</Link>

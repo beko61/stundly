@@ -1,5 +1,86 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (72) – v0.38.0: SEO landings (3 sayfa)
+
+### Hedef
+Audit'te "/vergleich/clockodo + 2 SEO landing" olarak listelenmişti.
+Organik trafik + intent-based landing pages. Reddit/LinkedIn tükendikçe
+SEO compound olur. 3 sayfa tek commit'te.
+
+### 1. `/handwerker` — Persona landing
+- SEO title: "Zeiterfassung für Handwerker — Stundly"
+- Keywords: Zeiterfassung Handwerker, Arbeitszeiterfassung Handwerksbetrieb,
+  Stundenzettel Handwerk, Notdienst Erfassung, Handwerker App
+- Hero: "Zeiterfassung für Handwerker — endlich richtig gedacht"
+- 4 pain point + solution kartı
+- 6 feature grid (Notdienst / Foto-Scan / Urlaub PDF / Netto live /
+  DATEV / Arbeitsrecht)
+- CTA + anchor pricing + cross-links
+
+### 2. `/notdienst-verwaltung` — Feature landing (unique wedge)
+- SEO title: "Notdienst-Verwaltung für Handwerker — Stundly"
+- Keywords: Notdienst Erfassung, Rufbereitschaft App, Notdienst Bonus
+  berechnen, Wochenend-Einsatz Handwerker
+- Hero: "Notdienst-Verwaltung mit Wochen-Zuordnung und Bonus-Berechnung"
+- 4-step "So funktioniert es" (1-4 numbered cards, orange accent)
+- 4 FAQ kartı (Wochen-Zuordnung, Bonus, Bezahlt-Status, Rufbereitschaft)
+- CTA
+
+### 3. `/vergleich/clockodo` — Head-to-head comparison
+- SEO title: "Stundly vs. Clockodo — Zeiterfassung für Handwerker"
+- Keywords: Stundly Clockodo Vergleich, Alternative zu Clockodo
+- **UWG §5 safe**: sadece objektif, doğrulanabilir kriterlere odaklı
+- Rakip iddiaları clockodo.com'un kendi Preisseite + Feature-Seiten'inden
+  alındı (Stand: Juli 2026 not edilmiş)
+- 18 satırlık feature table:
+  * Stundly kazandığı: Preis pauschal, Notdienst-Wochen-Zuordnung,
+    Brutto→Netto live, ArbZG-Warnungen, EntgFG, BUrlG, Foto-Scan (7 satır)
+  * Clockodo kazandığı: Projekt-Tracking, GPS, Kunden-Verwaltung (3 satır)
+  * Tie: Sprache, EU-Server, DSGVO, Testphase, DATEV, Mobile (6 satır)
+- 2 sütun "Wähle X, wenn du..." dürüst pozisyonlama:
+  * Stundly: Handwerker, Notdienst, Netto live, ArbZG
+  * Clockodo: Agentur, GPS, Kunden mit Report, existing setup
+
+### Sitemap
+- Priority 0.8 for /handwerker + /notdienst-verwaltung (high intent)
+- Priority 0.7 for /vergleich/clockodo
+- changeFrequency: monthly (feature/preis güncellemeleri için)
+
+### Middleware — PUBLIC_PATHS
+- /handwerker, /notdienst-verwaltung, /vergleich eklendi
+
+### Ana landing footer
+- "Für Handwerker" + "Notdienst" linkleri eklendi (SEO internal linking)
+
+### Neden factual comparison güvenli (UWG §5)
+- Vergleichende Werbung §6 UWG'ye göre izinli:
+  * Konkurent tanınabilir (Clockodo isim)
+  * Objektif kriterler karşılaştırılıyor (özellik, fiyat)
+  * Doğrulanabilir kaynak (clockodo.com öz sayfası)
+  * "Bleib bei Clockodo, wenn..." kart → adil pozisyonlama
+- Fake claim yok, sadece "clockodo.com sayfasında dokümante edilmemiş"
+  gibi neutral wording
+
+### Validation
+- TS clean · ESLint clean · Vitest 349/349 (UI-only, test değişmedi)
+
+### Değişen dosyalar (7 file + son_kayit)
+- `app/handwerker/page.tsx` — YENİ (~180 LOC)
+- `app/notdienst-verwaltung/page.tsx` — YENİ (~170 LOC)
+- `app/vergleich/clockodo/page.tsx` — YENİ (~200 LOC)
+- `app/sitemap.ts` — 3 yeni entry
+- `middleware.ts` — 3 yeni public path
+- `app/page.tsx` — footer 2 yeni link
+- `lib/version.ts` — 0.37.0 → 0.38.0
+
+### Kalan Week 3-4 (4 madde)
+- Monthly PDF report email
+- Onboarding sample data injection
+- Light mode tokens
+- Skeleton kalan yerler
+
+---
+
 ## 2026-07-11 (71) – v0.37.0: Weekly digest email — retention #1
 
 ### Hedef

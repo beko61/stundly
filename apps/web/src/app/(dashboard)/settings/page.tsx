@@ -25,6 +25,7 @@ interface Profile {
   logo_data:      string | null;
   bundesland:     string;
   signature_data: string | null;
+  weekly_digest_enabled: boolean;
 }
 
 const EMPTY: Profile = {
@@ -34,6 +35,7 @@ const EMPTY: Profile = {
   firma_strasse: "", firma_plz: "", firma_ort: "", firma_telefon: "",
   logo_data: null, bundesland: "NI",
   signature_data: null,
+  weekly_digest_enabled: false,
 };
 
 /**
@@ -154,7 +156,7 @@ export default function SettingsPage() {
     if (!session?.user) return;
     const { data } = await supabase
       .from("profiles")
-      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,bundesland,signature_data")
+      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,bundesland,signature_data,weekly_digest_enabled")
       .eq("user_id", session.user.id)
       .single();
     if (data) {
@@ -174,6 +176,7 @@ export default function SettingsPage() {
         logo_data:      data.logo_data      ?? null,
         bundesland:     data.bundesland     ?? "NI",
         signature_data: data.signature_data ?? null,
+        weekly_digest_enabled: Boolean(data.weekly_digest_enabled ?? false),
       });
       if (data.signature_data) setSigSaved(true);
     } else {
@@ -467,6 +470,40 @@ export default function SettingsPage() {
               />
             </div>
           )}
+        </div>
+
+        {/* E-Mail Nachrichten */}
+        <div id="digest" className="card" style={{ padding: 20 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📬 E-Mail Nachrichten</h2>
+          <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
+            Optionale E-Mails von Stundly. Kannst du jederzeit ändern.
+          </p>
+
+          <label
+            style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+              background: "var(--surface2)", borderRadius: 10, cursor: "pointer",
+              border: `1px solid ${profile.weekly_digest_enabled ? "color-mix(in srgb, var(--accent2) 40%, transparent)" : "var(--border)"}`,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={profile.weekly_digest_enabled}
+              onChange={(e) => setProfile((p) => ({ ...p, weekly_digest_enabled: e.target.checked }))}
+              style={{ width: 18, height: 18, accentColor: "var(--accent)", flexShrink: 0 }}
+              aria-label="Weekly digest opt-in"
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                Wöchentlicher Bericht
+              </div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, lineHeight: 1.5 }}>
+                Jeden Montag um 06:00 eine Zusammenfassung der letzten Woche —
+                Arbeitszeit, Urlaub, Notdienst und wichtige Compliance-Hinweise
+                (§3 ArbZG, §3 EntgFG). Kein Spam.
+              </div>
+            </div>
+          </label>
         </div>
 
         {/* Save */}

@@ -1,5 +1,98 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (71) – v0.37.0: Weekly digest email — retention #1
+
+### Hedef
+Audit'te "Weekly digest email (Monday) — retention #1" olarak
+listelenmişti. Pazartesi 06:00 UTC otomatik ozet mail.
+DSGVO gereği **opt-in** (varsayılan false), Settings toggle.
+
+### Migration 025 (⚠ manuel apply)
+- `profiles.weekly_digest_enabled boolean default false`
+- Partial index `where weekly_digest_enabled = true` (cron sorgusu hızlı)
+- Idempotent
+
+### YENİ MODUL — `lib/email/weeklyDigest.ts`
+- `computeWeeklyDigestStats({refDate, entries, notdienst, yearEntries})`:
+  * Geçen hafta (refDate-7 → refDate-1) window hesabı
+  * weekWorkedMin, weekWorkedDays, weekUrlaubDays, weekKrankDays, weekNotdienstDays
+  * monthWorkedMin (bu ay bugüne kadar)
+  * capViolations (§3 ArbZG 10h aşımı — findDailyCapViolations)
+  * krankheitOverLimit (§3 EntgFG 6 Wochen — calcKrankheitEpisodes)
+- `sendWeeklyDigestEmail({to, name, stats})`:
+  * Stundly dark tema (purple accent)
+  * 4 hafta stat kartı (Arbeitszeit, Arbeitstage, Urlaub, Krank)
+  * Ay summary + Notdienst (varsa)
+  * Compliance block kırmızı (varsa)
+  * "Zur Zeiterfassung" CTA + settings/unsubscribe link
+
+### YENI ENDPOINT — `/api/cron/weekly-digest`
+- Vercel Cron `0 6 * * 1` (Pazartesi 06:00 UTC)
+- Bearer $CRON_SECRET gate (aynı DSGVO cron)
+- Akış:
+  1. profiles WHERE weekly_digest_enabled=true AND is_active=true
+     AND deleted_at IS NULL
+  2. Bulk time_entries (yıl başı - bugün) + notdienst_entries (bu ay - bugün)
+     Per-user Map ile in-memory join
+  3. Her user için computeStats + send email
+  4. **Boş hafta skip** (0 iş = mail atma, spam algısı önlenir)
+  5. 200ms delay her mail arasında (Resend rate limit safety)
+- Response: `{ ran_at, total, sent, failed, skipped }`
+- maxDuration 300s (~500 user × 300ms = 150s < 300s)
+
+### SETTINGS UI — `/settings#digest`
+- Yeni "📬 E-Mail Nachrichten" card
+- Checkbox toggle:
+  "Wöchentlicher Bericht — Jeden Montag um 06:00 eine Zusammenfassung
+  der letzten Woche — Arbeitszeit, Urlaub, Notdienst und wichtige
+  Compliance-Hinweise (§3 ArbZG, §3 EntgFG). Kein Spam."
+- `Profile.weekly_digest_enabled: boolean` state'te tutulur, save'de
+  profiles.upsert ile birlikte gider
+- Email'deki "Abbestellen" linki `#digest` fragment ile bu bölüme scroll
+
+### vercel.json — 3. cron eklendi
+```json
+{ "path": "/api/cron/weekly-digest", "schedule": "0 6 * * 1" }
+```
+
+### Test — 10 case (`weeklyDigest.test.ts`)
+- Mock @resend (send mock)
+- Boş entries → 0 sayaçlar
+- Hafta window: 5 arbeiten = 40h/5g
+- Bu hafta sayılmaz (refDate sonrası hariç)
+- Önceki haftadan önce sayılmaz
+- Urlaub/Krank sayımı
+- Notdienst window filter
+- Ay bazlı toplam
+- §3 ArbZG cap tespiti
+- §3 EntgFG 44 gün → 2 excess
+- Compliance yoksa 0
+
+### Validation
+- TS clean · ESLint clean · Vitest **349/349** (339 → 349, +10)
+
+### Değişen dosyalar (5 file + son_kayit)
+- `supabase/migrations/025_profiles_weekly_digest.sql` — YENİ
+- `apps/web/src/lib/email/weeklyDigest.ts` — YENİ (~230 LOC)
+- `apps/web/src/app/api/cron/weekly-digest/route.ts` — YENİ (~130 LOC)
+- `apps/web/src/app/(dashboard)/settings/page.tsx` — toggle UI
+- `vercel.json` — 3. cron
+- `apps/web/src/__tests__/unit/weeklyDigest.test.ts` — YENİ
+- `apps/web/src/lib/version.ts` — 0.36.0 → 0.37.0
+
+### Manuel adım (deploy'da)
+⚠ **Migration 025** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+Yoksa: settings save 500 patlar (weekly_digest_enabled kolonu yok).
+
+### Kalan Week 3-4 (5 madde)
+- Monthly PDF report email
+- `/vergleich/clockodo` + 2 SEO landing
+- Onboarding sample data injection
+- Light mode tokens
+- Skeleton kalan 11 yerde replace
+
+---
+
 ## 2026-07-11 (70) – v0.36.0: Landing polish (Chef-Fokus + anchor pricing)
 
 ### Hedef

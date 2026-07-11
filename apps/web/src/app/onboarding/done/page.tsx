@@ -12,6 +12,7 @@ import {
 } from "@/app/demo/state";
 
 type ImportStatus = "checking" | "idle" | "prompt" | "importing" | "done" | "failed";
+type SampleStatus = "idle" | "loading" | "done" | "failed";
 
 function DoneContent() {
   const router = useRouter();
@@ -24,6 +25,11 @@ function DoneContent() {
   const [demoEntries,  setDemoEntries]  = useState<DemoEntry[]>([]);
   const [importedCount, setImportedCount] = useState(0);
   const [importError,   setImportError]   = useState<string | null>(null);
+
+  // Sample data (Beispieldaten) — sadece kişisel + demo import etmeyen için
+  const [sampleStatus,  setSampleStatus]  = useState<SampleStatus>("idle");
+  const [sampleCount,   setSampleCount]   = useState(0);
+  const [sampleError,   setSampleError]   = useState<string | null>(null);
 
   // Welcome maili tetikle (RESEND_API_KEY varsa, yoksa sessiz başarısız)
   useEffect(() => {
@@ -92,6 +98,25 @@ function DoneContent() {
   function handleDiscard() {
     clearDemoStorage();
     setImportStatus("idle");
+  }
+
+  async function handleLoadSample() {
+    setSampleStatus("loading");
+    setSampleError(null);
+    try {
+      const res = await fetch("/api/onboarding/sample-data", { method: "POST" });
+      const data = await res.json() as { inserted_time_entries?: number; error?: string };
+      if (!res.ok || data.error) {
+        setSampleError(data.error ?? "Fehler beim Laden");
+        setSampleStatus("failed");
+        return;
+      }
+      setSampleCount(data.inserted_time_entries ?? 0);
+      setSampleStatus("done");
+    } catch (err) {
+      setSampleError(err instanceof Error ? err.message : "Netzwerkfehler");
+      setSampleStatus("failed");
+    }
   }
 
   return (
@@ -202,6 +227,66 @@ function DoneContent() {
         }}>
           ⚠️ Import fehlgeschlagen{importError ? `: ${importError}` : ""}.
           Du kannst die Einträge auch manuell in der Zeiterfassung anlegen.
+        </div>
+      )}
+
+      {/* Sample data opt-in — nur wenn kein Demo-Import UND kişisel */}
+      {!isCompany && importStatus === "idle" && sampleStatus === "idle" && (
+        <div style={{
+          background: "var(--surface)", border: "1px dashed var(--border)",
+          borderRadius: 12, padding: "16px 18px", marginBottom: 20, textAlign: "left",
+        }}>
+          <div style={{ fontSize: 20, marginBottom: 6 }}>📊</div>
+          <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, color: "var(--text)" }}>
+            Möchtest du Beispieldaten laden?
+          </p>
+          <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
+            Wir legen ~20 Arbeitstage, 2 Urlaubstage, 1 Krankheitstag und 1 Notdienst-Wochenende
+            für den aktuellen Monat an. Du kannst sie jederzeit mit einem Klick löschen.
+          </p>
+          <button
+            type="button"
+            onClick={handleLoadSample}
+            className="btn"
+            style={{
+              background: "var(--surface2)", border: "1px solid var(--border)",
+              color: "var(--text)", fontSize: 13, minHeight: 42, width: "100%",
+            }}
+          >
+            📊 Beispieldaten laden (30 Tage)
+          </button>
+        </div>
+      )}
+
+      {sampleStatus === "loading" && (
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 12, padding: "14px 18px", marginBottom: 20,
+          fontSize: 13, color: "var(--muted)", textAlign: "left",
+        }}>
+          ⏳ Beispieldaten werden geladen…
+        </div>
+      )}
+
+      {sampleStatus === "done" && (
+        <div style={{
+          background: "color-mix(in srgb, var(--green) 12%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--green) 35%, transparent)",
+          borderRadius: 12, padding: "14px 18px", marginBottom: 20,
+          fontSize: 13, color: "var(--green)", fontWeight: 700, textAlign: "left",
+        }}>
+          ✅ {sampleCount} Beispiel-Einträge angelegt — löschbar mit einem Klick im Tracker.
+        </div>
+      )}
+
+      {sampleStatus === "failed" && (
+        <div style={{
+          background: "color-mix(in srgb, var(--red) 10%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
+          borderRadius: 12, padding: "14px 18px", marginBottom: 20,
+          fontSize: 13, color: "var(--red)", textAlign: "left",
+        }}>
+          ⚠️ Beispieldaten konnten nicht geladen werden{sampleError ? `: ${sampleError}` : ""}.
         </div>
       )}
 

@@ -18,6 +18,25 @@ export default function TrackerPage() {
   const { fetchEntries, create, update, remove } = useTimeEntries();
   const [scanOpen,      setScanOpen]      = useState(false);
   const [bundesland,    setBundesland]    = useState("NI");
+  const [clearingSample, setClearingSample] = useState(false);
+
+  const sampleCount = useMemo(
+    () => entries.filter((e) => (e.tags ?? []).includes("sample")).length,
+    [entries],
+  );
+
+  async function handleClearSample() {
+    if (!confirm("Alle Beispiel-Einträge löschen? Deine echten Einträge bleiben erhalten.")) return;
+    setClearingSample(true);
+    try {
+      const res = await fetch("/api/onboarding/sample-data", { method: "DELETE" });
+      if (res.ok) {
+        await fetchEntries();
+      }
+    } finally {
+      setClearingSample(false);
+    }
+  }
 
   // Load bundesland from profile for correct public holidays
   useEffect(() => {
@@ -73,6 +92,39 @@ export default function TrackerPage() {
     <>
       <MonthNav />
       <MonthlySummary feiertage={feiertage} />
+      {sampleCount > 0 && (
+        <div
+          role="status"
+          style={{
+            margin: "0 16px 12px",
+            padding: "10px 14px",
+            background: "color-mix(in srgb, var(--accent2) 8%, var(--surface))",
+            border: "1px dashed color-mix(in srgb, var(--accent2) 35%, transparent)",
+            borderRadius: 10,
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 10, flexWrap: "wrap",
+            fontSize: 12,
+          }}
+        >
+          <span style={{ color: "var(--muted)", lineHeight: 1.5 }}>
+            📊 <strong style={{ color: "var(--accent2)" }}>Beispieldaten aktiv</strong>
+            {" · "}{sampleCount} Eintr{sampleCount === 1 ? "ag" : "äge"} zur Ansicht
+          </span>
+          <button
+            onClick={handleClearSample}
+            disabled={clearingSample}
+            style={{
+              padding: "6px 12px", borderRadius: 8, cursor: clearingSample ? "wait" : "pointer",
+              background: "transparent",
+              border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+              color: "var(--accent2)", fontSize: 11, fontWeight: 700,
+              fontFamily: "'Syne',sans-serif",
+            }}
+          >
+            {clearingSample ? "Wird gelöscht…" : "Alle löschen"}
+          </button>
+        </div>
+      )}
       <NotdienstWeekly />
 
       <WelcomeBanner

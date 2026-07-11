@@ -1,5 +1,100 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (73) – v0.39.0: Onboarding sample data injection
+
+### Hedef
+Yeni user için "aha!" anını hızlandır. Boş dashboard yerine 30 gün
+örnek veri — user hemen Stundly'nin ne yaptığını görüyor. Audit'te
+"Onboarding sample data injection" olarak listelenmişti.
+
+### Design karar: opt-in, silinebilir, gizlenemez
+- **Opt-in**: onboarding/done'da BUTON — otomatik değil (user'ı
+  şaşırtmayalım, DSGVO friendly)
+- **Deterministic**: aynı ay = aynı veri (test edilebilir, sürpriz yok)
+- **Tag ile işaretli**: `tags: ["sample"]` → tracker'da banner + tek
+  tık silme
+- **DELETE endpoint**: `contains("tags", ["sample"])` filter — sadece
+  sample entry'ler silinir, user'ın kendi verisi korunur
+
+### YENI MODUL — `lib/onboarding/sampleData.ts`
+- `generateSampleData(year, month)` → { entries, notdienst }
+- Pattern (Mo-Fr sadece):
+  * ~20 arbeiten günü
+    - Çoğu 08:00-17:00 (60m pause) = 8h netto
+    - Her 4. gün 08:00-19:00 = 10h (Kundenauftrag Überstunden)
+    - Her 5. gün 07:30-16:30 (erken başlangıç)
+    - Her 7. gün 08:00-16:00 (45m pause) = 6h 45m (Baustellen-Besichtigung)
+  * 2 arka arkaya Urlaub (10-11. gün, "Kurzer Frühlings-Urlaub" note)
+  * 1 Krank (17. gün, "Grippe")
+  * 1 Notdienst-Wochenende: ilk Cuma-Cumartesi
+    - Fri 18-22, Sa 09-13
+    - Kunde: "Familie Schulz" / "Herr Müller"
+    - Note: "Beispieldatensatz" ile işaretli
+
+### YENI ENDPOINT — `/api/onboarding/sample-data`
+- **POST**: mevcut sample'ları sil + yeni 30 gün insert
+  * Idempotent: user butona tekrar basarsa upsert davranışı
+  * Return: `{ inserted_time_entries, inserted_notdienst, year, month }`
+- **DELETE**: `contains("tags", ["sample"])` time_entries +
+  `note LIKE %Beispieldatensatz%` notdienst_entries
+  * Return: `{ deleted_time_entries, deleted_notdienst }`
+- **GET**: sample count (banner göstermek için)
+
+### UI — `onboarding/done`
+- Yeni SampleStatus state ("idle" | "loading" | "done" | "failed")
+- Sadece **kişisel user + demo import etmeyen** için gösterilir
+  (`!isCompany && importStatus === "idle" && sampleStatus === "idle"`)
+- Card dashed border: "Möchtest du Beispieldaten laden?"
+- Açıklama: "~20 Arbeitstage, 2 Urlaubstage, 1 Krankheitstag,
+  1 Notdienst-Wochenende. Jederzeit löschbar."
+- Loading/Done/Failed state banner'ları
+
+### UI — `tracker/page`
+- `sampleCount = entries.filter(e => e.tags?.includes("sample")).length`
+- sampleCount > 0 ise MonthlySummary + NotdienstWeekly arasına banner:
+  * "📊 Beispieldaten aktiv · N Einträge zur Ansicht"
+  * "Alle löschen" butonu → DELETE endpoint + refetch
+  * confirm() dialog: "Deine echten Einträge bleiben erhalten"
+
+### Test — 8 case (`sampleData.test.ts`)
+- Haziran 2026 → ~20 arbeiten + 2 urlaub + 1 krank
+- Weekend arbeiten yok
+- Tüm entries `sample` tag'lı
+- Notdienst Fri+Sat, "Beispieldatensatz" note
+- Aynı ay → deterministic (idempotency)
+- Şubat 28 gün → doğru sayı
+- Arbeiten start/end doldurulmuş, is_night_shift false
+- Urlaub/Krank start/end null
+
+### Validation
+- TS clean · ESLint clean · Vitest **357/357** (349 → 357, +8)
+
+### Değişen dosyalar (5 file + son_kayit)
+- `apps/web/src/lib/onboarding/sampleData.ts` — YENİ (~100 LOC)
+- `apps/web/src/app/api/onboarding/sample-data/route.ts` — YENİ (~90 LOC)
+- `apps/web/src/app/onboarding/done/page.tsx` — sample opt-in + banner
+- `apps/web/src/app/(dashboard)/tracker/page.tsx` — banner + clear button
+- `apps/web/src/__tests__/unit/sampleData.test.ts` — YENİ
+- `apps/web/src/lib/version.ts` — 0.38.0 → 0.39.0
+
+### Neden bu design senior-safe
+1. **User consent**: buton — otomatik injection yok (unexpected data =
+   DSGVO gri alan)
+2. **Kolay geri alma**: banner her yerde, tek tık DELETE
+3. **User verisi güvenli**: DELETE sadece tag=sample siler,
+   contains() ile RLS friendly
+4. **Idempotent**: user butona 2× basarsa duplicate yok
+5. **Deterministic test**: aynı ay = aynı veri → test edilebilir
+6. **Note işareti**: Notdienst tablo `tags` field'ı yok, "Beispieldatensatz"
+   note ile işaretlendi (soft fingerprint)
+
+### Kalan Week 3-4 (3 madde)
+- Monthly PDF report email
+- Light mode tokens
+- Skeleton kalan yerler (~11 dosya)
+
+---
+
 ## 2026-07-11 (72) – v0.38.0: SEO landings (3 sayfa)
 
 ### Hedef

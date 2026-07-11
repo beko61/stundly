@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
 import { buildCsvDetail, buildCsvSummary, csvDownload } from "@/lib/export/csvExport";
+import { buildDatevMonthlyCsv, datevDownload, splitFullName } from "@/lib/export/datevExport";
 import type { TimeEntry } from "@workly/shared";
 
 interface EmployeeData {
@@ -12,6 +13,11 @@ interface EmployeeData {
     date: string; start_time: string | null; end_time: string | null;
     erledigt?: boolean | null; kunde?: string | null; note?: string | null;
   }>;
+  salarySettings: {
+    hourly_rate: number;
+    notdienst_bonus: number;
+    monthly_target_hours: number;
+  } | null;
 }
 interface DataPayload {
   year: number;
@@ -111,6 +117,69 @@ export function EmployeeExportButtons({
         {busy === "csv" ? "..." : "CSV"}
       </button>
       {err && <span style={{ fontSize: 10, color: "var(--red)" }}>{err}</span>}
+    </div>
+  );
+}
+
+// ── DATEV Bulk: tüm çalışanlar aylık Lohnjournal ────────────────────
+export function DatevBulkButton({ year, month }: { year: number; month: number }) {
+  const [busy, setBusy] = useState(false);
+  const [err,  setErr]  = useState<string | null>(null);
+
+  async function downloadDatev() {
+    setBusy(true); setErr(null);
+    try {
+      const data = await fetchData(year, month);
+      const rows = data.employees.map(emp => {
+        const p = emp.profile as {
+          full_name?: string; vorname?: string; nachname?: string;
+          email?: string; personal_nr?: string; user_id: string;
+        };
+        // Nachname/Vorname öncelikle profile'de tanımlıysa, yoksa full_name split
+        let vorname  = p.vorname  ?? "";
+        let nachname = p.nachname ?? "";
+        if (!vorname && !nachname) {
+          const s = splitFullName(p.full_name);
+          vorname  = s.vorname;
+          nachname = s.nachname;
+        }
+        const personalNr = p.personal_nr || `EMP-${p.user_id.slice(0, 8).toUpperCase()}`;
+        const settings = emp.salarySettings ?? { hourly_rate: 0, notdienst_bonus: 0, monthly_target_hours: 174 };
+        return {
+          personalNummer: personalNr,
+          vorname, nachname,
+          entries:   emp.entries,
+          notdienst: emp.notdienst,
+          stundenlohn:            settings.hourly_rate,
+          notdienstBonus:         settings.notdienst_bonus,
+          monatlicheSollstunden:  settings.monthly_target_hours,
+        };
+      });
+      const csv = buildDatevMonthlyCsv({ year: data.year, month: data.month, rows });
+      datevDownload(csv, `${fmtFilename("DATEV_Lohnjournal", year, month)}.csv`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Fehler");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <button
+        onClick={downloadDatev} disabled={busy}
+        title="Aylık DATEV-uyumlu Lohnjournal CSV — Steuerberater'a gönderilebilir"
+        style={{
+          padding: "9px 16px", borderRadius: 999,
+          background: "var(--blue)", color: "white", border: "none",
+          fontWeight: 800, fontSize: 12, cursor: busy ? "wait" : "pointer",
+          fontFamily: "'Syne',sans-serif",
+          boxShadow: "0 4px 16px color-mix(in srgb, var(--blue) 30%, transparent)",
+        }}
+      >
+        {busy ? "Wird erstellt..." : "📊 DATEV Export"}
+      </button>
+      {err && <span style={{ fontSize: 11, color: "var(--red)" }}>{err}</span>}
     </div>
   );
 }

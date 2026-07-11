@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
-import { EmployeeExportButtons, BulkCsvButton } from "./ReportExportButtons";
+import { EmployeeExportButtons, BulkCsvButton, DatevBulkButton } from "./ReportExportButtons";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 
@@ -98,7 +98,10 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 2 }}>Monatsauswertung</h1>
         </div>
-        <BulkCsvButton year={year} month={month} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <DatevBulkButton year={year} month={month} />
+          <BulkCsvButton year={year} month={month} />
+        </div>
       </div>
 
       {/* Month nav */}

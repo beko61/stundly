@@ -1,5 +1,85 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (69) – v0.35.0: DATEV/Lodas CSV Export (B2B killer)
+
+### Hedef
+Handwerksbetrieb'in Steuerberater'ine gönderdiği aylık payroll input
+CSV'si. Alman standart formatı (DATEV Lohn und Gehalt, LODAS, Lexware,
+Sage import uyumlu). Audit'te Major kategorisinde "DATEV CSV export
+YOK" olarak listelenmişti.
+
+### Yeni modül — `lib/export/datevExport.ts`
+- `buildDatevMonthlyCsv({ year, month, rows })` — bulk aylık export
+- `datevDownload(csv, filename)` — browser blob download
+- `splitFullName(fullName)` — "Ali Yildiz" → { vorname, nachname }
+  * Son kelime nachname, öncekiler vorname (Hans Jürgen Meier vb.)
+- `deNumber(n, decimals=2)` — 168.75 → "168,75" (DE ondalık)
+- `csvEscape(v)` — RFC 4180, semikolon-safe (DE-Excel)
+
+### CSV Format (v1 — 11 sütun)
+```
+Personalnummer;Nachname;Vorname;Abrechnungsmonat;Arbeitsstunden;
+Urlaubstage;Krankheitstage;Notdiensttage;Notdienstbonus_EUR;
+Grundlohn_Brutto_EUR;Bruttolohn_Gesamt_EUR
+```
+- **Encoding**: UTF-8 BOM (Excel DE tanır) + CRLF + Semikolon-Trenner
+- **Personalnummer**: `profiles.personal_nr` veya fallback
+  `EMP-<user_id[:8].toUpper>` (Steuerberater'a stabil ID)
+- **Nachname/Vorname**: `profiles.nachname/vorname` var ise onlar,
+  yoksa `full_name` → `splitFullName()`
+- **Arbeitsstunden**: netto ARBEITEN + Notdienst dakika toplamı / 60
+- **Grundlohn_Brutto**: monthly_target × hourly_rate (Sollstunden bazlı)
+- **Bruttolohn_Gesamt**: grundlohn + notdienstBonus (SFN v1'de dahil değil)
+
+### API — `/api/company/reports/data`
+- Yeni `salarySettings` field response'a eklendi:
+  hourly_rate, notdienst_bonus, monthly_target_hours (user_id başına
+  en yeni satır — created_at DESC)
+- Per-user Map ile in-memory join
+
+### UI — `/company/reports`
+- Yeni `DatevBulkButton` component (mavi highlight):
+  * "📊 DATEV Export" başlıklı, tooltip'te "Steuerberater'a gönderilebilir"
+- Header'a eklendi (mevcut "Alle als CSV" internal yanına)
+- Dosya adı: `DATEV_Lohnjournal_Juni_2026.csv`
+
+### Test — 20 case (`__tests__/unit/datevExport.test.ts`)
+- splitFullName: 4 case (iki kelime, üç kelime, tek, boş/null)
+- deNumber: 4 case (virgül, default, custom decimals, negatif)
+- csvEscape: 4 case (basit, semikolon, tırnak escape, null)
+- buildDatevMonthlyCsv: 8 case (BOM, header, 40h+bonus, Urlaub/Krank,
+  Notdienst bonus, çoklu mitarbeiter, semikolon escape, boş rows)
+
+### Validation
+- TS clean · ESLint clean · Vitest **339/339** (319 → 339, +20)
+
+### Değişen dosyalar (5 file)
+- `apps/web/src/lib/export/datevExport.ts` — YENİ (~180 LOC)
+- `apps/web/src/app/api/company/reports/data/route.ts` — salarySettings
+- `apps/web/src/app/company/reports/ReportExportButtons.tsx` — DatevBulkButton
+- `apps/web/src/app/company/reports/page.tsx` — buton entegrasyonu
+- `apps/web/src/__tests__/unit/datevExport.test.ts` — YENİ
+- `apps/web/src/lib/version.ts` — 0.34.0 → 0.35.0
+
+### v2 Backlog (bilinçli olarak dışta bırakılanlar)
+- SFN steuerfrei kolonu (Nacht/Sonntag/Feiertag ayrı sütunlar)
+- Überstunden ayrı satır (mevcut monthly_target üstü)
+- LODAS ASCII import formatı (Lohnart Nummer + Wert)
+- Personalnummer migration 025 (profiles.personal_nr required)
+- Krankheit 6-Wochen limit uygulaması Brutto düşümünde
+- Zwölftelung Urlaubsanspruch CSV'de
+
+### Kalan Week 3-4 (7 madde)
+- Weekly digest email (retention #1 — sonraki commit)
+- Monthly PDF report email
+- Landing testimonial strip
+- `/vergleich/clockodo` + SEO landings
+- Beta anchor pricing
+- Onboarding sample data
+- Light mode
+
+---
+
 ## 2026-07-11 (68) – v0.34.0: A11y baseline (Week 3-4)
 
 ### Hedef

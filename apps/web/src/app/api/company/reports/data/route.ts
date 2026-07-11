@@ -87,6 +87,26 @@ export async function GET(req: NextRequest) {
         .order("date", { ascending: true })
     : { data: [] };
 
+  // ── Salary settings (DATEV export için) ────────────────────────
+  const { data: salarySettingsList } = userIds.length > 0
+    ? await admin
+        .from("salary_settings")
+        .select("user_id, hourly_rate, notdienst_bonus, monthly_target_hours, created_at")
+        .in("user_id", userIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  // Her user için en yeni salary_settings satırı (birden fazla varsa)
+  const salaryByUser = new Map<string, { hourly_rate: number; notdienst_bonus: number; monthly_target_hours: number }>();
+  for (const s of salarySettingsList ?? []) {
+    if (!salaryByUser.has(s.user_id)) {
+      salaryByUser.set(s.user_id, {
+        hourly_rate:          Number(s.hourly_rate ?? 0),
+        notdienst_bonus:      Number(s.notdienst_bonus ?? 0),
+        monthly_target_hours: Number(s.monthly_target_hours ?? 174),
+      });
+    }
+  }
+
   // ── Feiertage (Bundesland: ilk Mitarbeiter'in bundesland'ı, default NI) ─
   const bundesland = (employees[0]?.bundesland as string) ?? "NI";
   const feiertage  = getFeiertage(year, bundesland);
@@ -98,6 +118,7 @@ export async function GET(req: NextRequest) {
       profile: emp,
       entries:   (timeEntries ?? []).filter(t => t.user_id === uid),
       notdienst: (ndEntries  ?? []).filter(n => n.user_id === uid),
+      salarySettings: salaryByUser.get(uid) ?? null,
     };
   });
 

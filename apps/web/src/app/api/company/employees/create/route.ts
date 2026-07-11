@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { logAudit } from "@/lib/audit/logger";
+import { createEmployeeSchema } from "@/lib/validation/schemas";
 
 /**
  * POST /api/company/employees/create
@@ -28,21 +29,15 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { admin, companyId } = ctx;
 
-  const body = await req.json().catch(() => ({}));
-  const email     = typeof body?.email     === "string" ? body.email.trim().toLowerCase() : "";
-  const password  = typeof body?.password  === "string" ? body.password               : "";
-  const fullName  = typeof body?.full_name === "string" ? body.full_name.trim()       : "";
-  const role      = body?.role === "company_admin" ? "company_admin" : "employee";
-
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return NextResponse.json({ error: "Ungültige E-Mail" }, { status: 400 });
+  const raw = await req.json().catch(() => ({}));
+  const parsed = createEmployeeSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({
+      error:   "Ungültige Eingabe",
+      details: parsed.error.flatten().fieldErrors,
+    }, { status: 400 });
   }
-  if (!password || password.length < 8) {
-    return NextResponse.json({ error: "Passwort muss mindestens 8 Zeichen haben" }, { status: 400 });
-  }
-  if (!fullName) {
-    return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
-  }
+  const { email, password, full_name: fullName, role } = parsed.data;
 
   // 1. Auth user oluştur
   const { data: created, error: authErr } = await admin.auth.admin.createUser({

@@ -1,5 +1,96 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (78) – v0.43.0: Zod schemas 4 admin write route
+
+### Hedef
+Audit'te "Zero Zod validation (zod dep'te ama kullanılmıyor)" tespiti.
+4 admin write endpoint için runtime input validation. Attacker-safe,
+frontend-friendly error mesajları.
+
+### YENİ MODUL — `lib/validation/schemas.ts`
+
+**3 shared schema**:
+- `createEmployeeSchema` — { email (RFC + trim + lowercase), password (min 8),
+  full_name (min 2 + trim), role (enum) }
+- `employeeIdSchema` — { userId (UUID v4) }
+- `vacationDecisionSchema` — { decision (enum approved/rejected),
+  reason (optional, max 1000) }
+
+**Error handling pattern**:
+```ts
+const parsed = schema.safeParse(raw);
+if (!parsed.success) return NextResponse.json({
+  error:   "Ungültige Eingabe",
+  details: parsed.error.flatten().fieldErrors, // per-field DE mesajlar
+}, { status: 400 });
+```
+
+**DE-lokalize mesajlar**:
+- "Ungültige E-Mail-Adresse"
+- "Passwort muss mindestens 8 Zeichen haben"
+- "Role muss 'employee' oder 'company_admin' sein"
+- "Ungültige userId (kein UUID)"
+
+### 4 route güncellendi
+- `POST /api/company/employees/create` → `createEmployeeSchema`
+  * Öncesi: manuel typeof+regex, ayrı 3 return statement
+  * Sonrası: tek safeParse + fieldErrors
+- `POST /api/company/employees/delete` → `employeeIdSchema`
+- `POST /api/company/employees/restore` → `employeeIdSchema`
+- `POST /api/company/employees/toggle` → `employeeIdSchema`
+- `POST /api/vacation/[id]/decision` → `vacationDecisionSchema`
+
+### Neden UUID validation kritik
+Öncesinde `userId` string type-check ile geçiyordu → attacker herhangi
+bir string gönderebiliyordu ("../admin", SQL injection payload, vs.).
+Supabase RLS bunları filter'lasa da defense-in-depth için input katmanı
+gerekli.
+
+### Test — 20 case (`schemas.test.ts`)
+- createEmployeeSchema: 8 case (valid, trim, lowercase, geçersiz email,
+  kısa password, kısa name, wrong role, empty body)
+- employeeIdSchema: 5 case (valid UUID, geçersiz UUID, eksik, null, number)
+- vacationDecisionSchema: 7 case (approved, rejected+reason, optional
+  reason, >1000 karakter, trim, wrong values, empty body)
+
+### Test update — mevcut test'ler UUID ile refactor
+- `softDelete.test.ts`: 4 replace_all
+  * "emp-1" → "11111111-2222-3333-4444-555555555555"
+  * "admin-1" → "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+  * "ghost" → başka UUID
+- `decision/route.test.ts`: 400 error assertion Zod format'ına uyumlu
+  ("Ungültige Eingabe" veya "approved" match)
+
+### Validation
+- TS clean · ESLint clean · Vitest **385/385** (365 → 385, +20)
+
+### Değişen dosyalar (7 file + son_kayit)
+- `apps/web/src/lib/validation/schemas.ts` — YENİ (~85 LOC)
+- `apps/web/src/app/api/company/employees/create/route.ts` — Zod
+- `apps/web/src/app/api/company/employees/delete/route.ts` — Zod
+- `apps/web/src/app/api/company/employees/restore/route.ts` — Zod
+- `apps/web/src/app/api/company/employees/toggle/route.ts` — Zod
+- `apps/web/src/app/api/vacation/[id]/decision/route.ts` — Zod
+- `apps/web/src/__tests__/unit/schemas.test.ts` — YENİ (20 case)
+- `apps/web/src/app/api/company/employees/__tests__/softDelete.test.ts` — UUID
+- `apps/web/src/app/api/vacation/[id]/decision/__tests__/route.test.ts` — format
+- `apps/web/src/lib/version.ts` — 0.42.0 → 0.43.0
+
+### Neden 5 route için 3 schema
+- Employee create → tek use
+- Employee ID actions (delete/restore/toggle) → paylaşımlı schema (DRY)
+- Vacation decision → tek use
+- Ilerdeki route'lar için `schemas.ts`'ye eklemek kolay
+
+### Kalan — Week 5-6 (5 madde)
+- salary/page 1148 LOC refactor
+- React Query time_entries + vacation
+- Middleware role → JWT
+- Stripe webhook integration test
+- next/image + next/dynamic
+
+---
+
 ## 2026-07-11 (77) – v0.42.0: Migration 027 (DB indexes) + CI restore
 
 ### Hedef

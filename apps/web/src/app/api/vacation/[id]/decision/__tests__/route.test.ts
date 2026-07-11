@@ -115,8 +115,10 @@ describe("POST /api/vacation/[id]/decision", () => {
     mockGetContext.mockResolvedValue(ctxAdmin());
     const res = await POST(makeRequest({ decision: "maybe" }), PARAMS);
     expect(res.status).toBe(400);
-    const json = await res.json() as { error: string };
-    expect(json.error).toContain("approved");
+    const json = await res.json() as { error: string; details?: { decision?: string[] } };
+    // Zod: error = "Ungültige Eingabe", details.decision içinde alan hatası
+    expect(json.error).toMatch(/Ungültige|approved/);
+    expect(json.details?.decision?.[0]).toMatch(/approved|rejected/);
   });
 
   it("404 — antrag bulunamazsa", async () => {

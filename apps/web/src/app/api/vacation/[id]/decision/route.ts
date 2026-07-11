@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { sendVacationDecisionEmail } from "@/lib/email/resend";
 import { logAudit } from "@/lib/audit/logger";
+import { vacationDecisionSchema } from "@/lib/validation/schemas";
 
 /**
  * POST /api/vacation/[id]/decision
@@ -25,16 +26,16 @@ export async function POST(
   const { admin, companyId, profile } = ctx;
   const { id } = await params;
 
-  const body = await req.json().catch(() => null) as
-    | { decision?: string; reason?: string }
-    | null;
-  if (!body) return NextResponse.json({ error: "Body fehlt" }, { status: 400 });
-
-  const decision = body.decision;
-  if (decision !== "approved" && decision !== "rejected") {
-    return NextResponse.json({ error: "decision muss 'approved' oder 'rejected' sein" }, { status: 400 });
+  const raw = await req.json().catch(() => ({}));
+  const parsed = vacationDecisionSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({
+      error:   "Ungültige Eingabe",
+      details: parsed.error.flatten().fieldErrors,
+    }, { status: 400 });
   }
-  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  const { decision } = parsed.data;
+  const reason = parsed.data.reason ?? "";
 
   // 1) Antrag holen
   const { data: vacation } = await admin

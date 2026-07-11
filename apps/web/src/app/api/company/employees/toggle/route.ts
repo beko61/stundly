@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { logAudit } from "@/lib/audit/logger";
+import { employeeIdSchema } from "@/lib/validation/schemas";
 
 /**
  * POST /api/company/employees/toggle
@@ -17,11 +18,16 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { admin, companyId } = ctx;
-  const { userId } = await req.json().catch(() => ({ userId: null }));
 
-  if (!userId || typeof userId !== "string") {
-    return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
+  const raw = await req.json().catch(() => ({}));
+  const parsed = employeeIdSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({
+      error:   "Ungültige Eingabe",
+      details: parsed.error.flatten().fieldErrors,
+    }, { status: 400 });
   }
+  const { userId } = parsed.data;
 
   // Güvenlik: target user aynı şirkette mi?
   const { data: target } = await admin

@@ -38,7 +38,7 @@ function makeAdminClient(opts: {
 }
 
 const ACTIVE_PROFILE = {
-  user_id:    "emp-1",
+  user_id:    "11111111-2222-3333-4444-555555555555",
   company_id: "co-1",
   role:       "employee",
   full_name:  "Max Mustermann",
@@ -49,7 +49,7 @@ const DELETED_PROFILE = { ...ACTIVE_PROFILE, deleted_at: "2026-06-01T10:00:00Z" 
 
 function ctxAdmin(opts: { profile?: unknown; updateError?: { message: string } | null } = {}) {
   return {
-    user: { id: "admin-1" },
+    user: { id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
     profile: { full_name: "Anna Admin", role: "company_admin", company_id: "co-1" },
     companyId: "co-1",
     admin: makeAdminClient({
@@ -73,7 +73,7 @@ describe("POST /api/company/employees/delete", () => {
 
   it("403 — admin değil", async () => {
     mockGetContext.mockResolvedValue(null);
-    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "emp-1" }));
+    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(403);
   });
 
@@ -85,7 +85,7 @@ describe("POST /api/company/employees/delete", () => {
 
   it("404 — Mitarbeiter yok", async () => {
     mockGetContext.mockResolvedValue(ctxAdmin({ profile: null }));
-    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "ghost" }));
+    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "99999999-9999-4999-8999-999999999999" }));
     expect(res.status).toBe(404);
   });
 
@@ -93,42 +93,42 @@ describe("POST /api/company/employees/delete", () => {
     mockGetContext.mockResolvedValue(ctxAdmin({
       profile: { ...ACTIVE_PROFILE, company_id: "co-2" },
     }));
-    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "emp-1" }));
+    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(404);
   });
 
   it("400 — admin kendi kendini silemez", async () => {
     mockGetContext.mockResolvedValue(ctxAdmin({
-      profile: { ...ACTIVE_PROFILE, user_id: "admin-1" },
+      profile: { ...ACTIVE_PROFILE, user_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
     }));
-    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "admin-1" }));
+    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }));
     expect(res.status).toBe(400);
   });
 
   it("409 — zaten silinmiş", async () => {
     mockGetContext.mockResolvedValue(ctxAdmin({ profile: DELETED_PROFILE }));
-    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "emp-1" }));
+    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(409);
   });
 
   it("200 — başarılı: deleted_at + is_active=false set, audit log atılır", async () => {
     mockGetContext.mockResolvedValue(ctxAdmin());
-    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "emp-1" }));
+    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-      deleted_by: "admin-1",
+      deleted_by: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
       is_active:  false,
     }));
     expect(mockUpdate.mock.calls[0]?.[0]).toHaveProperty("deleted_at");
     expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
       action: "employee.soft_deleted",
-      resourceId: "emp-1",
+      resourceId: "11111111-2222-3333-4444-555555555555",
     }));
   });
 
   it("500 — DB update hatasında audit log atılmaz", async () => {
     mockGetContext.mockResolvedValue(ctxAdmin({ updateError: { message: "rls" } }));
-    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "emp-1" }));
+    const res = await POST_DELETE(makeReq("http://l/api/company/employees/delete", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(500);
     expect(mockLogAudit).not.toHaveBeenCalled();
   });
@@ -140,7 +140,7 @@ describe("POST /api/company/employees/restore", () => {
 
   it("403 — admin değil", async () => {
     mockGetContext.mockResolvedValue(null);
-    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "emp-1" }));
+    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(403);
   });
 
@@ -154,19 +154,19 @@ describe("POST /api/company/employees/restore", () => {
     mockGetContext.mockResolvedValue(ctxAdmin({
       profile: { ...DELETED_PROFILE, company_id: "co-2" },
     }));
-    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "emp-1" }));
+    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(404);
   });
 
   it("409 — Mitarbeiter zaten aktif", async () => {
     mockGetContext.mockResolvedValue(ctxAdmin({ profile: ACTIVE_PROFILE }));
-    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "emp-1" }));
+    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(409);
   });
 
   it("200 — başarılı: deleted_at=null, is_active=true, audit log", async () => {
     mockGetContext.mockResolvedValue(ctxAdmin({ profile: DELETED_PROFILE }));
-    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "emp-1" }));
+    const res = await POST_RESTORE(makeReq("http://l/api/company/employees/restore", { userId: "11111111-2222-3333-4444-555555555555" }));
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith({
       deleted_at: null,

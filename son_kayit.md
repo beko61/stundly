@@ -1,5 +1,97 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (75) – v0.40.0: Monthly report email — retention #2
+
+### Hedef
+Weekly digest'in ay bazlı kardeşi. Her ayın 1'inde 06:00 UTC önceki
+ayın özet + /reports linki (PDF export için). Retention #2 ("düzenli
+temas noktası"). Migration 026 + Vercel Cron + Settings toggle.
+
+### Migration 026 (⚠ manuel apply)
+- `profiles.monthly_report_enabled boolean default false`
+- Partial index `where monthly_report_enabled = true`
+- Idempotent
+
+### YENİ MODUL — `lib/email/monthlyReport.ts` (~180 LOC)
+- `computeMonthlyReportStats({year, month, entries, notdienst, yearEntries})`:
+  * monthWorkedMin, monthWorkedDays, monthUrlaubDays, monthKrankDays,
+    monthNotdienstDays
+  * **Notdienst-Wochen-Zuordnung UYGULANIR** (`notdienstBelongsToMonth`)
+  * capViolations (§3 ArbZG cap tespiti)
+  * krankheitOverLimit (§3 EntgFG 6 Wochen)
+  * reportUrl = `/reports?year=X&month=Y` (PDF export için deep link)
+- `sendMonthlyReportEmail({to, name, stats})`:
+  * Stundly dark tema (weeklyDigest pattern reuse)
+  * 4 stat kartı + Notdienst blok (varsa) + Compliance blok
+  * "Bericht öffnen → PDF exportieren" CTA
+  * Unsubscribe link → /settings#digest
+
+### YENI ENDPOINT — `/api/cron/monthly-report`
+- Vercel Cron `0 6 1 * *` (her ayın 1'i 06:00 UTC)
+- Bearer $CRON_SECRET
+- Önceki ay hesabı: 1. gün çalışıyor, prev = ay-1 (Ocak 1 → Aralık öncesi yıl)
+- Akış:
+  1. profiles WHERE monthly_report_enabled=true + aktif
+  2. Yıllık time_entries (ay hesabı + yıllık Krankheit için)
+  3. Notdienst ±7 gün pay ile fetch + `notdienstBelongsToMonth` filter
+  4. Boş ay skip
+  5. 200ms delay her mail arasında (Resend rate limit)
+
+### SETTINGS UI
+- Yeni ikinci checkbox altına eklendi (weekly digest'in altında)
+- "Monatsbericht — Am 1. jedes Monats um 06:00 die Zusammenfassung des
+  Vormonats — mit Direkt-Link zum PDF-Export für deinen Steuerberater."
+- Aynı `#digest` fragment anchor ile unsubscribe
+
+### vercel.json — 4. cron
+Toplam cron sayısı 4:
+- 03:00 dsgvo-process
+- 04:00 rate-limit-cleanup
+- 06:00 Pazartesi weekly-digest
+- 06:00 ayın 1'i monthly-report
+
+### Test — 8 case (`monthlyReport.test.ts`)
+- Mock resend
+- Boş → 0 sayaçlar
+- 5 arbeiten = 40h
+- Ay dışı entry sayılmaz (önceki + sonraki ay)
+- Urlaub/Krank sayaçları
+- **Notdienst hafta-Pazar-atfı UYGULANIYOR** (kritik test!)
+  * 30.04 Perşembe (hafta Pazar 3.05) → Mayıs sayılır
+  * 31.05 Pazar → Mayıs sayılır
+  * 01.06 Pazartesi (hafta Pazar 7.06) → Haziran sayılır
+- §3 ArbZG cap tespiti
+- §3 EntgFG 44 gün → 2 excess
+- reportUrl format
+
+### Validation
+- TS clean · ESLint clean · Vitest **365/365** (357 → 365, +8)
+
+### Değişen dosyalar (6 file + son_kayit)
+- `supabase/migrations/026_profiles_monthly_report.sql` — YENİ
+- `apps/web/src/lib/email/monthlyReport.ts` — YENİ (~180 LOC)
+- `apps/web/src/app/api/cron/monthly-report/route.ts` — YENİ (~135 LOC)
+- `apps/web/src/app/(dashboard)/settings/page.tsx` — 2. toggle
+- `vercel.json` — 4. cron
+- `apps/web/src/__tests__/unit/monthlyReport.test.ts` — YENİ
+- `apps/web/src/lib/version.ts` — 0.39.1 → 0.40.0
+
+### Manuel adım (deploy'da)
+⚠ **Migration 026** Supabase Dashboard SQL Editor'da çalıştırılmalı.
+Yoksa: settings save 500 patlar.
+
+### Retention pipeline özet
+- **Anlık** (in-app): tracker uyarıları, Compliance-Warnings
+- **Haftalık** (email): weekly-digest Pazartesi
+- **Aylık** (email): monthly-report ayın 1'i
+- **Yıllık** (in-app): Zeitkonto Urlaubskonto, Verfall alarmı
+
+### Kalan Week 3-4 (2 madde)
+- Light mode tokens (~1-2 saat büyük iş)
+- Skeleton kalan 11 yerde replace (~15 dk mekanik)
+
+---
+
 ## 2026-07-11 (74) – v0.39.1: HOTFIX Notdienst ay-atfı tutarsızlığı (4 yer)
 
 ### Bulgu (kullanıcı raporu)

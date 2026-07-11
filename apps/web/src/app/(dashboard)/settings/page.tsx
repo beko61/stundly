@@ -26,6 +26,7 @@ interface Profile {
   bundesland:     string;
   signature_data: string | null;
   weekly_digest_enabled: boolean;
+  monthly_report_enabled: boolean;
 }
 
 const EMPTY: Profile = {
@@ -36,6 +37,7 @@ const EMPTY: Profile = {
   logo_data: null, bundesland: "NI",
   signature_data: null,
   weekly_digest_enabled: false,
+  monthly_report_enabled: false,
 };
 
 /**
@@ -156,7 +158,7 @@ export default function SettingsPage() {
     if (!session?.user) return;
     const { data } = await supabase
       .from("profiles")
-      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,bundesland,signature_data,weekly_digest_enabled")
+      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,bundesland,signature_data,weekly_digest_enabled,monthly_report_enabled")
       .eq("user_id", session.user.id)
       .single();
     if (data) {
@@ -176,7 +178,8 @@ export default function SettingsPage() {
         logo_data:      data.logo_data      ?? null,
         bundesland:     data.bundesland     ?? "NI",
         signature_data: data.signature_data ?? null,
-        weekly_digest_enabled: Boolean(data.weekly_digest_enabled ?? false),
+        weekly_digest_enabled:  Boolean(data.weekly_digest_enabled  ?? false),
+        monthly_report_enabled: Boolean(data.monthly_report_enabled ?? false),
       });
       if (data.signature_data) setSigSaved(true);
     } else {
@@ -484,6 +487,7 @@ export default function SettingsPage() {
               display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
               background: "var(--surface2)", borderRadius: 10, cursor: "pointer",
               border: `1px solid ${profile.weekly_digest_enabled ? "color-mix(in srgb, var(--accent2) 40%, transparent)" : "var(--border)"}`,
+              marginBottom: 8,
             }}
           >
             <input
@@ -501,6 +505,31 @@ export default function SettingsPage() {
                 Jeden Montag um 06:00 eine Zusammenfassung der letzten Woche —
                 Arbeitszeit, Urlaub, Notdienst und wichtige Compliance-Hinweise
                 (§3 ArbZG, §3 EntgFG). Kein Spam.
+              </div>
+            </div>
+          </label>
+
+          <label
+            style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+              background: "var(--surface2)", borderRadius: 10, cursor: "pointer",
+              border: `1px solid ${profile.monthly_report_enabled ? "color-mix(in srgb, var(--accent2) 40%, transparent)" : "var(--border)"}`,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={profile.monthly_report_enabled}
+              onChange={(e) => setProfile((p) => ({ ...p, monthly_report_enabled: e.target.checked }))}
+              style={{ width: 18, height: 18, accentColor: "var(--accent)", flexShrink: 0 }}
+              aria-label="Monthly report opt-in"
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                Monatsbericht
+              </div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, lineHeight: 1.5 }}>
+                Am 1. jedes Monats um 06:00 die Zusammenfassung des Vormonats —
+                mit Direkt-Link zum PDF-Export für deinen Steuerberater.
               </div>
             </div>
           </label>

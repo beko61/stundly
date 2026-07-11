@@ -10,6 +10,7 @@ import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
 import { notdienstMonthOf, notdienstBelongsToMonth, notdienstLoadRange, isoWeek } from "@/lib/utils/weekMonth";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -446,7 +447,14 @@ export default function ReportsPage() {
 
       <div style={{ padding:"16px 16px 40px", maxWidth: 1000, margin: "0 auto" }}>
         {loading ? (
-          <div style={{ textAlign:"center", color:"var(--muted)", padding:"40px 0" }}>Laden...</div>
+          <div
+            role="status"
+            aria-label="Bericht wird geladen"
+            style={{ display: "flex", flexDirection: "column", gap: 12, padding: "6px 0" }}
+          >
+            <Skeleton fullWidth height={140} radius={12} />
+            <Skeleton fullWidth height={220} radius={12} />
+          </div>
         ) : (
           <>
             {/* Hero kartlar — sadece year mode */}

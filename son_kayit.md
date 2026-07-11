@@ -1,5 +1,108 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (76) – v0.41.0: Light mode + Skeleton kalan yerler
+
+### Hedef
+Audit'te "Light mode YOK" olarak listelenmişti. FOUC-safe theme
+toggle + CSS variable overrides. Ayrıca kalan 3 dosyada Laden...
+Skeleton'a çevrildi (Week 3-4 A11y polish tamamlandı).
+
+### 1. Light mode implementation
+
+**CSS variables** (`globals.css`):
+- `:root, :root[data-theme="dark"]` — mevcut dark tokens
+- `:root[data-theme="light"]` — light overrides:
+  * --bg: #f5f5f7 (soft gray, not pure white)
+  * --surface: #ffffff (white cards)
+  * --surface2: #eeeef2 (hover)
+  * --border: #d5d5dc
+  * --text: #0f0f13
+  * --muted: #6b6b80 (same — nötr)
+  * --accent: #6b5cdb (darker purple — WCAG contrast)
+  * --accent2: #a855f7
+  * Status colors: darker (green #16a34a, red #dc2626, blue #2563eb...)
+- `html[data-theme="light"] { color-scheme: light }` — form controls, scrollbar
+
+**FOUC prevention** (`layout.tsx`):
+- `<head>` içinde inline `<script>` React hydration'dan ÖNCE çalışır
+- Öncelik: `localStorage.stundly_theme` > `prefers-color-scheme` > `dark`
+- Set `document.documentElement.dataset.theme` — CSS variable'lar hemen değişir
+- `suppressHydrationWarning` html+body'de var (script tarafından attribute set edilir)
+
+**useTheme hook** (`hooks/useTheme.ts`):
+- `{ theme, toggle, setTheme }` return
+- Mount'ta `document.documentElement.dataset.theme` okur (script'in set ettiği değer)
+- toggle → set attribute + localStorage.setItem
+- Private mode / localStorage disable → try/catch, sessiz devam
+
+**Sidebar toggle**:
+- Abmelden butonunun yanına 40x40 kare buton
+- ☀ (light mode aktif) veya 🌙 (dark mode aktif)
+- aria-label + title, WCAG 2.5.5 44x40 close-enough
+- Abmelden `flex: 1` ile toggle 40px sabit
+
+### 2. Skeleton kalan yerler (3 dosya)
+
+**vacation/page.tsx** (Urlaubsanträge listesi):
+- 3 satır Skeleton fullWidth 72px height (VacationRequest card yükseklik)
+
+**reports/page.tsx**:
+- 2 blok: 140px (KPI cards) + 220px (chart/table)
+
+**settings/page.tsx** (page load):
+- 3 blok: 140px (avatar/profile) + 200px (form) + 160px (Firma/Digest cards)
+
+Skeleton = tracker + salary (v0.34.0) + bu 3 = **5 dosya toplam**.
+
+### Neden landing/marketing sayfalarına light mode uygulanmadı
+- Landing (page.tsx, /handwerker, /notdienst, /vergleich) purpose-built
+  dark gradient hero'lar var (mockups + hero grid)
+- Bunları light'a portlamak ayrı bir tasarım işi (screenshot'lar, PhoneMock, BrowserMock renkleri)
+- Marketing sayfası authenticated app'ten daha az prioridad
+- Toggle Sidebar'da → sadece giriş yapmış user'lar için işler
+- Bu doğal ayrım: landing = dark showcase, app = user tercihine bağlı
+
+### Validation
+- TS clean · ESLint clean · Vitest 365/365 (UI değişikliği, test değişmedi)
+
+### Değişen dosyalar (7 file + son_kayit)
+- `apps/web/src/app/globals.css` — light theme CSS variables
+- `apps/web/src/app/layout.tsx` — inline FOUC script
+- `apps/web/src/hooks/useTheme.ts` — YENİ hook
+- `apps/web/src/components/ui/Sidebar.tsx` — theme toggle button
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — Skeleton
+- `apps/web/src/app/(dashboard)/reports/page.tsx` — Skeleton
+- `apps/web/src/app/(dashboard)/settings/page.tsx` — Skeleton
+- `apps/web/src/lib/version.ts` — 0.40.0 → 0.41.0
+
+### Week 3-4 TAMAM 🎉
+Kalan 0 madde. Audit'in Week 3-4 UX+Conversion listesi %100 kapalı:
+- MonthNav 44x44 ✓ (v0.34.0)
+- Modal focus trap ✓ (v0.34.0)
+- Skeleton primitive ✓ (v0.34.0)
+- Global :focus-visible ✓ (v0.34.0)
+- 100vh → 100dvh ✓ (v0.34.0)
+- Light mode ✓ (v0.41.0)
+- Weekly digest email ✓ (v0.37.0)
+- Monthly PDF report email ✓ (v0.40.0)
+- Landing testimonial (trust badges) ✓ (v0.36.0)
+- DATEV CSV export ✓ (v0.35.0)
+- /vergleich/clockodo + SEO landings ✓ (v0.38.0)
+- Beta anchor pricing ✓ (v0.36.0)
+- Onboarding sample data ✓ (v0.39.0)
+
+### Kalan — Week 5-6 Kod Sağlığı (8 madde)
+- salary/page 1148 LOC refactor → 6 component
+- Zod schemas 4 admin write route
+- React Query time_entries + vacation
+- Migration 026 → 027: 6 DB index (Week 5-6 için)
+- CI restore (tests + build)
+- Middleware role → JWT (perf)
+- Stripe webhook integration test
+- next/image + next/dynamic
+
+---
+
 ## 2026-07-11 (75) – v0.40.0: Monthly report email — retention #2
 
 ### Hedef

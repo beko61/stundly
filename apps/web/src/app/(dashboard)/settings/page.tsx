@@ -8,6 +8,7 @@ import { parseInternetsizExport } from "@/lib/import/internetsizImport";
 import type { ImportPayload } from "@/lib/import/internetsizImport";
 import { AutoFillReports } from "@/components/settings/AutoFillReports";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface Profile {
   vorname:        string;
@@ -298,7 +299,15 @@ export default function SettingsPage() {
   }
 
   if (loading) return (
-    <div style={{ textAlign: "center", padding: "80px 0", color: "var(--muted)" }}>Laden...</div>
+    <div
+      role="status"
+      aria-label="Profil wird geladen"
+      style={{ display: "flex", flexDirection: "column", gap: 12, padding: "24px 16px" }}
+    >
+      <Skeleton fullWidth height={140} radius={12} />
+      <Skeleton fullWidth height={200} radius={12} />
+      <Skeleton fullWidth height={160} radius={12} />
+    </div>
   );
 
   const field = (label: string, key: keyof Profile, opts?: { placeholder?: string; type?: string }) => (

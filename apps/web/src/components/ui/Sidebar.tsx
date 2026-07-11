@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
+import { useTheme } from "@/hooks/useTheme";
 
 type NavItem = { href: string; label: string; icon: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -45,6 +46,7 @@ export function Sidebar() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [role, setRole] = useState<Role>(null);
+  const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
     async function load() {
@@ -165,9 +167,34 @@ export function Sidebar() {
             </span>
           </div>
         )}
-        <button onClick={handleLogout} className="sidebar-logout">
-          🚪 Abmelden
-        </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={handleLogout}
+            className="sidebar-logout"
+            style={{ flex: 1 }}
+          >
+            🚪 Abmelden
+          </button>
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Light Mode aktivieren" : "Dark Mode aktivieren"}
+            title={theme === "dark" ? "Light Mode" : "Dark Mode"}
+            style={{
+              width: 40,
+              padding: "8px 0",
+              background: "var(--surface2)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              color: "var(--muted)",
+              cursor: "pointer",
+              fontSize: 14,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {theme === "dark" ? "☀" : "🌙"}
+          </button>
+        </div>
         <div className="sidebar-version">{STUNDLY_VERSION_LABEL}</div>
       </div>
     </aside>

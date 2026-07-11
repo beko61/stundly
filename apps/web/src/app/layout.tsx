@@ -74,6 +74,15 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        {/* Theme FOUC-önlemi: React hydration'dan ÖNCE data-theme'i ayarla.
+            localStorage öncelik, sonra prefers-color-scheme, fallback dark. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('stundly_theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();`,
+          }}
+        />
+      </head>
       <body suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
           {children}

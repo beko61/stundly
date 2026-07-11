@@ -8,6 +8,7 @@ import { URLAUB_ARTEN } from "@workly/shared";
 import { computeOvertime, type OvertimeEntry, type OvertimeNdEntry } from "@/lib/vacation/overtime";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface Profile {
   vorname: string; nachname: string; personal_nr: string;
@@ -650,7 +651,15 @@ export default function VacationPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0" }}>Laden...</div>
+          <div
+            role="status"
+            aria-label="Urlaubsanträge werden geladen"
+            style={{ display: "flex", flexDirection: "column", gap: 10, padding: "6px 0" }}
+          >
+            <Skeleton fullWidth height={72} radius={12} />
+            <Skeleton fullWidth height={72} radius={12} />
+            <Skeleton fullWidth height={72} radius={12} />
+          </div>
         ) : requests.length === 0 ? (
           <div style={{
             background: "color-mix(in srgb, var(--accent2) 8%, var(--surface))",

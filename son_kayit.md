@@ -1,5 +1,99 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (67) – v0.33.0: Chef-Fokus Update — company_admin dashboard redesign
+
+### Hedef
+Handwerker patronunun **gerçek günlük iş akışına** odaklı UX
+overhaul. Duplicate `/team` sayfası kaldırıldı, personal Sidebar'a
+company_admin için Firma-Panel CTA eklendi, `/company/dashboard`'da 3
+yeni widget (HEUTE-Ansicht, Compliance-Warnings, Mitarbeiter-Übersicht),
+ve `/company/employees/[id]`'de Zeitkonto kartı.
+
+### Ustaca analiz
+Kod haritasında iki büyük sorun tespit edildi:
+1. **Duplicate**: `/team` (277 LOC) + `/company/employees` (513 LOC)
+   ikisi de mitarbeiter yönetimi yapıyor. Artefakt.
+2. **Role UX**: company_admin login → /company/dashboard OK ama
+   personal sidebar'da `/company/*`'a dönüş linki yok. Admin
+   yanlışlıkla kişisel moda düşerse kayboluyor.
+3. **Dashboard yetersiz**: sadece 4 KPI + pending Urlaub. Patron'un
+   günlük ihtiyacı olan "Bugün kim çalışıyor / kim ihlalde / kim rest?"
+   göze çarpmıyor.
+
+### Yapılanlar (6 madde)
+
+**1. `/team` → 301 redirect `/company/employees`**
+- `(dashboard)/team/page.tsx`: server component redirect
+- Duplicate + karışıklık kaldırıldı. Bookmark uyumlu.
+
+**2. Personal Sidebar Firma-Panel CTA**
+- `Sidebar.tsx`: role === "company_admin" || "super_admin" ise EN ÜSTE
+  belirgin "🏢 Firma-Panel" linki → `/company/dashboard`
+- Super Admin badge altta ayrı kalır
+- "Mein Team" item ve `TEAM_NAV` sabit kaldırıldı (Auswertung grubunda)
+
+**3. HEUTE-Ansicht widget**
+- `/company/dashboard`: KPI kartlarından sonra
+- Her mitarbeiter için bugünkü status kartı:
+  🟢 ARBEITEN (Uhrzeit ile) / 🏖 URLAUB / 🤒 KRANK / 🎉 FEIERTAG /
+  🚨 NOTDIENST / ⚪ Kein Eintrag
+- Sol kenar accent renkte (status color)
+- Karta tıkla → mitarbeiter detay
+- Sıralama: bugün çalışan önce, alfabetik ikinci
+
+**4. Compliance-Warnings widget**
+- 3 kategori (varsa göster, yoksa gizle):
+  * 🚫 §3 ArbZG 10h/Tag aşımı (findDailyCapViolations)
+  * 🩺 §3 EntgFG 6 Wochen Krankheit (calcKrankheitEpisodes > 42)
+  * ⏳ §7 III BUrlG Verfall (calcUrlaubskonto.verfallWarning)
+- Her satır: mitarbeiter adı (link) + detay
+- Zaten hazır shared/utils helper'ları reused
+
+**5. Mitarbeiter-Übersicht tablosu**
+- 6 kolon: Mitarbeiter · Arbeitszeit · Urlaub übrig · Krank · Notdienst · Pending
+- Ada tıkla → detay sayfası
+- Urlaub übrig kırmızı olabilir (< 0), Krank/Notdienst chip'li
+- Pending Urlaub sarı chip
+
+**6. Zeitkonto kartı `/company/employees/[id]`**
+- Summary stats sonrasına eklendi
+- 4 stat: Anspruch (Zwölftelung ile) · Übertrag (varsa) · Genommen · Rest
+- Zwölftelung fullMonths göstergesi
+- §4 Wartezeit info (< 6 ay)
+- Verfall Warning ($< 30 gün + remaining > 0)
+- §3 EntgFG 6 Wochen aşımı Krankheit episode listesi
+
+### Data flow (efficient)
+- `/company/dashboard` tek render'da tek batch:
+  * profiles (aktif) + monthEntries + yearEntries + salary_settings +
+    monthNdEntries + pendingVacations + pendingInvites
+  * Server-side aggregate, in-memory compliance check
+- N+1 problem yok, tek JOIN-free birleşim
+
+### Validation
+- TS clean · ESLint clean · Vitest 319/319 (test değişmedi, UI-only)
+
+### Değişen dosyalar (5 file)
+- `apps/web/src/app/(dashboard)/team/page.tsx` — redirect (277 → 7 LOC)
+- `apps/web/src/components/ui/Sidebar.tsx` — Firma-Panel CTA + TEAM_NAV
+  kaldırıldı
+- `apps/web/src/app/company/dashboard/page.tsx` — komple redesign
+  (193 → 470 LOC)
+- `apps/web/src/app/company/employees/[userId]/page.tsx` — Zeitkonto
+  card eklendi (+95 LOC)
+- `apps/web/src/lib/version.ts` — 0.32.0 → 0.33.0
+
+### Kalan Audit (Week 3-6)
+- Kritik: 0 ✅
+- Major kalan Week 3-4: MonthNav 44×44 · Modal focus trap · Skeleton ·
+  Light mode · 100dvh · Weekly digest email · Monthly PDF email ·
+  Testimonial · DATEV CSV · SEO landing · Beta pricing · Onboarding
+- Major kalan Week 5-6: salary/page refactor · Zod schemas · React
+  Query · DB index migration 025 · CI restore · JWT role · Stripe
+  test · next/image next/dynamic
+
+---
+
 ## 2026-07-11 (66) – v0.32.0: R4+R5 rate limit (Supabase persistent)
 
 ### Hedef

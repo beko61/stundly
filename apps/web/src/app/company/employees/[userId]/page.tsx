@@ -1,6 +1,12 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
+import {
+  calcAnnualEntitlement,
+  calcUrlaubskonto,
+  calcKrankheitEpisodes,
+  ENTGFG_KRANKHEIT_LIMIT_DAYS,
+} from "@workly/shared";
 import { VacationDecisionButtons } from "./VacationDecisionButtons";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -102,6 +108,45 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   const prevMonth = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
   const nextMonth = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
 
+  // ─────────────────────────────────────────────────────────────
+  // Zeitkonto (Urlaub + Krankheit compliance) — YIL bazlı
+  // ─────────────────────────────────────────────────────────────
+  const yearStartISO = `${now.getFullYear()}-01-01`;
+  const yearEndISO   = `${now.getFullYear()}-12-31`;
+  const [{ data: yearEntries }, { data: salarySettingsList }] = await Promise.all([
+    admin
+      .from("time_entries")
+      .select("id, date, day_type, start_time, end_time, break_minutes, is_night_shift")
+      .eq("user_id", userId)
+      .gte("date", yearStartISO)
+      .lte("date", yearEndISO),
+    admin
+      .from("salary_settings")
+      .select("urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const settings = (salarySettingsList ?? [])[0] ?? null;
+  const anspruch = Number(settings?.urlaub_anspruch ?? 30);
+  const entitlement = calcAnnualEntitlement({
+    annualAnspruch:  anspruch,
+    employmentStart: (settings?.employment_start_date as string | null) ?? null,
+    employmentEnd:   (settings?.employment_end_date   as string | null) ?? null,
+    year:            now.getFullYear(),
+  });
+  const usedThisYear = (yearEntries ?? []).filter((e) => e.day_type === "urlaub").length;
+  const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const konto = calcUrlaubskonto({
+    thisYearEntitlement:   entitlement.anspruch,
+    thisYearUsed:          usedThisYear,
+    previousYearRemaining: Number(settings?.urlaub_carry_over ?? 0),
+    refDate:               todayISO,
+    year:                  now.getFullYear(),
+  });
+  const krankheitEpisodes = calcKrankheitEpisodes(yearEntries ?? []);
+  const krankheitOverLimit = krankheitEpisodes.filter((ep) => ep.days > ENTGFG_KRANKHEIT_LIMIT_DAYS);
+
   return (
     <div>
       {/* Geri link */}
@@ -172,6 +217,99 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Zeitkonto (Urlaub + Krankheit) — YIL bazlı */}
+      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
+        Zeitkonto · {now.getFullYear()}
+      </h2>
+      <div
+        className="card"
+        style={{
+          padding: "18px 20px",
+          marginBottom: 28,
+          background: konto.verfallWarning
+            ? "color-mix(in srgb, var(--red) 6%, var(--surface))"
+            : "var(--surface)",
+          border: konto.verfallWarning
+            ? "1px solid color-mix(in srgb, var(--red) 30%, transparent)"
+            : "1px solid var(--border)",
+        }}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 16, marginBottom: entitlement.isProrated || konto.carryOverAvailable > 0 || konto.verfallWarning || krankheitOverLimit.length > 0 ? 12 : 0 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Anspruch
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+              {entitlement.anspruch} Tage
+            </div>
+            {entitlement.isProrated && (
+              <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                {entitlement.fullMonths}/12 Monate (§5 BUrlG)
+              </div>
+            )}
+          </div>
+          {konto.carryOverAvailable > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Übertrag
+              </div>
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+                +{konto.carryOverAvailable}
+              </div>
+              <div style={{ fontSize: 10, color: konto.verfallWarning ? "var(--red)" : "var(--muted)", marginTop: 2 }}>
+                Verfall {konto.verfallDate}
+              </div>
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Genommen
+            </div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+              {usedThisYear} Tage
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Rest
+            </div>
+            <div style={{
+              fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2,
+              color: konto.remaining < 0 ? "var(--red)" : "var(--green)",
+            }}>
+              {konto.remaining} Tage
+            </div>
+          </div>
+        </div>
+
+        {konto.verfallWarning && (
+          <div style={{ marginTop: 8, fontSize: 12, color: "var(--red)", fontWeight: 700 }}>
+            ⚠️ §7 III BUrlG: {konto.carryOverAvailable} Übertrag-Tag(e) verfallen in {konto.daysUntilVerfall} Tagen (31.03.)
+          </div>
+        )}
+        {entitlement.waitingPeriodActive && (
+          <div style={{ marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
+            ℹ️ §4 BUrlG Wartezeit: Voller Urlaubsanspruch erst nach 6 Monaten Beschäftigung.
+          </div>
+        )}
+        {krankheitOverLimit.length > 0 && (
+          <div style={{
+            marginTop: 12, paddingTop: 12,
+            borderTop: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
+            fontSize: 12, color: "var(--red)", lineHeight: 1.6,
+          }}>
+            🩺 <strong>§3 EntgFG:</strong> Lohnfortzahlung endet für {krankheitOverLimit.length}{" "}
+            Krank-Episode{krankheitOverLimit.length === 1 ? "" : "n"}:
+            {" "}
+            {krankheitOverLimit.map((ep, i) => (
+              <span key={ep.start}>
+                {i > 0 && ", "}{ep.start}–{ep.end} ({ep.days}T, {ep.excessDates.length} über Limit)
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tage Tabelle (read-only) */}

@@ -38,8 +38,6 @@ const BASE_GROUPS: NavGroup[] = [
   },
 ];
 
-const TEAM_NAV: NavItem = { href: "/team", label: "Mein Team", icon: "👥" };
-
 type Role = "individual" | "employee" | "company_admin" | "super_admin" | null;
 
 export function Sidebar() {
@@ -70,13 +68,10 @@ export function Sidebar() {
     window.location.href = "/login";
   }
 
-  // Insert Team into Auswertung group if company_admin
-  const groups: NavGroup[] = BASE_GROUPS.map(g => {
-    if (g.title === "Auswertung" && role === "company_admin") {
-      return { ...g, items: [...g.items, TEAM_NAV] };
-    }
-    return g;
-  });
+  // Kişisel modda company_admin/super_admin için Firma-Panel CTA en üstte
+  // gösterilir (Super Admin badge de kalır). Nav gruplarına dokunulmaz —
+  // patron kendisi de çalışıyorsa kişisel /tracker/salary yine erişilebilir.
+  const groups: NavGroup[] = BASE_GROUPS;
 
   return (
     <aside className="sidebar">
@@ -86,9 +81,27 @@ export function Sidebar() {
         <span className="sidebar-title">STUNDLY</span>
       </div>
 
-      {/* Super admin badge */}
-      {role === "super_admin" && (
+      {/* Firma-Panel CTA — company_admin/super_admin için */}
+      {(role === "company_admin" || role === "super_admin") && (
         <div style={{ padding: "10px 12px 0" }}>
+          <Link
+            href="/company/dashboard"
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "12px 14px", borderRadius: 10, textDecoration: "none",
+              background: "color-mix(in srgb, var(--accent2) 14%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent2) 35%, transparent)",
+              color: "var(--accent2)", fontSize: 13, fontWeight: 800,
+            }}
+          >
+            <span style={{ fontSize: 15 }}>🏢</span> Firma-Panel
+          </Link>
+        </div>
+      )}
+
+      {/* Super admin badge (nur super_admin — Firma-Panel altında) */}
+      {role === "super_admin" && (
+        <div style={{ padding: "8px 12px 0" }}>
           <Link
             href="/superadmin"
             style={{

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
+import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { EmployeeExportButtons, BulkCsvButton, DatevBulkButton } from "./ReportExportButtons";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -44,17 +45,21 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
         .gte("date", firstDay).lte("date", lastDay)
     : { data: [] };
 
-  const { data: ndEntries } = userIds.length > 0
+  // Notdienst: hafta-Pazar-ay-atfı (bir hafta, Pazar'ının bulunduğu ayda sayılır)
+  // ±7 gün pay ile fetch, sonra notdienstBelongsToMonth ile filter
+  const ndRange = notdienstLoadRange(year, month);
+  const { data: ndRawEntries } = userIds.length > 0
     ? await admin
         .from("notdienst_entries")
         .select("user_id, date, start_time, end_time, erledigt")
         .in("user_id", userIds)
-        .gte("date", firstDay).lte("date", lastDay)
+        .gte("date", ndRange.start).lte("date", ndRange.end)
     : { data: [] };
+  const ndEntries = (ndRawEntries ?? []).filter(n => notdienstBelongsToMonth(n.date, year, month));
 
   const summaries = employees.map(emp => {
     const entries = (timeEntries ?? []).filter(e => e.user_id === emp.user_id);
-    const nd      = (ndEntries  ?? []).filter(n => n.user_id === emp.user_id);
+    const nd      = ndEntries.filter(n => n.user_id === emp.user_id);
     const workMin = entries.reduce((s, e) =>
       s + netMinutesForEntry({
         date: e.date,

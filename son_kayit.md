@@ -1,5 +1,92 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-11 (74) – v0.39.1: HOTFIX Notdienst ay-atfı tutarsızlığı (4 yer)
+
+### Bulgu (kullanıcı raporu)
+"Urlaub/Notdienst farklı raporlarda birbirinden farklı sayılıyor."
+
+### Root cause
+Notdienst-Wochen-Zuordnung kuralı: "Bir hafta, Pazar'ının bulunduğu ayda
+sayılır" (`notdienstBelongsToMonth`). Bu kural **bazı yerlerde uygulanmış,
+bazı yerlerde uygulanmamış**tı.
+
+Örnek: 28 Nisan (Mo) – 4 Mayıs (So) haftasında 5 Notdienst-Einsatz.
+Doğru: **hepsi MAYIS'a sayılır** (Pazar Mayıs'ta).
+- ✅ Tracker MonthlySummary: Mayıs → 5 Notdienst
+- ✅ Personel Dashboard: Mayıs → 5 Notdienst
+- ❌ Reports PDF: sadece 4 (1-4 Mayıs)
+- ❌ Company Reports: sadece 4
+- ❌ Company Dashboard: sadece 4
+- ❌ DATEV/CSV Export (API endpoint): sadece 4
+
+### Fix — `notdienstLoadRange` + `notdienstBelongsToMonth` her yerde
+Standart pattern: takvim ay ±7 gün fetch et, sonra
+`notdienstBelongsToMonth(date, year, month)` ile filter.
+
+**4 dosya düzeltildi**:
+
+1. **`apps/web/src/app/(dashboard)/reports/page.tsx`** (PDF üretim)
+   - Line 293-303: `startDate/endDate` calendar → `notdienstLoadRange`
+   - Import: `notdienstBelongsToMonth`, `notdienstLoadRange` eklendi
+   - **Not**: ekran görüntüsü zaten filter yapıyordu (line 148-153),
+     sadece PDF export bug'lıydı → aynı sayfada ekran ile PDF farklı
+     Notdienst gösteriyordu
+
+2. **`apps/web/src/app/company/reports/page.tsx`**
+   - Line 47-53: raw fetch → range + filter
+   - Import: `notdienstBelongsToMonth`, `notdienstLoadRange`
+   - Etki: mitarbeiter bazında Notdienst count + Total Notdienst
+     Übersicht KPI
+
+3. **`apps/web/src/app/company/dashboard/page.tsx`** (v0.33.0'da eklendi)
+   - Line 97: raw fetch → range + filter
+   - Import: yukarıdakiler
+   - Etki: `pendingByUser` ve Team KPI'daki Notdienst sayısı
+
+4. **`apps/web/src/app/api/company/reports/data/route.ts`**
+   - Line 83: raw fetch → range + filter
+   - Import: yukarıdakiler
+   - **KRİTİK**: bu endpoint DATEV Export + Bulk CSV + PDF hepsini
+     besliyor. Bug DATEV export'un yanlış Notdienst sayısı vermesine
+     yol açıyordu (Steuerberater'a yanlış payroll input!)
+
+### Neden tracker + personel dashboard doğruydu
+- `MonthlySummary.tsx` (line 76): `notdienstLoadRange` + filter kullanıyor
+- `NotdienstWeekly.tsx`: aynı
+- `(dashboard)/dashboard/page.tsx` (line 197): aynı
+
+Bu 3 yer doğru pattern uyguluyordu. Diğer 4 yer eksik.
+
+### Validation
+- TS clean · ESLint clean · Vitest 357/357 (test değişmedi, davranış fix)
+
+### Test manuel (kullanıcının kontrol etmesi lazım)
+- Beispiel-Notdienst 27.04.2026 (Sa) — hafta Pazar'ı 3.05 → **Mayıs**
+- Tracker (Mayıs) → 1 Notdienst
+- Reports (Mayıs) PDF → 1 Notdienst (eskiden 0)
+- Company Dashboard (Mayıs) → 1 Notdienst (eskiden 0)
+- DATEV Export (Mayıs) → 1 Notdiensttag (eskiden 0)
+
+### Değişen dosyalar (4 file + son_kayit)
+- `apps/web/src/app/(dashboard)/reports/page.tsx`
+- `apps/web/src/app/company/reports/page.tsx`
+- `apps/web/src/app/company/dashboard/page.tsx`
+- `apps/web/src/app/api/company/reports/data/route.ts`
+- `apps/web/src/lib/version.ts` — 0.39.0 → 0.39.1 (PATCH bugfix)
+
+### Urlaub tarafı için not
+Kullanıcı "urlaubda" da dedi ama Urlaub sayacı tüm sayfalarda **aynı
+kaynak** (time_entries.day_type='urlaub') kullanıyor. Farklı görünme
+olasılığı:
+- Vacation page yıl bazlı (yearUsedDays)
+- Tracker MonthlySummary ay bazlı
+- Reports ay bazlı
+
+Bunlar farklı window, farklı sayı — beklenen davranış. Bug değil.
+Kullanıcının şikayeti gerçekten Urlaub ise ekran örneği lazım.
+
+---
+
 ## 2026-07-11 (73) – v0.39.0: Onboarding sample data injection
 
 ### Hedef

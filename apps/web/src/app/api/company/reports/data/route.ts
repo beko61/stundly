@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { getFeiertage } from "@/lib/utils/feiertage";
+import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 
 /**
  * GET /api/company/reports/data?year=2026&month=6&userId=<optional>
@@ -77,15 +78,19 @@ export async function GET(req: NextRequest) {
         .order("date", { ascending: true })
     : { data: [] };
 
-  // ── Notdienst (aylık) ──────────────────────────────────────────
-  const { data: ndEntries } = userIds.length > 0
+  // ── Notdienst (aylık) — hafta-Pazar-ay-atfı ────────────────────
+  // Bir Notdienst-Woche, haftasının Pazar'ının bulunduğu ayda sayılır.
+  // ±7 gün pay ile fetch, sonra `notdienstBelongsToMonth` ile filter.
+  const ndRange = notdienstLoadRange(year, month);
+  const { data: ndRaw } = userIds.length > 0
     ? await admin
         .from("notdienst_entries")
         .select("user_id, date, start_time, end_time, erledigt, kunde, note")
         .in("user_id", userIds)
-        .gte("date", firstDay).lte("date", lastDay)
+        .gte("date", ndRange.start).lte("date", ndRange.end)
         .order("date", { ascending: true })
     : { data: [] };
+  const ndEntries = (ndRaw ?? []).filter(n => notdienstBelongsToMonth(n.date, year, month));
 
   // ── Salary settings (DATEV export için) ────────────────────────
   const { data: salarySettingsList } = userIds.length > 0

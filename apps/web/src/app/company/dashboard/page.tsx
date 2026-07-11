@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
+import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import {
   findDailyCapViolations,
   calcKrankheitEpisodes,
@@ -91,15 +92,19 @@ export default async function CompanyDashboardPage() {
         .lte("date", yearEnd)
     : { data: [] as TimeEntry[] };
 
-  // Notdienst bu ay (bonus + Übersicht için)
-  const { data: monthNdEntries } = userIds.length > 0
+  // Notdienst bu ay — hafta-Pazar-atfı (±7 gün pay ile fetch, sonra filter)
+  const ndRange = notdienstLoadRange(now.getFullYear(), now.getMonth() + 1);
+  const { data: monthNdRaw } = userIds.length > 0
     ? await admin
         .from("notdienst_entries")
         .select("user_id, date")
         .in("user_id", userIds)
-        .gte("date", firstDay)
-        .lte("date", lastDay)
+        .gte("date", ndRange.start)
+        .lte("date", ndRange.end)
     : { data: [] };
+  const monthNdEntries = (monthNdRaw ?? []).filter(n =>
+    notdienstBelongsToMonth(n.date, now.getFullYear(), now.getMonth() + 1),
+  );
 
   // Salary settings — Urlaubsanspruch/Zwölftelung/Verfall için
   const { data: salarySettings } = userIds.length > 0

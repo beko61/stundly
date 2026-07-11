@@ -9,7 +9,7 @@ import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
 import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
-import { notdienstMonthOf, isoWeek } from "@/lib/utils/weekMonth";
+import { notdienstMonthOf, notdienstBelongsToMonth, notdienstLoadRange, isoWeek } from "@/lib/utils/weekMonth";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -294,14 +294,18 @@ export default function ReportsPage() {
       const daysInMonth = new Date(year, month, 0).getDate();
       const endDate   = `${year}-${String(month).padStart(2,"0")}-${String(daysInMonth).padStart(2,"0")}`;
 
-      const [{ data: nd }, { data: prof }] = await Promise.all([
+      // Notdienst: hafta-Pazar-ay-atfı için ±7 gün pay ile çek, sonra filter
+      const ndRange = notdienstLoadRange(year, month);
+
+      const [{ data: ndRaw }, { data: prof }] = await Promise.all([
         supabase.from("notdienst_entries")
           .select("date, start_time, end_time, erledigt, kunde, note")
-          .eq("user_id", uid).gte("date", startDate).lte("date", endDate),
+          .eq("user_id", uid).gte("date", ndRange.start).lte("date", ndRange.end),
         supabase.from("profiles")
           .select("vorname, nachname, personal_nr, abteilung, vorgesetzter, email, company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, signature_data, bundesland")
           .eq("user_id", uid).maybeSingle(),
       ]);
+      const nd = (ndRaw ?? []).filter(n => notdienstBelongsToMonth(n.date, year, month));
 
       const notdienst: NotdienstEntry[] = (nd ?? []).map((n) => ({
         date:       n.date as string,

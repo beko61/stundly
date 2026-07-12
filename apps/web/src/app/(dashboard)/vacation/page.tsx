@@ -374,6 +374,14 @@ export default function VacationPage() {
       }));
       await supabase.from("time_entries").upsert(rows, { onConflict: "user_id,date" });
     }
+
+    // "Antrag einreichen" için beklenen davranış: kaydet + PDF indir + mail
+    // aç. mailTo boşsa sadece kayıt (mail göndermek istemeyen kullanıcı için
+    // escape hatch: MAIL-EMPFÄNGER alanını boşalt).
+    if (mailTo) {
+      await generatePDF();
+    }
+
     setSaving(false); setShowForm(false);
     setStartDate(""); setEndDate(""); setBemerkung(""); setVertretung("");
     void load();
@@ -1037,7 +1045,7 @@ export default function VacationPage() {
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     }}
                   >
-                    <Icon name="send" size={14} /> PDF + Mail erstellen
+                    <Icon name="send" size={14} /> Nur PDF-Vorschau (ohne Speichern)
                   </button>
                   <button
                     type="submit" disabled={saving || !startDate || !endDate}
@@ -1050,7 +1058,8 @@ export default function VacationPage() {
                     }}
                   >
                     {saving ? "Wird gespeichert..." : (
-                      <><Icon name="check" size={16} color="#1a1a2e" strokeWidth={2.5} /> Antrag einreichen</>
+                      <><Icon name="check" size={16} color="#1a1a2e" strokeWidth={2.5} />
+                        Speichern {mailTo ? "+ PDF & Mail senden" : ""}</>
                     )}
                   </button>
                 </div>

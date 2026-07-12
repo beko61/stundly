@@ -1,5 +1,49 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (83) – v0.47.1 HOTFIX: Urlaub-Antrag mail send
+
+### Bug
+Kullanıcı bildirimi: "urlaubu mail olarak gönderemiyorum tikliyorum
+kaydediyor ama o kadar."
+
+Formda iki buton vardı:
+- **PDF + Mail erstellen** (grey, secondary) → PDF indir + mailto: aç
+- **Antrag einreichen** (mor, primary) → sadece DB save, mail YOK
+
+Kullanıcı mor "Antrag einreichen" butonuna tıklıyordu (doğal olarak
+primary CTA), submit fonksiyonu sadece `vacation_requests` insert +
+`time_entries` upsert yapıyor, mailto tetiklenmiyordu. "einreichen"
+(başvuru gönder) label'ı mail beklentisi yaratıyordu.
+
+### Fix
+1. `handleSubmit` sonuna `mailTo` doluysa `generatePDF()` çağrısı
+   eklendi — save + PDF + mailto tek adımda.
+2. Primary buton label'ı dinamik: mailTo doluysa
+   "Speichern + PDF & Mail senden", boşsa "Speichern".
+3. Secondary buton label'ı netleşti: "Nur PDF-Vorschau (ohne Speichern)"
+   — kaydetmeden preview isteyen için.
+
+### Escape hatch
+Mail göndermek istemeyen kullanıcı MAIL-EMPFÄNGER alanını boşaltır.
+Default değeri profile.email (kullanıcının kendi maili) — supervisor'e
+göndermek için formda değiştirebilir.
+
+### Neden generatePDF() içine gömülü kaldı
+mailto'yu ayırıp handleSubmit'te tekrar açmak yerine mevcut PDF+mail
+fonksiyonunu direkt çağırdık. PDF de her zaman istenir bu akışta
+(kaydeden kullanıcı büyük ihtimalle Vorgesetzten'e PDF+mail göndermek
+istiyor).
+
+### Değişen dosyalar
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — handleSubmit +
+  submit button label
+- `apps/web/src/lib/version.ts` — 0.47.0 → 0.47.1
+
+### Validation
+TS clean · Test etkilenmedi (bu path'te test yok).
+
+---
+
 ## 2026-07-12 (82) – v0.47.0: salary/page.tsx refactor → 6 komponent
 
 ### Hedef

@@ -1,5 +1,61 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (81) – v0.46.0: Stripe webhook integration testleri (13 case)
+
+### Hedef
+Audit tespiti: Stripe webhook 0 test coverage. Signature verify,
+idempotency, 4 event type, email fail resilience, unknown event, DB
+throw — hepsi covered.
+
+### YENİ TEST DOSYASI — `api/stripe/webhook/__tests__/route.test.ts`
+
+**Mock stratejisi**:
+- `@/lib/stripe/server` → `stripe.webhooks.constructEvent`, `stripe.subscriptions.retrieve` intercept
+- `@supabase/supabase-js` → `createClient` fake admin döndürür, chain'e göre calls array kaydeder
+- `@/lib/email/resend` → `sendSubscriptionConfirmationEmail` spy
+
+**Table mock pattern**: makeAdmin() factory `.from(table)` çağrısını route ile aynı chain method'larıyla mock'lar (upsert, update.eq, select.eq.eq.limit.maybeSingle, insert, ...). Test sonunda `admin.calls.*` inspect edilir.
+
+### 13 test case
+
+1. **400** — signature header yok (ilk gate)
+2. **400** — invalid signature (constructEvent throws), idempotency insert olmaz
+3. **200** — duplicate event (processed=true) → early return `{duplicate:true}`, handler skip
+4. **200** — checkout.session.completed (COMPANY path) → subscriptions upsert(company_id, user_id=null, plan="team") + profiles.plan update(company_id) + email
+5. **200** — checkout INDIVIDUAL path → user_id set, company_id=null, profile lookup üzerinden email adresi
+6. **200** — bilinmeyen priceId → default "individual" plan
+7. **200** — customer.subscription.updated → status + period + cancel_at_period_end update
+8. **200** — customer.subscription.deleted → status="canceled" + canceled_at timestamp
+9. **200** — invoice.payment_failed (string subscription) → status="past_due"
+10. **200** — invoice.payment_failed (subscription null) → skip, no update
+11. **500** — handler DB throw → processed=false kalır, error kaydedilir (retry-safe)
+12. **200** — unknown event.type → sessizce processed=true, hiçbir handler tetiklenmez
+13. **200** — email gönderimi fail olsa bile 200 döner (email try/catch — kritik akışı bozmaz)
+
+### Neden bu 13 case
+- **Signature verify** (1,2): en kritik güvenlik gate, forge attempt reddedilmeli
+- **Idempotency** (3, 11): Stripe retry mekanizması `event.id` bazlı — duplicate email + duplicate plan flip önleme
+- **4 event type** (4-10): tüm handler dallarını covered — plan mapping, company vs individual, unknown price default
+- **Email failure resilience** (13): Resend down olsa webhook yine de subscription upsert etmeli — kullanıcı ödedi, plan aktif olmalı
+- **Unknown type** (12): Stripe yeni event ekliyor sürekli, sessizce geçmek doğru
+
+### Non-goals
+- Stripe SDK gerçek network call yok — pure unit test with mocks
+- Idempotency insert unique constraint yakalanan race durumu manuel test edildi (SQL insert error path console.error, non-fatal)
+
+### Validation
+- TS clean · ESLint clean · Vitest 398/398 (385 + 13 yeni)
+
+### Değişen dosyalar (2 file + son_kayit)
+- `apps/web/src/app/api/stripe/webhook/__tests__/route.test.ts` — YENİ
+- `apps/web/src/lib/version.ts` — 0.45.0 → 0.46.0
+
+### Kalan — Week 5-6 (2 madde)
+- salary/page 1148 LOC refactor (büyük iş, ayrı gün)
+- React Query time_entries + vacation (mimari değişiklik)
+
+---
+
 ## 2026-07-12 (80) – v0.45.0: Middleware role → JWT claim (auth hook)
 
 ### Hedef

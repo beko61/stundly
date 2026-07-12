@@ -1,46 +1,33 @@
 import { create } from "zustand";
-import type { TimeEntry } from "@workly/shared";
 
+/**
+ * Tracker UI state — pure client state.
+ *
+ * Server data (time_entries) React Query yönetir (hooks/queries/useTimeEntries).
+ * Bu store sadece:
+ *   - year / month — aktif ay seçimi (aylar arası nav)
+ *   - ndVersion   — Notdienst insert/update sonrası çocuk komponentlerin
+ *                   refetch tetiklemesi için bump'lanır (React Query'ye
+ *                   invalidateQueries de eklenebilir ilerde).
+ *
+ * v0.48.0 öncesi: entries + loading da burada tutuluyordu (server state
+ * mirror'ı). React Query'e taşındıkça bu alanlar kaldırıldı — tek doğruluk
+ * kaynağı için (Zustand + RQ paralel state riskini önlemek için).
+ */
 interface TrackerState {
-  entries: TimeEntry[];
   year: number;
   month: number; // 1-based
-  loading: boolean;
-  ndVersion: number; // incremented whenever notdienst_entries change
-  setEntries: (entries: TimeEntry[]) => void;
-  addEntry: (entry: TimeEntry) => void;
-  updateEntry: (entry: TimeEntry) => void;
-  deleteEntry: (id: string) => void;
+  ndVersion: number;
   setMonth: (year: number, month: number) => void;
-  setLoading: (loading: boolean) => void;
   incrementNdVersion: () => void;
 }
 
 const now = new Date();
 
 export const useTrackerStore = create<TrackerState>((set) => ({
-  entries:    [],
-  year:       now.getFullYear(),
-  month:      now.getMonth() + 1,
-  loading:    false,
-  ndVersion:  0,
-
-  setEntries: (entries) => set({ entries }),
-
-  addEntry: (entry) =>
-    set((state) => ({ entries: [...state.entries, entry].sort((a, b) => a.date.localeCompare(b.date)) })),
-
-  updateEntry: (entry) =>
-    set((state) => ({
-      entries: state.entries.map((e) => (e.id === entry.id ? entry : e)),
-    })),
-
-  deleteEntry: (id) =>
-    set((state) => ({ entries: state.entries.filter((e) => e.id !== id) })),
-
-  setMonth: (year, month) => set({ year, month, entries: [] }),
-
-  setLoading: (loading) => set({ loading }),
-
+  year:      now.getFullYear(),
+  month:     now.getMonth() + 1,
+  ndVersion: 0,
+  setMonth:  (year, month) => set({ year, month }),
   incrementNdVersion: () => set((state) => ({ ndVersion: state.ndVersion + 1 })),
 }));

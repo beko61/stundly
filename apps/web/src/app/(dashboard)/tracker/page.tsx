@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useEffect, useState } from "react";
+import type { TimeEntry } from "@workly/shared";
 import { useTrackerStore } from "@/store/trackerStore";
 import { MonthNav } from "@/components/tracker/MonthNav";
 import { MonthlySummary } from "@/components/tracker/MonthlySummary";
@@ -9,13 +10,22 @@ import { DayEntry } from "@/components/tracker/DayEntry";
 import { PhotoScanModal } from "@/components/tracker/PhotoScanModal";
 import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { useTimeEntries } from "@/hooks/useTimeEntries";
+import {
+  useTimeEntriesQuery,
+  useCreateTimeEntry,
+  useUpdateTimeEntry,
+  useDeleteTimeEntry,
+} from "@/hooks/queries/useTimeEntries";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { createClient } from "@/lib/supabase/client";
 
 export default function TrackerPage() {
-  const { entries, year, month, loading } = useTrackerStore();
-  const { fetchEntries, create, update, remove } = useTimeEntries();
+  const { year, month } = useTrackerStore();
+  const { data: entries = [], isLoading: loading, refetch } = useTimeEntriesQuery(year, month);
+  const createMut = useCreateTimeEntry();
+  const updateMut = useUpdateTimeEntry();
+  const deleteMut = useDeleteTimeEntry();
+
   const [scanOpen,      setScanOpen]      = useState(false);
   const [bundesland,    setBundesland]    = useState("NI");
   const [clearingSample, setClearingSample] = useState(false);
@@ -25,13 +35,26 @@ export default function TrackerPage() {
     [entries],
   );
 
+  // React Query mutasyonlarını DayEntry'nin beklediği shape'e adapt et
+  async function create(entry: Omit<TimeEntry, "id" | "user_id" | "created_at" | "updated_at" | "synced_at">) {
+    try { await createMut.mutateAsync(entry); return { error: null }; }
+    catch (e) { return { error: e instanceof Error ? e.message : "unknown" }; }
+  }
+  async function update(id: string, patch: Partial<TimeEntry>) {
+    try { await updateMut.mutateAsync({ id, patch }); return { error: null }; }
+    catch (e) { return { error: e instanceof Error ? e.message : "unknown" }; }
+  }
+  async function remove(id: string, date: string) {
+    try { await deleteMut.mutateAsync({ id, date }); } catch { /* ignore */ }
+  }
+
   async function handleClearSample() {
     if (!confirm("Alle Beispiel-Einträge löschen? Deine echten Einträge bleiben erhalten.")) return;
     setClearingSample(true);
     try {
       const res = await fetch("/api/onboarding/sample-data", { method: "DELETE" });
       if (res.ok) {
-        await fetchEntries();
+        await refetch();
       }
     } finally {
       setClearingSample(false);
@@ -51,9 +74,8 @@ export default function TrackerPage() {
     void loadBundesland();
   }, []);
 
-  useEffect(() => {
-    void fetchEntries();
-  }, [fetchEntries]);
+  // React Query useTimeEntriesQuery, year/month değişince otomatik refetch eder.
+  // Eski useEffect kaldırıldı — RQ handles this.
 
   const today    = new Date();
   const todayStr = today.toISOString().split("T")[0]!;
@@ -162,7 +184,7 @@ export default function TrackerPage() {
                 feiertag={feiertage[dateStr] || undefined}
                 onCreate={create}
                 onUpdate={update}
-                onDelete={async (id) => { await remove(id); }}
+                onDelete={async (id) => { await remove(id, dateStr); }}
               />
             </div>
           ))
@@ -182,7 +204,7 @@ export default function TrackerPage() {
       {scanOpen && (
         <PhotoScanModal
           onCreate={create}
-          onClose={() => { setScanOpen(false); void fetchEntries(); }}
+          onClose={() => { setScanOpen(false); void refetch(); }}
         />
       )}
     </>

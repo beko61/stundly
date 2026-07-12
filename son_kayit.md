@@ -1,5 +1,89 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (87) – v0.48.0: React Query time_entries + vacation
+
+### Hedef
+Audit tespiti: `useState + useEffect + supabase.from` pattern'i her sayfada tekrarlanıyor. Cache yok — aynı ay'ı iki komponent açtığında iki ayrı fetch. Mutation sonrası manuel refetch/store update. React Query bunu çözer.
+
+### YENİ altyapı
+
+**`@tanstack/react-query@^5`** yüklendi.
+
+**`providers/QueryProvider.tsx`** — QueryClient wrapper (staleTime 60s, gcTime 5dk, refetchOnWindowFocus off, retry 1). `app/layout.tsx` root'unda NextIntlClientProvider'ın içine wrap edildi.
+
+**`hooks/queries/useTimeEntries.ts`** — 4 hook:
+- `useTimeEntriesQuery(year, month)` — ay bazlı select
+- `useCreateTimeEntry()` — upsert on user_id+date, o ayı invalide
+- `useUpdateTimeEntry()` — patch by id, ayı invalide
+- `useDeleteTimeEntry()` — delete by id + date, o ayı invalide
+
+`useSessionUserId()` internal helper session'dan user id çeker.
+Query key: `["time_entries", user_id, year, month]` — session-scoped ve month-scoped.
+
+**`hooks/queries/useVacationRequests.ts`** — 4 hook:
+- `useVacationRequestsQuery()` — user'ın tüm vacation list
+- `useCreateVacationRequest()`, `useDeleteVacationRequest()`, `useUpdateVacationRequest()` — hepsi list cache'ini invalide
+
+### Migrate edilen componentler
+
+**`store/trackerStore.ts`** — pure UI state'e sadeleştirildi:
+- KALDI: year, month, ndVersion, setMonth, incrementNdVersion
+- SİLİNDİ: entries, loading, setEntries, addEntry, updateEntry, deleteEntry, setLoading
+- Sebep: server state RQ yönetiyor — Zustand ile paralel state riski önlendi
+
+**`app/(dashboard)/tracker/page.tsx`** —
+- `useTrackerStore().entries/loading` → `useTimeEntriesQuery(year, month)`
+- `useTimeEntries()` (eski hook) → 3 mutation hook (`useCreateTimeEntry` vs.)
+- DayEntry `onDelete` prop artık date parametresi de alıyor (RQ delete için)
+- `fetchEntries()` → `refetch()` (RQ built-in)
+- useEffect fetchEntries kaldırıldı — year/month değişince RQ auto-refetch
+
+**`components/tracker/NotdienstWeekly.tsx`** + **`MonthlySummary.tsx`** —
+- `useTrackerStore().entries` → `useTimeEntriesQuery(year, month).data ?? []`
+- **Dedup avantajı**: 3 komponent aynı `[year, month]` key'ini kullandığından RQ tek fetch yapıyor. Öncesi: page fetch + Notdienst mutex fetch + MonthlySummary mutex fetch = 3x
+
+**`app/(dashboard)/vacation/page.tsx`** —
+- `requests` local state → `useVacationRequestsQuery()`
+- `load()` → `loadAux()` (sadece profile, salary, time_entries, notdienst — vacation_requests RQ'da)
+- handleSubmit vacation_requests insert → `useCreateVacationRequest()` mutation
+- handleDelete vacation_requests delete → `useDeleteVacationRequest()` mutation
+- Mutation onSuccess otomatik list cache invalide → manuel refetch gerekmez
+
+### SILINEN
+`hooks/useTimeEntries.ts` — eski useState + supabase pattern. Yerini RQ hooks aldı.
+
+### Design notları
+- **Dumb store**: Zustand sadece UI state. Server state = RQ. Tek doğruluk kaynağı, paralel state riski yok.
+- **Query key stratejisi**: `[entity, user_id, ...scope]` — user değişince cache otomatik miss (log-out sonrası eski data görünmez).
+- **Mutation invalidation**: Her mutation kendi cache slice'ını invalide eder — cross-slice update yok.
+- **`useSessionUserId`** hook her hook'ta lazy load — bir kez fetch, sonra state.
+- **staleTime 60s**: 1 dakika içinde tekrar açılan aynı sayfa fetch yapmaz. Beta ölçekte doğru trade-off.
+
+### Etkilenmeyen
+Diğer 16 dosya (dashboard, salary, reports, company/*, api routes, ...) hâlâ direct-Supabase kullanıyor. Bunlar Phase 2 için — bu iterasyonda tracker + vacation en yüksek trafikli read/mutation path'ler.
+
+### Validation
+- TS clean · ESLint clean · Vitest 398/398 (test değişmedi)
+
+### Değişen dosyalar
+- YENİ: `apps/web/src/providers/QueryProvider.tsx`
+- YENİ: `apps/web/src/hooks/queries/useTimeEntries.ts`
+- YENİ: `apps/web/src/hooks/queries/useVacationRequests.ts`
+- MOD: `apps/web/src/app/layout.tsx` — QueryProvider wrap
+- MOD: `apps/web/src/store/trackerStore.ts` — sadeleştirildi
+- MOD: `apps/web/src/app/(dashboard)/tracker/page.tsx` — RQ hooks
+- MOD: `apps/web/src/components/tracker/NotdienstWeekly.tsx` — RQ hook
+- MOD: `apps/web/src/components/tracker/MonthlySummary.tsx` — RQ hook
+- MOD: `apps/web/src/app/(dashboard)/vacation/page.tsx` — RQ hooks
+- MOD: `apps/web/package.json` + `package-lock.json` — @tanstack/react-query^5
+- MOD: `apps/web/src/lib/version.ts` — 0.47.4 → 0.48.0
+- SIL: `apps/web/src/hooks/useTimeEntries.ts`
+
+### Kalan — Week 5-6
+**HEPSİ BİTTİ** — audit'in 8 Week 5-6 maddesinin tümü tamamlandı. Sıradaki iş kullanıcı feedback + Phase 2 (diğer sayfalar RQ) veya feature backlog.
+
+---
+
 ## 2026-07-12 (86) – v0.47.4 HOTFIX: Urlaub silince gün standard saatlerle geri doldurulsun
 
 ### Bug

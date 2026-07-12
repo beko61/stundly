@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration } from "@workly/shared";
 import { notdienstBelongsToMonth, notdienstLoadRange, weekMondayOf } from "@/lib/utils/weekMonth";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { useTimeEntriesQuery } from "@/hooks/queries/useTimeEntries";
 
 interface NdRow {
   date: string;
@@ -47,7 +48,8 @@ function minsToTime(min: number): string {
 }
 
 export function NotdienstWeekly() {
-  const { entries, year, month, ndVersion } = useTrackerStore();
+  const { year, month, ndVersion } = useTrackerStore();
+  const { data: entries = [] } = useTimeEntriesQuery(year, month);
   const [ndRows, setNdRows] = useState<NdRow[]>([]);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;

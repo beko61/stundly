@@ -10,6 +10,11 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
+import {
+  useVacationRequestsQuery,
+  useCreateVacationRequest,
+  useDeleteVacationRequest,
+} from "@/hooks/queries/useVacationRequests";
 
 interface Profile {
   vorname: string; nachname: string; personal_nr: string;
@@ -156,8 +161,13 @@ const STATUS_INFO: Record<VacationRequest["status"], { label: string; color: str
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function VacationPage() {
-  const [requests,  setRequests]  = useState<VacationRequest[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  // React Query — vacation_requests list + mutations
+  const { data: requests = [], isLoading: reqsLoading, refetch: refetchRequests } = useVacationRequestsQuery();
+  const createReqMut = useCreateVacationRequest();
+  const deleteReqMut = useDeleteVacationRequest();
+
+  const [auxLoading,   setAuxLoading]  = useState(true);   // profile, salary, time_entries, notdienst yükleniyor mu
+  const loading   = reqsLoading || auxLoading;
   const [showForm,  setShowForm]  = useState(false);
   const [profile,   setProfile]   = useState<Profile | null>(null);
 
@@ -185,7 +195,7 @@ export default function VacationPage() {
   );
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void loadAux(); }, []);
   // Body scroll lock when panel open
   useEffect(() => {
     if (showForm) {
@@ -196,17 +206,21 @@ export default function VacationPage() {
     return () => { document.body.style.overflow = ""; };
   }, [showForm]);
 
-  async function load() {
-    setLoading(true);
+  /**
+   * Aux data yükle (profile, salary, time_entries, notdienst).
+   * vacation_requests React Query üzerinden ayrı olarak fetch ediliyor.
+   * Mutation sonrası refetch için hem loadAux hem refetchRequests çağrılır.
+   */
+  async function loadAux() {
+    setAuxLoading(true);
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
-    if (!user) { setLoading(false); return; }
+    if (!user) { setAuxLoading(false); return; }
 
     const yearStartISO = `${year}-01-01`;
     const yearEndISO   = `${year}-12-31`;
-    const [{ data: reqs }, { data: prof }, { data: salary }, { data: timeData }, { data: ndData }] = await Promise.all([
-      supabase.from("vacation_requests").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
+    const [{ data: prof }, { data: salary }, { data: timeData }, { data: ndData }] = await Promise.all([
       supabase.from("profiles").select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon").eq("user_id", user.id).single(),
       supabase.from("salary_settings").select("urlaub_anspruch, monthly_target_hours").eq("user_id", user.id)
         .order("created_at", { ascending: false }).limit(1).maybeSingle(),
@@ -219,7 +233,6 @@ export default function VacationPage() {
     ]);
 
     if (salary?.urlaub_anspruch) setVacTotal(Number(salary.urlaub_anspruch));
-    if (reqs) setRequests(reqs as VacationRequest[]);
 
     // monthly_target_hours → günlük hedef (21.7 ortalama iş günü/ay).
     // Default Almanya tam zamanlı: 173h/ay → ~7.97h/gün ≈ 8h.
@@ -249,7 +262,7 @@ export default function VacationPage() {
       if (prof.signature_data) setSigData(prof.signature_data);
       if (prof.email) setMailTo(prof.email);
     }
-    setLoading(false);
+    setAuxLoading(false);
   }
 
   // ── Computed ──────────────────────────────────────────────────────────────
@@ -360,16 +373,25 @@ export default function VacationPage() {
     if (!session?.user) { setSaving(false); return; }
     const userId = session.user.id;
 
-    await supabase.from("vacation_requests").insert({
-      user_id:    userId,
-      start_date: startDate,
-      end_date:   endDate,
-      days_count: days,
-      reason:     bemerkung || null,
-      urlaub_art: urlaubArt,
-      vertretung: vertretung || null,
-      status:     "pending",
-    });
+    // vacation_requests → React Query mutation (list cache otomatik invalide olur)
+    try {
+      await createReqMut.mutateAsync({
+        start_date: startDate,
+        end_date:   endDate,
+        days_count: days,
+        reason:     bemerkung || null,
+        urlaub_art: urlaubArt,
+        vertretung: vertretung || null,
+        status:     "pending",
+      });
+    } catch (err) {
+      console.error("[vacation] create failed:", err);
+      setSaving(false);
+      return;
+    }
+
+    // time_entries urlaub günleri (RQ hook range=month, burada year-wide yazıyoruz —
+    // supabase direct upsert kaldı, RQ cache'i aux load ile refresh olur)
     const dates = workdayDates(startDate, endDate);
     if (dates.length > 0) {
       const rows = dates.map(date => ({
@@ -389,7 +411,7 @@ export default function VacationPage() {
 
     setSaving(false); setShowForm(false);
     setStartDate(""); setEndDate(""); setBemerkung(""); setVertretung("");
-    void load();
+    void loadAux();
   }
 
   /**
@@ -415,7 +437,9 @@ export default function VacationPage() {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
     const toDelete = requests.find(r => r.id === id);
-    await supabase.from("vacation_requests").delete().eq("id", id);
+    // vacation_requests → RQ mutation (list cache otomatik invalide)
+    try { await deleteReqMut.mutateAsync({ id }); }
+    catch (err) { console.error("[vacation] delete failed:", err); return; }
     if (toDelete && userId) {
       const dates = workdayDates(toDelete.start_date, toDelete.end_date);
       if (dates.length > 0) {
@@ -448,7 +472,7 @@ export default function VacationPage() {
         }
       }
     }
-    void load();
+    void loadAux();
   }
 
   function handleSaveSignature() {

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
+import { useTimeEntriesQuery } from "@/hooks/queries/useTimeEntries";
 
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT       = 30; // Fallback: salary_settings.urlaub_anspruch okunamazsa
@@ -25,7 +26,8 @@ interface MonthlySummaryProps {
 }
 
 export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
-  const { entries, year, month, ndVersion } = useTrackerStore();
+  const { year, month, ndVersion } = useTrackerStore();
+  const { data: entries = [] } = useTimeEntriesQuery(year, month);
   const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
   const [yearUrlaub, setYearUrlaub] = useState(0); // tüm yılın Urlaub gün sayısı
   const [targetHours, setTargetHours] = useState(TARGET_HOURS_DEFAULT);

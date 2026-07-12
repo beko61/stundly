@@ -7,6 +7,7 @@ import { CookieBanner } from "@/components/ui/CookieBanner";
 import { SupportButton } from "@/components/ui/SupportButton";
 import { RegisterSW } from "@/components/ui/RegisterSW";
 import { InstallPrompt } from "@/components/ui/InstallPrompt";
+import { QueryProvider } from "@/providers/QueryProvider";
 import "./globals.css";
 
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
@@ -85,13 +86,15 @@ export default async function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
-          {children}
-          <SupportButton />
-          <CookieBanner />
-          <InstallPrompt />
-          <RegisterSW />
-          <Analytics />
-          <SpeedInsights />
+          <QueryProvider>
+            {children}
+            <SupportButton />
+            <CookieBanner />
+            <InstallPrompt />
+            <RegisterSW />
+            <Analytics />
+            <SpeedInsights />
+          </QueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>

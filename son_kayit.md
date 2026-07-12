@@ -1,5 +1,50 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (86) – v0.47.4 HOTFIX: Urlaub silince gün standard saatlerle geri doldurulsun
+
+### Bug
+Kullanıcı: "urlaub yaptım örnek 2 ocak çalışma günü sonra urlaubu
+sildim sildiğim gün boş kalıyor otomatik o günün saatlerinin
+gelmesini istiyorum."
+
+Önceki davranış: Vacation delete → o günlerin `time_entries` rows'ları
+SIL (`delete()`). Sonuç: takvimde o günler tamamen boş, sanki
+çalışılmadığı gün gibi. Kullanıcı bekliyor: normal Arbeitstag olsun
+(varsayılan saatlerle).
+
+### Fix
+`handleDelete()` DB akışı değişti:
+- Önce vacation_requests row sil (aynı)
+- Sonra o günlerin time_entries'te `day_type="arbeiten"` olarak upsert:
+  * `getStandardTimes()` (localStorage, Settings → Standard-Arbeitszeiten)
+  * `getDefaultForDow(dow, std)` — Mo-Do vs Fr için ayrı saatler
+  * Weekend safeguard: workdayDates() zaten Sa/So filtreliyor,
+    ama emin olmak için `defaults === null` fallback
+
+Kullanıcı Settings'te standard saatleri değiştirmemişse
+DEFAULT_STANDARD_TIMES kullanılır: Mo-Do 07:45–17:00 (60min pause),
+Fr 07:45–14:30 (30min pause).
+
+### Neden delete + insert değil upsert
+`onConflict: user_id,date` ile atomic overwrite. Delete + insert
+race condition açar, daha yavaş, weekend edge case'i yönetmek zor.
+
+### Alternative düşünülüp reddedildi
+"Silinmeden önceki entry'yi restore et" — bunun için history tablosu
+gerekir. Vacation yaratılırken önceki entry siliniyor (upsert
+overwrite). Şu an geri getirilemez. Standard saatler pragmatik
+default — çoğu kullanıcı bunu bekliyor.
+
+### Değişen dosyalar
+- `apps/web/src/app/(dashboard)/vacation/page.tsx` — handleDelete +
+  getStandardTimes import
+- `apps/web/src/lib/version.ts` — 0.47.3 → 0.47.4
+
+### Validation
+TS clean.
+
+---
+
 ## 2026-07-12 (85) – v0.47.3 HOTFIX: Mail gesture context + resend butonu
 
 ### Bug 1: PDF sonrası mail açılmıyor

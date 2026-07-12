@@ -9,6 +9,7 @@ import { computeOvertime, type OvertimeEntry, type OvertimeNdEntry } from "@/lib
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
 
 interface Profile {
   vorname: string; nachname: string; personal_nr: string;
@@ -418,8 +419,33 @@ export default function VacationPage() {
     if (toDelete && userId) {
       const dates = workdayDates(toDelete.start_date, toDelete.end_date);
       if (dates.length > 0) {
-        await supabase.from("time_entries").delete()
-          .eq("user_id", userId).eq("day_type", "urlaub").in("date", dates);
+        // Urlaub silindi → o günleri sadece silmiyoruz, standard çalışma
+        // saatleriyle geri dolduruyoruz. Kullanıcı beklentisi: "urlaub kaldırılınca
+        // o gün normal iş günü gibi görünsün" (offline versiyondaki davranış).
+        // upsert onConflict=user_id,date urlaub row'unu overwrite eder.
+        // NOT: workdayDates() zaten Sa/So filtreler → sadece Mo-Fr geliyor.
+        const std = getStandardTimes();
+        const rows = dates
+          .map(date => {
+            const dow      = new Date(date).getDay();
+            const defaults = getDefaultForDow(dow, std);
+            if (!defaults) return null; // güvenlik — Sa/So olmamalı ama emin ol
+            return {
+              user_id:        userId,
+              date,
+              day_type:       "arbeiten" as const,
+              start_time:     defaults.start,
+              end_time:       defaults.end,
+              break_minutes:  defaults.pause,
+              is_night_shift: false,
+              note:           null,
+              tags:           [] as string[],
+            };
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null);
+        if (rows.length > 0) {
+          await supabase.from("time_entries").upsert(rows, { onConflict: "user_id,date" });
+        }
       }
     }
     void load();

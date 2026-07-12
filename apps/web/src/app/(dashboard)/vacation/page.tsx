@@ -15,6 +15,10 @@ interface Profile {
   eintrittsdatum: string; abteilung: string; vorgesetzter: string;
   email: string; company_name: string | null; logo_data: string | null;
   signature_data: string | null; bundesland: string;
+  firma_strasse:  string | null;
+  firma_plz:      string | null;
+  firma_ort:      string | null;
+  firma_telefon:  string | null;
 }
 
 // ── Inline SVG Icons ────────────────────────────────────────────────────────
@@ -202,7 +206,7 @@ export default function VacationPage() {
     const yearEndISO   = `${year}-12-31`;
     const [{ data: reqs }, { data: prof }, { data: salary }, { data: timeData }, { data: ndData }] = await Promise.all([
       supabase.from("vacation_requests").select("*").eq("user_id", user.id).order("start_date", { ascending: false }),
-      supabase.from("profiles").select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland").eq("user_id", user.id).single(),
+      supabase.from("profiles").select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon").eq("user_id", user.id).single(),
       supabase.from("salary_settings").select("urlaub_anspruch, monthly_target_hours").eq("user_id", user.id)
         .order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("time_entries")
@@ -410,64 +414,161 @@ export default function VacationPage() {
     setSigData(data);
   }
 
-  function pdfRow(doc: import("jspdf").jsPDF, label: string, val: string, y: number) {
-    doc.setFontSize(9); doc.setTextColor(107, 107, 128); doc.text(label, 20, y);
-    doc.setTextColor(30, 30, 40); doc.setFontSize(10); doc.text(val, 75, y);
-  }
-
   async function generatePDF() {
     const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const p = profile;
-    doc.setFillColor(26, 26, 46);
-    doc.rect(0, 0, 210, 38, "F");
+
+    // Sayfa boyutları — A4: 210×297mm, sol margin 18, sağ margin 192
+    const W = 210, L = 18, R = 192, CW = R - L;
+    let y = 15;
+
+    // ── LOGO (merkezî, üstte, 16×16) ──────────────────────────────────────
     if (p?.logo_data) {
-      try { doc.addImage(p.logo_data, "PNG", 160, 8, 32, 16); } catch { /* ignore */ }
+      try {
+        doc.addImage(p.logo_data, "PNG", W / 2 - 8, y, 16, 16);
+        y += 19;
+      } catch {
+        y += 2;
+      }
     }
-    doc.setFontSize(10); doc.setTextColor(196, 132, 252);
-    const companyLine = p?.company_name ? `STUNDLY — ${p.company_name}` : "STUNDLY";
-    doc.text(companyLine, 20, 16);
-    doc.setFontSize(20); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
-    doc.text("Urlaubsantrag", 20, 30); doc.setFont("helvetica", "normal");
-    let y = 50;
-    doc.setFillColor(240, 240, 245); doc.rect(15, y - 6, 180, 52, "F");
-    doc.setFontSize(8); doc.setTextColor(107, 107, 128); doc.text("MITARBEITER", 20, y); y += 6;
-    pdfRow(doc, "Name, Vorname:",  `${p?.nachname ?? ""}, ${p?.vorname ?? ""}`.replace(/^,\s*|,\s*$/, "").trim() || "—", y); y += 7;
-    pdfRow(doc, "Personal-Nr.:",   p?.personal_nr    ?? "—", y); y += 7;
-    pdfRow(doc, "Eintrittsdatum:", p?.eintrittsdatum ?? "—", y); y += 7;
-    pdfRow(doc, "Abteilung:",      p?.abteilung      ?? "—", y); y += 7;
-    pdfRow(doc, "Vorgesetzte/r:",  p?.vorgesetzter   ?? "—", y); y += 7;
+
+    // ── HEADER — firma adı + adres + separator ────────────────────────────
+    doc.setFontSize(13); doc.setFont("helvetica", "bold"); doc.setTextColor(0);
+    doc.text(p?.company_name || "Stundly", W / 2, y, { align: "center" });
+    y += 4.5;
+
+    // Adres satırı: "Straße - PLZ Ort | Tel." (mevcut olanları birleştir)
+    const addressParts: string[] = [];
+    if (p?.firma_strasse) addressParts.push(p.firma_strasse);
+    if (p?.firma_plz || p?.firma_ort) {
+      addressParts.push(`${p?.firma_plz ?? ""} ${p?.firma_ort ?? ""}`.trim());
+    }
+    const addrLine1 = addressParts.join(" - ");
+    const addrLine2 = p?.firma_telefon ? `Tel. ${p.firma_telefon}` : "";
+    const headerLine = [addrLine1, addrLine2].filter(Boolean).join(" | ");
+    if (headerLine) {
+      doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+      doc.text(headerLine, W / 2, y, { align: "center" });
+      y += 3;
+    }
+    doc.setDrawColor(80); doc.setLineWidth(0.5); doc.line(L, y, R, y); y += 7;
+
+    // ── TITLE ─────────────────────────────────────────────────────────────
+    doc.setFontSize(15); doc.setFont("helvetica", "bold");
+    doc.text("URLAUBSANTRAG", W / 2, y, { align: "center" }); y += 9;
+
+    // ── Helpers: gri section bar + label:value row ────────────────────────
+    function sec(t: string) {
+      doc.setFillColor(235, 235, 235); doc.rect(L, y - 3, CW, 5.5, "F");
+      doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.setTextColor(50);
+      doc.text(t, L + 3, y + 0.5); doc.setTextColor(0);
+      y += 6;
+    }
+    function rw(lbl: string, val: string) {
+      doc.setFontSize(8); doc.setFont("helvetica", "bold");
+      doc.text(lbl, L + 2, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(val || "", L + 40, y);
+      doc.setDrawColor(220); doc.setLineWidth(0.1); doc.line(L, y + 1.5, R, y + 1.5);
+      y += 4.5;
+    }
+
+    // ── MITARBEITER ───────────────────────────────────────────────────────
+    sec("MITARBEITER");
+    rw("Name:",           p?.nachname       ?? "");
+    rw("Vorname:",        p?.vorname        ?? "");
+    rw("Personal-Nr.:",   p?.personal_nr    ?? "");
+    rw("Eintrittsdatum:", p?.eintrittsdatum ?? "");
+    rw("Abteilung:",      p?.abteilung      ?? "");
+    rw("Vorgesetzte/r:",  p?.vorgesetzter   ?? "");
+    if (vertretung) rw("Vertretung:", vertretung);
+    y += 2;
+
+    // ── URLAUBSÜBERSICHT ──────────────────────────────────────────────────
+    sec("URLAUBSUEBERSICHT");
+    rw("Jahresurlaub:", `${VAC_TOTAL} Tage`);
+    rw("Resturlaub:",   `${Math.max(0, remainingDays - days)} Tage`);
+    y += 2;
+
+    // ── URLAUBSZEITRAEUME — tablo ─────────────────────────────────────────
+    sec("URLAUBSZEITRAEUME");
+
+    // Koyu header row (Von | Bis | Anz. Tage | Urlaubsart)
+    doc.setFillColor(55, 55, 55); doc.rect(L, y - 3, CW, 6, "F");
+    doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(255);
+    doc.text("Von",        L + 3,   y + 0.5);
+    doc.text("Bis",        L + 38,  y + 0.5);
+    doc.text("Anz. Tage",  L + 78,  y + 0.5);
+    doc.text("Urlaubsart", L + 110, y + 0.5);
+    doc.setTextColor(0);
     y += 6;
-    doc.setFillColor(240, 240, 245); doc.rect(15, y - 6, 180, 59, "F");
-    doc.setFontSize(8); doc.setTextColor(107, 107, 128); doc.text("URLAUBSDATEN", 20, y); y += 6;
-    pdfRow(doc, "Von:",          fmtDate(startDate),         y); y += 7;
-    pdfRow(doc, "Bis:",          fmtDate(endDate),           y); y += 7;
-    pdfRow(doc, "Arbeitstage:",  `${days} Tage`,             y); y += 7;
-    pdfRow(doc, "Urlaubsart:",   urlaubArt,                   y); y += 7;
-    pdfRow(doc, "Vertretung:",   vertretung || "—",           y); y += 7;
-    pdfRow(doc, "Bemerkungen:",  bemerkung || "—",            y); y += 7;
-    y += 10;
-    doc.setDrawColor(107, 107, 128);
-    doc.line(20, y + 20, 90, y + 20); doc.line(120, y + 20, 190, y + 20);
-    doc.setFontSize(8); doc.setTextColor(107, 107, 128);
-    doc.text("Datum, Unterschrift Arbeitnehmer", 20, y + 25);
-    doc.text("Datum, Unterschrift Arbeitgeber",  120, y + 25);
-    if (sigData) {
-      try { doc.addImage(sigData, "PNG", 20, y, 60, 18); } catch { /* ignore */ }
+
+    // Data row
+    doc.setFontSize(8); doc.setFont("helvetica", "normal");
+    doc.text(fmtDate(startDate), L + 3,   y);
+    doc.text(fmtDate(endDate),   L + 38,  y);
+    doc.text(String(days),       L + 78,  y);
+    doc.text(urlaubArt,          L + 110, y);
+    doc.setDrawColor(180); doc.rect(L, y - 3, CW, 6);
+    y += 6;
+
+    // Gesamt row
+    doc.setFont("helvetica", "bold");
+    doc.text("Gesamt:", L + 62, y);
+    doc.text(String(days), L + 78, y);
+    doc.rect(L, y - 3, CW, 6);
+    y += 8;
+
+    // ── BEMERKUNGEN (varsa) ───────────────────────────────────────────────
+    if (bemerkung) {
+      sec("BEMERKUNGEN");
+      doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      const bl = doc.splitTextToSize(bemerkung, CW - 6);
+      doc.text(bl, L + 2, y);
+      y += bl.length * 3.5 + 3;
     }
-    const heute = new Date().toLocaleDateString("de-DE");
-    doc.setFontSize(9); doc.setTextColor(30, 30, 40);
-    doc.text(`${heute},`, 20, y + 30);
-    doc.setFontSize(8); doc.setTextColor(107, 107, 128);
-    doc.text(`Erstellt am ${heute} · ${STUNDLY_VERSION_LABEL}`, 20, 285);
+
+    // ── SIGNATURE — alt kısımda 2 sütun ──────────────────────────────────
+    const heuteStr = new Date().toLocaleDateString("de-DE");
+    let sigY = Math.max(y + 18, 240);
+    if (sigY > 268) sigY = 268;
+    doc.setDrawColor(80); doc.setLineWidth(0.3);
+
+    // Sol: Arbeitnehmer (imza + tarih)
+    if (sigData) {
+      try { doc.addImage(sigData, "PNG", L + 5, sigY - 20, 50, 16); } catch { /* ignore */ }
+    }
+    doc.line(L, sigY, L + 72, sigY);
+    doc.setFontSize(7); doc.setFont("helvetica", "normal");
+    doc.text(`Arbeitnehmer/in  -  ${heuteStr}`, L + 36, sigY + 4, { align: "center" });
+
+    // Sağ: Vorgesetzte/r (boş, arbeitgeber tarafından imzalanacak)
+    doc.line(R - 72, sigY, R, sigY);
+    doc.text("Vorgesetzte/r  -  Datum", R - 36, sigY + 4, { align: "center" });
+
+    // Version footer
+    doc.setFontSize(6); doc.setTextColor(150);
+    doc.text(STUNDLY_VERSION_LABEL, W / 2, 290, { align: "center" });
+
+    // ── SAVE + MAIL ───────────────────────────────────────────────────────
     const fname = `${p?.nachname ?? "Urlaub"}_${startDate}_${endDate}`.replace(/\s/g, "_");
     doc.save(`Urlaubsantrag_${fname}.pdf`);
+
     if (mailTo) {
-      const subject = encodeURIComponent(`Urlaubsantrag ${p?.vorname ?? ""} ${p?.nachname ?? ""} — ${fmtDate(startDate)} bis ${fmtDate(endDate)}`);
-      const body = encodeURIComponent(
-        `Sehr geehrte/r Damen und Herren,\n\nhiermit beantrage ich Urlaub vom ${fmtDate(startDate)} bis ${fmtDate(endDate)} (${days} Arbeitstage).\nUrlaubsart: ${urlaubArt}${vertretung ? "\nVertretung: " + vertretung : ""}${bemerkung ? "\nBemerkung: " + bemerkung : ""}\n\nMit freundlichen Grüßen\n${p?.vorname ?? ""} ${p?.nachname ?? ""}`
+      const subject = encodeURIComponent(
+        `Urlaubsantrag ${p?.vorname ?? ""} ${p?.nachname ?? ""} — ${fmtDate(startDate)} bis ${fmtDate(endDate)}`
       );
-      window.open(`mailto:${mailTo}?subject=${subject}&body=${body}`);
+      const body = encodeURIComponent(
+        `Sehr geehrte Damen und Herren,\n\n` +
+        `hiermit beantrage ich Urlaub vom ${fmtDate(startDate)} bis ${fmtDate(endDate)} (${days} Arbeitstage).\n` +
+        `Den unterschriebenen Urlaubsantrag finden Sie im Anhang als PDF.\n\n` +
+        `Mit freundlichen Grüßen\n${p?.vorname ?? ""} ${p?.nachname ?? ""}`
+      );
+      // Kaydet+PDF akışında mailto'yu kısa gecikmeyle aç, PDF download çakışmasın
+      setTimeout(() => {
+        window.open(`mailto:${mailTo}?subject=${subject}&body=${body}`, "_self");
+      }, 800);
     }
   }
 

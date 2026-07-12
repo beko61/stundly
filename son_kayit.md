@@ -1,5 +1,54 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (84) – v0.47.2 HOTFIX: Urlaubsantrag PDF redesign (offline stil)
+
+### Bug
+Kullanıcı: "çıktı saçma geldi bana, önceki (offline) versiyondaki gibi
+yap." Mevcut PDF web-app tarzı: mor gradient header, logo sağ üstte,
+solda büyük "Urlaubsantrag" yazısı. Klasik ofis dokümanına benzemiyor.
+
+### Reference şablon
+`C:\Users\bktas\Desktop\masa\Claude\kullanici_v2.html` — Supabase öncesi
+offline standalone HTML versiyon. `generateUrlaubPDF` fonksiyonu (line
+1954) klasik almanca iş formu layoutunda:
+- Logo merkezî, üstte (16×16)
+- Firma adı + adres merkezî + altında yatay çizgi
+- URLAUBSANTRAG büyük başlık merkezî
+- Gri (235,235,235) section header bar'lar
+- Label:value satırları alt ince çizgi ile
+- URLAUBSZEITRAEUME'de dark table header + tablo satırları
+- BEMERKUNGEN (varsa) ayrı section
+- Alt kısımda 2 sütun signature line (Arbeitnehmer/Vorgesetzte/r)
+
+### Fix — jsPDF layout tamamen yeniden yazıldı
+`generatePDF()` offline şablona birebir çevrildi. Farklar:
+- Company info offline'da hardcoded ("Ideal Sanitaer") → dinamik olarak
+  `profile.company_name` + `firma_strasse/plz/ort/telefon` (migration
+  014'te var, `profiles.select()`'e eklendi + Profile interface güncellendi)
+- Resturlaub hesabı: state'teki `remainingDays - days` (bu antrag onaylanınca
+  kalan)
+- Vertretung (offline'da yok) — MITARBEITER section'a opsiyonel row olarak eklendi
+- Signature: sigData varsa Arbeitnehmer imzasının üstüne overlay + auto-datum
+- Version footer sayfa altında minik gri "Stundly vX.Y.Z"
+
+### Değişen dosyalar
+- `apps/web/src/app/(dashboard)/vacation/page.tsx`:
+  * Profile interface + 4 firma_* alanı
+  * profiles.select() query bu alanları da fetch ediyor
+  * pdfRow helper silindi, generatePDF içinde inline sec+rw helper'lar
+  * PDF layout tamamen yeni
+- `apps/web/src/lib/version.ts` — 0.47.1 → 0.47.2
+
+### Validation
+TS clean. Test etkilenmedi.
+
+### Kullanıcı manuel doğrulama
+Deploy sonrası yeni antrag → PDF indir. Firma adı, adres, telefon
+Settings → Firma sayfasında set edilmiş olmalı (yoksa boş görünecek —
+adres satırı kalmaz, sadece firma adı ve horizontal line görünür).
+
+---
+
 ## 2026-07-12 (83) – v0.47.1 HOTFIX: Urlaub-Antrag mail send
 
 ### Bug

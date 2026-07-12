@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
+// generateMonthlyReportPDF: dynamic import (~200KB @react-pdf/renderer + jspdf)
+// Sadece PDF butonuna basınca yüklenir — initial bundle'da yok.
 import { buildCsvDetail, buildCsvSummary, csvDownload } from "@/lib/export/csvExport";
 import { buildDatevMonthlyCsv, datevDownload, splitFullName } from "@/lib/export/datevExport";
 import type { TimeEntry } from "@workly/shared";
@@ -59,6 +60,8 @@ export function EmployeeExportButtons({
       if (!emp) { setErr("Mitarbeiter nicht gefunden"); setBusy(null); return; }
 
       if (format === "pdf") {
+        // Lazy load PDF module (~200KB) — sadece PDF butonuna basınca
+        const { generateMonthlyReportPDF } = await import("@/lib/pdf/monthlyReportPdf");
         await generateMonthlyReportPDF({
           year: data.year, month: data.month,
           entries:   emp.entries,

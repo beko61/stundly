@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
-import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf";
+// generateMonthlyReportPDF: dynamic import — ~200KB @react-pdf/renderer + jspdf
+// initial bundle'da yer almaz, PDF butonuna basınca yüklenir.
 import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
@@ -335,6 +336,8 @@ export default function ReportsPage() {
       if (prof?.email)         profile.company_email = prof.email as string;
 
       const feiertage = getFeiertage(year, (prof?.bundesland as string | null) ?? "NI");
+      // Lazy load PDF module (~200KB) — sadece butona basınca
+      const { generateMonthlyReportPDF } = await import("@/lib/pdf/monthlyReportPdf");
       await generateMonthlyReportPDF({ year, month, entries, notdienst, feiertage, profile });
     } catch (err) {
       console.error("PDF Error:", err);

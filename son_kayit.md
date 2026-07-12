@@ -1,5 +1,65 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (79) – v0.44.0: next/dynamic PDF module lazy load
+
+### Hedef
+Audit'te "next/image + next/dynamic" listelenmişti. PDF render modülü
+`@react-pdf/renderer + jspdf` ~200KB — initial bundle'da yer alıyordu
+ama sadece PDF butonuna basınca kullanılıyor. Dynamic import ile
+lazy load edildi.
+
+### Değişen dosyalar (2)
+
+**`app/(dashboard)/reports/page.tsx`**:
+- Öncesi: `import { generateMonthlyReportPDF } from "@/lib/pdf/monthlyReportPdf"` (initial bundle)
+- Sonrası:
+  ```ts
+  // Type import kalır (type-only, runtime 0 byte)
+  import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
+  // Value import dynamic — sadece butona basınca yüklenir
+  const { generateMonthlyReportPDF } = await import("@/lib/pdf/monthlyReportPdf");
+  ```
+
+**`app/company/reports/ReportExportButtons.tsx`**:
+- Öncesi: static import
+- Sonrası: aynı dynamic pattern
+
+### Etki (tahminen)
+- Reports page initial JS bundle: ~200KB azalır
+- FCP + TTI (First Contentful Paint + Time to Interactive) hızlanır
+- PDF butonuna tıklayan user'lar bir kez indirir, cache'lenir
+- CSV/DATEV export'a etki yok (o modüller ~10KB)
+
+### Neden signature canvas dokunulmadı
+- react-signature-canvas ~20KB — küçük
+- Vacation + Settings pages authenticated area — user zaten yüklenmiş
+- Ref typing dynamic ile karmaşıklaşıyor (useRef<SignatureCanvas>)
+- Marjinal kazanç yüksek complexity — skip
+- Vacation page zaten jspdf'yi dynamic yapıyor (line 411)
+
+### Neden next/image atlandı
+- `.eslintrc.json`'da `@next/next/no-img-element: "off"` — bilinçli tercih
+- Landing screenshot'ları yok (PhoneMock/BrowserMock CSS-only)
+- Kullanıcı user-content (logo, signature) base64 data URL — next/image
+  data: URL'i optimize edemez
+- Vercel image optimization = ekstra cost, ROI marginal
+
+### Validation
+- TS clean · ESLint clean · Vitest 385/385 (davranış değişmedi)
+
+### Değişen dosyalar (3 file + son_kayit)
+- `apps/web/src/app/(dashboard)/reports/page.tsx` — dynamic PDF
+- `apps/web/src/app/company/reports/ReportExportButtons.tsx` — dynamic PDF
+- `apps/web/src/lib/version.ts` — 0.43.0 → 0.44.0
+
+### Kalan — Week 5-6 (4 madde)
+- salary/page 1148 LOC refactor (büyük iş, ayrı gün)
+- React Query time_entries + vacation (mimari değişiklik)
+- Middleware role → JWT (perf gain — her request DB read)
+- Stripe webhook integration test
+
+---
+
 ## 2026-07-11 (78) – v0.43.0: Zod schemas 4 admin write route
 
 ### Hedef

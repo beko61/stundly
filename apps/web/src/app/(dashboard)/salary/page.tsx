@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   calculateMonthlySalary,
-  formatDuration,
   calcNettoFromBrutto,
   calcKrankheitEpisodes,
   ENTGFG_KRANKHEIT_LIMIT_DAYS,
@@ -14,28 +13,16 @@ import {
   calcUrlaubskonto,
 } from "@workly/shared";
 import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode, KrankheitEpisode } from "@workly/shared";
-import { YearPicker } from "@/components/ui/YearPicker";
-import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
-import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTrackerStore } from "@/store/trackerStore";
 import { usePrivacyMode, maskMoney } from "@/lib/privacy";
 import { getFeiertage } from "@/lib/utils/feiertage";
-
-const STEUERKLASSEN: { value: Steuerklasse; label: string; hint: string }[] = [
-  { value: "I",   label: "I",   hint: "Ledig" },
-  { value: "II",  label: "II",  hint: "Alleinerz." },
-  { value: "III", label: "III", hint: "Verh. (höher)" },
-  { value: "IV",  label: "IV",  hint: "Verh. (gleich)" },
-  { value: "V",   label: "V",   hint: "Verh. (niedr.)" },
-  { value: "VI",  label: "VI",  hint: "2. Job" },
-];
-
-const KIRCHENSTEUER_OPTIONS: { value: KirchensteuerRate; label: string }[] = [
-  { value: 0,    label: "Keine" },
-  { value: 0.08, label: "8% (BW, BY)" },
-  { value: 0.09, label: "9% (übrige)" },
-];
+import { RecordModal } from "./components/RecordModal";
+import { SalaryHeader } from "./components/SalaryHeader";
+import { YearlyCharts } from "./components/YearlyCharts";
+import { TaxSettingsCard } from "./components/TaxSettingsCard";
+import { SettingsCard } from "./components/SettingsCard";
+import { MonthBreakdown } from "./components/MonthBreakdown";
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_S   = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -446,396 +433,32 @@ export default function SalaryPage() {
 
   return (
     <>
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800 }}>Gehaltsübersicht</h1>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={togglePrivacy}
-              title={moneyHidden ? "Beträge anzeigen" : "Beträge verbergen"}
-              aria-label={moneyHidden ? "Beträge anzeigen" : "Beträge verbergen"}
-              style={{
-                background: moneyHidden ? "color-mix(in srgb, var(--blue) 14%, transparent)" : "var(--surface2)",
-                border: `1px solid ${moneyHidden ? "color-mix(in srgb, var(--blue) 35%, transparent)" : "var(--border)"}`,
-                color: moneyHidden ? "var(--blue)" : "var(--muted)",
-                width: 36, height: 30, borderRadius: 8, cursor: "pointer",
-                fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
-              {moneyHidden ? "🔒" : "👁"}
-            </button>
-            <YearPicker value={year} onChange={setYear} />
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <button onClick={prevMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 44, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Vorheriger Monat">‹</button>
-          <h1 style={{ fontSize: 18, fontWeight: 800, minWidth: 90, textAlign: "center" }}>{MONTHS[month - 1]}</h1>
-          <button onClick={nextMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 44, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Nächster Monat">›</button>
-        </div>
-      </div>
+      <SalaryHeader
+        year={year}
+        month={month}
+        moneyHidden={moneyHidden}
+        onYearChange={setYear}
+        onPrevMonth={prevMonth}
+        onNextMonth={nextMonth}
+        onTogglePrivacy={togglePrivacy}
+      />
 
       <div style={{ padding: "20px 16px 40px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 960, margin: "0 auto" }}>
 
-        {/* ── Settings ── */}
-        <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span className="label">⚙️ Einstellungen</span>
-            {settingsSaved && <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 700 }}>✓ Gespeichert</span>}
-          </div>
+        <SettingsCard
+          settings={settings}
+          onChange={setSettings}
+          loading={loading}
+          settingsSaved={settingsSaved}
+          month={month}
+          entriesCount={entries.length}
+          totalGross={breakdown.total_gross}
+          netto={nettoCalc.netto}
+          fmtEur={fmtEur}
+          whatIfNettoDelta={whatIfPlusOne.nettoDelta}
+        />
 
-          {/* Live preview — Settings değişince anında güncellenir */}
-          {!loading && entries.length > 0 && (
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              gap: 10, marginBottom: 14,
-              padding: "10px 14px",
-              background: "color-mix(in srgb, var(--accent2) 8%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--accent2) 25%, transparent)",
-              borderRadius: 10,
-              fontFamily: "'DM Mono',monospace",
-              fontSize: 12,
-            }}>
-              <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "'Syne',sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                ⚡ Live {MONTHS[month-1]}
-              </span>
-              <span style={{ color: "var(--green)" }}>{fmtEur(breakdown.total_gross)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Brutto</span></span>
-              <span style={{ color: "var(--muted)" }}>→</span>
-              <span style={{ color: "var(--accent2)" }}>{fmtEur(nettoCalc.netto)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Netto</span></span>
-            </div>
-          )}
-          <div className="settings-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {([
-              {
-                key: "hourly_rate", label: "Stundenlohn (€)",
-                tipTitle: "Stundenlohn",
-                tipBody: "Dein Brutto-Stundenlohn. Grundlage für alle Berechnungen — Grundgehalt, Überstunden und Bonusbeträge.\n\nStandard für Handwerk: 15 €/h.\nGesetzlicher Mindestlohn 2026: 13,90 €/h.",
-              },
-              {
-                key: "monthly_target_hours", label: "Sollstunden/Monat",
-                tipTitle: "Sollstunden / Monat",
-                tipBody: "Deine vertragliche Monatsarbeitszeit.\n\nVerwendung:\n• Lohnberechnung (Festgehalt = Sollstunden × Stundenlohn)\n• Tracker-Differenz (Über-/Unterstunden)\n\nTypisch 160-174h für Vollzeit.",
-              },
-              {
-                key: "overtime_rate_multiplier", label: "Überstunden ×",
-                tipTitle: "Überstunden-Multiplikator",
-                tipBody: "Aufschlag für Stunden über deiner Sollzeit.\n\n• 1,00 = kein Extra (Überstunden wie normale Stunden)\n• 1,25 = 25 % Aufschlag (üblich)\n• 1,50 = 50 % Aufschlag (Wochenende/Nacht)",
-              },
-              {
-                key: "night_shift_bonus", label: "Nachtzuschlag €/h",
-                tipTitle: "Nachtzuschlag",
-                tipBody: "Zusätzlicher Bonus pro Stunde für als 'Nachtschicht' markierte Einträge.\n\nWird auf den Stundenlohn aufgeschlagen, NICHT mit dem Überstundensatz multipliziert.",
-              },
-              {
-                key: "notdienst_bonus", label: "Notdienst €/Tag",
-                tipTitle: "Notdienst-Bonus",
-                tipBody: "Pauschal pro Einsatz (unabhängig von der Dauer).\n\n⏱ Auszahlungs-Zeitpunkt:\nNotdienst aus Vormonat wird im aktuellen Monat ausgezahlt. Beispiel: Januar-Notdienst → Februar-Brutto.",
-              },
-              {
-                key: "urlaub_anspruch", label: "Urlaubsanspruch / Jahr",
-                tipTitle: "Urlaubsanspruch",
-                tipBody: "Deine jährlichen Urlaubstage laut Vertrag.\n\n• 24 Tage = BUrlG-Minimum (6-Tage-Woche)\n• 20 Tage = BUrlG-Minimum (5-Tage-Woche)\n• 30 Tage = übliche Regelung im Handwerk\n\nWird im Tracker für 'Urlaub übrig' verwendet.",
-              },
-            ] as { key: keyof SalarySettings; label: string; tipTitle: string; tipBody: string }[]).map(({ key, label, tipTitle, tipBody }) => {
-              const isHourly = key === "hourly_rate";
-              const rate = settings.hourly_rate ?? 0;
-              const belowMindestlohn = isHourly && rate > 0 && rate < MINDESTLOHN_CURRENT;
-              return (
-                <div key={key}>
-                  <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
-                    {label}
-                    <InfoTooltip title={tipTitle}>{tipBody}</InfoTooltip>
-                  </label>
-                  <input
-                    className="input" type="number" step="0.01"
-                    value={settings[key] as number}
-                    onChange={(e) => setSettings(s => ({ ...s, [key]: parseFloat(e.target.value) || 0 }))}
-                    style={isHourly && belowMindestlohn ? { borderColor: "var(--red)" } : undefined}
-                  />
-                  {isHourly && (
-                    <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.5 }}>
-                      <div style={{ color: belowMindestlohn ? "var(--red)" : "var(--muted)" }}>
-                        {belowMindestlohn ? (
-                          <>⚠️ Unter dem gesetzlichen Mindestlohn ({formatMindestlohn()}/h) — bitte prüfen.</>
-                        ) : (
-                          <>💶 Gesetzlicher Mindestlohn {new Date().getFullYear()}: <strong style={{ color: "var(--text)" }}>{formatMindestlohn()}/h</strong></>
-                        )}
-                      </div>
-                      {entries.length > 0 && whatIfPlusOne.nettoDelta > 0 && (
-                        <div style={{ color: "var(--green)", marginTop: 2 }}>
-                          💡 <strong>+1 €/h</strong> ≈ +{fmtEur(whatIfPlusOne.nettoDelta)} / Monat Netto
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Beschäftigung & Urlaub (BUrlG) ── */}
-        <div className="card">
-          <div className="label" style={{ marginBottom: 12 }}>💼 Beschäftigung & Urlaub</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-            <div>
-              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
-                Beschäftigt seit
-                <InfoTooltip title="§5 BUrlG Zwölftelung">
-                  Datum, an dem dein Arbeitsverhältnis begonnen hat.{"\n\n"}
-                  Wenn im laufenden Jahr, wird der Urlaubsanspruch anteilig
-                  gekürzt (1/12 pro fehlendem Kalendermonat).{"\n\n"}
-                  Nach 6 Monaten Wartezeit (§4 BUrlG) besteht der volle Anspruch.
-                </InfoTooltip>
-              </label>
-              <input
-                className="input" type="date"
-                value={settings.employment_start_date ?? ""}
-                onChange={(e) => setSettings(s => ({ ...s, employment_start_date: e.target.value || null }))}
-              />
-            </div>
-            <div>
-              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
-                Beschäftigt bis (optional)
-                <InfoTooltip title="Beschäftigungsende">
-                  Datum, an dem dein Arbeitsverhältnis endet (letzter Arbeitstag).
-                  Nur ausfüllen wenn befristet oder Kündigung ausgesprochen.
-                  Leer = weiterhin aktiv.
-                </InfoTooltip>
-              </label>
-              <input
-                className="input" type="date"
-                value={settings.employment_end_date ?? ""}
-                onChange={(e) => setSettings(s => ({ ...s, employment_end_date: e.target.value || null }))}
-              />
-            </div>
-            <div>
-              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
-                Übertrag Vorjahr (Tage)
-                <InfoTooltip title="§7 III BUrlG Übertrag">
-                  Übertragene Urlaubstage aus dem Vorjahr, die noch nicht
-                  genommen wurden.{"\n\n"}
-                  Diese Tage verfallen am 31.03. des laufenden Jahres, wenn
-                  sie bis dahin nicht genommen wurden (§7 III S. 2 BUrlG).{"\n\n"}
-                  Übertragung ist nur bei dringenden betrieblichen oder
-                  persönlichen Gründen zulässig — Abstimmung mit AG.
-                </InfoTooltip>
-              </label>
-              <input
-                className="input" type="number" step="0.5" min={0} max={60}
-                value={settings.urlaub_carry_over ?? 0}
-                onChange={(e) => setSettings(s => ({ ...s, urlaub_carry_over: parseFloat(e.target.value) || 0 }))}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── Steuer-Einstellungen ── */}
-        <div className="card">
-          <div className="label" style={{ marginBottom: 12 }}>🇩🇪 Steuer & Abzüge</div>
-
-          {/* Steuerklasse — visual buttons */}
-          <div style={{ marginBottom: 14 }}>
-            <label className="label" style={{ marginBottom: 6, display: "inline-flex", alignItems: "center" }}>
-              Steuerklasse
-              <InfoTooltip title="Lohnsteuerklasse">
-                Deine Steuerklasse laut Lohnsteuerkarte (I–VI).{"\n\n"}
-                • I = Ledig / dauernd getrennt{"\n"}
-                • II = Alleinerziehend{"\n"}
-                • III = Verheiratet, höher verdienend{"\n"}
-                • IV = Verheiratet, etwa gleich{"\n"}
-                • V = Verheiratet, niedriger verdienend{"\n"}
-                • VI = Zweitjob (höchste Steuer)
-              </InfoTooltip>
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
-              {STEUERKLASSEN.map(({ value, label, hint }) => {
-                const active = (settings.steuerklasse ?? "I") === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setSettings(s => ({ ...s, steuerklasse: value }))}
-                    title={hint}
-                    style={{
-                      padding: "10px 4px",
-                      background: active ? "var(--accent)" : "var(--surface2)",
-                      border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                      borderRadius: 8,
-                      color: active ? "white" : "var(--muted)",
-                      fontFamily: "'Syne',sans-serif",
-                      fontWeight: 800,
-                      fontSize: 14,
-                      cursor: "pointer",
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    <div>{label}</div>
-                    <div style={{ fontSize: 8, fontWeight: 600, opacity: 0.8, marginTop: 2 }}>{hint}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Row 2: Kirchensteuer + Kind */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <div>
-              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
-                Kirchensteuer
-                <InfoTooltip title="Kirchensteuer">
-                  Wird auf die Lohnsteuer aufgeschlagen, wenn du Mitglied einer Kirche bist.{"\n\n"}
-                  • 9 % in den meisten Bundesländern{"\n"}
-                  • 8 % in Bayern und Baden-Württemberg{"\n"}
-                  • Keine, wenn nicht in der Kirche
-                </InfoTooltip>
-              </label>
-              <select
-                className="input"
-                value={String(settings.kirchensteuer ?? 0)}
-                onChange={(e) => setSettings(s => ({ ...s, kirchensteuer: Number(e.target.value) as KirchensteuerRate }))}
-                style={{ appearance: "none" }}
-              >
-                {KIRCHENSTEUER_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
-                Kind im Haushalt
-                <InfoTooltip title="Kinder & Pflegeversicherung">
-                  Beeinflusst nur die Pflegeversicherung (PV):{"\n\n"}
-                  • Mit Kind: 1,7 % PV{"\n"}
-                  • Ohne Kind (ab 23 Jahre): 2,35 % PV (Kinderlosenzuschlag 0,6 %){"\n\n"}
-                  Hat KEINEN Einfluss auf die Lohnsteuer.
-                </InfoTooltip>
-              </label>
-              <button
-                type="button"
-                onClick={() => setSettings(s => ({ ...s, hat_kinder: !s.hat_kinder }))}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  background: settings.hat_kinder ? "var(--green)" : "var(--surface2)",
-                  border: `1px solid ${settings.hat_kinder ? "var(--green)" : "var(--border)"}`,
-                  borderRadius: 10,
-                  color: settings.hat_kinder ? "white" : "var(--muted)",
-                  fontFamily: "'Syne',sans-serif",
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                {settings.hat_kinder ? "✓ Ja (PV 1,7%)" : "Nein (PV 2,35%)"}
-              </button>
-            </div>
-          </div>
-
-          {/* Manual mode */}
-          <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: settings.tax_mode === "manual" ? 10 : 0 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", display: "inline-flex", alignItems: "center" }}>
-                  Manueller Modus
-                  <InfoTooltip title="Manueller Abzugs-Modus">
-                    Wenn die automatische Berechnung stark von deiner echten Abrechnung abweicht, kannst du einen festen Gesamt-Abzugssatz eingeben.{"\n\n"}
-                    Beispiel: Echte Abrechnung zeigt 32 % Abzug → trage 32 ein.{"\n\n"}
-                    Stundly nutzt dann diesen Prozentsatz statt EStG-Berechnung + SV-Beiträge.
-                  </InfoTooltip>
-                </div>
-                <div style={{ fontSize: 11, color: "var(--muted)" }}>Fester % statt echte Berechnung</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSettings(s => ({ ...s, tax_mode: s.tax_mode === "manual" ? "auto" : "manual" }))}
-                style={{
-                  padding: "6px 14px",
-                  background: settings.tax_mode === "manual" ? "var(--accent)" : "var(--surface)",
-                  border: `1px solid ${settings.tax_mode === "manual" ? "var(--accent)" : "var(--border)"}`,
-                  borderRadius: 999,
-                  color: settings.tax_mode === "manual" ? "white" : "var(--muted)",
-                  fontFamily: "'Syne',sans-serif",
-                  fontWeight: 700,
-                  fontSize: 11,
-                  cursor: "pointer",
-                }}
-              >
-                {settings.tax_mode === "manual" ? "AN" : "AUS"}
-              </button>
-            </div>
-            {settings.tax_mode === "manual" && (
-              <div>
-                <label className="label">Abzug in %</label>
-                <input
-                  className="input"
-                  type="number" step="0.1" min="0" max="100"
-                  value={settings.manuell_abzug ?? 0}
-                  onChange={(e) => setSettings(s => ({ ...s, manuell_abzug: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* §3b EStG SFN-Zuschläge */}
-          <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, marginTop: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", display: "inline-flex", alignItems: "center" }}>
-                  §3b Zuschlag (SFN)
-                  <InfoTooltip title="Sonntag/Feiertag/Nacht-Zuschläge">
-                    §3b EStG: Zuschläge für Arbeit an Sonntagen, Feiertagen und in der Nacht
-                    (20-06 Uhr) sind steuer- und teilweise sv-frei.{"\n\n"}
-                    • Nacht 20-06 Uhr: 25 %{"\n"}
-                    • Sonntag: 50 %{"\n"}
-                    • Feiertag: 125 %{"\n"}
-                    • Überschneidung: additiv (z.B. Sonntag+Nacht = 75 %){"\n\n"}
-                    Grundlohn-Cap: 50 €/h steuerfrei, 25 €/h sv-frei.{"\n\n"}
-                    Wenn aktiv: automatisch aus deinen Arbeitszeiten berechnet und
-                    zum Brutto addiert. Netto wird höher (weniger Lohnsteuer + SV).{"\n\n"}
-                    Vereinfacht — exakte Payroll nur mit Steuerberater.
-                  </InfoTooltip>
-                </div>
-                <div style={{ fontSize: 11, color: "var(--muted)" }}>Steuerfreie Zuschläge automatisch berechnen</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSettings(s => ({ ...s, sfn_enabled: !s.sfn_enabled }))}
-                style={{
-                  padding: "6px 14px",
-                  background: settings.sfn_enabled ? "var(--accent)" : "var(--surface)",
-                  border: `1px solid ${settings.sfn_enabled ? "var(--accent)" : "var(--border)"}`,
-                  borderRadius: 999,
-                  color: settings.sfn_enabled ? "white" : "var(--muted)",
-                  fontFamily: "'Syne',sans-serif",
-                  fontWeight: 700,
-                  fontSize: 11,
-                  cursor: "pointer",
-                }}
-              >
-                {settings.sfn_enabled ? "AN" : "AUS"}
-              </button>
-            </div>
-          </div>
-
-          <div style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            background: "color-mix(in srgb, var(--yellow) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--yellow) 25%, transparent)",
-            borderRadius: 8,
-            fontSize: 11,
-            color: "var(--muted)",
-            lineHeight: 1.55,
-          }}>
-            ⚠️ <strong style={{ color: "var(--text)" }}>Wichtig:</strong> Alle Brutto/Netto-Werte sind <strong style={{ color: "var(--yellow)" }}>Schätzungen</strong>.
-            Die echte Lohnabrechnung kann abweichen — Krankenkassen-Zusatzbeitrag (kassenspezifisch),
-            geldwerte Vorteile, Pauschalsteuer und Freibeträge werden nicht berücksichtigt.
-            Für exakte Werte bitte deine echte Gehaltsabrechnung verwenden.
-          </div>
-        </div>
+        <TaxSettingsCard settings={settings} onChange={setSettings} />
 
         {/* ── Year-to-Date Übersicht ── */}
         {!loading && ytd.brutto > 0 && (
@@ -966,482 +589,60 @@ export default function SalaryPage() {
           </div>
         ) : (
           <>
-            {/* HERO — Brutto → Netto */}
-            <div className="card purple">
-              <div className="label" style={{ marginBottom: 12, display: "inline-flex", alignItems: "center" }}>
-                💰 {MONTHS[month-1]} — Schätzung
-                <InfoTooltip title="Warum nur eine Schätzung?" color="var(--yellow)" icon="⚠️">
-                  Die echte Lohnabrechnung kann abweichen, weil:{"\n\n"}
-                  • <strong>Krankenkassen-Zusatzbeitrag</strong> variiert je Kasse (0,9 – 2,5 %){"\n"}
-                  • <strong>Geldwerte Vorteile</strong> (Dienstwagen, Job-Ticket, Essensgutscheine){"\n"}
-                  • <strong>Pauschalsteuer</strong> bei Minijobs oder Bonuszahlungen{"\n"}
-                  • <strong>Vermögenswirksame Leistungen</strong>, betriebliche Altersvorsorge{"\n"}
-                  • <strong>Freibeträge</strong> auf deiner Steuerkarte (Werbungskosten, Kinderfreibetrag){"\n\n"}
-                  Stundly nutzt EStG §32a 2024 + Standard-SV-Sätze. Genauigkeit ±5 % bei mittlerem Brutto.{"\n\n"}
-                  Für exakte Werte → echte Gehaltsabrechnung verwenden.
-                </InfoTooltip>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 12%, transparent)", borderRadius: 12, padding: "12px 8px" }}>
-                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>BRUTTO</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--green)" }}>
-                    {fmtEur(breakdown.total_gross)}
-                  </div>
-                </div>
-                <div style={{ fontSize: 22, color: "var(--muted)" }}>→</div>
-                <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 12, padding: "12px 8px" }}>
-                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>NETTO</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--accent2)" }}>
-                    {fmtEur(nettoCalc.netto)}
-                  </div>
-                </div>
-              </div>
-              <div style={{ textAlign: "center", fontSize: 11, color: "var(--muted)" }}>
-                Abzüge gesamt: <strong style={{ color: "var(--red)" }}>{fmtEur(nettoCalc.abzuege.gesamt)}</strong>
-                {nettoCalc.abzuege.manuell && <> (manuell {nettoCalc.abzuege.manuellProzent}%)</>}
-              </div>
-            </div>
+            <MonthBreakdown
+              year={year}
+              month={month}
+              settings={settings}
+              breakdown={breakdown}
+              nettoCalc={nettoCalc}
+              urlaubskonto={urlaubskonto}
+              krankheitOverLimit={krankheitOverLimit}
+              currentMonthNotdienstDays={currentMonthNotdienstDays}
+              curRecord={curRecord}
+              fmtEur={fmtEur}
+              onOpenRecordModal={openRecordModal}
+              onJumpToPrevMonthTracker={() => {
+                const prevMonth = month === 1 ? 12 : month - 1;
+                const prevYear  = month === 1 ? year - 1 : year;
+                setTrackerMonth(prevYear, prevMonth);
+                router.push("/tracker");
+              }}
+            />
 
-            {/* §5+§7 BUrlG — Urlaubskonto (Zwölftelung + Verfall 31.03) */}
-            {(urlaubskonto.entitlement.isProrated || urlaubskonto.konto.carryOverAvailable > 0 || urlaubskonto.konto.verfallWarning) && (
-              <div
-                className="card"
-                style={{
-                  background: urlaubskonto.konto.verfallWarning
-                    ? "color-mix(in srgb, var(--red) 10%, var(--surface))"
-                    : "color-mix(in srgb, var(--accent2) 8%, var(--surface))",
-                  border: urlaubskonto.konto.verfallWarning
-                    ? "1px solid color-mix(in srgb, var(--red) 35%, transparent)"
-                    : "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 8, display: "inline-flex", alignItems: "center" }}>
-                  🏖 Urlaubskonto {year}
-                  <InfoTooltip title="BUrlG Zwölftelung + Verfall">
-                    §5 BUrlG (Zwölftelung): Wenn dein Arbeitsverhältnis nicht das
-                    ganze Jahr besteht, verringert sich der Anspruch um 1/12 pro
-                    fehlendem Kalendermonat.{"\n\n"}
-                    §7 III BUrlG (Übertrag): Urlaub muss im Kalenderjahr genommen
-                    werden. Übertrag aus dem Vorjahr verfällt am 31.03.
-                    des laufenden Jahres, wenn er bis dahin nicht genommen wurde.{"\n\n"}
-                    Einstellungen unten:
-                    {" "}Beschäftigungsbeginn/-ende + Übertrag aus Vorjahr.
-                  </InfoTooltip>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, fontSize: 12 }}>
-                  <div>
-                    <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Anspruch</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
-                      {urlaubskonto.entitlement.anspruch} Tage
-                    </div>
-                    {urlaubskonto.entitlement.isProrated && (
-                      <div style={{ fontSize: 10, color: "var(--muted)" }}>
-                        {urlaubskonto.entitlement.fullMonths}/12 Monate (§5)
-                      </div>
-                    )}
-                  </div>
-                  {urlaubskonto.konto.carryOverAvailable > 0 && (
-                    <div>
-                      <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Übertrag</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
-                        +{urlaubskonto.konto.carryOverAvailable}
-                      </div>
-                      <div style={{ fontSize: 10, color: urlaubskonto.konto.verfallWarning ? "var(--red)" : "var(--muted)" }}>
-                        Verfall {urlaubskonto.konto.verfallDate}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Genommen</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
-                      {urlaubskonto.usedThisYear} Tage
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Rest</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: urlaubskonto.konto.remaining < 0 ? "var(--red)" : "var(--green)" }}>
-                      {urlaubskonto.konto.remaining} Tage
-                    </div>
-                  </div>
-                </div>
-                {urlaubskonto.konto.verfallWarning && (
-                  <div style={{ marginTop: 8, fontSize: 11, color: "var(--red)", fontWeight: 700 }}>
-                    ⚠️ {urlaubskonto.konto.carryOverAvailable} Übertrag-Tag(e) verfallen in {urlaubskonto.konto.daysUntilVerfall} Tagen (31.03.)
-                  </div>
-                )}
-                {urlaubskonto.entitlement.waitingPeriodActive && (
-                  <div style={{ marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
-                    ℹ️ §4 BUrlG Wartezeit: Voller Urlaubsanspruch erst nach 6 Monaten Beschäftigung.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* §3 EntgFG — Krankheit über 6 Wochen */}
-            {krankheitOverLimit.length > 0 && (
-              <div
-                role="alert"
-                className="card"
-                style={{
-                  background: "color-mix(in srgb, var(--red) 10%, var(--surface))",
-                  border: "1px solid color-mix(in srgb, var(--red) 35%, transparent)",
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--red)", marginBottom: 6, display: "inline-flex", alignItems: "center" }}>
-                  🩺 §3 EntgFG — Lohnfortzahlung endet
-                  <InfoTooltip title="6 Wochen Lohnfortzahlung">
-                    §3 EntgFG: Der Arbeitgeber zahlt bei Krankheit maximal
-                    6 Wochen (42 Kalendertage) das volle Gehalt weiter.{"\n\n"}
-                    Ab dem 43. Tag zahlt die Krankenkasse Krankengeld:{"\n"}
-                    • 70 % des Bruttos{"\n"}
-                    • Höchstens 90 % des Nettos{"\n\n"}
-                    Diese Anzeige nutzt eine vereinfachte Kettenlogik
-                    (kalendarisch aufeinanderfolgende Krank-Einträge).
-                    Fortsetzungserkrankung nach §3 II EntgFG wird nicht modelliert.
-                  </InfoTooltip>
-                </div>
-                {krankheitOverLimit.map(ep => (
-                  <div key={ep.start} style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.55 }}>
-                    <strong style={{ color: "var(--text)" }}>{ep.start} — {ep.end}</strong>
-                    {" · "}{ep.days} Kalendertage{" · "}
-                    <span style={{ color: "var(--red)" }}>
-                      {ep.excessDates.length} Tag{ep.excessDates.length === 1 ? "" : "e"} über Limit
-                    </span>
-                    {" · ab "}{ep.excessDates[0]}{" Krankengeld"}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Verdienst breakdown */}
-            <div className="card">
-              <div className="label" style={{ marginBottom: 10 }}>📊 Verdienst-Aufschlüsselung</div>
-              {(() => {
-                const prevMonthName = MONTHS[(month - 2 + 12) % 12]!;
-                const rows: Array<{ key: string; label: string; value: string; clickable: boolean }> = [
-                  { key: "hours",     label: "Gearbeitete Stunden",   value: formatDuration(Math.round(breakdown.worked_hours * 60)), clickable: false },
-                  { key: "base",      label: "Grundgehalt",           value: fmtEur(breakdown.base_pay),           clickable: false },
-                  { key: "overtime",  label: "Überstundenvergütung",  value: fmtEur(breakdown.overtime_pay),       clickable: false },
-                  { key: "night",     label: "Nachtzuschlag",         value: fmtEur(breakdown.night_shift_bonus),  clickable: false },
-                  {
-                    key:   "notdienst",
-                    label: currentMonthNotdienstDays > 0
-                      ? `Notdienst-Bonus (${currentMonthNotdienstDays}× aus ${prevMonthName}) →`
-                      : `Notdienst-Bonus (0× aus ${prevMonthName})`,
-                    value:     fmtEur(breakdown.notdienst_bonus),
-                    clickable: currentMonthNotdienstDays > 0,
-                  },
-                ];
-                if (settings.sfn_enabled && breakdown.sfn_zuschlag > 0) {
-                  rows.push({
-                    key: "sfn",
-                    label: "§3b Zuschlag (SFN, steuerfrei-Anteil)",
-                    value: fmtEur(breakdown.sfn_zuschlag),
-                    clickable: false,
-                  });
-                }
-                return rows;
-              })().map(({ key, label, value, clickable }) => {
-                const onClick = clickable && key === "notdienst" ? () => {
-                  const prevMonth = month === 1 ? 12 : month - 1;
-                  const prevYear  = month === 1 ? year - 1 : year;
-                  setTrackerMonth(prevYear, prevMonth);
-                  router.push("/tracker");
-                } : undefined;
-                return (
-                  <div
-                    key={key}
-                    onClick={onClick}
-                    title={clickable ? "Klick: zu Notdienst-Einträgen im Tracker springen" : undefined}
-                    style={{
-                      display: "flex", justifyContent: "space-between",
-                      padding: "7px 0",
-                      borderBottom: "1px solid var(--border)",
-                      cursor: clickable ? "pointer" : "default",
-                      ...(clickable ? {
-                        marginLeft: -6, marginRight: -6, paddingLeft: 6, paddingRight: 6, borderRadius: 6,
-                        transition: "background 0.15s",
-                      } : {}),
-                    }}
-                    onMouseEnter={clickable ? (e) => { (e.currentTarget as HTMLDivElement).style.background = "color-mix(in srgb, var(--orange) 8%, transparent)"; } : undefined}
-                    onMouseLeave={clickable ? (e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; } : undefined}
-                  >
-                    <span style={{ fontSize: 13, color: clickable ? "var(--orange)" : "var(--muted)", fontWeight: clickable ? 700 : 400 }}>{label}</span>
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13 }}>{value}</span>
-                  </div>
-                );
-              })}
-              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10 }}>
-                <span style={{ fontWeight: 700, fontSize: 14 }}>Brutto Gesamt</span>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>
-                  {fmtEur(breakdown.total_gross)}
-                </span>
-              </div>
-            </div>
-
-            {/* Abzüge breakdown — only in auto mode */}
-            {!nettoCalc.abzuege.manuell && breakdown.total_gross > 0 && (
-              <div className="card red">
-                <div className="label" style={{ marginBottom: 10 }}>🧾 Abzüge im Detail</div>
-                {[
-                  { label: "Lohnsteuer",          value: nettoCalc.abzuege.lohnsteuer },
-                  { label: "Solidaritätszuschlag", value: nettoCalc.abzuege.soli },
-                  { label: "Kirchensteuer",       value: nettoCalc.abzuege.kirchensteuer },
-                  { label: "Rentenversicherung (RV)", value: nettoCalc.abzuege.rv },
-                  { label: "Arbeitslosenversicherung (AV)", value: nettoCalc.abzuege.av },
-                  { label: "Krankenversicherung (KV)", value: nettoCalc.abzuege.kv },
-                  { label: "Pflegeversicherung (PV)", value: nettoCalc.abzuege.pv },
-                ].map(({ label, value }) => (
-                  <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
-                    <span style={{ fontSize: 12, color: "var(--muted)" }}>{label}</span>
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: value > 0 ? "var(--red)" : "var(--muted)" }}>
-                      − {fmtEur(value)}
-                    </span>
-                  </div>
-                ))}
-                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>Summe Abzüge</span>
-                  <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: "var(--red)" }}>
-                    − {fmtEur(nettoCalc.abzuege.gesamt)}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* ── Monatsabrechnung eintragen ── */}
-            <div className="card">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <span className="label">🧾 Abrechnung {MONTHS[month-1]}</span>
-                <button
-                  onClick={openRecordModal}
-                  style={{
-                    background: "var(--accent)", border: "none", color: "white",
-                    padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-                    fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700,
-                  }}
-                >
-                  {curRecord ? "✏️ Bearbeiten" : "+ Eintragen"}
-                </button>
-              </div>
-
-              {curRecord ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>BRUTTO</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>{fmtEur(curRecord.brutto)}</div>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>NETTO</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--blue)" }}>{fmtEur(curRecord.netto)}</div>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>STEUER</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--red)" }}>{fmtEur(curRecord.brutto - curRecord.netto)}</div>
-                  </div>
-                  {curRecord.note && (
-                    <div style={{ gridColumn: "1/-1", fontSize: 12, color: "var(--muted)", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-                      📝 {curRecord.note}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ textAlign: "center", padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>
-                  Noch keine Abrechnung eingetragen.
-                </div>
-              )}
-            </div>
-
-            {/* ── Auto-Jahresübersicht (Stundly berechnet) ── */}
-            <div className="card purple">
-              <div className="label" style={{ marginBottom: 8 }}>🤖 Jahres-Schätzung {year} (automatisch)</div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
-                {[
-                  { label: "Brutto/Jahr",  val: fmtEurNoCents(yearlyAutoBruttoTotal), color: "var(--green)" },
-                  { label: "Netto/Jahr",   val: fmtEurNoCents(yearlyAutoNettoTotal),  color: "var(--accent2)"  },
-                  { label: "Ø Netto/Mon", val: fmtEurNoCents(yearlyAutoNettoTotal/12), color: "var(--blue)" },
-                ].map(c => (
-                  <div key={c.label} style={{ textAlign: "center", background: "var(--surface2)", borderRadius: 10, padding: "10px 6px" }}>
-                    <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: c.color }}>{c.val}</div>
-                  </div>
-                ))}
-              </div>
-
-              {yearlyAutoBruttoTotal === 0 ? (
-                <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", padding: "12px 0" }}>
-                  Noch keine Zeiteinträge für {year}.
-                </div>
-              ) : (
-                Array.from({ length: 12 }, (_, i) => {
-                  const a = yearlyAuto[i]!;
-                  const bPct = Math.round((a.brutto / yearlyAutoMax) * 100);
-                  const nPct = Math.round((a.netto  / yearlyAutoMax) * 100);
-                  const isEmpty = a.brutto === 0;
-                  return (
-                    <div key={a.month} style={{ marginBottom: 7, opacity: isEmpty ? 0.3 : 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
-                        <span style={{ color: a.month === month ? "var(--accent2)" : "var(--muted)", fontWeight: 700, width: 28 }}>{MONTHS_S[i]}</span>
-                        {isEmpty ? (
-                          <span style={{ fontSize: 10, color: "var(--muted)" }}>—</span>
-                        ) : (
-                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
-                            B: {fmtEurNoCents(a.brutto)} · N: {fmtEurNoCents(a.netto)}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ position: "relative", height: 8, background: "var(--surface2)", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${bPct}%`, background: "var(--green)", borderRadius: 4, transition: "width 0.4s" }} />
-                        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${nPct}%`, background: "var(--accent2)", borderRadius: 4, opacity: 0.7, transition: "width 0.4s" }} />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-
-              {yearlyAutoBruttoTotal > 0 && (
-                <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
-                  {[["var(--green)","Brutto"],["var(--accent2)","Netto"]].map(([c,l]) => (
-                    <div key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <div style={{ width: 8, height: 8, background: c, borderRadius: 2 }} />
-                      <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>{l}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 8, lineHeight: 1.4 }}>
-                ℹ️ Basierend auf Zeiteinträgen × Stundenlohn × Steuereinstellungen.
-                Schätzung — die echte Lohnabrechnung kann ±5% abweichen.
-              </div>
-            </div>
-
-            {/* ── Manuelle Jahresübersicht (Abrechnungen) ── */}
-            <div className="card">
-              <div className="label" style={{ marginBottom: 6 }}>📊 Echte Abrechnungen {year}</div>
-
-              {/* Totals */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
-                {[
-                  { label: "Brutto",  val: fmtEurNoCents(yearlyBrutto), color: "var(--green)" },
-                  { label: "Netto",   val: fmtEurNoCents(yearlyNetto),  color: "var(--blue)"  },
-                  { label: "Steuer",  val: fmtEurNoCents(yearlyBrutto - yearlyNetto), color: "var(--red)" },
-                ].map(c => (
-                  <div key={c.label} style={{ textAlign: "center", background: "var(--surface2)", borderRadius: 10, padding: "10px 6px" }}>
-                    <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: c.color }}>{c.val}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Monthly bars */}
-              {records.length === 0 ? (
-                <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", padding: "12px 0" }}>
-                  Noch keine Einträge für {year}.
-                </div>
-              ) : (
-                Array.from({ length: 12 }, (_, i) => {
-                  const m   = i + 1;
-                  const rec = records.find(r => r.month === m);
-                  const bPct = rec ? Math.round((rec.brutto / yearlyMax) * 100) : 0;
-                  const nPct = rec ? Math.round((rec.netto  / yearlyMax) * 100) : 0;
-                  return (
-                    <div key={m} style={{ marginBottom: 7, opacity: rec ? 1 : 0.35 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
-                        <span style={{ color: m === month ? "var(--accent2)" : "var(--muted)", fontWeight: 700, width: 28 }}>{MONTHS_S[i]}</span>
-                        {rec ? (
-                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
-                            B: {fmtEurNoCents(rec.brutto)} · N: {fmtEurNoCents(rec.netto)}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 10, color: "var(--muted)" }}>—</span>
-                        )}
-                      </div>
-                      <div style={{ position: "relative", height: 8, background: "var(--surface2)", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${bPct}%`, background: "var(--green)", borderRadius: 4, transition: "width 0.4s" }} />
-                        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${nPct}%`, background: "var(--blue)", borderRadius: 4, opacity: 0.6, transition: "width 0.4s" }} />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-
-              {/* Legend */}
-              {records.length > 0 && (
-                <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
-                  {[["var(--green)","Brutto"],["var(--blue)","Netto"]].map(([c,l]) => (
-                    <div key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <div style={{ width: 8, height: 8, background: c, borderRadius: 2 }} />
-                      <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>{l}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <YearlyCharts
+              year={year}
+              month={month}
+              yearlyAuto={yearlyAuto}
+              yearlyAutoMax={yearlyAutoMax}
+              yearlyAutoBruttoTotal={yearlyAutoBruttoTotal}
+              yearlyAutoNettoTotal={yearlyAutoNettoTotal}
+              records={records}
+              yearlyBrutto={yearlyBrutto}
+              yearlyNetto={yearlyNetto}
+              yearlyMax={yearlyMax}
+              fmtEurNoCents={fmtEurNoCents}
+            />
           </>
         )}
       </div>
 
-      {/* Record modal */}
-      {recordModal && (
-        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setRecordModal(false)}>
-          <div className="modal-sheet">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800 }}>🧾 {MONTHS[month-1]} {year}</h2>
-              <button className="btn btn-ghost" onClick={() => setRecordModal(false)} style={{ padding: "6px 10px" }}>✕</button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label className="label">Brutto erhalten (€)</label>
-                  <input className="input" type="number" step="0.01" value={mBrutto}
-                    onChange={e => setMBrutto(e.target.value)} placeholder="z.B. 2500.00" />
-                </div>
-                <div>
-                  <label className="label">Netto erhalten (€)</label>
-                  <input className="input" type="number" step="0.01" value={mNetto}
-                    onChange={e => setMNetto(e.target.value)} placeholder="z.B. 1800.00" />
-                </div>
-              </div>
-
-              {mBrutto && mNetto && (
-                <div style={{
-                  background: "color-mix(in srgb, var(--red) 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--red) 30%, transparent)",
-                  borderRadius: 10, padding: "10px 14px",
-                  display: "flex", justifyContent: "space-between",
-                }}>
-                  <span style={{ fontSize: 13, color: "var(--muted)" }}>Steuer / Abzüge</span>
-                  <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: "var(--red)" }}>
-                    {fmtEur(parseFloat(mBrutto||"0") - parseFloat(mNetto||"0"))}
-                  </span>
-                </div>
-              )}
-
-              <div>
-                <label className="label">Notiz (optional)</label>
-                <input className="input" type="text" value={mNote}
-                  onChange={e => setMNote(e.target.value)} placeholder="z.B. Bonus, Sonderzahlung..." />
-              </div>
-
-              <button className="btn btn-primary" onClick={() => void saveRecord()} disabled={mSaving || !mBrutto} style={{ width: "100%" }}>
-                {mSaving ? "Speichern..." : "💾 Speichern"}
-              </button>
-
-              {curRecord && (
-                <button onClick={() => void deleteRecord()} style={{
-                  width: "100%", padding: 12, background: "transparent",
-                  border: "1px solid var(--red)", borderRadius: 12, color: "var(--red)",
-                  fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                }}>
-                  🗑 Eintrag löschen
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <RecordModal
+        open={recordModal}
+        month={month}
+        year={year}
+        brutto={mBrutto}
+        netto={mNetto}
+        note={mNote}
+        saving={mSaving}
+        hasExistingRecord={!!curRecord}
+        fmtEur={fmtEur}
+        onClose={() => setRecordModal(false)}
+        onBruttoChange={setMBrutto}
+        onNettoChange={setMNetto}
+        onNoteChange={setMNote}
+        onSave={() => void saveRecord()}
+        onDelete={() => void deleteRecord()}
+      />
     </>
   );
 }

@@ -1,5 +1,71 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (82) – v0.47.0: salary/page.tsx refactor → 6 komponent
+
+### Hedef
+Audit tespiti: `salary/page.tsx` 1148 LOC (şimdi büyümüş 1447 LOC), tek
+dosyada 8 major card + modal + tüm state + data loading + 3 useMemo +
+localStorage sync + Supabase upsert. Anlaşılması zor, ekip için değişiklik
+riski yüksek. 6 komponente ayrıldı.
+
+### Sonuç
+- **page.tsx**: 1447 → **648 LOC** (%55 küçülme). Sadece state, effects,
+  useMemo, orchestration.
+- **6 yeni komponent** (`salary/components/` altında, toplam 1111 LOC):
+  1. `SalaryHeader.tsx` (54 LOC) — month nav + year picker + privacy toggle
+  2. `SettingsCard.tsx` (187 LOC) — Einstellungen + Beschäftigung/Urlaub
+  3. `TaxSettingsCard.tsx` (233 LOC) — Steuer & Abzüge (Steuerklasse, KirSt, Kind, Manual, SFN, disclaimer)
+  4. `MonthBreakdown.tsx` (358 LOC) — HERO + Urlaubskonto + Krankheit alert + Verdienst + Abzüge + Monatsabrechnung display
+  5. `YearlyCharts.tsx` (182 LOC) — Auto + Manual jahresübersicht bar charts
+  6. `RecordModal.tsx` (97 LOC) — Monatsabrechnung eintragen modal
+
+### Design pattern
+- **Dumb components**: Hiçbir komponent supabase call veya effect içermez.
+  State + all logic parent'ta (page.tsx orchestrator).
+- **Props over context**: React context yerine explicit prop plumbing.
+  Type safety ile refactor kolaylaşır.
+- **Shared types**: `SalaryBreakdown`, `NettoBreakdown` `@workly/shared`'den
+  import edilir (re-define etmedik — tek doğruluk kaynağı).
+- **Callback pattern**: onChange updater fn'i, onOpen/onClose vs. — parent
+  state'i tek yerde yönetir.
+
+### Neden 6 komponent (7 değil)
+YTD card, empty state (loading skeleton + new-user hint + small notice)
+page.tsx'te kaldı — küçük, çok az repeat, extra komponent overhead'i
+gerekmiyordu. MonthBreakdown içinde ol-mama'sı iyi bir sınır.
+
+### Etkilenen davranış
+Sıfır — pure refactor. Her komponent orijinal JSX ile identical output
+üretir. Tüm state, effects, event handlers page.tsx'te.
+
+### Neden dosyaları büyük tutmadık (component başı avg 185 LOC)
+- 358 LOC MonthBreakdown, 6-7 farklı card içerir. Alt komponent'e bölmek
+  fazla granularity, çok prop, okuma güçleşir.
+- 233 LOC TaxSettings, 5 farklı UI sekmesi (Steuerklasse buttons, Kirsteuer
+  select, Kind toggle, Manual mode, SFN toggle, disclaimer) — hepsi
+  cohesive tek "tax settings".
+- Audit'in "6 komponent" hedefi netti, alt-bölmek YAGNI.
+
+### Validation
+- TS clean · ESLint clean · Vitest 398/398 (test değişmedi)
+- Manual smoke test: sayfa açılış, ay/yıl değiştirme, settings save,
+  modal open/close — kullanıcı doğrulaması gerekiyor
+
+### Değişen dosyalar (7 file + son_kayit)
+- `apps/web/src/app/(dashboard)/salary/page.tsx` — 1447→648 LOC
+- `apps/web/src/app/(dashboard)/salary/components/SalaryHeader.tsx` — YENİ
+- `apps/web/src/app/(dashboard)/salary/components/SettingsCard.tsx` — YENİ
+- `apps/web/src/app/(dashboard)/salary/components/TaxSettingsCard.tsx` — YENİ
+- `apps/web/src/app/(dashboard)/salary/components/MonthBreakdown.tsx` — YENİ
+- `apps/web/src/app/(dashboard)/salary/components/YearlyCharts.tsx` — YENİ
+- `apps/web/src/app/(dashboard)/salary/components/RecordModal.tsx` — YENİ
+- `apps/web/src/lib/version.ts` — 0.46.0 → 0.47.0
+
+### Kalan — Week 5-6 (1 madde)
+- React Query time_entries + vacation (mimari değişiklik)
+
+---
+
 ## 2026-07-12 (81) – v0.46.0: Stripe webhook integration testleri (13 case)
 
 ### Hedef

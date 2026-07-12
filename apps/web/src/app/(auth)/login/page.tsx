@@ -65,6 +65,10 @@ function LoginForm() {
       });
       const accept = await acceptRes.json();
       if (acceptRes.ok && accept.redirectTo) {
+        // JWT'de eski user_role claim var (migration 028 hook). Server-side
+        // role az önce değişti — fresh claim için session refresh şart.
+        // Yoksa middleware /company path'ini eski role ile reddediyor.
+        await supabase.auth.refreshSession();
         router.push(accept.redirectTo);
         router.refresh();
         return;

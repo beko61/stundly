@@ -74,6 +74,9 @@ function SetupForm() {
         setLoading(false);
         return;
       }
+      // Server az önce role'u company_admin yaptı — JWT user_role claim'i
+      // fresh olsun (migration 028 hook). Yoksa /company/dashboard reddedilir.
+      await supabase.auth.refreshSession();
       router.push("/onboarding/done?type=company");
     } else {
       const res = await fetch("/api/onboarding/set-bundesland", {

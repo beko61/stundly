@@ -1,5 +1,99 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (80) – v0.45.0: Middleware role → JWT claim (auth hook)
+
+### Hedef
+Audit tespiti: middleware `/company`, `/team`, `/superadmin` her request'inde
+`profiles.role` için ekstra DB read yapıyordu. Supabase Custom Access Token
+Hook ile role JWT'ye claim olarak gömüldü → middleware base64 decode ile
+okuyor, DB read yok.
+
+### YENİ MIGRATION — `028_custom_access_token_hook.sql`
+
+**Function**: `public.custom_access_token_hook(event jsonb) returns jsonb`
+- `security definer` — RLS'yi bypass eder, function owner yetkisiyle çalışır
+- `set search_path = public` — search_path hijack koruması
+- Auth service her token mint'inde çağırır (signIn / refresh / auto-refresh)
+- Claims'e `user_role` ekler: `profiles.role` ne ise onu, yoksa 'individual'
+- `grant execute` sadece `supabase_auth_admin` — public revoke edilir
+
+**DEPLOY**:
+1. Migration Supabase SQL editor'e paste edilir
+2. Dashboard → Authentication → Hooks → "Custom Access Token" enable
+3. `public.custom_access_token_hook` seçilir
+
+Hook enable edilmezse function tanımlıdır ama çağrılmaz → middleware
+fallback DB read'e düşer, davranış regression'suz.
+
+### middleware.ts değişiklik
+
+**Eklenen** — `readUserRoleFromJwt(accessToken)`:
+- JWT payload (dot-separated 2. segment) base64url decode
+- `user_role` string claim döner, yoksa null
+
+**Değişen** — role kontrol blok:
+```ts
+// Öncesi: her /company request'inde
+const { data: profile } = await supabase.from("profiles").select("role")...
+
+// Sonrası:
+const { data: { session } } = await supabase.auth.getSession(); // cookies, no network
+if (session?.access_token) role = readUserRoleFromJwt(session.access_token);
+if (role === null) { /* fallback profiles fetch (legacy session veya hook off) */ }
+```
+
+`getSession()` cookies'den okur (network yok, DB yok). Hook aktif tüm
+oturumlar için: 0 ekstra call. Legacy oturumlar için: eski davranış.
+
+### JWT refresh — 3 sayfada eklendi
+Server-side role/company_id değiştikten sonra client cache'indeki JWT
+eski claim'i taşıyor. Sonraki request'te middleware /company path'ini
+eski role ile reddedecekti. `supabase.auth.refreshSession()` fresh JWT alır.
+
+- `(auth)/login/page.tsx` — invitations/accept başarılı sonrası
+- `(auth)/register/page.tsx` — invitations/accept başarılı sonrası
+- `onboarding/setup/page.tsx` — create-company başarılı sonrası
+
+### Neden company_id / plan claim'e alınmadı
+YAGNI. Middleware sadece `role` kontrol ediyor. Diğer yerlerde
+profiles fetch olduğu gibi kalıyor. Sonra ihtiyaç doğarsa hook'a claim
+eklemek 3 satır.
+
+### Neden stripe webhook için refresh eklenmedi
+Webhook başka user'ın plan'ını değiştirir — o user'ın client'ına
+signal göndermek Websocket ister. Plan claim'e gömülmediği için
+zaten stale sorunu yok.
+
+### Performance impact
+- /company/dashboard, /company/employees, /company/reports vs. yüksek
+  trafikli admin path'lerinde her request 1 DB round-trip kalkar
+- Middleware p50: ~20-40ms → ~5-10ms (DB latency'ye bağlı)
+- Diğer path'lerde etki yok (zaten profile fetch etmiyordu)
+
+### Validation
+- TS clean · ESLint clean · Vitest 385/385 (davranış değişmedi)
+
+### Değişen dosyalar (5 file + 1 migration + son_kayit)
+- `supabase/migrations/028_custom_access_token_hook.sql` — YENİ
+- `apps/web/src/middleware.ts` — JWT decode helper + role read değişikliği
+- `apps/web/src/app/(auth)/login/page.tsx` — refreshSession
+- `apps/web/src/app/(auth)/register/page.tsx` — refreshSession
+- `apps/web/src/app/onboarding/setup/page.tsx` — refreshSession
+- `apps/web/src/lib/version.ts` — 0.44.0 → 0.45.0
+
+### Kalan — Week 5-6 (3 madde)
+- salary/page 1148 LOC refactor (büyük iş, ayrı gün)
+- React Query time_entries + vacation (mimari değişiklik)
+- Stripe webhook integration test
+
+### Kullanıcı manuel adım
+Migration 028 Supabase'e paste edildikten SONRA:
+Dashboard → Authentication → Hooks → Custom Access Token → Enable →
+Function: `public.custom_access_token_hook` seç → Save.
+Enable olmadan hook çalışmaz, middleware fallback ile eski davranışta kalır.
+
+---
+
 ## 2026-07-12 (79) – v0.44.0: next/dynamic PDF module lazy load
 
 ### Hedef

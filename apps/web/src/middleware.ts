@@ -10,6 +10,23 @@ const COMPANY_ADMIN_PATHS = ["/company", "/team"];
 // Sadece super_admin erişebilir
 const SUPER_ADMIN_PATHS = ["/superadmin"];
 
+// Migration 028 custom_access_token_hook JWT'ye `user_role` claim ekler.
+// JWT payload zaten getUser() ile validate edildikten sonra decode edip
+// role okuyoruz — ekstra DB round-trip yok.
+function readUserRoleFromJwt(accessToken: string): string | null {
+  try {
+    const payload = accessToken.split(".")[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const decoded = atob(padded);
+    const parsed = JSON.parse(decoded) as { user_role?: string };
+    return typeof parsed.user_role === "string" ? parsed.user_role : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -48,20 +65,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Rol koruması — sadece company / superadmin path'lerinde profile fetch
-  // (Eski davranış. Soft-delete gate layout'larda + login sayfasında yapılıyor.)
+  // Rol koruması — sadece company / superadmin path'lerinde çalışır.
+  // (Soft-delete gate layout'larda + login sayfasında yapılıyor.)
   if (user) {
     const isCompanyPath    = COMPANY_ADMIN_PATHS.some((p) => pathname.startsWith(p));
     const isSuperAdminPath = SUPER_ADMIN_PATHS.some((p) => pathname.startsWith(p));
 
     if (isCompanyPath || isSuperAdminPath) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
+      // Önce JWT claim'den oku (migration 028 hook). getSession() cookies'den
+      // okur, network yok. Hook aktif değilse veya legacy session ise claim
+      // null gelir — profiles fallback kalır (davranış eskisi gibi).
+      let role: string | null = null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        role = readUserRoleFromJwt(session.access_token);
+      }
 
-      const role = profile?.role ?? "individual";
+      if (role === null) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+        role = profile?.role ?? "individual";
+      }
 
       if (isSuperAdminPath && role !== "super_admin") {
         return NextResponse.redirect(new URL("/dashboard", request.url));

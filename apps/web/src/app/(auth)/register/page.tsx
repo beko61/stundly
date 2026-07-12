@@ -137,6 +137,8 @@ function RegisterForm() {
         body:    JSON.stringify({ token }),
       });
       const accept = await acceptRes.json();
+      // JWT user_role claim fresh olsun (migration 028 hook)
+      await supabase.auth.refreshSession();
       router.push(accept.redirectTo ?? "/tracker");
     } else {
       router.push("/onboarding/type");

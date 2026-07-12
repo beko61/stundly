@@ -1,5 +1,80 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (88) – v0.49.0: Şifre sıfırlama akışı
+
+### Hedef
+Backlog'da açıktı: "Şifremi unuttum" akışı yoktu. Kullanıcı şifresini
+kaybettiğinde login yapamıyordu, super_admin'in devreye girmesi gerekiyordu.
+
+### Akış
+1. Login sayfasında Passwort input'unun üstünde **"Vergessen?"** link (küçük accent2)
+2. `/forgot-password` — email input, `supabase.auth.resetPasswordForEmail()`
+   * redirectTo: `{origin}/reset-password`
+   * Sonuç: her koşulda "email gönderildi" UI (user enumeration önleme)
+3. Supabase mail atar (Auth email template'i)
+4. Link → `/reset-password#access_token=...&type=recovery`
+5. Supabase client `detectSessionInUrl` (default on) hash'i parse eder,
+   geçici recovery session kurar
+6. Sayfa `getSession()` ile session var mı kontrol eder:
+   * Yoksa: "Link ungültig oder abgelaufen" + retry link
+   * Varsa: yeni şifre + confirm form
+7. Submit → `supabase.auth.updateUser({ password })`
+8. Success → `signOut()` + `router.push("/login")` (fresh sign-in için)
+
+### YENİ dosyalar
+- `apps/web/src/app/(auth)/forgot-password/page.tsx` — email formu
+  * 2 state: form + sent success
+  * Session enumeration safe (her hata → "email gönderildi" göster)
+- `apps/web/src/app/(auth)/reset-password/page.tsx` — yeni şifre form
+  * 4 state: loading, no-session (expired), success, form
+  * Min 8 char + password confirmation validation
+  * Success → 2sn sonra /login redirect
+
+### middleware.ts
+`PUBLIC_PATHS` array'ine `/forgot-password` + `/reset-password` eklendi.
+`/reset-password` recovery session ile açıldığı için login-redirect
+logic'inden etkilenmez (sadece /login ve /register kontrol ediliyor).
+
+### login/page.tsx
+Passwort label satırının sağına küçük "Vergessen?" link — accent2 renk,
+11px, bold.
+
+### Güvenlik notları
+- `resetPasswordForEmail` her sonuç için 200 OK → email enumeration önleme
+- Recovery session TTL Supabase default (1 saat)
+- updateUser sonrası `signOut()` → user fresh JWT alsın (yeni şifreyle)
+- Same-password error handling ("New password should be different...")
+
+### Kullanıcı manuel adım
+Supabase Dashboard → Authentication → Email Templates → **Reset Password**
+şablonu Almanca'ya çevrilmeli:
+```
+Subject: Stundly — Passwort zurücksetzen
+Body:
+Hi,
+klick auf den folgenden Link, um dein Passwort zurückzusetzen:
+{{ .ConfirmationURL }}
+
+Der Link ist 1 Stunde gültig.
+
+Falls du das nicht angefragt hast, ignoriere diese Mail.
+```
+
+Dashboard → Authentication → URL Configuration → **Redirect URLs**'e
+`https://stundly.de/reset-password` eklenmeli (production).
+
+### Validation
+TS clean · ESLint clean · Vitest 398/398
+
+### Değişen dosyalar
+- YENİ: `apps/web/src/app/(auth)/forgot-password/page.tsx`
+- YENİ: `apps/web/src/app/(auth)/reset-password/page.tsx`
+- MOD: `apps/web/src/app/(auth)/login/page.tsx` — Vergessen? link
+- MOD: `apps/web/src/middleware.ts` — 2 public path
+- MOD: `apps/web/src/lib/version.ts` — 0.48.0 → 0.49.0
+
+---
+
 ## 2026-07-12 (87) – v0.48.0: React Query time_entries + vacation
 
 ### Hedef

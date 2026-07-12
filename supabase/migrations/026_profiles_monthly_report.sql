@@ -9,7 +9,7 @@ alter table public.profiles
   add column if not exists monthly_report_enabled boolean default false;
 
 comment on column public.profiles.monthly_report_enabled is
-  'Monthly report email opt-in — her ayın 1'inde önceki ayın özeti + /reports linki. Default false.';
+  'Monthly report email opt-in — her ayin 1''inde onceki ayin ozeti + /reports linki. Default false.';
 
 create index if not exists idx_profiles_monthly_report_enabled
   on public.profiles (monthly_report_enabled)

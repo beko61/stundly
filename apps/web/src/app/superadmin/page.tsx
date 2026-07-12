@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import { computeMrrTrend, type SubscriptionRow } from "@/lib/utils/mrrTrend";
+import { RevenueChart } from "./components/RevenueChart";
 
 export default async function SuperAdminDashboard() {
   const supabase = await createClient();
@@ -17,7 +19,7 @@ export default async function SuperAdminDashboard() {
   ] = await Promise.all([
     admin.from("companies").select("*", { count: "exact", head: true }),
     admin.from("profiles").select("*", { count: "exact", head: true }),
-    admin.from("subscriptions").select("plan, status, currency"),
+    admin.from("subscriptions").select("plan, status, currency, created_at, canceled_at"),
   ]);
 
   const activeSubs = subscriptions?.filter(s => s.status === "active") ?? [];
@@ -25,6 +27,9 @@ export default async function SuperAdminDashboard() {
 
   const planPrices: Record<string, number> = { individual: 9.99, team: 29.99, business: 79.99 };
   const mrr = activeSubs.reduce((sum, s) => sum + (planPrices[s.plan] ?? 0), 0);
+
+  // MRR trend — son 12 ay
+  const mrrTrend = computeMrrTrend((subscriptions ?? []) as SubscriptionRow[], 12);
 
   // Son 5 şirket
   const { data: recentCompanies } = await admin
@@ -47,7 +52,7 @@ export default async function SuperAdminDashboard() {
       <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>Super Admin Dashboard</h1>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 32 }}>Gesamtübersicht aller Kunden und Umsätze</p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 36 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
         {stats.map(stat => (
           <div key={stat.label} className="card" style={{ padding: "20px" }}>
             <div style={{ fontSize: 24, marginBottom: 8 }}>{stat.icon}</div>
@@ -55,6 +60,11 @@ export default async function SuperAdminDashboard() {
             <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* MRR trend chart — son 12 ay */}
+      <div style={{ marginBottom: 32 }}>
+        <RevenueChart data={mrrTrend} />
       </div>
 
       <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Neueste Unternehmen</h2>

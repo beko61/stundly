@@ -1,5 +1,73 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (89) – v0.50.0: Super Admin MRR trend chart
+
+### Hedef
+Backlog: "Super Admin → Gelir grafiği" — Aylık MRR/ARR trend.
+Öncesinde dashboard scalar değerler gösteriyordu (MRR: €X, ARR: €12X).
+Son 12 ay bar chart eklendi.
+
+### YENİ dosyalar
+
+**`lib/utils/mrrTrend.ts`** — pure function `computeMrrTrend(subs, months=12, refDate?)`:
+- Her ayın son günü itibariyle "aktif" abonelikleri filtrele:
+  * `created_at <= monthEnd` VE `(canceled_at IS NULL OR canceled_at > monthEnd)`
+- Trial dahil değil (paid MRR)
+- Plan fiyatları: individual 9.99, team 29.99, business 79.99 (EUR)
+- UTC time'da hesap (timezone drift önleme)
+- Return: `{ month: "YYYY-MM", label: "Jan", mrr: number }[]`
+
+**`__tests__/unit/mrrTrend.test.ts`** — 8 test case:
+- Boş sub → tüm aylar 0
+- Ocak'ta yaratılan → Ocak'tan itibaren aktif
+- Nisan'da iptal → Mart'a kadar aktif
+- Trial dahil değil
+- 3 farklı plan toplanır
+- Gelecek sub geçmişi etkilemez
+- Bilinmeyen plan crash olmaz, 0 sayılır
+- months=6 override çalışır
+
+**`superadmin/components/RevenueChart.tsx`** — server-render inline SVG:
+- Header: son ay MRR (büyük yeşil) + MoM % (▲/▼)
+- ARR (Annual Run Rate) satırı = last × 12
+- Bar chart: 12 ay, son ay yeşil, diğerleri accent2 (soluk)
+- Native `<title>` hover tooltip her bar için
+- Footer: hesap methodology disclaimer
+
+### MOD
+`superadmin/page.tsx`:
+- subscriptions query'e `created_at, canceled_at` eklendi
+- `computeMrrTrend()` çağrısı + `<RevenueChart data={mrrTrend} />`
+- Layout: stats grid → chart → recent companies table
+
+### Neden pure SVG
+Chart lib (recharts, chart.js) ~50KB. Superadmin sadece 1-2 kullanıcı,
+initial bundle'a eklemenin ROI'si düşük. Bar chart 60 satır SVG ile
+render edilir. Server-render friendly (RSC uyumlu, hydration yok).
+
+### Basitleştirme kabulleri
+- Pro-rated upgrade/downgrade yok (mid-month plan değişimi son ayın
+  fiyatı ile hesaplanır)
+- Stripe coupon discount uygulanmıyor (nominal MRR)
+- Yıllık plan varsayımı yok (şu an sistemde yıllık ürün toggle var
+  ama subscriptions tablosu billing interval'i tutmuyor)
+
+Bu kabuller `RevenueChart` altındaki disclaimer'da açıkça belirtilmiş.
+Kesin MRR için "MRR snapshot" tablosu + webhook history parse gerekir —
+beta ölçekte basit model yeterli.
+
+### Validation
+- TS clean · ESLint clean · Vitest **406/406** (+8 mrrTrend)
+
+### Değişen dosyalar
+- YENİ: `apps/web/src/lib/utils/mrrTrend.ts`
+- YENİ: `apps/web/src/__tests__/unit/mrrTrend.test.ts`
+- YENİ: `apps/web/src/app/superadmin/components/RevenueChart.tsx`
+- MOD: `apps/web/src/app/superadmin/page.tsx` — chart entegre + query genişletildi
+- MOD: `apps/web/src/lib/version.ts` — 0.49.0 → 0.50.0
+
+---
+
 ## 2026-07-12 (88) – v0.49.0: Şifre sıfırlama akışı
 
 ### Hedef

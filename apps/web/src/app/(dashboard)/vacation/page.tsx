@@ -391,6 +391,23 @@ export default function VacationPage() {
     void load();
   }
 
+  /**
+   * Kaydedilmiş bir antrag için PDF'i yeniden üret + mailto aç.
+   * "Ben mailimi gönderemedim, tekrar denemek istiyorum" senaryosu.
+   */
+  function handleResendPDF(r: VacationRequest) {
+    void generatePDF({
+      startDate:  r.start_date,
+      endDate:    r.end_date,
+      urlaubArt:  (r.urlaub_art as UrlaubArt) ?? "Erholungsurlaub",
+      vertretung: r.vertretung ?? "",
+      bemerkung:  r.reason ?? "",
+      days:       r.days_count,
+      mailTo,
+      sigData,
+    });
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Antrag wirklich löschen?")) return;
     const supabase = createClient();
@@ -414,7 +431,52 @@ export default function VacationPage() {
     setSigData(data);
   }
 
-  async function generatePDF() {
+  /**
+   * PDF üretimi + isteğe bağlı mailto: açma.
+   *
+   * State'ten bağımsız olsun diye tüm veriler input object'ten okunur —
+   * hem form submit hem de kaydedilmiş antrag'dan yeniden PDF için tek
+   * fonksiyon.
+   *
+   * Mail sırası: mailto ÖNCE açılır (kullanıcı gesture context'inde,
+   * setTimeout yok — browser popup bloklayıp mailto'yu kaybetmesin),
+   * sonra PDF download tetiklenir. Böylece kullanıcı PDF'i kapadıktan
+   * sonra mail açık kalır.
+   */
+  async function generatePDF(input?: {
+    startDate:   string;
+    endDate:     string;
+    urlaubArt:   UrlaubArt;
+    vertretung:  string;
+    bemerkung:   string;
+    days:        number;
+    mailTo:      string;
+    sigData?:    string | null;
+  }) {
+    // Parametre yoksa form state'inden oku (mevcut submit akışı)
+    const src = input ?? {
+      startDate, endDate, urlaubArt, vertretung, bemerkung, days, mailTo,
+      sigData,
+    };
+
+    // ── MAIL ÖNCE ─────────────────────────────────────────────────────────
+    // Popup blocker + PDF download gesture context çakışmasını önlemek için
+    // mailto'yu ilk açıyoruz (kullanıcı butonuna bastığı andaki gesture
+    // hâlâ geçerli). PDF download bundan sonra da tetiklenir.
+    if (src.mailTo) {
+      const p0 = profile;
+      const subject = encodeURIComponent(
+        `Urlaubsantrag ${p0?.vorname ?? ""} ${p0?.nachname ?? ""} — ${fmtDate(src.startDate)} bis ${fmtDate(src.endDate)}`
+      );
+      const body = encodeURIComponent(
+        `Sehr geehrte Damen und Herren,\n\n` +
+        `hiermit beantrage ich Urlaub vom ${fmtDate(src.startDate)} bis ${fmtDate(src.endDate)} (${src.days} Arbeitstage).\n` +
+        `Den unterschriebenen Urlaubsantrag finden Sie im Anhang als PDF.\n\n` +
+        `Mit freundlichen Grüßen\n${p0?.vorname ?? ""} ${p0?.nachname ?? ""}`
+      );
+      window.location.href = `mailto:${src.mailTo}?subject=${subject}&body=${body}`;
+    }
+
     const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const p = profile;
@@ -482,13 +544,13 @@ export default function VacationPage() {
     rw("Eintrittsdatum:", p?.eintrittsdatum ?? "");
     rw("Abteilung:",      p?.abteilung      ?? "");
     rw("Vorgesetzte/r:",  p?.vorgesetzter   ?? "");
-    if (vertretung) rw("Vertretung:", vertretung);
+    if (src.vertretung) rw("Vertretung:", src.vertretung);
     y += 2;
 
     // ── URLAUBSÜBERSICHT ──────────────────────────────────────────────────
     sec("URLAUBSUEBERSICHT");
     rw("Jahresurlaub:", `${VAC_TOTAL} Tage`);
-    rw("Resturlaub:",   `${Math.max(0, remainingDays - days)} Tage`);
+    rw("Resturlaub:",   `${Math.max(0, remainingDays - src.days)} Tage`);
     y += 2;
 
     // ── URLAUBSZEITRAEUME — tablo ─────────────────────────────────────────
@@ -506,25 +568,25 @@ export default function VacationPage() {
 
     // Data row
     doc.setFontSize(8); doc.setFont("helvetica", "normal");
-    doc.text(fmtDate(startDate), L + 3,   y);
-    doc.text(fmtDate(endDate),   L + 38,  y);
-    doc.text(String(days),       L + 78,  y);
-    doc.text(urlaubArt,          L + 110, y);
+    doc.text(fmtDate(src.startDate), L + 3,   y);
+    doc.text(fmtDate(src.endDate),   L + 38,  y);
+    doc.text(String(src.days),       L + 78,  y);
+    doc.text(src.urlaubArt,          L + 110, y);
     doc.setDrawColor(180); doc.rect(L, y - 3, CW, 6);
     y += 6;
 
     // Gesamt row
     doc.setFont("helvetica", "bold");
     doc.text("Gesamt:", L + 62, y);
-    doc.text(String(days), L + 78, y);
+    doc.text(String(src.days), L + 78, y);
     doc.rect(L, y - 3, CW, 6);
     y += 8;
 
     // ── BEMERKUNGEN (varsa) ───────────────────────────────────────────────
-    if (bemerkung) {
+    if (src.bemerkung) {
       sec("BEMERKUNGEN");
       doc.setFontSize(8); doc.setFont("helvetica", "normal");
-      const bl = doc.splitTextToSize(bemerkung, CW - 6);
+      const bl = doc.splitTextToSize(src.bemerkung, CW - 6);
       doc.text(bl, L + 2, y);
       y += bl.length * 3.5 + 3;
     }
@@ -536,8 +598,9 @@ export default function VacationPage() {
     doc.setDrawColor(80); doc.setLineWidth(0.3);
 
     // Sol: Arbeitnehmer (imza + tarih)
-    if (sigData) {
-      try { doc.addImage(sigData, "PNG", L + 5, sigY - 20, 50, 16); } catch { /* ignore */ }
+    const effectiveSig = src.sigData ?? p?.signature_data ?? null;
+    if (effectiveSig) {
+      try { doc.addImage(effectiveSig, "PNG", L + 5, sigY - 20, 50, 16); } catch { /* ignore */ }
     }
     doc.line(L, sigY, L + 72, sigY);
     doc.setFontSize(7); doc.setFont("helvetica", "normal");
@@ -551,25 +614,9 @@ export default function VacationPage() {
     doc.setFontSize(6); doc.setTextColor(150);
     doc.text(STUNDLY_VERSION_LABEL, W / 2, 290, { align: "center" });
 
-    // ── SAVE + MAIL ───────────────────────────────────────────────────────
-    const fname = `${p?.nachname ?? "Urlaub"}_${startDate}_${endDate}`.replace(/\s/g, "_");
+    // ── SAVE (mail zaten en başta location.href ile açıldı) ──────────────
+    const fname = `${p?.nachname ?? "Urlaub"}_${src.startDate}_${src.endDate}`.replace(/\s/g, "_");
     doc.save(`Urlaubsantrag_${fname}.pdf`);
-
-    if (mailTo) {
-      const subject = encodeURIComponent(
-        `Urlaubsantrag ${p?.vorname ?? ""} ${p?.nachname ?? ""} — ${fmtDate(startDate)} bis ${fmtDate(endDate)}`
-      );
-      const body = encodeURIComponent(
-        `Sehr geehrte Damen und Herren,\n\n` +
-        `hiermit beantrage ich Urlaub vom ${fmtDate(startDate)} bis ${fmtDate(endDate)} (${days} Arbeitstage).\n` +
-        `Den unterschriebenen Urlaubsantrag finden Sie im Anhang als PDF.\n\n` +
-        `Mit freundlichen Grüßen\n${p?.vorname ?? ""} ${p?.nachname ?? ""}`
-      );
-      // Kaydet+PDF akışında mailto'yu kısa gecikmeyle aç, PDF download çakışmasın
-      setTimeout(() => {
-        window.open(`mailto:${mailTo}?subject=${subject}&body=${body}`, "_self");
-      }, 800);
-    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -859,7 +906,7 @@ export default function VacationPage() {
                     </div>
                   </div>
 
-                  {/* Right: status + delete */}
+                  {/* Right: status + actions */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
                     <span style={{
                       fontSize: 10, padding: "4px 10px", borderRadius: 999, fontWeight: 700,
@@ -869,13 +916,32 @@ export default function VacationPage() {
                       {r.status === "approved" && <Icon name="check" size={10} strokeWidth={2.5} />}
                       {r.status === "pending" ? `Wartet ${daysOpen}T` : status.label}
                     </span>
-                    <button
-                      onClick={() => handleDelete(r.id)}
-                      style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 2, opacity: 0.6 }}
-                      title="Löschen"
-                    >
-                      <Icon name="trash" size={13} />
-                    </button>
+                    <div style={{ display: "flex", gap: 2 }}>
+                      <button
+                        onClick={() => handleResendPDF(r)}
+                        style={{
+                          background: "color-mix(in srgb, var(--accent2) 12%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
+                          color: "var(--accent2)",
+                          cursor: "pointer",
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          display: "flex", alignItems: "center", gap: 4,
+                          fontSize: 10, fontWeight: 700,
+                          fontFamily: "'Syne',sans-serif",
+                        }}
+                        title="PDF neu erstellen & Mail senden"
+                      >
+                        <Icon name="send" size={11} /> PDF+Mail
+                      </button>
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 4, opacity: 0.6 }}
+                        title="Löschen"
+                      >
+                        <Icon name="trash" size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -1137,7 +1203,7 @@ export default function VacationPage() {
                 {/* Actions */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
                   <button
-                    type="button" onClick={generatePDF}
+                    type="button" onClick={() => void generatePDF()}
                     disabled={!startDate || !endDate}
                     style={{
                       width: "100%", padding: 12, background: "var(--surface)",

@@ -1,5 +1,52 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (85) – v0.47.3 HOTFIX: Mail gesture context + resend butonu
+
+### Bug 1: PDF sonrası mail açılmıyor
+Kullanıcı: "pdf indirdim sonra pdfyi kapatinca mail çilmadi."
+Önceki fix (v0.47.1) `setTimeout(..., 800)` ile mailto açıyordu. PDF
+download popup viewer'da açıldığında setTimeout fired ama browser
+gesture context kaybolmuş → mailto blocked.
+
+**Fix**: `window.location.href = mailto:...` çağrısını PDF üretiminden
+ÖNCE, hâlâ gesture context'inde iken yap. setTimeout yok. `_self` de
+gerekmez — mailto: OS handler kullandığı için tab kaybolmaz.
+
+### Bug 2: Kaydedilmiş antrag'a tıklanamıyor
+Kullanıcı: "urlaubta yaptığım urlaub içerisine giremiyorum düzenleme
+yada gönderme yok."
+
+Kart sadece trash butonu vardı, PDF/mail yeniden gönderme yoktu.
+Kullanıcı mail'i kaçırırsa/yanlış adrese gönderirse antragı silip
+yeniden yaratmak zorundaydı.
+
+**Fix**: Her karta **"PDF+Mail"** resend butonu eklendi (trash'ın yanına,
+küçük accent2 renkli). Onclick: `handleResendPDF(r)` — request'in
+kaydedilmiş verilerinden yeni PDF üretir + mail açar.
+
+### Kod değişikliği
+`generatePDF()` parametreleştirildi — state'ten bağımsız çalışır:
+- Optional input object (startDate, endDate, urlaubArt, vertretung,
+  bemerkung, days, mailTo, sigData)
+- Verilmezse form state'ten okur (submit akışı)
+- Verilirse request'ten okur (resend akışı)
+
+Sigdata fallback: input.sigData → profile.signature_data → yok.
+
+### Değişen dosyalar
+- `apps/web/src/app/(dashboard)/vacation/page.tsx`:
+  * generatePDF() parametreleştirildi, mail location.href'e çevrildi
+    (setTimeout kaldırıldı)
+  * handleResendPDF() yeni fonksiyon
+  * Vacation card'a PDF+Mail buton eklendi
+  * "Nur PDF-Vorschau" butonu inline arrow wrap
+- `apps/web/src/lib/version.ts` — 0.47.2 → 0.47.3
+
+### Validation
+TS clean.
+
+---
+
 ## 2026-07-12 (84) – v0.47.2 HOTFIX: Urlaubsantrag PDF redesign (offline stil)
 
 ### Bug

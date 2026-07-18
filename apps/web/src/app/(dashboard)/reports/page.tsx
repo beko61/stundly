@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
+import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
+import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
@@ -110,58 +113,59 @@ export default function ReportsPage() {
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth()+1);
   const [mode, setMode]   = useState<"month"|"year">("month");
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [ndEntries, setNdEntries] = useState<Array<NdEntryHelper & { kunde?: string | null; note?: string | null }>>([]);
-  const [loading, setLoading] = useState(false);
   const [bundesland, setBundesland] = useState<string>("NI");
-  const [targetHours, setTargetHours] = useState<number>(STANDARD_HOURS_DEFAULT);
-  const [vacTotal, setVacTotal] = useState<number>(30);
 
+  // Date range — month veya year mode
+  const { start, end } = useMemo(() => {
+    if (mode === "month") {
+      return {
+        start: `${year}-${String(month).padStart(2,"0")}-01`,
+        end:   new Date(year, month, 0).toISOString().split("T")[0]!,
+      };
+    }
+    return {
+      start: `${year - 1}-12-25`, // önceki yılın son hafta payı
+      end:   `${year + 1}-01-07`, // sonraki yılın ilk hafta payı
+    };
+  }, [year, month, mode]);
+
+  // RQ hooks — time_entries + notdienst_entries + salary_settings
+  const { data: entriesRaw = [], isLoading: lEntries } = useTimeEntriesRangeQuery(start, end);
+  const { data: ndRaw      = [], isLoading: lNd }      = useNotdienstEntriesQuery(start, end);
+  const { data: salaryData }                            = useSalarySettingsQuery();
+
+  const loading = lEntries || lNd;
+  const entries = entriesRaw as TimeEntry[];
+
+  // Notdienst filter — hafta bu aya/yıla düşenler
+  const ndEntries = useMemo(
+    () => (ndRaw as Array<{ date: string; start_time: string | null; end_time: string | null; erledigt?: boolean | null; kunde?: string | null; note?: string | null }>)
+      .filter(n => {
+        const m = notdienstMonthOf(n.date);
+        if (mode === "year") return m.year === year;
+        return m.year === year && m.month === month;
+      }) as Array<NdEntryHelper & { kunde?: string | null; note?: string | null }>,
+    [ndRaw, mode, year, month],
+  );
+
+  const targetHours = salaryData?.monthly_target_hours ? Number(salaryData.monthly_target_hours) : STANDARD_HOURS_DEFAULT;
+  const vacTotal    = salaryData?.urlaub_anspruch     ? Number(salaryData.urlaub_anspruch)     : 30;
+
+  // Profile bundesland — direct supabase (single fetch, no hook)
   useEffect(() => {
-    async function load() {
-      setLoading(true);
+    let cancelled = false;
+    void (async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-
-      const start = mode==="month"
-        ? `${year}-${String(month).padStart(2,"0")}-01`
-        : `${year - 1}-12-25`; // Hafta Pazar atfı için önceki yılın son haftasından çekme payı
-      const end = mode==="month"
-        ? new Date(year, month, 0).toISOString().split("T")[0]!
-        : `${year + 1}-01-07`; // ve sonraki yılın ilk haftasına taşma payı
-
-      const [{ data }, { data: nd }, { data: prof }, { data: salary }] = await Promise.all([
-        supabase.from("time_entries").select("*")
-          .eq("user_id", session.user.id).gte("date", start).lte("date", end),
-        supabase.from("notdienst_entries")
-          .select("date, start_time, end_time, erledigt, kunde, note")
-          .eq("user_id", session.user.id).gte("date", start).lte("date", end),
-        supabase.from("profiles").select("bundesland")
-          .eq("user_id", session.user.id).maybeSingle(),
-        supabase.from("salary_settings").select("monthly_target_hours, urlaub_anspruch")
-          .eq("user_id", session.user.id).order("created_at", { ascending: false })
-          .limit(1).maybeSingle(),
-      ]);
-      if (data) setEntries(data as TimeEntry[]);
-      if (nd) {
-        // Notdienst: tarihi başka ayda olsa bile, hafta-Pazartesi'sinin yıl/ay'ı
-        // bu rapor periyoduna düşenleri kabul et.
-        const filtered = (nd as Array<{ date: string; start_time: string; end_time: string; erledigt?: boolean | null; kunde?: string | null; note?: string | null }>)
-          .filter(n => {
-            const m = notdienstMonthOf(n.date);
-            if (mode === "year") return m.year === year;
-            return m.year === year && m.month === month;
-          });
-        setNdEntries(filtered);
-      }
-      if (prof?.bundesland) setBundesland(prof.bundesland as string);
-      if (salary?.monthly_target_hours) setTargetHours(Number(salary.monthly_target_hours));
-      if (salary?.urlaub_anspruch) setVacTotal(Number(salary.urlaub_anspruch));
-      setLoading(false);
-    }
-    void load();
-  }, [year, month, mode]);
+      const { data } = await supabase.from("profiles")
+        .select("bundesland")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (!cancelled && data?.bundesland) setBundesland(data.bundesland as string);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
 

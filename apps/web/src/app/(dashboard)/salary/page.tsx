@@ -23,6 +23,9 @@ import { YearlyCharts } from "./components/YearlyCharts";
 import { TaxSettingsCard } from "./components/TaxSettingsCard";
 import { SettingsCard } from "./components/SettingsCard";
 import { MonthBreakdown } from "./components/MonthBreakdown";
+import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
+import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
+import { useSalarySettingsQuery, useUpsertSalarySettings } from "@/hooks/queries/useSalarySettings";
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_S   = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -71,14 +74,14 @@ export default function SalaryPage() {
   const [month,    setMonth]    = useState(now.getMonth() + 1);
   const router = useRouter();
   const setTrackerMonth = useTrackerStore(s => s.setMonth);
-  const [entries,  setEntries]  = useState<TimeEntry[]>([]);
+  // ── RQ hooks ─────────────────────────────────────────────────────────────
+  const { data: salaryData, isLoading: lSalarySettings } = useSalarySettingsQuery();
+  const upsertSalarySettings = useUpsertSalarySettings();
+
   const [records,  setRecords]  = useState<MonthRecord[]>([]);
-  const [loading,  setLoading]  = useState(true);
   const [settings, setSettings] = useState<SalarySettings>(DEFAULT_SETTINGS);
   const [settingsSaved,  setSettingsSaved]  = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
-  // Supabase row id for current settings record (for updates)
-  const settingsRowId = useRef<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Modal state
@@ -88,103 +91,76 @@ export default function SalaryPage() {
   const [mNote,   setMNote]   = useState("");
   const [mSaving, setMSaving] = useState(false);
 
-  // Load settings: Supabase first, fallback to localStorage
+  // RQ salaryData hydrate → local settings state (bir kere, initial load'ta)
   useEffect(() => {
-    async function loadSettings() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        setSettings(loadLocalSettings());
-        setSettingsLoaded(true);
-        return;
-      }
-      const { data } = await supabase
-        .from("salary_settings")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (data) {
-        settingsRowId.current = data.id as string;
-        const loaded: SalarySettings = {
-          id:                       data.id as string,
-          user_id:                  data.user_id as string,
-          valid_from:               data.valid_from as string,
-          hourly_rate:              Number(data.hourly_rate),
-          overtime_rate_multiplier: Number(data.overtime_rate_multiplier),
-          night_shift_bonus:        Number(data.night_shift_bonus),
-          notdienst_bonus:          Number(data.notdienst_bonus),
-          monthly_target_hours:     Number(data.monthly_target_hours),
-          steuerklasse:             (data.steuerklasse as Steuerklasse | null) ?? "I",
-          kirchensteuer:            (Number(data.kirchensteuer ?? 0) as KirchensteuerRate),
-          hat_kinder:               Boolean(data.hat_kinder ?? false),
-          tax_mode:                 (data.tax_mode as TaxMode | null) ?? "auto",
-          manuell_abzug:            Number(data.manuell_abzug ?? 0),
-          urlaub_anspruch:          Number(data.urlaub_anspruch ?? 30),
-          sfn_enabled:              Boolean(data.sfn_enabled ?? false),
-          employment_start_date:    (data.employment_start_date as string | null) ?? null,
-          employment_end_date:      (data.employment_end_date   as string | null) ?? null,
-          urlaub_carry_over:        Number(data.urlaub_carry_over ?? 0),
-        };
-        setSettings(loaded);
-        localStorage.setItem(LS_KEY, JSON.stringify(loaded));
-      } else {
-        setSettings(loadLocalSettings());
-      }
-      setSettingsLoaded(true);
+    if (settingsLoaded) return;
+    if (lSalarySettings) return; // hâlâ fetching
+    if (salaryData) {
+      const loaded: SalarySettings = {
+        id:                       salaryData.id,
+        user_id:                  salaryData.user_id,
+        valid_from:               salaryData.valid_from,
+        hourly_rate:              Number(salaryData.hourly_rate),
+        overtime_rate_multiplier: Number(salaryData.overtime_rate_multiplier),
+        night_shift_bonus:        Number(salaryData.night_shift_bonus),
+        notdienst_bonus:          Number(salaryData.notdienst_bonus),
+        monthly_target_hours:     Number(salaryData.monthly_target_hours),
+        steuerklasse:             (salaryData.steuerklasse as Steuerklasse | null) ?? "I",
+        kirchensteuer:            (Number(salaryData.kirchensteuer ?? 0) as KirchensteuerRate),
+        hat_kinder:               Boolean(salaryData.hat_kinder ?? false),
+        tax_mode:                 (salaryData.tax_mode as TaxMode | null) ?? "auto",
+        manuell_abzug:            Number(salaryData.manuell_abzug ?? 0),
+        urlaub_anspruch:          Number(salaryData.urlaub_anspruch ?? 30),
+        sfn_enabled:              Boolean(salaryData.sfn_enabled ?? false),
+        employment_start_date:    salaryData.employment_start_date ?? null,
+        employment_end_date:      salaryData.employment_end_date   ?? null,
+        urlaub_carry_over:        Number(salaryData.urlaub_carry_over ?? 0),
+      };
+      setSettings(loaded);
+      localStorage.setItem(LS_KEY, JSON.stringify(loaded));
+    } else {
+      setSettings(loadLocalSettings());
     }
-    void loadSettings();
-  }, []);
+    setSettingsLoaded(true);
+  }, [salaryData, lSalarySettings, settingsLoaded]);
 
-  // Auto-save settings: localStorage + Supabase (debounced)
+  // Auto-save settings: localStorage + Supabase (debounced via RQ mutation)
   useEffect(() => {
     if (!settingsLoaded) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
+    saveTimer.current = setTimeout(() => {
       localStorage.setItem(LS_KEY, JSON.stringify(settings));
 
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const payload = {
-          hourly_rate:              settings.hourly_rate,
-          overtime_rate_multiplier: settings.overtime_rate_multiplier,
-          night_shift_bonus:        settings.night_shift_bonus,
-          notdienst_bonus:          settings.notdienst_bonus,
-          monthly_target_hours:     settings.monthly_target_hours,
-          steuerklasse:             settings.steuerklasse ?? "I",
-          kirchensteuer:            settings.kirchensteuer ?? 0,
-          hat_kinder:               settings.hat_kinder ?? false,
-          tax_mode:                 settings.tax_mode ?? "auto",
-          manuell_abzug:            settings.manuell_abzug ?? 0,
-          urlaub_anspruch:          settings.urlaub_anspruch ?? 30,
-          sfn_enabled:              settings.sfn_enabled ?? false,
-          employment_start_date:    settings.employment_start_date ?? null,
-          employment_end_date:      settings.employment_end_date ?? null,
-          urlaub_carry_over:        settings.urlaub_carry_over ?? 0,
-        };
-        if (settingsRowId.current) {
-          await supabase.from("salary_settings").update(payload).eq("id", settingsRowId.current);
-        } else {
-          const { data: inserted } = await supabase
-            .from("salary_settings")
-            .insert({ ...payload, user_id: session.user.id, valid_from: new Date().toISOString().split("T")[0] })
-            .select("id")
-            .single();
-          if (inserted) settingsRowId.current = inserted.id as string;
-        }
-      }
-
-      setSettingsSaved(true);
-      setTimeout(() => setSettingsSaved(false), 1500);
+      const payload = {
+        hourly_rate:              settings.hourly_rate,
+        overtime_rate_multiplier: settings.overtime_rate_multiplier,
+        night_shift_bonus:        settings.night_shift_bonus,
+        notdienst_bonus:          settings.notdienst_bonus,
+        monthly_target_hours:     settings.monthly_target_hours,
+        steuerklasse:             settings.steuerklasse ?? "I",
+        kirchensteuer:            settings.kirchensteuer ?? 0,
+        hat_kinder:               settings.hat_kinder ?? false,
+        tax_mode:                 settings.tax_mode ?? "auto",
+        manuell_abzug:            settings.manuell_abzug ?? 0,
+        urlaub_anspruch:          settings.urlaub_anspruch ?? 30,
+        sfn_enabled:              settings.sfn_enabled ?? false,
+        employment_start_date:    settings.employment_start_date ?? null,
+        employment_end_date:      settings.employment_end_date ?? null,
+        urlaub_carry_over:        settings.urlaub_carry_over ?? 0,
+      };
+      // RQ mutation — internally update-or-insert; onSuccess invalidate
+      upsertSalarySettings.mutate(payload, {
+        onSuccess: () => {
+          setSettingsSaved(true);
+          setTimeout(() => setSettingsSaved(false), 1500);
+        },
+      });
     }, 600);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, settingsLoaded]);
 
-  // ALL entries for the year (for monthly auto-netto chart)
-  const [yearEntries, setYearEntries] = useState<TimeEntry[]>([]);
+  // yearEntries artık RQ hook'tan geliyor (aşağıda)
   const [bundesland,  setBundesland]  = useState("NI");
 
   // Bundesland aus Profil (Feiertage-Lookup für SFN §3b)
@@ -203,47 +179,39 @@ export default function SalaryPage() {
 
   const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
 
-  // Yıl boyunca tüm Notdienst entry'lerinin tarihleri (sadece date kolonu)
-  // — Notdienst bir önceki ayın işidir, bu ayın brutto'suna gider
-  const [yearNotdienstDates, setYearNotdienstDates] = useState<string[]>([]);
+  // ── RQ hooks: time_entries (month + year) + notdienst (year, önceki Aralık dahil) ──
+  const yearStart = `${year}-01-01`;
+  const yearEnd   = `${year}-12-31`;
+  const ndStart   = `${year - 1}-12-01`; // Ocak salary için önceki Aralık payı
+  const ndEnd     = `${year}-12-31`;
 
-  // Load time entries + monthly records + notdienst dates
+  const { data: monthEntriesRaw = [], isLoading: lMonth } = useTimeEntriesQuery(year, month);
+  const { data: yearEntriesRaw  = [], isLoading: lYear  } = useTimeEntriesRangeQuery(yearStart, yearEnd);
+  const { data: ndRawEntries    = [], isLoading: lNd    } = useNotdienstEntriesQuery(ndStart, ndEnd);
+
+  const entries     = monthEntriesRaw as TimeEntry[];
+  const yearEntries = yearEntriesRaw  as TimeEntry[];
+
+  // Sadece date kolonu lazım — notdienst dates için mapping
+  const yearNotdienstDates = useMemo(
+    () => ndRawEntries.map(n => n.date),
+    [ndRawEntries],
+  );
+
+  const loading = lMonth || lYear || lNd;
+
+  // salary_records — henüz RQ hook yok, direct supabase kaldı
   useEffect(() => {
-    async function load() {
-      setLoading(true);
+    async function loadRecords() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user) { setLoading(false); return; }
-
-      const yearStart = `${year}-01-01`;
-      const yearEnd   = `${year}-12-31`;
-      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-      const endDate   = new Date(year, month, 0).toISOString().split("T")[0]!;
-
-      // Notdienst-Range: yıllık + önceki Aralık (Ocak salary için) + sonraki Ocak (Aralık için pek değil ama tutarlı)
-      const ndStart = `${year - 1}-12-01`;
-      const ndEnd   = `${year}-12-31`;
-
-      const [{ data: te }, { data: rec }, { data: yte }, { data: nd }] = await Promise.all([
-        supabase.from("time_entries").select("*")
-          .eq("user_id", user.id).gte("date", startDate).lte("date", endDate),
-        supabase.from("salary_records").select("*")
-          .eq("user_id", user.id).eq("year", year).order("month"),
-        supabase.from("time_entries").select("*")
-          .eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd),
-        supabase.from("notdienst_entries").select("date")
-          .eq("user_id", user.id).gte("date", ndStart).lte("date", ndEnd),
-      ]);
-
-      if (te)  setEntries(te as TimeEntry[]);
-      if (rec) setRecords(rec as MonthRecord[]);
-      if (yte) setYearEntries(yte as TimeEntry[]);
-      if (nd)  setYearNotdienstDates((nd as { date: string }[]).map(n => n.date));
-      setLoading(false);
+      if (!session?.user) return;
+      const { data } = await supabase.from("salary_records").select("*")
+        .eq("user_id", session.user.id).eq("year", year).order("month");
+      if (data) setRecords(data as MonthRecord[]);
     }
-    void load();
-  }, [year, month]);
+    void loadRecords();
+  }, [year]);
 
   /** Bu ayın brutto'suna giren Notdienst sayısı = ÖNCEKI ay'ın Notdienst'leri.
    *  Ocak için: önceki yılın Aralık ayı. */

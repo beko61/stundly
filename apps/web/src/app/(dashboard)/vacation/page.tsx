@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import type { VacationRequest, UrlaubArt } from "@workly/shared";
@@ -15,6 +15,21 @@ import {
   useCreateVacationRequest,
   useDeleteVacationRequest,
 } from "@/hooks/queries/useVacationRequests";
+import { useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
+import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
+import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
+import { useQueryClient } from "@tanstack/react-query";
+
+// Direct time_entries upsert sonrası tüm time_entries query'lerini invalide et.
+// (month + range key'leri ayrı prefix'lerde olduğu için predicate kullanıyoruz.)
+function invalidateAllTimeEntries(qc: ReturnType<typeof useQueryClient>) {
+  return qc.invalidateQueries({
+    predicate: q => {
+      const k = q.queryKey[0];
+      return k === "time_entries" || k === "time_entries_range";
+    },
+  });
+}
 
 interface Profile {
   vorname: string; nachname: string; personal_nr: string;
@@ -162,12 +177,24 @@ const STATUS_INFO: Record<VacationRequest["status"], { label: string; color: str
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function VacationPage() {
   // React Query — vacation_requests list + mutations
-  const { data: requests = [], isLoading: reqsLoading, refetch: refetchRequests } = useVacationRequestsQuery();
+  const qc = useQueryClient();
+  const { data: requests = [], isLoading: reqsLoading } = useVacationRequestsQuery();
   const createReqMut = useCreateVacationRequest();
   const deleteReqMut = useDeleteVacationRequest();
 
-  const [auxLoading,   setAuxLoading]  = useState(true);   // profile, salary, time_entries, notdienst yükleniyor mu
-  const loading   = reqsLoading || auxLoading;
+  const year = new Date().getFullYear();
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const yearStartISO = `${year}-01-01`;
+  const yearEndISO   = `${year}-12-31`;
+
+  // RQ hooks — year time_entries + year notdienst + salary_settings (dedup ile
+  // dashboard + tracker ile paylaşımlı)
+  const { data: salarySettings, isLoading: lSalary } = useSalarySettingsQuery();
+  const { data: yearTimeData  = [], isLoading: lTime } = useTimeEntriesRangeQuery(yearStartISO, yearEndISO);
+  const { data: yearNdData    = [], isLoading: lNd   } = useNotdienstEntriesQuery(yearStartISO, yearEndISO);
+
+  const [profileLoading, setProfileLoading]  = useState(true);
+  const loading = reqsLoading || lSalary || lTime || lNd || profileLoading;
   const [showForm,  setShowForm]  = useState(false);
   const [profile,   setProfile]   = useState<Profile | null>(null);
 
@@ -178,24 +205,65 @@ export default function VacationPage() {
   const [bemerkung,  setBemerkung]  = useState("");
   const [mailTo,     setMailTo]     = useState("");
   const [saving,     setSaving]     = useState(false);
-  const [yearUsedDays,  setYearUsedDays]  = useState(0);
-  const [overtimeMin,   setOvertimeMin]   = useState(0);
-  const [vacTotal,      setVacTotal]      = useState(30);
-  const [allUrlaubDates, setAllUrlaubDates] = useState<Set<string>>(new Set());
-  const VAC_TOTAL = vacTotal;
 
   const [sigData, setSigData] = useState<string | null>(null);
   const sigRef = useRef<SignatureCanvas>(null);
 
-  const year = new Date().getFullYear();
-  const todayISO = new Date().toISOString().slice(0, 10);
   const holidays = useMemo(
     () => getFeiertage(year, profile?.bundesland ?? "NI"),
     [year, profile?.bundesland]
   );
 
+  // ── Computed from RQ data ──
+  // vacTotal, yearUsedDays, overtimeMin, allUrlaubDates artık RQ verilerinden
+  // türetiliyor (useMemo). Öncesinde useState + loadAux useEffect setliyordu.
+  const vacTotal = salarySettings?.urlaub_anspruch ? Number(salarySettings.urlaub_anspruch) : 30;
+  const VAC_TOTAL = vacTotal;
+
+  const { yearUsedDays, overtimeMin, allUrlaubDates } = useMemo(() => {
+    const monthlyHours = salarySettings?.monthly_target_hours ? Number(salarySettings.monthly_target_hours) : 173;
+    const hoursPerDay  = monthlyHours / 21.7;
+    if (yearTimeData.length === 0) {
+      return { yearUsedDays: 0, overtimeMin: 0, allUrlaubDates: new Set<string>() };
+    }
+    const { urlaubDays, overtimeMin: om } = computeOvertime(
+      yearTimeData as unknown as OvertimeEntry[],
+      yearStartISO,
+      todayISO,
+      {
+        ndEntries: yearNdData as unknown as OvertimeNdEntry[],
+        hoursPerDay,
+      },
+    );
+    const s = new Set<string>();
+    for (const e of yearTimeData) {
+      if (e.day_type === "urlaub") s.add(e.date);
+    }
+    return { yearUsedDays: urlaubDays, overtimeMin: om, allUrlaubDates: s };
+  }, [salarySettings, yearTimeData, yearNdData, yearStartISO, todayISO]);
+
+  // Profile — direct supabase (single fetch, no hook), auto-loads on mount
+  const loadProfile = useCallback(async () => {
+    setProfileLoading(true);
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) { setProfileLoading(false); return; }
+
+    const { data: prof } = await supabase.from("profiles")
+      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon")
+      .eq("user_id", user.id).single();
+
+    if (prof) {
+      setProfile(prof as Profile);
+      if (prof.signature_data) setSigData(prof.signature_data);
+      if (prof.email) setMailTo(prof.email);
+    }
+    setProfileLoading(false);
+  }, []);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void loadAux(); }, []);
+  useEffect(() => { void loadProfile(); }, []);
   // Body scroll lock when panel open
   useEffect(() => {
     if (showForm) {
@@ -205,65 +273,6 @@ export default function VacationPage() {
     }
     return () => { document.body.style.overflow = ""; };
   }, [showForm]);
-
-  /**
-   * Aux data yükle (profile, salary, time_entries, notdienst).
-   * vacation_requests React Query üzerinden ayrı olarak fetch ediliyor.
-   * Mutation sonrası refetch için hem loadAux hem refetchRequests çağrılır.
-   */
-  async function loadAux() {
-    setAuxLoading(true);
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) { setAuxLoading(false); return; }
-
-    const yearStartISO = `${year}-01-01`;
-    const yearEndISO   = `${year}-12-31`;
-    const [{ data: prof }, { data: salary }, { data: timeData }, { data: ndData }] = await Promise.all([
-      supabase.from("profiles").select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon").eq("user_id", user.id).single(),
-      supabase.from("salary_settings").select("urlaub_anspruch, monthly_target_hours").eq("user_id", user.id)
-        .order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("time_entries")
-        .select("date, start_time, end_time, break_minutes, day_type")
-        .eq("user_id", user.id).gte("date", yearStartISO).lte("date", yearEndISO),
-      supabase.from("notdienst_entries")
-        .select("date, start_time, end_time")
-        .eq("user_id", user.id).gte("date", yearStartISO).lte("date", yearEndISO),
-    ]);
-
-    if (salary?.urlaub_anspruch) setVacTotal(Number(salary.urlaub_anspruch));
-
-    // monthly_target_hours → günlük hedef (21.7 ortalama iş günü/ay).
-    // Default Almanya tam zamanlı: 173h/ay → ~7.97h/gün ≈ 8h.
-    const monthlyHours = salary?.monthly_target_hours ? Number(salary.monthly_target_hours) : 173;
-    const hoursPerDay  = monthlyHours / 21.7;
-
-    if (timeData) {
-      const { urlaubDays, overtimeMin } = computeOvertime(
-        timeData as OvertimeEntry[],
-        yearStartISO,
-        todayISO,
-        {
-          ndEntries: (ndData ?? []) as OvertimeNdEntry[],
-          hoursPerDay,
-        },
-      );
-      setYearUsedDays(urlaubDays);
-      setOvertimeMin(overtimeMin);
-      const s = new Set<string>();
-      for (const e of timeData as { date: string; day_type: string | null }[]) {
-        if (e.day_type === "urlaub") s.add(e.date);
-      }
-      setAllUrlaubDates(s);
-    }
-    if (prof) {
-      setProfile(prof as Profile);
-      if (prof.signature_data) setSigData(prof.signature_data);
-      if (prof.email) setMailTo(prof.email);
-    }
-    setAuxLoading(false);
-  }
 
   // ── Computed ──────────────────────────────────────────────────────────────
   const remainingDays = VAC_TOTAL - yearUsedDays;
@@ -411,7 +420,7 @@ export default function VacationPage() {
 
     setSaving(false); setShowForm(false);
     setStartDate(""); setEndDate(""); setBemerkung(""); setVertretung("");
-    void loadAux();
+    void invalidateAllTimeEntries(qc); // time_entries değişti → derived state (allUrlaubDates, yearUsedDays) refresh
   }
 
   /**
@@ -472,7 +481,7 @@ export default function VacationPage() {
         }
       }
     }
-    void loadAux();
+    void invalidateAllTimeEntries(qc); // time_entries değişti → derived state (allUrlaubDates, yearUsedDays) refresh
   }
 
   function handleSaveSignature() {

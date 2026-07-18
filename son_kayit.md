@@ -1,5 +1,66 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (94) – v0.55.0: Phase 2 RQ — vacation + salary + reports batch migrate
+
+### Hedef
+"devam hepsini bitir" — Phase 2 RQ'nun kalanı: vacation loadAux + salary/page.tsx debounced save + reports/page.tsx. Tek büyük commit.
+
+### vacation/page.tsx
+- loadAux'ta 4 supabase call → 3 RQ hook + 1 profile direct:
+  * salary_settings → useSalarySettingsQuery
+  * time_entries year → useTimeEntriesRangeQuery
+  * notdienst year → useNotdienstEntriesQuery
+  * profile → direct (single fetch, no hook)
+- vacTotal, yearUsedDays, overtimeMin, allUrlaubDates → 4 useState kaldırıldı, useMemo türetildi
+- loadAux → loadProfile (sadece profile) + auxLoading → profileLoading rename
+- handleSubmit / handleDelete sonrası time_entries direct upsert var (RQ mutation değil), bu yüzden `invalidateAllTimeEntries(qc)` helper eklendi (predicate ile hem "time_entries" hem "time_entries_range" prefix'lerini invalide eder)
+
+### salary/page.tsx
+- loadSettings useEffect → useSalarySettingsQuery + hydrate useEffect
+- Debounced auto-save: `settingsRowId` ref kaldırıldı — RQ hook (useUpsertSalarySettings) internally find-latest + update-or-insert yapıyor
+- Year time_entries + notdienst_dates → useTimeEntriesRangeQuery + useNotdienstEntriesQuery
+- Month time_entries → useTimeEntriesQuery
+- yearNotdienstDates useState → useMemo (ndRawEntries.map)
+- salary_records → direct kaldı (henüz hook yok, sonraki iterasyon)
+- loading state artık RQ isLoading'lerin OR'u
+
+### reports/page.tsx
+- load useEffect'te 4 supabase call → 3 RQ hook + 1 profile direct
+- entries/ndEntries useState → RQ + useMemo filter
+- targetHours/vacTotal useState → useMemo (salaryData'dan derive)
+- exportPDF fonksiyonundaki 2 direct call kaldı (rare, click-triggered)
+
+### Kod sağlığı
+- Tüm sayfalar aynı 3 RQ hook pattern'e uyumlu:
+  useTimeEntriesQuery / useTimeEntriesRangeQuery / useNotdienstEntriesQuery / useSalarySettingsQuery
+- Direct supabase kalan: profile queries (single-user, low frequency), salary_records (henüz hook yok), 1-shot mutations, PDF export path
+
+### Dedup kazançları (final)
+Dashboard + tracker + salary + vacation + reports — hepsi aynı useralık için:
+- Aynı ay time_entries → tek fetch
+- Aynı yıl time_entries → tek fetch
+- salary_settings → tek fetch
+- Aynı range notdienst → tek fetch
+
+User dashboard → herhangi bir sayfaya geçince 0 yeni fetch (staleTime 60s hit).
+
+### Validation
+- TS clean · ESLint clean · Vitest **422/422**
+
+### Değişen dosyalar
+- MOD: `apps/web/src/app/(dashboard)/vacation/page.tsx`
+- MOD: `apps/web/src/app/(dashboard)/salary/page.tsx`
+- MOD: `apps/web/src/app/(dashboard)/reports/page.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.54.0 → 0.55.0
+
+### Kalan direct-Supabase (Phase 3 için)
+- company/dashboard, company/employees/[userId] — admin, different user context (userId param'lı hook gerekir)
+- settings/page.tsx — 1 direct call (notdienst insert batch), minor
+- onboarding sayfaları — 1-shot flow
+- api routes — server-side, RQ konusu değil
+
+---
+
 ## 2026-07-12 (93) – v0.54.0: dashboard/page.tsx tam RQ migrate + range hook
 
 ### Hedef

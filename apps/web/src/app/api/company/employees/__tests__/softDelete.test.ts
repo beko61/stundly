@@ -14,6 +14,10 @@ vi.mock("@/lib/company/admin", () => ({
 vi.mock("@/lib/audit/logger", () => ({
   logAudit: (...args: unknown[]) => mockLogAudit(...args),
 }));
+// Rate limit her testte allowed:true (env yok, gerçek DB'ye gitmesin)
+vi.mock("@/lib/rateLimit/check", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, count: 1, limit: 100, retryAfterSec: 0 }),
+}));
 
 function makeAdminClient(opts: {
   profile: unknown;

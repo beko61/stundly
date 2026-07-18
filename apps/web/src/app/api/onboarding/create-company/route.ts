@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// Company spam koruması: user başına günde 5 attempt (idempotency check
+// zaten var — user'ın 1 company'si olabilir, 5 attempt fazlasıyla yeterli
+// retry/hata durumu için).
+const CREATE_COMPANY_LIMIT_PER_DAY = 5;
+const CREATE_COMPANY_WINDOW_SEC    = 86400;
 
 /**
  * POST /api/onboarding/create-company
@@ -25,6 +32,19 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  }
+
+  // Rate limit
+  const rl = await checkRateLimit({
+    bucket:    `create_company:${user.id}`,
+    limit:     CREATE_COMPANY_LIMIT_PER_DAY,
+    windowSec: CREATE_COMPANY_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Versuche. Bitte später erneut versuchen." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
   }
 
   const body = await req.json().catch(() => null);

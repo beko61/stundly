@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// Destructive: tüm zaman/entry verilerini siler. Günde 3 attempt yeterli
+// (yanlışlıkla iki kere basınca 2. erişim reddedilmez; ama serial abuse önlenir).
+const RESET_DATA_LIMIT_PER_DAY = 3;
+const RESET_DATA_WINDOW_SEC    = 86400;
 
 /**
  * Kullanıcının tüm zaman/giriş verilerini siler — ama hesabı, profil bilgilerini
@@ -20,6 +26,19 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit — destructive, günde 3
+  const rl = await checkRateLimit({
+    bucket:    `reset_data:${user.id}`,
+    limit:     RESET_DATA_LIMIT_PER_DAY,
+    windowSec: RESET_DATA_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Löschversuche. Bitte später erneut." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
   }
 
   // Onay metni kontrolü — yanlış POST koruması

@@ -1,12 +1,30 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// Account silme talebi — günde 3 attempt. Endpoint zaten idempotent
+// (existing pending check), rate limit sadece log spam koruması.
+const DELETE_LIMIT_PER_DAY = 3;
+const DELETE_WINDOW_SEC    = 86400;
 
 // DSGVO Art. 17 — Recht auf Löschung (30 Tage Wartefrist)
 export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = await checkRateLimit({
+    bucket:    `dsgvo_delete:${user.id}`,
+    limit:     DELETE_LIMIT_PER_DAY,
+    windowSec: DELETE_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Löschanfragen. Bitte später erneut versuchen." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
 
   const admin = createAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

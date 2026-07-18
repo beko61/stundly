@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { logAudit } from "@/lib/audit/logger";
 import { createEmployeeSchema } from "@/lib/validation/schemas";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// Admin per company başına saatte 50 employee create — real akışta 5-10
+// yeter, spam/typosquatting saldırısını önler.
+const CREATE_EMP_LIMIT_PER_HOUR = 50;
+const CREATE_EMP_WINDOW_SEC     = 3600;
 
 /**
  * POST /api/company/employees/create
@@ -27,7 +33,19 @@ import { createEmployeeSchema } from "@/lib/validation/schemas";
 export async function POST(req: NextRequest) {
   const ctx = await getCompanyAdminContext();
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const { admin, companyId } = ctx;
+  const { admin, companyId, user } = ctx;
+
+  const rl = await checkRateLimit({
+    bucket:    `employees_create:${user.id}`,
+    limit:     CREATE_EMP_LIMIT_PER_HOUR,
+    windowSec: CREATE_EMP_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Mitarbeiter angelegt. Bitte später erneut versuchen." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
 
   const raw = await req.json().catch(() => ({}));
   const parsed = createEmployeeSchema.safeParse(raw);

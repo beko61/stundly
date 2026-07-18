@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// Token brute-force koruması: yanlış/expired token'la saldırgan geçerli
+// invitation token'ları tarayabilir. Auth'lu user başına 20 attempt/saat
+// yeterli (real kullanıcı 1-2 kere denemek zorunda kalır maximum).
+const ACCEPT_LIMIT_PER_HOUR = 20;
+const ACCEPT_WINDOW_SEC     = 3600;
 
 /**
  * POST /api/invitations/accept
@@ -24,6 +31,19 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  }
+
+  // Rate limit — auth'lu user başına saatte 20 attempt
+  const rl = await checkRateLimit({
+    bucket:    `invitations_accept:${user.id}`,
+    limit:     ACCEPT_LIMIT_PER_HOUR,
+    windowSec: ACCEPT_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Versuche. Bitte später erneut versuchen." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
   }
 
   const { token } = await req.json().catch(() => ({ token: null }));

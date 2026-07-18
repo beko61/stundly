@@ -1,12 +1,29 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// DSGVO export — expensive 5-tablo query. DoS önleme: günde 5 attempt.
+const EXPORT_LIMIT_PER_DAY = 5;
+const EXPORT_WINDOW_SEC    = 86400;
 
 // DSGVO Art. 20 — Datenübertragbarkeit
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = await checkRateLimit({
+    bucket:    `dsgvo_export:${user.id}`,
+    limit:     EXPORT_LIMIT_PER_DAY,
+    windowSec: EXPORT_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Export-Anfragen. Bitte später erneut versuchen." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
 
   const admin = createAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

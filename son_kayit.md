@@ -1,5 +1,52 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (90) – v0.51.0: Rate limit auth-critical route'lara yayıldı
+
+### Hedef
+`checkRateLimit` (Supabase-backed sliding window) sadece `/api/scan` +
+`/api/contact` kullanıyordu. Auth-hardening: brute-force + destructive +
+DoS-prone endpoint'lere yayıldı.
+
+### Eklenen rate limit'ler
+
+| Endpoint | Limit | Neden |
+|---|---|---|
+| `/api/invitations/accept` | 20/saat | Token brute-force önleme |
+| `/api/onboarding/create-company` | 5/gün | Company spam önleme (idempotent, 5 fazla) |
+| `/api/account/reset-data` | 3/gün | Destructive (tüm entries silinir) |
+| `/api/dsgvo/export` | 5/gün | Expensive 5-tablo query, DoS |
+| `/api/dsgvo/delete` | 3/gün | Log spam koruması (endpoint idempotent) |
+| `/api/company/employees/create` | 50/saat | Employee spam / typosquatting (per admin) |
+| `/api/company/employees/delete` | 30/saat | Mass-delete/lockout önleme (per admin) |
+
+Hepsi `userId`-bucket (auth'lu). Response format aynı: 429 + `Retry-After` header + Almanca error message.
+
+### Neden change-password atlandı
+`/api/account/change-password` sadece `must_change_password` flag'ini
+false yapıyor (asıl şifre değişimi client-side `supabase.auth.updateUser`
+ile). Idempotent flag flip, abuse'e değmez.
+
+### Test fix
+`softDelete.test.ts` — `checkRateLimit`'i mock'la (Supabase env yok,
+gerçek DB'ye gitmesin). `vi.mock("@/lib/rateLimit/check", ...)` her
+attempt'e `allowed: true` döner.
+
+### Validation
+- TS clean · ESLint clean · Vitest **406/406**
+
+### Değişen dosyalar
+- MOD: `apps/web/src/app/api/invitations/accept/route.ts`
+- MOD: `apps/web/src/app/api/onboarding/create-company/route.ts`
+- MOD: `apps/web/src/app/api/account/reset-data/route.ts`
+- MOD: `apps/web/src/app/api/dsgvo/export/route.ts`
+- MOD: `apps/web/src/app/api/dsgvo/delete/route.ts`
+- MOD: `apps/web/src/app/api/company/employees/create/route.ts`
+- MOD: `apps/web/src/app/api/company/employees/delete/route.ts`
+- MOD: `apps/web/src/app/api/company/employees/__tests__/softDelete.test.ts` — checkRateLimit mock
+- MOD: `apps/web/src/lib/version.ts` — 0.50.0 → 0.51.0
+
+---
+
 ## 2026-07-12 (89) – v0.50.0: Super Admin MRR trend chart
 
 ### Hedef

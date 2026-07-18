@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { logAudit } from "@/lib/audit/logger";
 import { employeeIdSchema } from "@/lib/validation/schemas";
+import { checkRateLimit } from "@/lib/rateLimit/check";
+
+// Mass-delete/lockout koruma: admin başına saatte 30. Yanlışlıkla batch
+// silmenin de önüne geçer.
+const DELETE_EMP_LIMIT_PER_HOUR = 30;
+const DELETE_EMP_WINDOW_SEC     = 3600;
 
 /**
  * POST /api/company/employees/delete
@@ -23,6 +29,18 @@ export async function POST(req: NextRequest) {
   const ctx = await getCompanyAdminContext();
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { admin, companyId } = ctx;
+
+  const rl = await checkRateLimit({
+    bucket:    `employees_delete:${ctx.user.id}`,
+    limit:     DELETE_EMP_LIMIT_PER_HOUR,
+    windowSec: DELETE_EMP_WINDOW_SEC,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Löschversuche. Bitte später erneut versuchen." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
 
   const raw = await req.json().catch(() => ({}));
   const parsed = employeeIdSchema.safeParse(raw);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration } from "@workly/shared";
@@ -8,6 +8,9 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
 import { usePrivacyMode } from "@/lib/privacy";
+import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
+import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
+import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -110,9 +113,12 @@ function calcBrutto(workedMin: number, ndMin: number, ndCount: number, s: Salary
 }
 
 export default function DashboardPage() {
-  const today      = new Date();
+  // Today değeri render-stable (mount edildiği tarih). Gün değişince re-mount
+  // yeter — RQ key stabilize et
+  const [today] = useState(() => new Date());
   const todayYear  = today.getFullYear();
   const todayMonth = today.getMonth() + 1;
+  const todayStr   = today.toISOString().split("T")[0]!;
 
   // ── Selected month state (ay seçici için) ──
   const [selectedYear,  setSelectedYear]  = useState(todayYear);
@@ -122,103 +128,83 @@ export default function DashboardPage() {
   const [bundesland, setBundesland] = useState("NI");
   const [moneyHidden] = usePrivacyMode();
 
-  // Selected month data
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
+  // ── Date ranges (memoized for RQ key stability) ──
+  const yearStart  = `${selectedYear}-01-01`;
+  const yearEnd    = `${selectedYear}-12-31`;
+  const yearNdEnd  = `${selectedYear + 1}-01-07`;
+  const ndRange    = useMemo(() => notdienstLoadRange(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
+  const last7Start = useMemo(() => {
+    const d = new Date(today); d.setDate(d.getDate() - 6);
+    return d.toISOString().split("T")[0]!;
+  }, [today]);
 
-  // Year-wide data (for trend chart + yearly card)
-  const [yearEntries, setYearEntries] = useState<TimeEntry[]>([]);
-  const [yearNd, setYearNd] = useState<NdEntry[]>([]);
+  // ── React Query — 5 hook, dedup üzerinden 5 network call ──
+  const { data: entriesRaw     = [], isLoading: lMonth     } = useTimeEntriesQuery(selectedYear, selectedMonth);
+  const { data: ndRaw          = [], isLoading: lNd        } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
+  const { data: yearEntriesRaw = [], isLoading: lYearEntry } = useTimeEntriesRangeQuery(yearStart, yearEnd);
+  const { data: yearNdRaw      = [], isLoading: lYearNd    } = useNotdienstEntriesQuery(yearStart, yearNdEnd);
+  const { data: last7Raw       = [], isLoading: lLast7     } = useTimeEntriesRangeQuery(last7Start, todayStr);
+  const { data: salaryData }                                  = useSalarySettingsQuery();
 
-  // Last 7 days (always relative to today, regardless of selected month)
-  const [last7, setLast7] = useState<TimeEntry[]>([]);
+  const loading = lMonth || lNd || lYearEntry || lYearNd || lLast7;
 
-  const [settings, setSettings] = useState<SalarySettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
+  // TimeEntry (shared) → local TimeEntry interface (subset) — structural assign
+  const entries     = entriesRaw     as unknown as TimeEntry[];
+  const yearEntries = yearEntriesRaw as unknown as TimeEntry[];
+  const last7       = last7Raw       as unknown as TimeEntry[];
 
-  // ── Load on selectedMonth change ──
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) { setLoading(false); return; }
-    const uid = session.user.id;
-
-    const startMonth = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-    const endMonth   = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-
-    // Notdienst için aktif ay aralığını 7 gün uzat (hafta taşması için)
-    const ndRange = notdienstLoadRange(selectedYear, selectedMonth);
-
-    const yearStart  = `${selectedYear}-01-01`;
-    const yearEnd    = `${selectedYear}-12-31`;
-
-    const last7Start = new Date(today);
-    last7Start.setDate(last7Start.getDate() - 6);
-    const last7StartStr = last7Start.toISOString().split("T")[0]!;
-    const todayStr      = today.toISOString().split("T")[0]!;
-
-    const [profileRes, settingsRes, monthRes, ndRes, yearRes, yearNdRes, last7Res] = await Promise.all([
-      supabase.from("profiles").select("vorname, bundesland").eq("user_id", uid).maybeSingle(),
-      supabase.from("salary_settings")
-        .select("hourly_rate, monthly_target_hours, overtime_rate_multiplier, night_shift_bonus, notdienst_bonus, urlaub_anspruch")
-        .eq("user_id", uid).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
-        .eq("user_id", uid).gte("date", startMonth).lte("date", endMonth),
-      // Notdienst: ayın 1'i → ayın son günü + 7 (sonra hafta filtresine alınır)
-      supabase.from("notdienst_entries").select("date, start_time, end_time, erledigt")
-        .eq("user_id", uid).gte("date", ndRange.start).lte("date", ndRange.end),
-      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
-        .eq("user_id", uid).gte("date", yearStart).lte("date", yearEnd),
-      // Yıllık Notdienst: tüm yıl + 7 gün (sonraki yılın ilk haftasına taşan günler için)
-      supabase.from("notdienst_entries").select("date, start_time, end_time, erledigt")
-        .eq("user_id", uid).gte("date", yearStart).lte("date", `${selectedYear + 1}-01-07`),
-      supabase.from("time_entries").select("date, day_type, start_time, end_time, break_minutes, is_night_shift")
-        .eq("user_id", uid).gte("date", last7StartStr).lte("date", todayStr),
-    ]);
-
-    setName(profileRes.data?.vorname ?? session.user.email?.split("@")[0] ?? "");
-    if (profileRes.data?.bundesland) setBundesland(profileRes.data.bundesland as string);
-    if (settingsRes.data) {
-      const fromSupabase: SalarySettings = {
-        hourly_rate:              Number(settingsRes.data.hourly_rate)              || DEFAULT_SETTINGS.hourly_rate,
-        monthly_target_hours:     Number(settingsRes.data.monthly_target_hours)     || DEFAULT_SETTINGS.monthly_target_hours,
-        overtime_rate_multiplier: Number(settingsRes.data.overtime_rate_multiplier) || DEFAULT_SETTINGS.overtime_rate_multiplier,
-        night_shift_bonus:        Number(settingsRes.data.night_shift_bonus)        || 0,
-        notdienst_bonus:          Number(settingsRes.data.notdienst_bonus)          || 0,
-        urlaub_anspruch:          Number(settingsRes.data.urlaub_anspruch)          || DEFAULT_SETTINGS.urlaub_anspruch,
-      };
-      setSettings(mergeSettings(fromSupabase, readLocalSalarySettings()));
-    }
-    setEntries((monthRes.data  ?? []) as TimeEntry[]);
-    // Notdienst: sadece haftası bu aya düşenleri tut
-    setNdEntries(((ndRes.data ?? []) as NdEntry[]).filter(nd =>
+  // Notdienst month: hafta bu aya düşenleri filtrele
+  const ndEntries = useMemo(
+    () => (ndRaw as unknown as NdEntry[]).filter(nd =>
       notdienstBelongsToMonth(nd.date, selectedYear, selectedMonth)
-    ));
-    setYearEntries((yearRes.data ?? []) as TimeEntry[]);
-    setYearNd((yearNdRes.data  ?? []) as NdEntry[]);
-    setLast7((last7Res.data    ?? []) as TimeEntry[]);
-    setLoading(false);
-    // intentionally exclude `today` (re-renders only on real day-change which is fine)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear, selectedMonth]);
+    ),
+    [ndRaw, selectedYear, selectedMonth],
+  );
+  const yearNd = yearNdRaw as unknown as NdEntry[];
 
-  useEffect(() => { void loadAll(); }, [loadAll]);
+  // Salary settings — RQ + localStorage merge (live sync)
+  const [localPatch, setLocalPatch] = useState<Partial<SalarySettings> | null>(() =>
+    typeof window !== "undefined" ? readLocalSalarySettings() : null,
+  );
+  const settings: SalarySettings = useMemo(() => {
+    const base: SalarySettings = salaryData ? {
+      hourly_rate:              Number(salaryData.hourly_rate)              || DEFAULT_SETTINGS.hourly_rate,
+      monthly_target_hours:     Number(salaryData.monthly_target_hours)     || DEFAULT_SETTINGS.monthly_target_hours,
+      overtime_rate_multiplier: Number(salaryData.overtime_rate_multiplier) || DEFAULT_SETTINGS.overtime_rate_multiplier,
+      night_shift_bonus:        Number(salaryData.night_shift_bonus)        || 0,
+      notdienst_bonus:          Number(salaryData.notdienst_bonus)          || 0,
+      urlaub_anspruch:          Number(salaryData.urlaub_anspruch)          || DEFAULT_SETTINGS.urlaub_anspruch,
+    } : DEFAULT_SETTINGS;
+    return mergeSettings(base, localPatch);
+  }, [salaryData, localPatch]);
 
-  // Live-sync salary settings from Salary page (localStorage + 'storage' + visibility)
+  // Profile (isim + bundesland) — direkt supabase, single fetch on mount
   useEffect(() => {
-    function applyLocal() {
-      const patch = readLocalSalarySettings();
-      if (patch) setSettings(prev => mergeSettings(prev, patch));
-    }
+    let cancelled = false;
+    void (async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await supabase.from("profiles")
+        .select("vorname, bundesland")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setName(data?.vorname ?? session.user.email?.split("@")[0] ?? "");
+      if (data?.bundesland) setBundesland(data.bundesland as string);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Live-sync salary settings from Salary page (localStorage cross-tab + focus)
+  useEffect(() => {
+    function applyLocal() { setLocalPatch(readLocalSalarySettings()); }
     function onStorage(e: StorageEvent) {
       if (e.key === SALARY_LS_KEY && e.newValue) applyLocal();
     }
     function onVisible() {
       if (document.visibilityState === "visible") applyLocal();
     }
-    applyLocal();
     window.addEventListener("storage", onStorage);
     document.addEventListener("visibilitychange", onVisible);
     return () => {

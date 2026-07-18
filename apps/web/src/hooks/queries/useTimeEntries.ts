@@ -47,6 +47,14 @@ export function timeEntriesKey(userId: string | null | undefined, year: number, 
   return ["time_entries", userId ?? "anon", year, month] as const;
 }
 
+export function timeEntriesRangeKey(userId: string | null | undefined, start: string, end: string) {
+  return ["time_entries_range", userId ?? "anon", start, end] as const;
+}
+
+export function timeEntriesPrefix(userId: string | null | undefined) {
+  return ["time_entries", userId ?? "anon"] as const;
+}
+
 // ── Query: month range read ───────────────────────────────────────────────────
 export function useTimeEntriesQuery(year: number, month: number) {
   const userId = useSessionUserId();
@@ -69,6 +77,29 @@ export function useTimeEntriesQuery(year: number, month: number) {
         .lte("date", endDate)
         .order("date", { ascending: true });
 
+      if (error) throw new Error(error.message);
+      return (data ?? []) as TimeEntry[];
+    },
+  });
+}
+
+// ── Query: arbitrary date range (yıllık, YTD, last-7 vb.) ────────────────────
+export function useTimeEntriesRangeQuery(start: string, end: string) {
+  const userId = useSessionUserId();
+
+  return useQuery({
+    queryKey: timeEntriesRangeKey(userId, start, end),
+    enabled:  typeof userId === "string" && !!start && !!end,
+    queryFn:  async (): Promise<TimeEntry[]> => {
+      if (!userId) return [];
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("time_entries")
+        .select("*")
+        .eq("user_id", userId)
+        .gte("date", start)
+        .lte("date", end)
+        .order("date", { ascending: true });
       if (error) throw new Error(error.message);
       return (data ?? []) as TimeEntry[];
     },

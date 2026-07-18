@@ -1,5 +1,74 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (93) – v0.54.0: dashboard/page.tsx tam RQ migrate + range hook
+
+### Hedef
+Dashboard sayfası (671 LOC) 7 parallel supabase query yapıyordu (`loadAll`).
+v0.48-53 aralığında yaratılan RQ hook'lar ile 6'sı migrate edildi. En büyük
+dedup kazancı — dashboard ana giriş sayfası, tüm tracker/salary/vacation
+component'leri onun altında.
+
+### YENİ variant
+`useTimeEntriesRangeQuery(start, end)` — `useTimeEntries.ts` içinde. Ay-scoped
+`useTimeEntriesQuery(year, month)`'ın yanına, arbitrary range için variant.
+Yıllık / YTD / last-7 gibi ay-dışı sorgular için gerekliydi.
+
+Yeni key helpers:
+- `timeEntriesKey(uid, y, m)` — mevcut
+- `timeEntriesRangeKey(uid, start, end)` — YENİ
+- `timeEntriesPrefix(uid)` — YENİ (mutation invalidate için, ay + range hepsi)
+
+### MIGRATE — `dashboard/page.tsx`
+7 query → 5 RQ hook (+ 1 profile direct + 1 salary_settings):
+- ~~time_entries month~~ → `useTimeEntriesQuery(y, m)`
+- ~~time_entries year~~ → `useTimeEntriesRangeQuery(yearStart, yearEnd)`
+- ~~time_entries last7~~ → `useTimeEntriesRangeQuery(last7Start, todayStr)`
+- ~~notdienst month range~~ → `useNotdienstEntriesQuery(range.start, range.end)`
+- ~~notdienst year+7~~ → `useNotdienstEntriesQuery(yearStart, yearNdEnd)`
+- ~~salary_settings~~ → `useSalarySettingsQuery()`
+- profiles (vorname, bundesland) → DIRECT (single fetch on mount, keep as-is)
+
+### Kaldırılan state
+- ~~entries, ndEntries, yearEntries, yearNd, last7, settings, loading~~ (7 useState)
+- ~~loadAll useCallback + trigger useEffect~~ (dev-time confusion)
+
+### Kalan state
+- name, bundesland (profile-derived, minimal)
+- selectedYear, selectedMonth (UI state)
+- localPatch (localStorage cross-tab sync)
+- today (render-stable via useState init function — gün değişince re-mount yeter)
+
+### Dedup impact
+Dashboard + tracker + salary aynı ay time_entries için TEK network call.
+Öncesi:
+- dashboard loadAll: 7 query
+- tracker sayfası: 1 (useTimeEntriesQuery — v0.48)
+- salary sayfası: 4 query (Phase 3'te)
+
+Sonrası dashboard: 5 network call (paralel), 1 dedup ile paylaşım.
+User dashboard → tracker geçince 0 yeni fetch (staleTime 60s hit).
+
+### Structural type cast
+Dashboard'ın local `TimeEntry` interface'i shared TimeEntry'nin subset'i.
+`as unknown as TimeEntry[]` cast yapıldı — TypeScript structural narrow
+otomatik değil, ama runtime uyumlu.
+
+### Validation
+- TS clean · ESLint clean · Vitest **422/422**
+
+### Değişen dosyalar
+- MOD: `apps/web/src/hooks/queries/useTimeEntries.ts` — range variant + key helpers
+- MOD: `apps/web/src/app/(dashboard)/dashboard/page.tsx` — loadAll rewrite
+- MOD: `apps/web/src/lib/version.ts` — 0.53.0 → 0.54.0
+
+### Kalan Phase 2
+- salary/page.tsx (debounce risk, ayrı iterasyon)
+- reports/page.tsx
+- company/dashboard/page.tsx + employees/[userId]/page.tsx
+- 10 diğer sayfa (settings, onboarding, ...) direct supabase kullanıyor
+
+---
+
 ## 2026-07-12 (92) – v0.53.0: React Query Phase 2 — SalarySettings + Notdienst hooks
 
 ### Hedef

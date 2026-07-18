@@ -14,12 +14,9 @@ import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
 import { useModalA11y } from "@/hooks/useModalA11y";
 
 /**
- * §4 ArbZG — Pausenregelung
- * - Arbeitszeit > 6h  → mindestens 30 min Pause
- * - Arbeitszeit > 9h  → mindestens 45 min Pause
- *
- * Selbstständige'ler ArbZG'ye tabi değil ama Arbeitnehmer'ler için Pflicht.
- * Warn-only (block değil) — Stundly hem Solo hem Team modunda çalışıyor.
+ * §4 ArbZG — Pausenregelung. Brutto Arbeitszeit bazlı (konservatif):
+ *   >6h → 30 min, >9h → 45 min. Shared `getMinRequiredBreak` netto bekliyor,
+ *   burada UX için brutto kullanılıyor (biraz daha erken uyarı verir).
  */
 function requiredPauseMinutes(bruttoMinutes: number): number {
   if (bruttoMinutes > 9 * 60) return 45;

@@ -4,12 +4,17 @@ import {
   ARBZG_STANDARD_MINUTES,
   ARBZG_ROLLING_WINDOW_MONTHS,
   ARBZG_RUHEZEIT_MIN_MINUTES,
+  ARBZG_WEEKLY_MAX_MINUTES,
   isDailyCapViolation,
   isRollingAvgViolation,
   isRuhezeitViolation,
   findDailyCapViolations,
   calcRolling6MonthAvg,
   calcRuhezeitMinutes,
+  calcWeeklyMinutes,
+  findWeeklyCapViolations,
+  getMinRequiredBreak,
+  isPauseInsufficient,
 } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 
@@ -225,5 +230,123 @@ describe("isRuhezeitViolation", () => {
   });
   it("0 min = Verstoß", () => {
     expect(isRuhezeitViolation(0)).toBe(true);
+  });
+});
+
+describe("ARBZG_WEEKLY_MAX_MINUTES", () => {
+  it("48h * 60 = 2880 min", () => {
+    expect(ARBZG_WEEKLY_MAX_MINUTES).toBe(48 * 60);
+  });
+});
+
+describe("calcWeeklyMinutes", () => {
+  it("boş liste → boş sonuç", () => {
+    expect(calcWeeklyMinutes([])).toEqual([]);
+  });
+
+  it("tek gün 8h → hafta = 480 min, kein Verstoß", () => {
+    // 2026-01-05 (Montag) — KW 2026-W02
+    const r = calcWeeklyMinutes([
+      arbeiten("2026-01-05", "08:00", "17:00", 60), // 8h netto
+    ]);
+    expect(r).toHaveLength(1);
+    expect(r[0]?.isoWeek).toBe("2026-W02");
+    expect(r[0]?.netMinutes).toBe(480);
+    expect(r[0]?.isViolation).toBe(false);
+  });
+
+  it("5 gün × 10h = 50h → 48h aşımı, Verstoß", () => {
+    // Mo-Fr 08:00-19:00 mit 60min Pause = 10h netto/gün
+    const r = calcWeeklyMinutes([
+      arbeiten("2026-01-05", "08:00", "19:00", 60),
+      arbeiten("2026-01-06", "08:00", "19:00", 60),
+      arbeiten("2026-01-07", "08:00", "19:00", 60),
+      arbeiten("2026-01-08", "08:00", "19:00", 60),
+      arbeiten("2026-01-09", "08:00", "19:00", 60),
+    ]);
+    expect(r).toHaveLength(1);
+    expect(r[0]?.netMinutes).toBe(5 * 10 * 60); // 3000
+    expect(r[0]?.isViolation).toBe(true);
+  });
+
+  it("Urlaub / Krank / Notdienst günleri hafta toplamına dahil edilmez", () => {
+    const r = calcWeeklyMinutes([
+      arbeiten("2026-01-05", "08:00", "17:00", 60), // 8h
+      mkEntry({ date: "2026-01-06", day_type: "urlaub"    }),
+      mkEntry({ date: "2026-01-07", day_type: "krank"     }),
+      mkEntry({ date: "2026-01-08", day_type: "feiertag"  }),
+      mkEntry({ date: "2026-01-09", day_type: "notdienst" }),
+    ]);
+    expect(r).toHaveLength(1);
+    expect(r[0]?.netMinutes).toBe(480); // Sadece arbeiten sayılır
+  });
+
+  it("cross-year edge — 30 Aralık 2025 (Salı, W01/2026)", () => {
+    // ISO 2025 Aralık 29-31 → W01/2026 (Perşembe 1 Ocak 2026 → hafta 2026'ya bağlanır? Hayır: 1 Ocak 2026 Perşembe, W01/2026)
+    // Bu bizim isoWeekOf implementasyonunu doğrular
+    const r = calcWeeklyMinutes([
+      arbeiten("2025-12-30", "08:00", "16:00", 0), // 8h
+    ]);
+    expect(r).toHaveLength(1);
+    expect(r[0]?.isoWeek).toBe("2026-W01");
+  });
+
+  it("iki farklı hafta → 2 ayrı entry", () => {
+    const r = calcWeeklyMinutes([
+      arbeiten("2026-01-05", "08:00", "16:00", 0), // W02
+      arbeiten("2026-01-12", "08:00", "16:00", 0), // W03
+    ]);
+    expect(r).toHaveLength(2);
+    expect(r[0]?.isoWeek).toBe("2026-W02");
+    expect(r[1]?.isoWeek).toBe("2026-W03");
+  });
+});
+
+describe("findWeeklyCapViolations", () => {
+  it("sadece 48h aşan haftalar döner", () => {
+    const v = findWeeklyCapViolations([
+      arbeiten("2026-01-05", "08:00", "17:00", 60), // W02 = 8h, OK
+      arbeiten("2026-01-12", "06:00", "22:00", 60), // W03 = 15h ARBEITEN violation but weekly
+      arbeiten("2026-01-13", "06:00", "22:00", 60), // W03 += 15h = 30h, still not 48h
+      arbeiten("2026-01-14", "06:00", "22:00", 60), // 45h
+      arbeiten("2026-01-15", "06:00", "22:00", 60), // 60h ← violation
+    ]);
+    expect(v).toHaveLength(1);
+    expect(v[0]?.isoWeek).toBe("2026-W03");
+  });
+});
+
+describe("getMinRequiredBreak (§4 ArbZG)", () => {
+  it("≤6h çalışma → 0 min mola gerekli değil", () => {
+    expect(getMinRequiredBreak(0)).toBe(0);
+    expect(getMinRequiredBreak(6 * 60)).toBe(0); // 6h tam sınır, aşılmadı
+  });
+  it("6h-9h arası → 30 min", () => {
+    expect(getMinRequiredBreak(6 * 60 + 1)).toBe(30);
+    expect(getMinRequiredBreak(8 * 60)).toBe(30);
+    expect(getMinRequiredBreak(9 * 60)).toBe(30); // 9h tam sınır, aşılmadı
+  });
+  it(">9h → 45 min", () => {
+    expect(getMinRequiredBreak(9 * 60 + 1)).toBe(45);
+    expect(getMinRequiredBreak(10 * 60)).toBe(45);
+    expect(getMinRequiredBreak(12 * 60)).toBe(45);
+  });
+});
+
+describe("isPauseInsufficient", () => {
+  it("5h çalışma + 0 mola → OK", () => {
+    expect(isPauseInsufficient(5 * 60, 0)).toBe(false);
+  });
+  it("7h çalışma + 15 min mola → yetersiz (30 gerekli)", () => {
+    expect(isPauseInsufficient(7 * 60, 15)).toBe(true);
+  });
+  it("7h çalışma + 30 min mola → OK", () => {
+    expect(isPauseInsufficient(7 * 60, 30)).toBe(false);
+  });
+  it("10h çalışma + 30 min mola → yetersiz (45 gerekli)", () => {
+    expect(isPauseInsufficient(10 * 60, 30)).toBe(true);
+  });
+  it("10h çalışma + 45 min mola → OK", () => {
+    expect(isPauseInsufficient(10 * 60, 45)).toBe(false);
   });
 });

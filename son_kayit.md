@@ -1,5 +1,70 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (91) – v0.52.0: ArbZG weekly 48h + §4 Ruhepausen helper'ları
+
+### Hedef
+Mevcut ArbZG kontrolleri:
+- ✅ 10h/gün cap (§3) — MonthlySummary + TimeEntryModal inline
+- ✅ 11h Ruhezeit (§5) — TimeEntryModal inline
+- ✅ 6-ay rolling avg — helper var (UI'da yok, gerekmiyor)
+- ✅ §4 Pause (TimeEntryModal inline — local `requiredPauseMinutes`)
+
+Eksik:
+- ❌ Weekly 48h cap warning
+- ❌ Shared `getMinRequiredBreak` / `isPauseInsufficient` yardımcıları
+  (test edilebilir + reusable)
+
+### shared `arbzg.ts` yeni sabitler + fonksiyonlar
+
+**Constants**:
+- `ARBZG_WEEKLY_MAX_MINUTES = 48 * 60` — haftalık cap
+- `ARBZG_PAUSE_6H_THRESHOLD_MIN = 6 * 60`
+- `ARBZG_PAUSE_9H_THRESHOLD_MIN = 9 * 60`
+- `ARBZG_PAUSE_6H_MIN_MINUTES = 30`
+- `ARBZG_PAUSE_9H_MIN_MINUTES = 45`
+
+**Functions**:
+- `calcWeeklyMinutes(entries) → WeeklyMinutesEntry[]`
+  * ISO 8601 Kalenderwoche bazlı gruplama
+  * Sadece `day_type === "arbeiten"` entry'lerinin net_minutes toplamı
+  * Cross-year safe (ISO week uses Perşembe rule)
+- `findWeeklyCapViolations(entries) → filtered violations`
+- `getMinRequiredBreak(workedMinutes) → 0 | 30 | 45`
+- `isPauseInsufficient(workedMinutes, breakMinutes) → boolean`
+
+### Test (16 yeni case)
+`arbzg.test.ts` +16 → toplam 46 test:
+- ARBZG_WEEKLY_MAX_MINUTES sabit doğrulama
+- calcWeeklyMinutes: boş, tek gün, 5×10h ihlal, urlaub/krank hariç,
+  cross-year edge (30.12.2025 → W01/2026), iki farklı hafta
+- findWeeklyCapViolations: sadece 48h aşan haftalar
+- getMinRequiredBreak: ≤6h, 6-9h, >9h thresholds (edge case sınır dahil)
+- isPauseInsufficient: 4 case (5h/0, 7h/15 yetersiz, 7h/30 OK, 10h/30/45)
+
+### UI: MonthlySummary
+Daily cap warning banner'ının **altına** weekly warning banner eklendi:
+- Sarı (yellow) tema (daily kırmızı, weekly sarı — hierarchy)
+- "⚠️ §3 ArbZG (Wöchentlich): X Wochen mit mehr als 48 h..."
+- İlk 3 haftayı listeler (KW numarası + saat)
+- 6-Monats-Ø 48h/Woche disclaimer
+
+### UI: TimeEntryModal
+§4 pause warning zaten mevcuttu (local `requiredPauseMinutes(brutto)`).
+Shared'e taşımayı denedim ama brutto→netto behavior farkı (edge case:
+6h05m brutto + 10min break) mevcut UX'i değiştirir. Local helper'ı
+tuttum + shared helper'ı diğer yerler için sundum (DRY, tek doğruluk).
+
+### Validation
+- TS clean · ESLint clean · Vitest **422/422** (406 + 16 arbzg)
+
+### Değişen dosyalar
+- MOD: `packages/shared/src/utils/arbzg.ts` — 5 const + 4 function
+- MOD: `apps/web/src/__tests__/unit/arbzg.test.ts` — 16 yeni case
+- MOD: `apps/web/src/components/tracker/MonthlySummary.tsx` — weekly warning
+- MOD: `apps/web/src/lib/version.ts` — 0.51.0 → 0.52.0
+
+---
+
 ## 2026-07-12 (90) – v0.51.0: Rate limit auth-critical route'lara yayıldı
 
 ### Hedef

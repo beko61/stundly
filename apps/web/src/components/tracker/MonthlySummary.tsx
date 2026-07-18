@@ -7,6 +7,7 @@ import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMon
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
 import { useTimeEntriesQuery } from "@/hooks/queries/useTimeEntries";
+import { findWeeklyCapViolations } from "@workly/shared";
 
 const TARGET_HOURS_DEFAULT = 174;
 const URLAUB_DEFAULT       = 30; // Fallback: salary_settings.urlaub_anspruch okunamazsa
@@ -129,6 +130,7 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
       diffMin:      r.diffMin,
       targetMin:    r.targetMin,
       dailyCapViolations: r.dailyCapViolations,
+      weeklyViolations:   findWeeklyCapViolations(entries),
     };
   }, [entries, ndEntries, targetHours, feiertage, year, month]);
 
@@ -207,6 +209,29 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           {stats.dailyCapViolations.slice(0, 3).map(iso => iso.slice(8)).join(", ")}
           {stats.dailyCapViolations.length > 3 && ` +${stats.dailyCapViolations.length - 3}`}
           . Ausgleich innerhalb 6 Monaten (Ø ≤ 8h/Werktag) nötig.
+        </div>
+      )}
+      {stats.weeklyViolations.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 10,
+            padding: "8px 12px",
+            borderRadius: 10,
+            background: "color-mix(in srgb, var(--yellow) 12%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--yellow) 40%, transparent)",
+            fontSize: 12,
+            color: "var(--yellow)",
+            lineHeight: 1.45,
+          }}
+        >
+          ⚠️ <strong>§3 ArbZG (Wöchentlich):</strong> {stats.weeklyViolations.length}{" "}
+          {stats.weeklyViolations.length === 1 ? "Woche" : "Wochen"} mit mehr als{" "}
+          <strong>48 h</strong> Arbeit
+          {" — "}
+          {stats.weeklyViolations.slice(0, 3).map(w => `${w.isoWeek} (${minsToTime(w.netMinutes)})`).join(", ")}
+          {stats.weeklyViolations.length > 3 && ` +${stats.weeklyViolations.length - 3}`}
+          . 6-Monats-Ø ≤ 48h/Woche einhalten (Ausgleichszeitraum).
         </div>
       )}
       <div style={{

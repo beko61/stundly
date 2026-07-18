@@ -1,5 +1,48 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (95) – v0.56.0: "Vom Vortag kopieren" button
+
+### Hedef
+Küçük ama sık kullanılan UX kolaylığı: yeni bir Arbeitstag entry'si
+açıldığında, dünkü Arbeiten değerlerini tek tıkla kopyala. Kullanıcı
+her gün aynı saatleri elle girmek zorunda kalmasın.
+
+### Neden ekstra dashboard hooks eklenmedi bu iterasyonda
+Phase 3 hedefi (company admin sayfaları — company/dashboard,
+company/employees/[userId]) inceleme sonucunda **RSC (React Server
+Components)** çıktı — server-side render, RQ konusu değil. Diğer
+client-side sayfalar (company/billing, company/employees, settings)
+küçük scope + düşük dedup değeri. Phase 3 refactor pratik olarak
+tamam.
+
+Bunun yerine küçük user-görünür bir feature:
+
+### UI değişiklik — TimeEntryModal
+Header'ın altına (form üstünde) yeni kart tarzı buton:
+- **Görünür şart**: (1) mevcut entry yok (yeni ekleme), (2) previousEntry var,
+  (3) previousEntry.day_type === "arbeiten", (4) start_time + end_time dolu
+- **Tasarım**: accent2 renk, dashed border (secondary action)
+- **Label**: "📋 Vom Vortag kopieren (07:45–17:00)" — dünkü zamanlar preview
+- **Aksiyon**: click → 6 state field set edilir (dayType, startTime, endTime,
+  breakMinutes, isNightShift, note). Kullanıcı bunları hâlâ edit edebilir.
+- **Title tooltip**: "Vortag übernehmen: 07:45–17:00, 60 min Pause"
+
+### Neden Vortag = ARBEITEN filter
+Urlaub/Krank/Feiertag/Notdienst günlerini kopyalamak anlam yok (day_type
+farklı, zaman alanları null). Sadece gerçek çalışma günü kopyalanmalı.
+
+### Test
+Manuel test: bir günü doldur, sonraki günü aç → button görünmeli, tıkla → alanlar dolar. Var olan entry düzenleme modunda button görünmemeli.
+
+### Validation
+- TS clean · ESLint clean · Vitest 422/422
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/TimeEntryModal.tsx` — copy button
+- MOD: `apps/web/src/lib/version.ts` — 0.55.0 → 0.56.0
+
+---
+
 ## 2026-07-12 (94) – v0.55.0: Phase 2 RQ — vacation + salary + reports batch migrate
 
 ### Hedef

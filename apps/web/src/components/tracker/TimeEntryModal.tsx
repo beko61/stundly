@@ -192,6 +192,33 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* "Vom Vortag kopieren" — sadece yeni entry + previousEntry ARBEITEN varsa */}
+          {!entry && previousEntry && previousEntry.day_type === DAY_TYPES.ARBEITEN && previousEntry.start_time && previousEntry.end_time && (
+            <button
+              type="button"
+              onClick={() => {
+                setDayType(DAY_TYPES.ARBEITEN);
+                setStartTime(previousEntry.start_time!);
+                setEndTime(previousEntry.end_time!);
+                setBreakMinutes(previousEntry.break_minutes ?? 0);
+                setIsNightShift(previousEntry.is_night_shift ?? false);
+                if (previousEntry.note) setNote(previousEntry.note);
+              }}
+              style={{
+                padding: "8px 12px", borderRadius: 8, cursor: "pointer",
+                background: "color-mix(in srgb, var(--accent2) 12%, transparent)",
+                border:     "1px dashed color-mix(in srgb, var(--accent2) 40%, transparent)",
+                color:      "var(--accent2)",
+                fontFamily: "'Syne', sans-serif",
+                fontSize: 12, fontWeight: 700,
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+              }}
+              title={`Vortag übernehmen: ${previousEntry.start_time}–${previousEntry.end_time}, ${previousEntry.break_minutes ?? 0} min Pause`}
+            >
+              📋 Vom Vortag kopieren ({previousEntry.start_time}–{previousEntry.end_time})
+            </button>
+          )}
+
           {/* Day type */}
           <div>
             <label className="label">Typ</label>

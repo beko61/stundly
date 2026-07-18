@@ -1,5 +1,65 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (92) – v0.53.0: React Query Phase 2 — SalarySettings + Notdienst hooks
+
+### Hedef
+v0.48.0'de time_entries + vacation_requests RQ'ya taşınmıştı. Phase 2:
+diğer sık kullanılan 2 tablo için RQ hook + high-value bir consumer'ı
+(MonthlySummary) migrate. Kalan sayfalar (16) sonraki iterasyonlarda.
+
+### YENİ hooks
+
+**`hooks/queries/useSalarySettings.ts`**:
+- `useSalarySettingsQuery()` — user'ın en güncel (latest by created_at) satırı
+- `useUpsertSalarySettings()` — mevcut varsa UPDATE, yoksa INSERT
+  * onSuccess → invalidate ["salary_settings", user_id]
+- Query key `["salary_settings", user_id]` — user-scoped
+- Dönüş: `SalarySettings | null`
+
+**`hooks/queries/useNotdienstEntries.ts`**:
+- `useNotdienstEntriesQuery(start, end)` — range-based
+- `useCreateNotdienstEntry()` + `useDeleteNotdienstEntry()` — mutations
+- Mutations invalide `["notdienst_entries", user_id]` prefix (tüm range'ler)
+  * Sebep: range'ler overlap edebilir, tek range invalide guvenilmez
+- `notdienstEntriesPrefix()` helper — prefix invalidate için
+
+### MIGRATE — `components/tracker/MonthlySummary.tsx`
+- **Öncesi**: 3 separate `useEffect` + `createClient` + direct supabase
+  (salary_settings load, notdienst_entries load, yearUrlaub still direct)
+- **Sonrası**:
+  * `useSalarySettingsQuery()` → targetHours + urlaubAnspruch
+  * `useNotdienstEntriesQuery(range.start, range.end)` → ndRaw, sonra
+    `notdienstBelongsToMonth` ile filtreleyip ndEntries useMemo
+  * localStorage override state (cross-tab live sync) — user salary
+    sayfasında slider oynatınca MonthlySummary anında güncellensin
+  * yearUrlaub load'u direct supabase kaldı (henüz hook yok, farklı pattern)
+- **Kazanç**:
+  * Tracker sayfası + MonthlySummary + NotdienstWeekly artık aynı ay
+    time_entries VE aynı user salary_settings için TEK network call
+    yapıyor (RQ dedup). Öncesi: her komponentte ayrı fetch.
+  * ndVersion state hâlâ trackerStore'da (Notdienst mutation invalidate
+    manuel + RQ auto invalidate; overlap ok)
+
+### Neden salary/page.tsx migrate edilmedi (bu iterasyonda)
+Debounced auto-save + settingsRowId ref + localStorage sync + 4 tablo
+compound loader. Migration çok kapsamlı ve risk yüksek. Ayrı bir
+iterasyona ertelendi. Phase 3'te sırası gelecek.
+
+### Kalan Phase 2 migrasyonları
+15 sayfa hâlâ direct-Supabase (dashboard, salary, reports, company/*).
+Bu iterasyonda 1 consumer migrate + 2 hook altyapı hazırlığı.
+
+### Validation
+- TS clean · ESLint clean · Vitest **422/422**
+
+### Değişen dosyalar
+- YENİ: `apps/web/src/hooks/queries/useSalarySettings.ts`
+- YENİ: `apps/web/src/hooks/queries/useNotdienstEntries.ts`
+- MOD: `apps/web/src/components/tracker/MonthlySummary.tsx` — 2 RQ hook
+- MOD: `apps/web/src/lib/version.ts` — 0.52.0 → 0.53.0
+
+---
+
 ## 2026-07-12 (91) – v0.52.0: ArbZG weekly 48h + §4 Ruhepausen helper'ları
 
 ### Hedef

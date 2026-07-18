@@ -7,6 +7,8 @@ import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMon
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
 import { useTimeEntriesQuery } from "@/hooks/queries/useTimeEntries";
+import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
+import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { findWeeklyCapViolations } from "@workly/shared";
 
 const TARGET_HOURS_DEFAULT = 174;
@@ -27,36 +29,23 @@ interface MonthlySummaryProps {
 }
 
 export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
-  const { year, month, ndVersion } = useTrackerStore();
+  const { year, month } = useTrackerStore();
   const { data: entries = [] } = useTimeEntriesQuery(year, month);
-  const [ndEntries, setNdEntries] = useState<NdEntry[]>([]);
-  const [yearUrlaub, setYearUrlaub] = useState(0); // tüm yılın Urlaub gün sayısı
-  const [targetHours, setTargetHours] = useState(TARGET_HOURS_DEFAULT);
-  const [urlaubAnspruch, setUrlaubAnspruch] = useState(URLAUB_DEFAULT);
+  const { data: salarySettings } = useSalarySettingsQuery();
+  const ndRange = notdienstLoadRange(year, month);
+  const { data: ndRaw = [] } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
+  const [yearUrlaub, setYearUrlaub] = useState(0);
 
-  // Settings'ten Sollstunden + Urlaubsanspruch oku (live sync via localStorage)
+  // localStorage'daki live salary_settings güncellemesi — user salary sayfasında
+  // slider oynattığında MonthlySummary anında güncellensin (cross-component).
+  // salary/page.tsx localStorage set ediyor (workly_salary_settings_v2 key).
+  const [localOverride, setLocalOverride] = useState<{ monthly_target_hours?: number; urlaub_anspruch?: number }>({});
   useEffect(() => {
-    async function loadSettings() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      const { data } = await supabase
-        .from("salary_settings")
-        .select("monthly_target_hours, urlaub_anspruch")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data?.monthly_target_hours) setTargetHours(Number(data.monthly_target_hours));
-      if (data?.urlaub_anspruch)      setUrlaubAnspruch(Number(data.urlaub_anspruch));
-    }
-    void loadSettings();
     const applyLocal = (raw: string | null) => {
       if (!raw) return;
       try {
         const parsed = JSON.parse(raw) as { monthly_target_hours?: number; urlaub_anspruch?: number };
-        if (parsed.monthly_target_hours) setTargetHours(Number(parsed.monthly_target_hours));
-        if (parsed.urlaub_anspruch)      setUrlaubAnspruch(Number(parsed.urlaub_anspruch));
+        setLocalOverride(parsed);
       } catch {}
     };
     const handler = (e: StorageEvent) => {
@@ -65,31 +54,19 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
     window.addEventListener("storage", handler);
     try { applyLocal(localStorage.getItem("workly_salary_settings_v2")); } catch {}
     return () => window.removeEventListener("storage", handler);
-  }, [year, month]);
+  }, []);
 
-  // Notdienst bu ay — hafta-Pazartesi'si bu aya düşen tüm Notdienst'ler
-  // (bu ayın 1'inden sonraki ayın 7'sine kadar yükle, sonra haftaya göre filtrele)
-  useEffect(() => {
-    async function loadNd() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      const { start, end } = notdienstLoadRange(year, month);
-      const { data } = await supabase
-        .from("notdienst_entries")
-        .select("date, start_time, end_time, erledigt")
-        .eq("user_id", session.user.id)
-        .gte("date", start)
-        .lte("date", end);
-      if (!data) return;
-      // Hafta'nın Pazartesi'si bu aya düşenleri tut, diğerlerini ele
-      const filtered = (data as NdEntry[]).filter(nd =>
-        notdienstBelongsToMonth(nd.date, year, month)
-      );
-      setNdEntries(filtered);
-    }
-    void loadNd();
-  }, [year, month, ndVersion]);
+  // Priority: localStorage override > RQ salary_settings > default
+  const targetHours = localOverride.monthly_target_hours
+    ?? (salarySettings?.monthly_target_hours ? Number(salarySettings.monthly_target_hours) : TARGET_HOURS_DEFAULT);
+  const urlaubAnspruch = localOverride.urlaub_anspruch
+    ?? (salarySettings?.urlaub_anspruch ? Number(salarySettings.urlaub_anspruch) : URLAUB_DEFAULT);
+
+  // Hafta'nın Pazartesi'si bu aya düşen Notdienst entry'lerini filtrele
+  const ndEntries = useMemo(
+    () => ndRaw.filter(nd => notdienstBelongsToMonth(nd.date, year, month)) as NdEntry[],
+    [ndRaw, year, month],
+  );
 
   // Tüm yılın Urlaub günlerini say (Urlaubskonto için)
   useEffect(() => {

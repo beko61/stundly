@@ -1,5 +1,54 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-07-12 (96) – v0.56.1 HOTFIX: Vercel build fix (React 19 + @react-pdf/renderer)
+
+### Bug
+v0.48.0'den beri Vercel tüm deploy'ları FAIL:
+```
+unhandledRejection [TypeError: Cannot read properties of undefined (reading 'ReactCurrentDispatcher')]
+```
+
+Prod v0.47.4'te takıldı, 9 sürüm (v0.48-v0.56) canlıya çıkmadı.
+
+### Kök neden
+`@react-pdf/renderer@3.4.0` React 18 için yapılmış — `ReactCurrentDispatcher`
+gibi React internal API'ları kullanıyor. React 19'da bu kaldırıldı.
+
+`next.config.mjs`'te `experimental.optimizePackageImports: ["@react-pdf/renderer"]`
+vardı — Next.js build sırasında package'ı analiz ediyor, React internal
+lookup crashe neden oluyor.
+
+Ayrıca projede `@react-pdf/renderer` **kullanılmıyor** — jspdf var (dynamic
+import). Package.json'da unused dep olarak kalmış.
+
+### Neden local build çalışıyor
+Local Windows build cache + belki webpack cache'ten dolayı `optimizePackageImports`
+transitive analyz aynı hataya yol açmıyor. Vercel fresh build → hata görünür.
+
+### Fix
+1. `next.config.mjs`: `optimizePackageImports` array'inden `@react-pdf/renderer` kaldırıldı (aslında tüm `experimental.optimizePackageImports` sildim çünkü tek entry idi)
+2. `apps/web/package.json`: `@react-pdf/renderer` dependency kaldırıldı (`npm uninstall`)
+3. package-lock.json güncellendi
+
+### Etki
+- Vercel build çalışacak
+- Bundle size hafif düşer (unused dep temizlendi)
+- Fonksiyonel değişim yok — PDF hâlâ jspdf ile üretiliyor
+
+### Kalan blind fix'ler (v0.51.0 pin, v0.56 SSR-safe)
+Onlar da fena değil, ama asıl bug'ı çözmüyordu. Log görülünce 3 dakikada teşhis oldu.
+
+### Validation
+- TS clean · Local build clean
+
+### Değişen dosyalar
+- MOD: `apps/web/next.config.mjs` — optimizePackageImports kaldırıldı
+- MOD: `apps/web/package.json` — @react-pdf/renderer uninstall
+- MOD: `package-lock.json`
+- MOD: `apps/web/src/lib/version.ts` — 0.56.0 → 0.56.1
+
+---
+
 ## 2026-07-12 (95) – v0.56.0: "Vom Vortag kopieren" button
 
 ### Hedef

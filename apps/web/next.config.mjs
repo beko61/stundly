@@ -4,9 +4,9 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/config.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    optimizePackageImports: ["@react-pdf/renderer"],
-  },
+  // NOT: @react-pdf/renderer optimizePackageImports kaldırıldı — React 19'da
+  // ReactCurrentDispatcher yok, package React 18 için. Ayrıca proje jspdf
+  // kullanıyor, @react-pdf/renderer runtime'da import edilmiyor.
   transpilePackages: ["@workly/shared"],
   serverExternalPackages: ["@supabase/ssr"],
 

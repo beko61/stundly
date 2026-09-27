@@ -66,6 +66,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   const [erledigt, setErledigt] = useState<boolean>(entry?.erledigt ?? false);
   const [saving,   setSaving]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [mailLoading, setMailLoading] = useState(false);
 
   const duration = start && end
     ? formatDuration(calculateWorkDuration(start, end, 0).net_minutes)
@@ -131,7 +132,22 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
     onClose();
   }
 
-  function handleMailSend() {
+  async function handleMailSend() {
+    setMailLoading(true);
+    let to = "";
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: prof } = await supabase.from("profiles").select("email").eq("user_id", session.user.id).maybeSingle();
+        to = (prof?.email as string | null) ?? "";
+      }
+    } catch {
+      // Firma-Mail konnte nicht geladen werden — Mail öffnet trotzdem, nur ohne Empfänger.
+    } finally {
+      setMailLoading(false);
+    }
+
     const subjectParts = [`Notdienst-Bericht ${date}`, kunde.trim(), adresse.trim()].filter(Boolean);
     const subject = encodeURIComponent(subjectParts.join(" – "));
     const lines = [
@@ -143,7 +159,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
       ergebnis ? `\nErgebnis / Feststellungen:\n${ergebnis}` : "",
       note     ? `\nNotiz: ${note}`        : "",
     ].filter(Boolean).join("\n");
-    window.open(`mailto:?subject=${subject}&body=${encodeURIComponent(lines)}`);
+    window.open(`mailto:${encodeURIComponent(to)}?subject=${subject}&body=${encodeURIComponent(lines)}`);
   }
 
   const taStyle: React.CSSProperties = {
@@ -332,13 +348,13 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
           </button>
 
           {/* Per Mail */}
-          <button onClick={handleMailSend} style={{
+          <button onClick={handleMailSend} disabled={mailLoading} style={{
             width:"100%", padding:14, background:"#ea4335", border:"none",
             borderRadius:12, color:"white", fontFamily:"'Syne',sans-serif",
             fontSize:14, fontWeight:800, cursor:"pointer",
             display:"flex", alignItems:"center", justifyContent:"center", gap:8,
           }}>
-            <span style={{ fontSize:18 }}>📧</span> Per Mail senden
+            <span style={{ fontSize:18 }}>📧</span> {mailLoading ? "Öffnet..." : "Per Mail senden"}
           </button>
           <p style={{ fontSize:11, color:"var(--muted)", textAlign:"center" }}>
             📎 Fotos bitte manuell anhängen

@@ -1,5 +1,32 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (98) – v0.57.1: Notdienst mail — Empfänger otomatik (profil e-mail)
+
+### Kullanıcı isteği
+"Maile geçtiğinde otomatik gönderende profildeki şirket maili otomatik gelsin."
+
+### Netlik notu (kullanıcıya iletildi)
+`mailto:` linkleri sadece **Kime/Cc/Bcc/Konu/Gövde** set edebilir — **Gönderen
+(From)** telefonun/tarayıcının varsayılan mail hesabından gelir, Stundly bunu
+değiştiremez (mailto protokolünün teknik sınırı). Bu yüzden istek "Kime" alanına
+profildeki e-mail'in otomatik dolması olarak uygulandı.
+
+### Yapılan
+`handleMailSend` artık async: buton tıklanınca `profiles.email` (Settings →
+Mitarbeiterdaten → E-Mail, PDF raporlarda zaten `company_email` olarak kullanılan
+aynı alan) çekilip mailto `to` kısmına yazılıyor. Sorgu/network hatası olursa
+sessizce boş `to` ile devam eder (mail açılışını engellemez). Buton sorgu sırasında
+"Öffnet..." gösterir (`mailLoading` state).
+
+### Validation
+- TS clean · ESLint clean · Vitest 422/422 pass
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/NotdienstModal.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.57.0 → 0.57.1
+
+---
+
 ## 2026-09-27 (97) – v0.57.0: Kullanıcı bug report — 3 madde (Notdienst freeze, mail subject, scroll-to-top)
 
 ### Kullanıcı raporu (canlı sitede)

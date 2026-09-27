@@ -167,3 +167,109 @@ describe("NotdienstModal", () => {
     expect(mockProfile).toHaveBeenCalledTimes(1);
   });
 });
+
+// ── Uhrzeit-Automatik ───────────────────────────────────────────────────────
+
+describe("NotdienstModal — Uhrzeit", () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  const startInput = () => screen.getByLabelText("Start") as HTMLInputElement;
+  const endInput   = () => screen.getByLabelText("Ende") as HTMLInputElement;
+
+  it("neuer Eintrag: Start = Uhrzeit beim Öffnen (minutengenau), Ende = +1h", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 8, 27, 14, 37));
+    renderModal();
+    expect(startInput().value).toBe("14:37");
+    expect(endInput().value).toBe("15:37");
+  });
+
+  it("Ende läuft mit Start mit, bis Ende selbst geändert wird", () => {
+    renderModal();
+    fireEvent.change(startInput(), { target: { value: "20:10" } });
+    expect(endInput().value).toBe("21:10");
+    fireEvent.change(endInput(), { target: { value: "22:00" } });
+    fireEvent.change(startInput(), { target: { value: "19:00" } });
+    expect(endInput().value).toBe("22:00");
+  });
+
+  it("bestehender Eintrag: HH:MM statt HH:MM:SS, Start ändern verschiebt Ende nicht", () => {
+    renderModal(savedRow("nd-9", { date: "2026-09-27", start_time: "18:00:00", end_time: "19:30:00" }));
+    expect(startInput().value).toBe("18:00");
+    expect(endInput().value).toBe("19:30");
+    fireEvent.change(startInput(), { target: { value: "17:00" } });
+    expect(endInput().value).toBe("19:30");
+  });
+});
+
+// ── Adresse: PLZ → Ort + Straßenvorschläge ─────────────────────────────────
+
+describe("NotdienstModal — Adresse", () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({
+      plz: "30519", orte: ["Hannover"],
+      streets: [
+        { name: "Hildebrand-Weg", ort: "Hannover" },
+        { name: "Hildesheimer Straße", ort: "Hannover" },
+        { name: "Wiehbergstraße", ort: "Hannover" },
+      ],
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  const plzInput    = () => screen.getByLabelText("PLZ") as HTMLInputElement;
+  const ortInput    = () => screen.getByLabelText("Ort") as HTMLInputElement;
+  const streetInput = () => screen.getByLabelText("Straße und Hausnummer") as HTMLInputElement;
+
+  it("PLZ → Ort automatisch, Straße tippen → Vorschläge, Auswahl → gespeicherte Adresse", async () => {
+    const { onSave } = renderModal();
+    fireEvent.change(plzInput(), { target: { value: "30519" } });
+    await waitFor(() => expect(ortInput().value).toBe("Hannover"));
+    expect(String(fetchMock.mock.calls[0]![0])).toBe("/api/address/streets?plz=30519");
+
+    fireEvent.focus(streetInput());
+    fireEvent.change(streetInput(), { target: { value: "hilde" } });
+    const options = screen.getAllByRole("option").map(o => o.textContent);
+    expect(options).toEqual(["Hildebrand-Weg", "Hildesheimer Straße"]);
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: "Hildesheimer Straße" }));
+    expect(streetInput().value).toBe("Hildesheimer Straße ");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    fireEvent.change(streetInput(), { target: { value: "Hildesheimer Straße 5" } });
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(mockInsert.mock.calls[0]![0]).toMatchObject({ adresse: "Hildesheimer Straße 5, 30519 Hannover" });
+  });
+
+  it("PLZ nur Ziffern, max. 5; ohne vollständige PLZ kein Request", () => {
+    renderModal();
+    fireEvent.change(plzInput(), { target: { value: "30a51" } });
+    expect(plzInput().value).toBe("3051");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("bestehende Adresse wird in PLZ / Ort / Straße zerlegt", () => {
+    renderModal(savedRow("nd-9", { date: "2026-09-27", start_time: "18:00", end_time: "19:00",
+      adresse: "Wiehbergstraße 3, 30519 Hannover" }));
+    expect(plzInput().value).toBe("30519");
+    expect(ortInput().value).toBe("Hannover");
+    expect(streetInput().value).toBe("Wiehbergstraße 3");
+  });
+
+  it("Straßenverzeichnis nicht erreichbar → Adresse bleibt frei eintippbar", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("down", { status: 502 }));
+    const { onSave } = renderModal();
+    fireEvent.change(plzInput(), { target: { value: "30519" } });
+    fireEvent.change(ortInput(), { target: { value: "Hannover" } });
+    fireEvent.focus(streetInput());
+    fireEvent.change(streetInput(), { target: { value: "Hinterhof 2" } });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(mockInsert.mock.calls[0]![0]).toMatchObject({ adresse: "Hinterhof 2, 30519 Hannover" });
+  });
+});

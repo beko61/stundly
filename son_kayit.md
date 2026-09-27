@@ -1,5 +1,53 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (106) – v0.60.0: Notdienst — giriş saati otomatik + PLZ'ye göre sokak önerisi
+
+### Kullanıcı isteği
+1. "Otomatik saat geldiğinde sayfaya giriş saati gelsin, bitiş otomatik 1 saat sonraya atsın."
+2. "Adres bölümünde posta kodunu yazdığımda sokağı yazarken altta otomatik sokak arasın, mümkün mü?"
+
+### 1) Saat
+- Yeni Notdienst: Start = modal açıldığı an (dakika hassas; önceden :00/:30'a yuvarlanıyordu),
+  Ende = Start + 1h.
+- Yeni kayıtta Start değişince Ende otomatik +1h kayar — kullanıcı Ende'yi elle değiştirene ya da
+  Schnellauswahl'dan seçene kadar (`endTouched`). Mevcut kayıtlarda Ende hiç otomatik kaymaz.
+- Mevcut kayıtlarda `18:00:00` → input'ta `18:00`.
+
+### 2) Adres — PLZ → Ort + sokak önerileri
+- Veri: **OpenPLZ API** (openplzapi.org, açık veri, key yok). Test: 30519 → 277 kayıt/6 sayfa →
+  258 benzersiz sokak; "hilde" → Hildebrand-Weg | Hildesheimer Straße.
+- Yeni `GET /api/address/streets?plz=` (auth + rate limit 120/h): tüm sayfaları sunucuda çekip
+  birleştiriyor (dedupe, "Str." → "Straße"), Next fetch cache 24h. Kullanıcının tarayıcısı
+  üçüncü tarafla konuşmuyor (IP gitmiyor), dışarı sadece PLZ çıkıyor.
+- Client: PLZ 5 hane olunca tek istek, sonra yazarken filtre anında (istek yok). Kelime içi eşleşme,
+  kelime başı önce, "str"/"straße"/"strasse" eşdeğer. Ev numarası yazılınca liste kapanır (tıklama
+  numarayı silmesin). Ort otomatik (PLZ birden fazla Ort kapsıyorsa en sık olan; sokak seçilince onun Ort'u).
+- UI: [PLZ][Ort] / [Straße & Nr. + öneri listesi][📍]. ARIA combobox/listbox.
+- DB değişmedi: `adresse` tek alan "Straße Nr, PLZ Ort" (`joinAdresse`); eski kayıtlar `splitAdresse`
+  ile parçalanıyor, PLZ'siz eski serbest metin olduğu gibi Straße alanına düşüyor.
+- API erişilemezse (502) adres serbestçe yazılmaya devam ediyor.
+
+### Testler (+23)
+- `addressStreets.test.ts` (11): normalize, merge/dedupe, Orte sırası, filtre kuralları, split/join.
+- `api/address/streets/__tests__/route.test.ts` (5): 400/401/429, sayfa birleştirme, sadece PLZ dışarı, 502.
+- `NotdienstModal.test.tsx` (+7): saat varsayılanı (fake Date), Ende takibi, HH:MM:SS; PLZ→Ort→öneri→
+  seçim→kayıt adresi; PLZ input filtre; eski adres parçalama; API down.
+- Test yeni bir mantık hatası yakaladı: "wiehbergstr" normalize edilince tam eşleşme sayılıp liste
+  gizleniyordu → artık sadece birebir seçilmiş isimde gizleniyor.
+- Canlı veri kontrolü: aynı helper'lar gerçek OpenPLZ verisiyle (30519, 30167) çalıştırıldı.
+
+### Validation
+- TS clean · ESLint clean · Vitest 450/450 (33 dosya) · `next build` clean
+
+### Değişen dosyalar
+- ADD: `apps/web/src/lib/address/streets.ts`
+- ADD: `apps/web/src/app/api/address/streets/route.ts` (+ `__tests__/route.test.ts`)
+- ADD: `apps/web/src/__tests__/unit/addressStreets.test.ts`
+- MOD: `apps/web/src/components/tracker/NotdienstModal.tsx` (+ testleri)
+- MOD: `apps/web/src/lib/version.ts` — 0.59.3 → 0.60.0
+
+---
+
 ## 2026-09-27 (105) – v0.59.3: Zeiterfassung — bugüne kaydırma fix + saat/not görünümü
 
 ### Kullanıcı raporu

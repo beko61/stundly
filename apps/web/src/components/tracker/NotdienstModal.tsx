@@ -5,6 +5,9 @@ import type React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration } from "@workly/shared";
 import { useModalA11y } from "@/hooks/useModalA11y";
+import {
+  filterStreets, joinAdresse, splitAdresse, type StreetSuggestion,
+} from "@/lib/address/streets";
 
 export interface NotdienstEntry {
   id: string;
@@ -39,11 +42,10 @@ const PRESETS: [string, string, string][] = [
   ["08:00","16:00","Sa/So 08–16"],
 ];
 
-// Default times for a NEW notdienst: round current time down to :00,
-// end = +1h. Better UX than always 17:00–18:00.
+// Neuer Notdienst: Start = Uhrzeit beim Öffnen (minutengenau), Ende = Start + 1h.
 function defaultStart(): string {
   const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes() < 30 ? 0 : 30).padStart(2, "0")}`;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 function defaultEnd(start: string): string {
   const [h, m] = start.split(":").map(Number);
@@ -85,11 +87,20 @@ export function buildNotdienstMailto(m: NotdienstMailInput): string {
 
 export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props) {
   const modalRef = useModalA11y<HTMLDivElement>({ onClose });
-  const initStart = entry?.start_time ?? defaultStart();
+  // DB liefert Zeiten teils als "18:00:00" — <input type="time"> soll HH:MM zeigen.
+  const initStart = entry?.start_time?.slice(0, 5) ?? defaultStart();
   const [start,    setStart]    = useState(initStart);
-  const [end,      setEnd]      = useState(entry?.end_time   ?? defaultEnd(initStart));
+  const [end,      setEnd]      = useState(entry?.end_time?.slice(0, 5) ?? defaultEnd(initStart));
+  // Bei neuen Einträgen läuft Ende automatisch mit (Start + 1h), bis der User Ende selbst setzt.
+  const [endTouched, setEndTouched] = useState(!!entry);
   const [kunde,    setKunde]    = useState(entry?.kunde      ?? "");
-  const [adresse,  setAdresse]  = useState(entry?.adresse    ?? "");
+  const initAdr = splitAdresse(entry?.adresse);
+  const [strasse,  setStrasse]  = useState(initAdr.strasse);
+  const [plz,      setPlz]      = useState(initAdr.plz);
+  const [ort,      setOrt]      = useState(initAdr.ort);
+  const adresse = joinAdresse({ strasse, plz, ort });
+  const [streets,  setStreets]  = useState<StreetSuggestion[] | null>(null);
+  const [streetFocus, setStreetFocus] = useState(false);
   const [problem,  setProblem]  = useState(entry?.problem    ?? "");
   const [ergebnis, setErgebnis] = useState(entry?.ergebnis   ?? "");
   const [note,     setNote]     = useState(entry?.note       ?? "");
@@ -114,6 +125,34 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
     }).catch(() => { /* Firma-Mail optional — Mail-Button funktioniert auch ohne */ });
     return () => { cancelled = true; };
   }, []);
+
+  // Straßen je PLZ einmal laden, dann beim Tippen clientseitig filtern
+  useEffect(() => {
+    setStreets(null);
+    if (!/^\d{5}$/.test(plz)) return;
+    const ctrl = new AbortController();
+    fetch(`/api/address/streets?plz=${plz}`, { signal: ctrl.signal })
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: { orte: string[]; streets: StreetSuggestion[] } | null) => {
+        if (!d) return;
+        setStreets(d.streets);
+        setOrt(o => o || d.orte[0] || "");
+      })
+      .catch(() => { /* Vorschläge optional — Adresse bleibt frei eintippbar */ });
+    return () => ctrl.abort();
+  }, [plz]);
+
+  const suggestions = streetFocus && streets ? filterStreets(streets, strasse) : [];
+
+  function pickStreet(s: StreetSuggestion) {
+    setStrasse(`${s.name} `);
+    if (s.ort) setOrt(s.ort);
+  }
+
+  function changeStart(v: string) {
+    setStart(v);
+    if (!endTouched && /^\d{2}:\d{2}$/.test(v)) setEnd(defaultEnd(v));
+  }
 
   const duration = start && end
     ? formatDuration(calculateWorkDuration(start, end, 0).net_minutes)
@@ -227,14 +266,53 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
               placeholder="z.B. Frau Ermakov/Kraft, 2. OG rechts" />
           </div>
 
-          {/* Adresse + Google Maps Button */}
+          {/* Adresse: PLZ → Ort automatisch, Straße mit Vorschlägen + Google Maps */}
           <div>
             <label className="label">Adresse</label>
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <input className="input" type="text" inputMode="numeric" autoComplete="postal-code"
+                aria-label="PLZ" placeholder="PLZ" maxLength={5} value={plz}
+                onChange={e => setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                style={{ width:92, flexShrink:0 }} />
+              <input className="input" type="text" autoComplete="address-level2"
+                aria-label="Ort" placeholder="Ort" value={ort}
+                onChange={e => setOrt(e.target.value)} style={{ flex:1, minWidth:0 }} />
+            </div>
             <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-              <input className="input" type="text" value={adresse} onChange={e => setAdresse(e.target.value)}
-                placeholder="z.B. Kniestraße 22, 30519 Hannover"
-                style={{ flex:1 }} />
-              <button onClick={openMaps} title="In Google Maps öffnen" style={{
+              <div style={{ position:"relative", flex:1, minWidth:0 }}>
+                <input className="input" type="text" autoComplete="off"
+                  role="combobox" aria-label="Straße und Hausnummer"
+                  aria-autocomplete="list" aria-expanded={suggestions.length > 0}
+                  aria-controls="nd-street-list"
+                  value={strasse} onChange={e => setStrasse(e.target.value)}
+                  onFocus={() => setStreetFocus(true)} onBlur={() => setStreetFocus(false)}
+                  placeholder={plz.length === 5 ? "Straße & Nr. — tippen für Vorschläge" : "Straße & Nr. (erst PLZ für Vorschläge)"}
+                  style={{ width:"100%" }} />
+                {suggestions.length > 0 && (
+                  <ul id="nd-street-list" role="listbox" style={{
+                    position:"absolute", top:"calc(100% + 4px)", left:0, right:0, zIndex:5,
+                    margin:0, padding:4, listStyle:"none",
+                    background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10,
+                    boxShadow:"0 8px 24px rgba(0,0,0,0.35)",
+                  }}>
+                    {suggestions.map(s => (
+                      // mousedown statt click: sonst verliert das Input zuerst den Fokus und die Liste verschwindet
+                      <li key={`${s.name}|${s.ort}`} role="option" aria-selected={false}
+                        onMouseDown={e => { e.preventDefault(); pickStreet(s); }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface2)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                        style={{
+                          padding:"9px 10px", borderRadius:8, cursor:"pointer", fontSize:13,
+                          display:"flex", justifyContent:"space-between", gap:8,
+                        }}>
+                        <span>{s.name}</span>
+                        {s.ort && s.ort !== ort && <span style={{ color:"var(--muted)", fontSize:11 }}>{s.ort}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <button onClick={openMaps} title="In Google Maps öffnen" aria-label="In Google Maps öffnen" style={{
                 background:"var(--surface2)", border:"1px solid var(--green)", color:"var(--green)",
                 padding:"11px 13px", borderRadius:10, cursor:"pointer", fontSize:16, flexShrink:0,
               }}>📍</button>
@@ -262,7 +340,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             <label className="label">⏰ Schnellauswahl</label>
             <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
               {PRESETS.map(([s, e, label]) => (
-                <button key={`${s}-${e}`} onClick={() => { setStart(s); setEnd(e); }}
+                <button key={`${s}-${e}`} onClick={() => { setStart(s); setEnd(e); setEndTouched(true); }}
                   style={{
                     background: start===s && end===e ? "rgba(251,146,60,0.2)" : "var(--surface2)",
                     border:"1px solid var(--orange)", color:"var(--orange)",
@@ -276,11 +354,11 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
               <div>
                 <label className="label">Start</label>
-                <input className="input" type="time" value={start} onChange={e => setStart(e.target.value)} />
+                <input className="input" type="time" aria-label="Start" value={start} onChange={e => changeStart(e.target.value)} />
               </div>
               <div>
                 <label className="label">Ende</label>
-                <input className="input" type="time" value={end} onChange={e => setEnd(e.target.value)} />
+                <input className="input" type="time" aria-label="Ende" value={end} onChange={e => { setEnd(e.target.value); setEndTouched(true); }} />
               </div>
               <div>
                 <label className="label">Arbeitszeit</label>

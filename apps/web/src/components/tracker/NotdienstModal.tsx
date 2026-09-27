@@ -53,6 +53,36 @@ function defaultEnd(start: string): string {
   return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
 }
 
+export interface NotdienstMailInput {
+  to: string;
+  date: string;
+  start: string;
+  end: string;
+  duration: string;
+  kunde: string;
+  adresse: string;
+  problem: string;
+  ergebnis: string;
+  note: string;
+}
+
+/** mailto-URL für den Notdienst-Bericht. Betreff: Datum – Kunde – Adresse (leere Teile entfallen). */
+export function buildNotdienstMailto(m: NotdienstMailInput): string {
+  const subjectParts = [`Notdienst-Bericht ${m.date}`, m.kunde.trim(), m.adresse.trim()].filter(Boolean);
+  const lines = [
+    `Datum: ${m.date}`,
+    `Uhrzeit: ${m.start} – ${m.end} (${m.duration})`,
+    m.kunde    ? `Kunde: ${m.kunde}`         : "",
+    m.adresse  ? `Adresse: ${m.adresse}`     : "",
+    m.problem  ? `\nProblem:\n${m.problem}`  : "",
+    m.ergebnis ? `\nErgebnis / Feststellungen:\n${m.ergebnis}` : "",
+    m.note     ? `\nNotiz: ${m.note}`        : "",
+  ].filter(Boolean).join("\n");
+  // "@" bleibt unkodiert — manche Mail-Apps (Gmail/Outlook mobil) dekodieren %40 im Empfänger nicht.
+  const to = encodeURIComponent(m.to.trim()).replace(/%40/g, "@");
+  return `mailto:${to}?subject=${encodeURIComponent(subjectParts.join(" – "))}&body=${encodeURIComponent(lines)}`;
+}
+
 export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props) {
   const modalRef = useModalA11y<HTMLDivElement>({ onClose });
   const initStart = entry?.start_time ?? defaultStart();
@@ -154,19 +184,10 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   }
 
   function handleMailSend() {
-    const subjectParts = [`Notdienst-Bericht ${date}`, kunde.trim(), adresse.trim()].filter(Boolean);
-    const subject = encodeURIComponent(subjectParts.join(" – "));
-    const lines = [
-      `Datum: ${date}`,
-      `Uhrzeit: ${start} – ${end} (${duration})`,
-      kunde    ? `Kunde: ${kunde}`         : "",
-      adresse  ? `Adresse: ${adresse}`     : "",
-      problem  ? `\nProblem:\n${problem}`  : "",
-      ergebnis ? `\nErgebnis / Feststellungen:\n${ergebnis}` : "",
-      note     ? `\nNotiz: ${note}`        : "",
-    ].filter(Boolean).join("\n");
     // Direkter, synchroner Aufruf innerhalb der Klick-Geste (siehe useEffect oben).
-    window.location.href = `mailto:${encodeURIComponent(companyEmail)}?subject=${subject}&body=${encodeURIComponent(lines)}`;
+    window.location.href = buildNotdienstMailto({
+      to: companyEmail, date, start, end, duration, kunde, adresse, problem, ergebnis, note,
+    });
   }
 
   const taStyle: React.CSSProperties = {

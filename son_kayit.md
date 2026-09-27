@@ -1,5 +1,52 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (101) – v0.58.2: Notdienst mail "@" kodlama fix + ilk component testleri
+
+### Deploy doğrulaması
+GitHub commit status API: v0.57.0, v0.57.1, v0.58.0, v0.58.1 → hepsi
+`Vercel=success`. Canlı layout chunk'ında "Nach oben scrollen" (v0.57.0) mevcut.
+Yani v0.56.1 build fix'i tuttu, bugünkü tüm sürümler canlıda.
+
+### Bulunan ek mail sorunu
+Alıcı `encodeURIComponent` ile kodlanıyordu → `mailto:firma%40test.de`. Bazı mobil
+mail uygulamaları (Gmail/Outlook) `%40`'ı çözmeyip alıcıyı geçersiz sayıyor. "@"
+artık kodlanmadan bırakılıyor.
+
+### Refactor
+Mail URL üretimi saf fonksiyona çıkarıldı: `buildNotdienstMailto()` (export) —
+`handleMailSend` sadece bunu çağırıp `location.href`'e yazıyor (senkron).
+
+### İlk React component testi (11 test)
+`components/tracker/__tests__/NotdienstModal.test.tsx`:
+- buildNotdienstMailto: alıcı/@, subject (tarih–kunde–adres), boş alan filtresi, boş alıcı, body
+- Yeni kayıt → insert, modal açık kalır, "Aktualisieren"
+- 2. kayıt → aynı id'ye update, 2. insert yok
+- Silme butonu ilk kayıttan sonra görünür, yeni id ile siler
+- DB hatası → mesaj görünür, buton aktif, onSave/onClose yok
+- Session yok → "Session abgelaufen", sonsuz "Speichern..." yok
+- Mail tıklaması network çağrısı yapmaz (firma maili mount'ta yüklenir)
+Mutation check: `onClose()` geri eklenince ve `%40` fix'i kaldırılınca ilgili testler FAIL.
+
+### Test ortamı bulgusu (prod'u etkilemiyor)
+Root `node_modules`'ta `react-dom@18.3.1` + `next@14.2.35` hoist edilmiş (next-intl'in
+`next` peer'i root'ta çözülüyor). `react@19` ile birleşince `ReactCurrentDispatcher`
+crash — Vercel'i v0.48–v0.55 arası kıran hatanın aynısı. Prod build Next'in kendi
+react-dom'unu kullandığı için etkilenmiyor (`next build` lokal temiz, Vercel yeşil).
+Bağımlılıklara dokunmadan `vitest.config.ts`'te `react-dom` → web'in react-dom@19'u
+ve `@testing-library/react` → ESM build alias'ı eklendi. Kalıcı çözüm (lockfile
+temizliği / next-intl hoisting) ayrı iş olarak bırakıldı.
+
+### Validation
+- TS clean · ESLint clean · Vitest 433/433 (30 dosya, +11) · `next build` clean
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/NotdienstModal.tsx`
+- ADD: `apps/web/src/components/tracker/__tests__/NotdienstModal.test.tsx`
+- MOD: `apps/web/vitest.config.ts`
+- MOD: `apps/web/src/lib/version.ts` — 0.58.1 → 0.58.2
+
+---
+
 ## 2026-09-27 (100) – v0.58.1 HOTFIX: Notdienst mail hiç açılmıyordu (regresyon)
 
 ### Kullanıcı raporu

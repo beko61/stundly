@@ -67,6 +67,8 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   const [saving,   setSaving]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mailLoading, setMailLoading] = useState(false);
+  const [savedId,  setSavedId]  = useState<string | null>(entry?.id ?? null);
+  const [justSaved, setJustSaved] = useState(false);
 
   const duration = start && end
     ? formatDuration(calculateWorkDuration(start, end, 0).net_minutes)
@@ -102,8 +104,8 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
         erledigt,
       };
 
-      const { data, error } = entry
-        ? await supabase.from("notdienst_entries").update(payload).eq("id", entry.id).select().single()
+      const { data, error } = savedId
+        ? await supabase.from("notdienst_entries").update(payload).eq("id", savedId).select().single()
         : await supabase.from("notdienst_entries").insert(payload).select().single();
 
       if (error || !data) {
@@ -111,8 +113,12 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
         return;
       }
 
+      if (!savedId) setSavedId((data as NotdienstEntry).id);
       onSave(data as NotdienstEntry);
-      onClose();
+      // Modal bleibt offen — Mail direkt aus dem gespeicherten Eintrag senden,
+      // ohne ihn erneut öffnen zu müssen. Schließen macht der User über ✕.
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
     } catch {
       setSaveError("Netzwerkfehler — bitte erneut versuchen.");
     } finally {
@@ -121,14 +127,14 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   }
 
   async function handleDelete() {
-    if (!entry) return;
+    if (!savedId) return;
     const supabase = createClient();
-    const { error } = await supabase.from("notdienst_entries").delete().eq("id", entry.id);
+    const { error } = await supabase.from("notdienst_entries").delete().eq("id", savedId);
     if (error) {
       setSaveError(error.message || "Löschen fehlgeschlagen — bitte erneut versuchen.");
       return;
     }
-    onDelete?.(entry.id);
+    onDelete?.(savedId);
     onClose();
   }
 
@@ -338,13 +344,24 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             </div>
           )}
 
+          {justSaved && !saveError && (
+            <div style={{
+              background: "color-mix(in srgb, var(--green) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--green) 35%, transparent)",
+              borderRadius: 10, padding: "10px 12px",
+              color: "var(--green)", fontSize: 12, fontWeight: 600,
+            }}>
+              ✅ Gespeichert — du kannst jetzt direkt die Mail senden.
+            </div>
+          )}
+
           {/* Speichern */}
           <button onClick={handleSave} disabled={saving} style={{
             width:"100%", padding:14, background:"var(--orange)", border:"none",
             borderRadius:12, color:"white", fontFamily:"'Syne',sans-serif",
             fontSize:15, fontWeight:800, cursor:"pointer",
           }}>
-            {saving ? "Speichern..." : "💾 Speichern"}
+            {saving ? "Speichern..." : savedId ? "💾 Aktualisieren" : "💾 Speichern"}
           </button>
 
           {/* Per Mail */}
@@ -360,7 +377,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             📎 Fotos bitte manuell anhängen
           </p>
 
-          {entry && (
+          {savedId && (
             <button onClick={handleDelete} style={{
               width:"100%", padding:12, background:"transparent",
               border:"1px solid var(--red)", borderRadius:12,

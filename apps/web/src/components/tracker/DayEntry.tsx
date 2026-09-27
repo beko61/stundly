@@ -313,9 +313,9 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
           entry={ndModal === "new" ? null : ndModal}
           onSave={saved => {
             setNdEntries(prev =>
-              ndModal === "new"
-                ? [...prev, saved]
-                : prev.map(e => e.id === saved.id ? saved : e)
+              prev.some(e => e.id === saved.id)
+                ? prev.map(e => e.id === saved.id ? saved : e)
+                : [...prev, saved]
             );
             incrementNdVersion();
           }}

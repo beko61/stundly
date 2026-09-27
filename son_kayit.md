@@ -1,5 +1,43 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (99) – v0.58.0: Notdienst modal — Kaydet sonrası kapanmasın (mail için tekrar açma sorunu)
+
+### Kullanıcı raporu
+"Notdienst girdim, kaydediyorum, sayfa kapanıyor, mail atmak için tekrar girmem
+gerekiyor." — mantık hatası: kaydetme akışı mail göndermeyle kopuktu.
+
+### Kök neden
+`handleSave` başarılı kayıttan sonra her zaman `onClose()` çağırıyordu. Ama
+`handleMailSend` zaten formun local state'ini kullanıyor (DB'den tekrar okumuyor)
+— yani kapanmasının hiçbir teknik gerekçesi yoktu, sadece gereksiz bir adımdı.
+
+### Yapılan
+- `handleSave` artık `onClose()` çağırmıyor; kayıttan sonra modal açık kalıyor,
+  yeşil "✅ Gespeichert — du kannst jetzt direkt die Mail senden." banner'ı 2.5sn
+  gösteriliyor. Kullanıcı kaydet → hemen "Per Mail senden" akışını tek modalda
+  yapabiliyor, kapatmayı kendisi ✕ ile yapıyor.
+- Yeni entry (insert) için `savedId` state eklendi (`entry?.id` ile başlar, ilk
+  başarılı insert'te DB'den dönen id ile set edilir) — modal açıkken tekrar
+  "Speichern"e basılırsa artık INSERT değil UPDATE yapıyor (buton label'ı da
+  "💾 Aktualisieren" oluyor). Delete butonu da `savedId` şartına bağlandı (yeni
+  ama henüz kaydedilmemiş bir girdide silme butonu gösterilmiyor, kayıttan sonra
+  görünür).
+- `DayEntry.tsx`'teki `onSave` callback'i `ndModal === "new"` string karşılaştırmasına
+  göre append/update kararı veriyordu — modal artık kapanmadığı için 2. kayıtta bu
+  hep "yeni ekle" dalına girip **kopya kayıt** oluşturuyordu. Karşılaştırma id bazlı
+  yapıldı (`prev.some(e => e.id === saved.id)`), artık ndModal'ın "new"/entry olması
+  fark etmiyor.
+
+### Validation
+- TS clean · ESLint clean · Vitest 422/422 pass
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/NotdienstModal.tsx`
+- MOD: `apps/web/src/components/tracker/DayEntry.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.57.1 → 0.58.0
+
+---
+
 ## 2026-09-27 (98) – v0.57.1: Notdienst mail — Empfänger otomatik (profil e-mail)
 
 ### Kullanıcı isteği

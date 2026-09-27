@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { homePathForRole } from "@/lib/auth/homePath";
 
 function LoginForm() {
   const router = useRouter();
@@ -86,15 +87,7 @@ function LoginForm() {
       .eq("user_id", user.id)
       .single();
 
-    const role = profile?.role ?? "individual";
-
-    if (role === "super_admin") {
-      router.push("/superadmin");
-    } else if (role === "company_admin") {
-      router.push("/company/dashboard");
-    } else {
-      router.push("/dashboard");
-    }
+    router.push(homePathForRole(profile?.role));
 
     router.refresh();
   }

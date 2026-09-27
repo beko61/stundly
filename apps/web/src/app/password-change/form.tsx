@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { homePathForRole } from "@/lib/auth/homePath";
 
 interface Props {
   email:    string;
@@ -51,9 +52,7 @@ export function PasswordChangeForm({ email, fullName, role }: Props) {
     }
 
     // 3) Role-basiert weiterleiten
-    if (role === "super_admin")        router.push("/superadmin");
-    else if (role === "company_admin") router.push("/company/dashboard");
-    else                                router.push("/dashboard");
+    router.push(homePathForRole(role));
     router.refresh();
   }
 

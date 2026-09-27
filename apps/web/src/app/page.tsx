@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { homePathForRole } from "@/lib/auth/homePath";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
 
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
@@ -211,10 +212,7 @@ export default async function LandingPage() {
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
-    const role = (profile?.role as string | null) ?? "individual";
-    if (role === "super_admin")        redirect("/superadmin");
-    else if (role === "company_admin") redirect("/company/dashboard");
-    else                                redirect("/dashboard");
+    redirect(homePathForRole(profile?.role as string | null));
   }
 
   return (

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { homePathForRole } from "@/lib/auth/homePath";
 import { PasswordChangeForm } from "./form";
 
 export const metadata = {
@@ -30,10 +31,7 @@ export default async function PasswordChangePage() {
 
   // Flag set değilse — bu sayfaya gelmesine gerek yok. Role-bazlı yönlendir.
   if (!profile?.must_change_password) {
-    const role = profile?.role ?? "individual";
-    if (role === "super_admin")        redirect("/superadmin");
-    else if (role === "company_admin") redirect("/company/dashboard");
-    else                                redirect("/dashboard");
+    redirect(homePathForRole(profile?.role));
   }
 
   return (

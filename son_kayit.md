@@ -1,5 +1,32 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (107) – v0.60.1: Açılışta Dashboard (Super Admin Admin Panel'e düşüyordu)
+
+### Kullanıcı raporu
+"Uygulamayı ilk açtığımda dashboard gelmiyor."
+
+### Kök neden
+PWA `start_url` = `/`. Landing (`app/page.tsx`) giriş yapmış kullanıcıyı role göre yönlendiriyor:
+`super_admin → /superadmin`. Kullanıcı Super Admin ve uygulamayı kendi zaman takibi için de kullanıyor →
+her açılışta Admin Panel geliyordu. Service worker network-first, yönlendirmeyi engellemiyor (kontrol edildi).
+Aynı rol→sayfa kuralı 4 yerde kopyaydı (landing, login, password-change page + form).
+
+### Fix
+- Yeni `lib/auth/homePath.ts` → `homePathForRole(role)`: `company_admin → /company/dashboard`,
+  diğer herkes (super_admin dahil) → `/dashboard`. Admin Panel sidebar'dan.
+- 4 kopya bu fonksiyona bağlandı (davranış company_admin/employee için değişmedi).
+
+### Validation
+- TS clean · ESLint clean · Vitest 453/453 (+3 homePath)
+
+### Değişen dosyalar
+- ADD: `apps/web/src/lib/auth/homePath.ts`, `apps/web/src/__tests__/unit/homePath.test.ts`
+- MOD: `apps/web/src/app/page.tsx`, `apps/web/src/app/(auth)/login/page.tsx`,
+  `apps/web/src/app/password-change/page.tsx`, `apps/web/src/app/password-change/form.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.60.0 → 0.60.1
+
+---
+
 ## 2026-09-28 (106) – v0.60.0: Notdienst — giriş saati otomatik + PLZ'ye göre sokak önerisi
 
 ### Kullanıcı isteği

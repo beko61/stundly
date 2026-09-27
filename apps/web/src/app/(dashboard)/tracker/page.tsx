@@ -16,18 +16,42 @@ import {
   useUpdateTimeEntry,
   useDeleteTimeEntry,
 } from "@/hooks/queries/useTimeEntries";
+import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { getFeiertage } from "@/lib/utils/feiertage";
+import { notdienstLoadRange } from "@/lib/utils/weekMonth";
+import type { NotdienstEntry } from "@/components/tracker/NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
+
+const EMPTY_ND: NotdienstEntry[] = [];
 
 export default function TrackerPage() {
   const { year, month } = useTrackerStore();
-  const { data: entries = [], isLoading: loading, refetch } = useTimeEntriesQuery(year, month);
+  const entriesQ = useTimeEntriesQuery(year, month);
+  const { data: entries = [], isLoading: loading, refetch } = entriesQ;
+  // Notdienst des Monats (±1 Woche) — eine Query für alle Tageszeilen; gleicher Key wie
+  // MonthlySummary/NotdienstWeekly → dedupliziert, kein Extra-Request.
+  const ndRange = useMemo(() => notdienstLoadRange(year, month), [year, month]);
+  const ndQ = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
+  const ndByDate = useMemo(() => {
+    const m = new Map<string, NotdienstEntry[]>();
+    for (const nd of (ndQ.data ?? []) as unknown as NotdienstEntry[]) {
+      const list = m.get(nd.date) ?? [];
+      list.push(nd);
+      m.set(nd.date, list);
+    }
+    for (const list of m.values()) list.sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+    return m;
+  }, [ndQ.data]);
+  // isPending (nicht isLoading): in RQ v5 ist eine noch deaktivierte Query (Session lädt)
+  // isLoading=false — der Scroll lief dann zu früh.
+  const queriesReady = !entriesQ.isPending && !ndQ.isPending;
   const createMut = useCreateTimeEntry();
   const updateMut = useUpdateTimeEntry();
   const deleteMut = useDeleteTimeEntry();
 
   const [scanOpen,      setScanOpen]      = useState(false);
   const [bundesland,    setBundesland]    = useState("NI");
+  const [bundeslandReady, setBundeslandReady] = useState(false);
   const [clearingSample, setClearingSample] = useState(false);
 
   const sampleCount = useMemo(
@@ -71,18 +95,24 @@ export default function TrackerPage() {
         .from("profiles").select("bundesland").eq("user_id", session.user.id).single();
       if (data?.bundesland) setBundesland(data.bundesland as string);
     }
-    void loadBundesland();
+    // Feiertage ändern Zeilen (Feiertag-Label, "+ Notdienst") → erst danach scrollen
+    void loadBundesland().finally(() => setBundeslandReady(true));
   }, []);
 
   // React Query useTimeEntriesQuery, year/month değişince otomatik refetch eder.
   // Eski useEffect kaldırıldı — RQ handles this.
 
-  const today    = new Date();
-  const todayStr = today.toISOString().split("T")[0]!;
+  const dataReady = queriesReady && bundeslandReady;
 
-  // Aktif ay = bu ay ise, ilk render'da bugünün satırına scroll et
+  const today    = new Date();
+  // Lokales Datum — toISOString() ist UTC und lieferte in DE zwischen 0 und 2 Uhr "gestern".
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  // Aktif ay = bu ay ise, bugünün satırına scroll et — ERST wenn Einträge UND Notdienste da
+  // sind. Vorher luden NotdienstWeekly + jede Tageszeile nach dem Scroll nach, der Inhalt
+  // darüber wuchs und "heute" rutschte aus dem Bild.
   useEffect(() => {
-    if (loading) return;
+    if (!dataReady) return;
     const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
     if (!isCurrentMonth) return;
     // Layout settle olduktan sonra scroll
@@ -91,9 +121,9 @@ export default function TrackerPage() {
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 150);
     return () => clearTimeout(timer);
-  // intentionally only on loading change + month/year change
+  // intentionally only on readiness change + month/year change
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, year, month]);
+  }, [dataReady, year, month]);
 
   const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
 
@@ -182,6 +212,7 @@ export default function TrackerPage() {
                 isToday={dateStr === todayStr}
                 dayOfWeek={dow}
                 feiertag={feiertage[dateStr] || undefined}
+                ndEntries={ndByDate.get(dateStr) ?? EMPTY_ND}
                 onCreate={create}
                 onUpdate={update}
                 onDelete={async (id) => { await remove(id, dateStr); }}

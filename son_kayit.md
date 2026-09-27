@@ -1,5 +1,55 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (105) – v0.59.3: Zeiterfassung — bugüne kaydırma fix + saat/not görünümü
+
+### Kullanıcı raporu
+1. "Zeiterfassung sayfasına tıkladığımda bugünün üstüne gitmiyor."
+2. Screenshot: "çok berbat duruyor" — `Start 07:45:00`, `Ende 17:00:00` (saniyeli), not 2. satırı ikonun altına kayık.
+
+### 1) Scroll-to-today — kök neden
+Scroll, time_entries yüklendikten 150ms sonra çalışıyordu; ama iki şey SONRADAN yükleniyordu:
+- `NotdienstWeekly` (listenin hemen üstü) kendi fetch'ini yapıyor, veri gelene kadar `return null`,
+  sonra bütün kart birden beliriyordu (Eylül'de 20 Notdienst → birkaç yüz px).
+- Her `DayEntry` kendi Notdienst'ini ayrı çekiyordu (~30 request + ~30 getSession) → bugünden
+  önceki satırlar büyüyordu.
+Scroll doğru yere yapılıyor, sonra içerik bugünü aşağı itiyordu. Ayrıca RQ v5'te sorgu kapalıyken
+(session yüklenirken) `isLoading=false` → gating yetersizdi.
+
+### Fix
+- Tracker: ayın Notdienst'i TEK `useNotdienstEntriesQuery(notdienstLoadRange)` ile (MonthlySummary
+  ile aynı key → dedup, ekstra request yok), tarihe göre gruplanıp `DayEntry`'ye prop.
+- `NotdienstWeekly` aynı RQ sorgusunu kullanıyor (kendi fetch'i kaldırıldı).
+- Scroll artık `!entriesQ.isPending && !ndQ.isPending && bundeslandReady` olunca (Bundesland da
+  Feiertag satırlarını değiştiriyor).
+- `todayStr` lokal tarih (toISOString UTC idi → DE'de 00–02 arası "dün").
+- `DayEntry`: yerel ND state/fetch kaldırıldı; kayıt/silme/bezahlt-toggle sonrası
+  `invalidateQueries(["notdienst_entries"])`. `trackerStore.ndVersion` kaldırıldı.
+- Yan fayda: MonthlySummary Notdienst eklenince artık güncelleniyor (önceden ndVersion'dan habersizdi).
+- Davranış değişikliği: bir iş gününde ana kayıt silinse de o günün Notdienst'leri görünmeye devam
+  ediyor (DB'de duruyorlar, maaşa sayılıyorlar — gizlemek yanıltıcıydı).
+
+### 2) Görünüm
+- Saatler `hhmm()` ile hep `SS:DD` (DB bazen `07:45:00` döndürüyor) — chip'ler tek satıra sığıyor.
+- `NoteLine`: ikon ayrı sütun, metin yanında 2 satır clamp → 2. satır hizalı; 12px, text %65.
+
+### Testler
+- Yeni `tracker/__tests__/page.test.tsx` (2): ND/Bundesland yüklenmeden scroll yok, sonra tam 1 kez
+  `#today-entry`'ye; ND tek sorgudan günlere dağıtılıyor. Mutation check: eski gating ile FAIL.
+- Görsel: kullanıcının 23.09 kaydı vorher/nachher mock (app CSS, 375px).
+
+### Validation
+- TS clean · ESLint clean · Vitest 427/427 (31 dosya) · `next build` clean
+
+### Değişen dosyalar
+- MOD: `apps/web/src/app/(dashboard)/tracker/page.tsx`
+- ADD: `apps/web/src/app/(dashboard)/tracker/__tests__/page.test.tsx`
+- MOD: `apps/web/src/components/tracker/DayEntry.tsx`
+- MOD: `apps/web/src/components/tracker/NotdienstWeekly.tsx`
+- MOD: `apps/web/src/store/trackerStore.ts`
+- MOD: `apps/web/src/lib/version.ts` — 0.59.2 → 0.59.3
+
+---
+
 ## 2026-09-27 (104) – v0.59.2: Zeiterfassung — Notiz her gün tipinde saatlerin altında
 
 ### Kullanıcı isteği

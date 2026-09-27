@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { TimeEntry, DayType } from "@workly/shared";
 import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
 import { TimeEntryModal } from "./TimeEntryModal";
 import { NotdienstModal, type NotdienstEntry } from "./NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
-import { useTrackerStore } from "@/store/trackerStore";
 
 const WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 
@@ -34,15 +34,28 @@ const STATUS_ICON: Record<DayType, string> = {
   arbeiten:"✓", urlaub:"🏖", krank:"🤒", notdienst:"🚨", feiertag:"🎉", frei:"—",
 };
 
-/** Notiz/Kunde unter den Zeit-Chips — max. 2 Zeilen, bläht die Tageszeile nicht auf. */
+/** DB liefert Zeiten teils als "07:45:00" — Anzeige immer HH:MM. */
+function hhmm(t: string | null | undefined): string {
+  return t ? t.slice(0, 5) : "-";
+}
+
+/**
+ * Notiz/Kunde unter den Zeit-Chips — max. 2 Zeilen, bläht die Tageszeile nicht auf.
+ * Icon in eigener Spalte, damit Folgezeilen bündig unter dem Text stehen.
+ */
 function NoteLine({ icon, text }: { icon: string; text: string }) {
   return (
     <div style={{
-      marginTop:4, fontSize:11, color:"var(--muted)", lineHeight:1.35, whiteSpace:"pre-line",
-      display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
-      overflow:"hidden", overflowWrap:"anywhere",
+      display:"flex", gap:6, marginTop:6, fontSize:12, lineHeight:1.4,
+      color:"color-mix(in srgb, var(--text) 65%, transparent)",
     }}>
-      {icon} {text}
+      <span aria-hidden="true" style={{ flexShrink:0 }}>{icon}</span>
+      <div style={{
+        minWidth:0, whiteSpace:"pre-line", overflowWrap:"anywhere",
+        display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden",
+      }}>
+        {text}
+      </div>
     </div>
   );
 }
@@ -55,33 +68,24 @@ interface Props {
   isToday?:   boolean;
   dayOfWeek:  number;
   feiertag?:  string | undefined; // holiday name if applicable
+  /** Notdienst-Einträge dieses Tages — vom Tracker einmal pro Monat geladen (React Query). */
+  ndEntries:  NotdienstEntry[];
   onCreate:   (e: Omit<TimeEntry,"id"|"user_id"|"created_at"|"updated_at"|"synced_at">) => Promise<{error:string|null}|undefined>;
   onUpdate:   (id:string, patch:Partial<TimeEntry>) => Promise<{error:string|null}>;
   onDelete:   (id:string) => Promise<void>;
 }
 
-export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, onCreate, onUpdate, onDelete }: Props) {
+export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, ndEntries, onCreate, onUpdate, onDelete }: Props) {
   const [modalOpen, setModalOpen]   = useState(false);
   const [ndModal, setNdModal]       = useState<"new" | NotdienstEntry | null>(null);
-  const [ndEntries, setNdEntries]   = useState<NotdienstEntry[]>([]);
-  const incrementNdVersion = useTrackerStore(s => s.incrementNdVersion);;
+  const qc = useQueryClient();
+  // Früher lud jede Tageszeile ihre Notdienste selbst (~30 Requests, nach dem Scroll-zu-heute
+  // → Zeilen wuchsen nachträglich und schoben "heute" aus dem Bild). Jetzt: Monats-Query im
+  // Tracker, hier nur invalidieren.
+  const refreshNd = () => { void qc.invalidateQueries({ queryKey: ["notdienst_entries"] }); };
 
   const dayNum    = parseInt(date.split("-")[2] ?? "0", 10);
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-  // Load Notdienst sub-entries (weekends + Feiertage immer, Wochentage nur wenn Haupteintrag existiert)
-  useEffect(() => {
-    const isAutoHolidayDay = !!feiertag;
-    if (!entry && !isWeekend && !isAutoHolidayDay) return;
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) return;
-      supabase.from("notdienst_entries")
-        .select("*").eq("user_id", session.user.id).eq("date", date)
-        .order("start_time")
-        .then(({ data }) => { if (data) setNdEntries(data as NotdienstEntry[]); });
-    });
-  }, [date, entry, isWeekend, feiertag]);
 
   const workDuration = entry?.start_time && entry?.end_time
     ? calculateWorkDuration(entry.start_time, entry.end_time, entry.break_minutes)
@@ -171,7 +175,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                   display:"inline-flex", alignItems:"center", justifyContent:"center",
                   borderRadius:8,
                 }}
-                onClick={async e => { e.stopPropagation(); await onDelete(entry.id); setNdEntries([]); }}>×</button>
+                onClick={async e => { e.stopPropagation(); await onDelete(entry.id); }}>×</button>
             )}
           </div>
         </div>
@@ -181,9 +185,9 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
           <div style={{ padding:"0 14px 10px" }}>
             <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
               {[
-                { label:"Start", val:entry.start_time },
+                { label:"Start", val:hhmm(entry.start_time) },
                 { label:"Pause", val:`${String(Math.floor(entry.break_minutes/60)).padStart(2,"0")}:${String(entry.break_minutes%60).padStart(2,"0")}` },
-                { label:"Ende",  val:entry.end_time },
+                { label:"Ende",  val:hhmm(entry.end_time) },
                 { label:"Std",   val:netHours??"-" },
               ].map(({ label, val }) => (
                 <div key={label} className="time-chip">
@@ -244,8 +248,8 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                       {[
-                        { label:"Start", val:nd.start_time },
-                        { label:"Ende",  val:nd.end_time },
+                        { label:"Start", val:hhmm(nd.start_time) },
+                        { label:"Ende",  val:hhmm(nd.end_time) },
                         { label:"Std",   val:ndDur },
                       ].map(({ label, val }) => (
                         <div key={label} className="time-chip" style={{ borderColor:"var(--orange)" }}>
@@ -268,10 +272,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                         .eq("id", nd.id)
                         .select()
                         .single();
-                      if (!error && data) {
-                        setNdEntries(prev => prev.map(e => e.id === nd.id ? (data as NotdienstEntry) : e));
-                        incrementNdVersion();
-                      }
+                      if (!error && data) refreshNd();
                     }}
                     aria-label={nd.erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
                     title={nd.erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
@@ -318,15 +319,8 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
         <NotdienstModal
           date={date}
           entry={ndModal === "new" ? null : ndModal}
-          onSave={saved => {
-            setNdEntries(prev =>
-              prev.some(e => e.id === saved.id)
-                ? prev.map(e => e.id === saved.id ? saved : e)
-                : [...prev, saved]
-            );
-            incrementNdVersion();
-          }}
-          onDelete={id => { setNdEntries(prev => prev.filter(e => e.id !== id)); incrementNdVersion(); }}
+          onSave={refreshNd}
+          onDelete={refreshNd}
           onClose={() => setNdModal(null)}
         />
       )}

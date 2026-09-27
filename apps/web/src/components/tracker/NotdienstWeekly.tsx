@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
-import { createClient } from "@/lib/supabase/client";
+import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { calculateWorkDuration } from "@workly/shared";
 import { notdienstBelongsToMonth, notdienstLoadRange, weekMondayOf } from "@/lib/utils/weekMonth";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -48,35 +48,21 @@ function minsToTime(min: number): string {
 }
 
 export function NotdienstWeekly() {
-  const { year, month, ndVersion } = useTrackerStore();
+  const { year, month } = useTrackerStore();
   const { data: entries = [] } = useTimeEntriesQuery(year, month);
-  const [ndRows, setNdRows] = useState<NdRow[]>([]);
+  // Gleiche Query wie Tracker/MonthlySummary (dedupliziert). Früher eigener Fetch nach dem
+  // Mount → die Karte erschien verspätet und schob die Tagesliste nach unten.
+  const { start, end } = notdienstLoadRange(year, month);
+  const { data: ndRaw = [] } = useNotdienstEntriesQuery(start, end);
+  const ndRows = useMemo(
+    () => (ndRaw as unknown as NdRow[]).filter(nd => notdienstBelongsToMonth(nd.date, year, month)),
+    [ndRaw, year, month],
+  );
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(STORAGE_KEY) === "1";
   });
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      // Genişletilmiş aralık (ayın 1'i → ayın son günü + 7) — sonra haftaya göre filtre
-      const { start, end } = notdienstLoadRange(year, month);
-      const { data } = await supabase
-        .from("notdienst_entries")
-        .select("date, start_time, end_time, erledigt")
-        .eq("user_id", session.user.id)
-        .gte("date", start)
-        .lte("date", end);
-      if (!data) return;
-      const filtered = (data as NdRow[]).filter(nd =>
-        notdienstBelongsToMonth(nd.date, year, month)
-      );
-      setNdRows(filtered);
-    }
-    void load();
-  }, [year, month, ndVersion]);
 
   // Group by Kalenderwoche — hafta-Pazartesi'si bu aya düşen tüm haftaları kapsa.
   // Notdienst tarihi başka ayda olsa bile, haftanın Pazartesi'si bu ayda ise hafta dahil.

@@ -1,5 +1,69 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (102) – v0.59.0: Überstunden tek kaynak — Urlaub ile Berichte aynı rakam
+
+### Kullanıcı raporu
+Urlaub sayfası "ÜBERSTUNDEN 48.4h = 6 Tage", Berichte "Gesamt Überstunden +92:00 ≈ 11.5 Tage" — uyuşmuyor.
+
+### Teşhis (kullanıcı verisiyle iki rakam da birebir yeniden üretildi)
+İki ayrı hesap motoru vardı:
+- **Urlaub** → `lib/vacation/overtime.ts` `computeOvertime`: bugüne kadar; hedef = Mo-Fr × (aylık/21.7 ≈ 8.02h)
+  eksi ücretli izin **entry'leri**. **DB'de entry'si olmayan resmi tatiller (6 gün) hiç
+  düşülmüyordu → ≈ −48h haksız kesinti.** Maaş ayarı yoksa varsayılan 173h (Berichte 174h).
+  Notdienst ham tarihle, yıl sınırında hafta-Pazar kuralı yok.
+  Hesap: (1050:35 − 24:45 gelecek Eylül) + ND 137:10 − (192−53)×8.018 = **48.44h** ✓
+- **Berichte** → `calcMonthStats` year mode, todayISO YOK: tüm yıl, 12×174h sabit hedef,
+  "Jahr komplett befüllen" ile önceden doldurulmuş **28–30.09 + Ekim–Aralık** planlı günler de
+  fazla mesaiye sayılıyordu. Jan–Sep +93:45, Okt–Dez −1:45 = **+92:00** ✓
+
+### Karar (kullanıcı seçti): "Bugüne kadar"
+Fazla mesai = bugüne kadar gerçekten çalışılan. Berichte yıllık özeti (Soll, Differenz, tablo,
+donut) tüm yıl olarak kalıyor ("1 sene ne yaptın" — entry #~17 kararı korunuyor); sadece
+"Gesamt Überstunden" kartı "bis heute (27.09.)" oldu, DIFFERENZ kartı hint'i "ganzes Jahr inkl. Planung".
+Kullanıcı verisiyle beklenen yeni rakam ≈ **+99:00 (≈12 Tage)** her iki sayfada.
+
+### Yapılan
+- `monthStats.ts`:
+  - **YTD tatil çift sayım bug'ı**: hedef `countWorkDays(..., feiertage)` ile tatilsiz sayılıyor
+    AMA tatil ayrıca workedMin'e 8h kredi alıyordu → her tatil +8h sahte mesai. Artık YTD hedef =
+    Mo-Fr (tatil DAHİL) × günlük Soll; tatil kredisi hedefi dengeler (month mode ile aynı semantik).
+  - Günlük Soll = aylık Soll × 12 / yılın Mo-Fr sayısı (174h → tam 8h; yarı zamanlı 87h → 4h).
+    Tam yıl YTD = 12 × aylık Soll (yıllık raporla birebir).
+  - Yeni `calcOvertimeToDate()` — Urlaub + Berichte'nin TEK kaynağı (yıla filtre + Notdienst
+    hafta-Pazar kuralı + bugüne kadar).
+  - `notdienstYearLoadRange(year)`, `DEFAULT_TARGET_HOURS_PER_MONTH = 174` export.
+- `vacation/page.tsx`: `computeOvertime` → `calcOvertimeToDate`; Notdienst yıl sınırı payıyla yükleniyor.
+- `reports/page.tsx`:
+  - "Gesamt Überstunden" → `calcOvertimeToDate` + "bis heute" etiketi.
+  - **Year mode yıllık KPI'lar komşu yılın mesaisini sayıyordu**: time_entries aralığı Notdienst
+    payı yüzünden `önceki yıl 12-25 .. sonraki yıl 01-07` idi, yıl filtresi yoktu. Artık time_entries
+    tam yıl; Notdienst ayrı aralıkla.
+  - **Month mode ay sonu 1 gün kayıyordu**: `new Date(y, m, 0).toISOString()` Almanya'da UTC'ye
+    çevrilip "09-29" oluyordu → ayın son günü aylık raporda hiç yüklenmiyordu. Lokal hesap.
+  - **Month mode Notdienst eksikti**: sadece ayın tarihleri çekiliyordu; önceki ayda başlayıp bu
+    aya atfedilen haftanın Notdienst'leri (örn. Pzt 31.08 → Eylül) gelmiyordu. `notdienstLoadRange`.
+- `vacation/overtime.ts`: `computeOvertime` silindi (ikinci motor + tatil bug'ı); `isWeekday` /
+  `workdaysBetween` kaldı.
+
+### Testler
+- +8 test (monthStats): YTD tatil (auto + entry) diff=0, yarı zamanlı günlük Soll, tam yıl = 12×Soll,
+  calcOvertimeToDate: gelecek günler, diğer yıllar, Notdienst yıl sınırı + gelecek, Urlaub/Krank kredisi.
+- −16 test: `computeOvertime` testleri (fonksiyonla birlikte kaldırıldı, eski buggy davranışı kodluyordu).
+- Mutation check: eski YTD formülü geri konunca 7 yeni test FAIL.
+
+### Validation
+- TS clean · ESLint clean · Vitest 425/425 · `next build` clean
+
+### Değişen dosyalar
+- MOD: `apps/web/src/lib/utils/monthStats.ts`
+- MOD: `apps/web/src/lib/vacation/overtime.ts`
+- MOD: `apps/web/src/app/(dashboard)/vacation/page.tsx`
+- MOD: `apps/web/src/app/(dashboard)/reports/page.tsx`
+- MOD: `apps/web/src/__tests__/unit/monthStats.test.ts`, `overtime.test.ts`
+- MOD: `apps/web/src/lib/version.ts` — 0.58.2 → 0.59.0
+
+---
+
 ## 2026-09-27 (101) – v0.58.2: Notdienst mail "@" kodlama fix + ilk component testleri
 
 ### Deploy doğrulaması

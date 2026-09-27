@@ -20,6 +20,7 @@ import {
   ARBZG_MAX_DAILY_MINUTES,
 } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
+import { notdienstMonthOf } from "./weekMonth";
 
 export interface NdEntry {
   date: string;
@@ -204,11 +205,17 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   const ndCount = ndEntries.filter(nd => inWindow(nd.date)).length;
   const ndPaid  = ndEntries.filter(nd => inWindow(nd.date) && nd.erledigt).length;
 
-  // YTD: target = (yıl başı .. todayISO arası Mo-Fr × 8h). Aksi halde aylık ortalama × periyot ay sayısı.
+  // YTD: target = (yıl başı .. todayISO arası Mo-Fr, Feiertag DAHİL) × günlük Soll.
+  // Feiertag'lar yukarıda workedMin'e 8h kredi alıyor — hedeften de düşülürse çift sayılır
+  // (eski bug: her tatil +8h sahte Überstunde). Günlük Soll = aylık Soll × 12 / yılın Mo-Fr sayısı,
+  // böylece tam yıl YTD = 12 × targetHoursPerMonth (174h → tam 8h/gün).
+  // Aksi halde aylık ortalama × periyot ay sayısı.
   const workDaysInPeriod = countWorkDays(year, month, feiertage, ytdCutoff);
   let targetMin: number;
   if (ytdCutoff) {
-    targetMin = workDaysInPeriod * 8 * 60;
+    const weekdaysToDate = countWorkDays(year, null, {}, ytdCutoff);
+    const weekdaysYear   = countWorkDays(year, null, {});
+    targetMin = Math.round(weekdaysToDate * (targetHoursPerMonth * 12 / weekdaysYear) * 60);
   } else {
     const monthsInPeriod = month != null ? 1 : 12;
     targetMin = targetHoursPerMonth * monthsInPeriod * 60;
@@ -226,4 +233,44 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
     diffMin, targetMin,
     dailyCapViolations,
   };
+}
+
+/**
+ * Notdienst-Laderange für ein ganzes Jahr: eine Woche, deren Sonntag im Jahr liegt,
+ * kann Ende Dezember des Vorjahres beginnen (Wochen-Sonntag-Regel).
+ */
+/** Aylık Soll varsayılanı — salary_settings.monthly_target_hours boşsa. */
+export const DEFAULT_TARGET_HOURS_PER_MONTH = 174;
+
+export function notdienstYearLoadRange(year: number): { start: string; end: string } {
+  return { start: `${year - 1}-12-25`, end: `${year + 1}-01-07` };
+}
+
+export interface OvertimeToDateInput {
+  /** time_entries — dürfen über das Jahr hinausgehen, werden gefiltert. */
+  entries: TimeEntry[];
+  /** notdienst_entries aus `notdienstYearLoadRange(year)` — werden per Wochen-Sonntag-Regel gefiltert. */
+  ndEntries: NdEntry[];
+  feiertage: Record<string, string>;
+  year: number;
+  targetHoursPerMonth: number;
+  todayISO: string;
+}
+
+/**
+ * Überstunden-Saldo BIS HEUTE — einzige Quelle für Urlaub-Seite ("Überstunden",
+ * "+X aus Überstunden") und Berichte ("Gesamt Überstunden"). Vorausgefüllte
+ * Zukunftstage (Jahres-Befüllung) zählen nicht.
+ */
+export function calcOvertimeToDate(input: OvertimeToDateInput): MonthStatsResult {
+  const { year } = input;
+  return calcMonthStats({
+    entries:   input.entries.filter(e => e.date.startsWith(`${year}-`)),
+    ndEntries: input.ndEntries.filter(n => notdienstMonthOf(n.date).year === year),
+    feiertage: input.feiertage,
+    year,
+    month: null,
+    targetHoursPerMonth: input.targetHoursPerMonth,
+    todayISO: input.todayISO,
+  });
 }

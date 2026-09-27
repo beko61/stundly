@@ -12,13 +12,19 @@ import { YearPicker } from "@/components/ui/YearPicker";
 // initial bundle'da yer almaz, PDF butonuna basınca yüklenir.
 import type { NotdienstEntry, ProfileInfo } from "@/lib/pdf/monthlyReportPdf";
 import { getFeiertage } from "@/lib/utils/feiertage";
-import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
+import {
+  calcMonthStats,
+  calcOvertimeToDate,
+  notdienstYearLoadRange,
+  DEFAULT_TARGET_HOURS_PER_MONTH,
+  type NdEntry as NdEntryHelper,
+} from "@/lib/utils/monthStats";
 import { notdienstMonthOf, notdienstBelongsToMonth, notdienstLoadRange, isoWeek } from "@/lib/utils/weekMonth";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-const STANDARD_HOURS_DEFAULT = 174;
+
 
 interface DonutSlice { value: number; color: string; label: string; }
 
@@ -118,20 +124,28 @@ export default function ReportsPage() {
   // Date range — month veya year mode
   const { start, end } = useMemo(() => {
     if (mode === "month") {
+      // Ay sonu lokal hesaplanır — toISOString() UTC'ye çevirip Almanya'da 1 gün geri kaydırıyordu
+      // (30.09 → "09-29", ayın son günü hiç yüklenmiyordu).
+      const lastDay = new Date(year, month, 0).getDate();
       return {
         start: `${year}-${String(month).padStart(2,"0")}-01`,
-        end:   new Date(year, month, 0).toISOString().split("T")[0]!,
+        end:   `${year}-${String(month).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`,
       };
     }
-    return {
-      start: `${year - 1}-12-25`, // önceki yılın son hafta payı
-      end:   `${year + 1}-01-07`, // sonraki yılın ilk hafta payı
-    };
+    return { start: `${year}-01-01`, end: `${year}-12-31` };
   }, [year, month, mode]);
+
+  // Notdienst ±1 hafta pay ile (hafta-Pazar atfı) — aşağıda aya/yıla filtrelenir.
+  // Eskiden month mode'da sadece ayın tarihleri çekiliyordu → önceki ayda başlayıp
+  // bu aya atfedilen haftanın Notdienst'leri eksik kalıyordu.
+  const ndLoad = useMemo(
+    () => (mode === "month" ? notdienstLoadRange(year, month) : notdienstYearLoadRange(year)),
+    [year, month, mode],
+  );
 
   // RQ hooks — time_entries + notdienst_entries + salary_settings
   const { data: entriesRaw = [], isLoading: lEntries } = useTimeEntriesRangeQuery(start, end);
-  const { data: ndRaw      = [], isLoading: lNd }      = useNotdienstEntriesQuery(start, end);
+  const { data: ndRaw      = [], isLoading: lNd }      = useNotdienstEntriesQuery(ndLoad.start, ndLoad.end);
   const { data: salaryData }                            = useSalarySettingsQuery();
 
   const loading = lEntries || lNd;
@@ -148,7 +162,7 @@ export default function ReportsPage() {
     [ndRaw, mode, year, month],
   );
 
-  const targetHours = salaryData?.monthly_target_hours ? Number(salaryData.monthly_target_hours) : STANDARD_HOURS_DEFAULT;
+  const targetHours = salaryData?.monthly_target_hours ? Number(salaryData.monthly_target_hours) : DEFAULT_TARGET_HOURS_PER_MONTH;
   const vacTotal    = salaryData?.urlaub_anspruch     ? Number(salaryData.urlaub_anspruch)     : 30;
 
   // Profile bundesland — direct supabase (single fetch, no hook)
@@ -198,6 +212,16 @@ export default function ReportsPage() {
       notdienst:      r.ndCount,
     };
   }, [entries, ndEntries, year, month, mode, feiertage, targetHours]);
+
+  // "Gesamt Überstunden" — bis heute, identisch mit der Urlaub-Seite (calcOvertimeToDate).
+  // Der restliche Jahresbericht (Soll, Differenz, Tabelle) bleibt das ganze Jahr.
+  const overtimeToDate = useMemo(() => {
+    if (mode !== "year") return null;
+    return calcOvertimeToDate({
+      entries, ndEntries: ndRaw as NdEntryHelper[], feiertage, year,
+      targetHoursPerMonth: targetHours, todayISO,
+    });
+  }, [mode, entries, ndRaw, feiertage, year, targetHours, todayISO]);
 
   // Year mode'da Notdienst'leri (ay, KW) bazında grupla — açılır kapanır detay için
   const ndByWeek = useMemo(() => {
@@ -466,8 +490,11 @@ export default function ReportsPage() {
           <>
             {/* Hero kartlar — sadece year mode */}
             {mode === "year" && (() => {
-              const gesamtUeber = stats.diffMin;  // (worked + nd) − soll
-              const ueberTage = stats.diffMin / 60 / 8;
+              const gesamtUeber = overtimeToDate?.diffMin ?? 0;  // bis heute: (worked + nd) − soll
+              const ueberTage = gesamtUeber / 60 / 8;
+              const bisLabel = todayISO.startsWith(`${year}-`)
+                ? `bis heute (${todayISO.slice(8, 10)}.${todayISO.slice(5, 7)}.)`
+                : `Jahr ${year}`;
               const ndStunden = stats.ndMin / 60;
               const ndTage = ndStunden / 8;
               return (
@@ -489,7 +516,7 @@ export default function ReportsPage() {
                       {minsToHM(gesamtUeber)}
                     </div>
                     <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
-                      ≈ {gesamtUeber >= 0 ? "+" : ""}{ueberTage.toFixed(1)} Tage à 8 Std/Tag
+                      {bisLabel} · ≈ {gesamtUeber >= 0 ? "+" : ""}{ueberTage.toFixed(1)} Tage à 8 Std/Tag
                     </div>
                   </div>
 
@@ -520,7 +547,7 @@ export default function ReportsPage() {
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
               {[
                 { label:"GEARBEITET",  val:fmt(stats.workedMinPure), color:"green",  hint:`Soll: ${fmt(stats.targetMin)}` },
-                { label:"DIFFERENZ",   val:`${sign(stats.diffMin)}${fmt(stats.diffMin)}`, color:stats.diffMin>=0?"blue":"red", hint:stats.diffMin>=0?"Überstunden":"Minderstunden" },
+                { label:"DIFFERENZ",   val:`${sign(stats.diffMin)}${fmt(stats.diffMin)}`, color:stats.diffMin>=0?"blue":"red", hint:mode === "year" ? "ganzes Jahr inkl. Planung" : stats.diffMin>=0?"Überstunden":"Minderstunden" },
                 { label:"ARBEITSTAGE", val:`${stats.arbeitenDays} / ${stats.workDaysInPeriod}`, color:"purple", hint:"Erfasst / Werktage" },
                 { label:"URLAUB",      val:`${stats.urlaub} T`, color:"blue", hint:mode === "year" ? `Rest ${Math.max(0, vacTotal - stats.urlaub)}/${vacTotal}` : "Tage" },
               ].map(c=>(

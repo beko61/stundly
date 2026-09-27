@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcMonthStats, countWorkDays } from "@/lib/utils/monthStats";
+import { calcMonthStats, calcOvertimeToDate, countWorkDays } from "@/lib/utils/monthStats";
 import type { TimeEntry } from "@workly/shared";
 
 const TARGET = 174;
@@ -334,5 +334,93 @@ describe("calcMonthStats: §3 ArbZG dailyCapViolations", () => {
       feiertage: {}, year: 2026, month: 6, targetHoursPerMonth: TARGET,
     });
     expect(r.dailyCapViolations).toEqual([]);
+  });
+});
+
+describe("calcMonthStats YTD: Feiertag nicht doppelt zählen", () => {
+  // 2026-01-01 (Do) Neujahr … 2026-01-09 (Fr) = 7 Mo-Fr, davon 1 Feiertag
+  const today = "2026-01-09";
+  const neujahr = { "2026-01-01": "Neujahr" };
+  const workedDays = ["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"];
+
+  it("alle Werktage 8h gearbeitet + Auto-Feiertag → Differenz 0 (früher +8h)", () => {
+    const r = calcMonthStats({
+      entries: workedDays.map(d => arbeiten(d)), feiertage: neujahr,
+      year: 2026, month: null, targetHoursPerMonth: TARGET, todayISO: today,
+    });
+    expect(r.targetMin).toBe(7 * 8 * 60);
+    expect(r.diffMin).toBe(0);
+  });
+
+  it("Feiertag als Eintrag gespeichert → ebenfalls Differenz 0", () => {
+    const r = calcMonthStats({
+      entries: [feiertag("2026-01-01"), ...workedDays.map(d => arbeiten(d))], feiertage: neujahr,
+      year: 2026, month: null, targetHoursPerMonth: TARGET, todayISO: today,
+    });
+    expect(r.diffMin).toBe(0);
+  });
+
+  it("Tagessoll folgt dem Monatssoll (Teilzeit 87h → 4h/Tag in 2026)", () => {
+    const r = calcMonthStats({
+      entries: [], feiertage: {},
+      year: 2026, month: null, targetHoursPerMonth: 87, todayISO: today,
+    });
+    expect(r.targetMin).toBe(7 * 4 * 60);
+  });
+
+  it("volles Jahr per YTD = 12 × Monatssoll (gleich wie Jahresbericht)", () => {
+    const r = calcMonthStats({
+      entries: [], feiertage: {},
+      year: 2025, month: null, targetHoursPerMonth: TARGET, todayISO: "2026-09-27",
+    });
+    expect(r.targetMin).toBe(12 * TARGET * 60);
+  });
+});
+
+describe("calcOvertimeToDate (Urlaub + Berichte, einzige Quelle)", () => {
+  const today = "2026-01-09";
+  const neujahr = { "2026-01-01": "Neujahr" };
+  const base = ["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"]
+    .map(d => arbeiten(d));
+
+  it("vorausgefüllte Zukunftstage (Jahres-Befüllung) zählen nicht", () => {
+    const future = ["2026-01-12", "2026-01-13", "2026-03-02"].map(d => arbeiten(d, "07:45", "17:00", 60));
+    const r = calcOvertimeToDate({
+      entries: [...base, ...future], ndEntries: [], feiertage: neujahr,
+      year: 2026, targetHoursPerMonth: TARGET, todayISO: today,
+    });
+    expect(r.diffMin).toBe(0);
+  });
+
+  it("Einträge anderer Jahre werden ignoriert", () => {
+    const r = calcOvertimeToDate({
+      entries: [...base, arbeiten("2025-12-30", "06:00", "20:00", 0)], ndEntries: [], feiertage: neujahr,
+      year: 2026, targetHoursPerMonth: TARGET, todayISO: today,
+    });
+    expect(r.diffMin).toBe(0);
+  });
+
+  it("Notdienst zählt nach Wochen-Sonntag-Regel und nur bis heute", () => {
+    const r = calcOvertimeToDate({
+      entries: base,
+      ndEntries: [
+        { date: "2025-12-29", start_time: "18:00", end_time: "20:00" }, // Mo, Sonntag 04.01.2026 → 2026 ✓
+        { date: "2025-12-22", start_time: "18:00", end_time: "20:00" }, // Sonntag 28.12.2025 → 2025 ✗
+        { date: "2026-01-06", start_time: "18:00", end_time: "19:00" }, // ✓
+        { date: "2026-01-20", start_time: "18:00", end_time: "22:00" }, // Zukunft ✗
+      ],
+      feiertage: neujahr, year: 2026, targetHoursPerMonth: TARGET, todayISO: today,
+    });
+    expect(r.ndMin).toBe(3 * 60);
+    expect(r.diffMin).toBe(3 * 60);
+  });
+
+  it("Urlaub/Krank-Tage werden mit 8h gutgeschrieben", () => {
+    const entries = [urlaub("2026-01-02"), krank("2026-01-05"), ...base.slice(2)];
+    const r = calcOvertimeToDate({
+      entries, ndEntries: [], feiertage: neujahr,
+      year: 2026, targetHoursPerMonth: TARGET, todayISO: today,
+    });
+    expect(r.diffMin).toBe(0);
   });
 });

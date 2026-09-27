@@ -3,9 +3,15 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
-import type { VacationRequest, UrlaubArt } from "@workly/shared";
+import type { VacationRequest, UrlaubArt, TimeEntry } from "@workly/shared";
 import { URLAUB_ARTEN } from "@workly/shared";
-import { computeOvertime, type OvertimeEntry, type OvertimeNdEntry } from "@/lib/vacation/overtime";
+import { isWeekday } from "@/lib/vacation/overtime";
+import {
+  calcOvertimeToDate,
+  notdienstYearLoadRange,
+  DEFAULT_TARGET_HOURS_PER_MONTH,
+  type NdEntry,
+} from "@/lib/utils/monthStats";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -191,7 +197,8 @@ export default function VacationPage() {
   // dashboard + tracker ile paylaşımlı)
   const { data: salarySettings, isLoading: lSalary } = useSalarySettingsQuery();
   const { data: yearTimeData  = [], isLoading: lTime } = useTimeEntriesRangeQuery(yearStartISO, yearEndISO);
-  const { data: yearNdData    = [], isLoading: lNd   } = useNotdienstEntriesQuery(yearStartISO, yearEndISO);
+  const ndRange = notdienstYearLoadRange(year);
+  const { data: yearNdData    = [], isLoading: lNd   } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
 
   const [profileLoading, setProfileLoading]  = useState(true);
   const loading = reqsLoading || lSalary || lTime || lNd || profileLoading;
@@ -221,26 +228,30 @@ export default function VacationPage() {
   const VAC_TOTAL = vacTotal;
 
   const { yearUsedDays, overtimeMin, allUrlaubDates } = useMemo(() => {
-    const monthlyHours = salarySettings?.monthly_target_hours ? Number(salarySettings.monthly_target_hours) : 173;
-    const hoursPerDay  = monthlyHours / 21.7;
     if (yearTimeData.length === 0) {
       return { yearUsedDays: 0, overtimeMin: 0, allUrlaubDates: new Set<string>() };
     }
-    const { urlaubDays, overtimeMin: om } = computeOvertime(
-      yearTimeData as unknown as OvertimeEntry[],
-      yearStartISO,
+    // Aynı hesap Berichte "Gesamt Überstunden" kartında — iki sayfa hep aynı rakamı gösterir.
+    const { diffMin } = calcOvertimeToDate({
+      entries:   yearTimeData as unknown as TimeEntry[],
+      ndEntries: yearNdData as unknown as NdEntry[],
+      feiertage: holidays,
+      year,
+      targetHoursPerMonth: salarySettings?.monthly_target_hours
+        ? Number(salarySettings.monthly_target_hours)
+        : DEFAULT_TARGET_HOURS_PER_MONTH,
       todayISO,
-      {
-        ndEntries: yearNdData as unknown as OvertimeNdEntry[],
-        hoursPerDay,
-      },
-    );
+    });
+    // Urlaub-Kontingent: das ganze Jahr, auch geplante Tage (Mo-Fr).
     const s = new Set<string>();
+    let urlaubDays = 0;
     for (const e of yearTimeData) {
-      if (e.day_type === "urlaub") s.add(e.date);
+      if (e.day_type !== "urlaub") continue;
+      s.add(e.date);
+      if (isWeekday(e.date)) urlaubDays++;
     }
-    return { yearUsedDays: urlaubDays, overtimeMin: om, allUrlaubDates: s };
-  }, [salarySettings, yearTimeData, yearNdData, yearStartISO, todayISO]);
+    return { yearUsedDays: urlaubDays, overtimeMin: Math.max(0, diffMin), allUrlaubDates: s };
+  }, [salarySettings, yearTimeData, yearNdData, holidays, year, todayISO]);
 
   // Profile — direct supabase (single fetch, no hook), auto-loads on mount
   const loadProfile = useCallback(async () => {

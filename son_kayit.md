@@ -1,5 +1,46 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (100) – v0.58.1 HOTFIX: Notdienst mail hiç açılmıyordu (regresyon)
+
+### Kullanıcı raporu
+"Goto mail çalışmıyor, mail gönderemiyorum."
+
+### Kök neden (v0.57.1'in regresyonu)
+Bir önceki değişiklikte (Kime alanına profil e-mail'i otomatik doldurma),
+`handleMailSend` async yapılıp `window.open("mailto:...")` çağrısından ÖNCE
+Supabase'e `await` ile session + profile sorgusu eklenmişti. Tarayıcılar
+(özellikle mobil Safari/Chrome) `window.open`/mailto'yu sadece tıklama
+event'i içinde SENKRON çağrılırsa "kullanıcı başlattı" sayıp izin verir —
+bir `await`den sonra çağrılan `window.open` popup/navigasyon olarak
+sessizce bloklanabiliyor. Bu yüzden buton hiçbir şey yapmıyormuş gibi
+görünüyordu.
+
+### Fix
+- Firma e-maili artık modal AÇILIR AÇILMAZ (`useEffect`, mount'ta) arka planda
+  çekiliyor ve `companyEmail` state'inde tutuluyor.
+- `handleMailSend` tekrar tamamen senkron — hiçbir `await` yok, tıklama anında
+  direkt çalışıyor.
+- `window.open(...)` yerine `window.location.href = "mailto:..."` kullanıldı
+  (bazı masaüstü tarayıcılarda mail programı yokken `window.open` boş bir sekme
+  açık bırakıyor; `location.href` bu sorunu yaşamıyor).
+- `mailLoading` state'i ve "Öffnet..." buton metni kaldırıldı (artık gereksiz,
+  gecikme yok).
+
+### Ders
+mailto/window.open gibi "kullanıcı jesti" gerektiren API'leri kullanan bir
+handler'a **asla** senkron olmayan (await'li) bir adım eklenmemeli — gerekiyorsa
+veri önceden (mount/useEffect'te) hazırlanmalı, tıklama anı sadece zaten hazır
+veriyle senkron şekilde API'yi çağırmalı.
+
+### Validation
+- TS clean · ESLint clean · Vitest 422/422 pass
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/NotdienstModal.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.58.0 → 0.58.1
+
+---
+
 ## 2026-09-27 (99) – v0.58.0: Notdienst modal — Kaydet sonrası kapanmasın (mail için tekrar açma sorunu)
 
 ### Kullanıcı raporu

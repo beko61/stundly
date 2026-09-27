@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration } from "@workly/shared";
@@ -66,9 +66,24 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   const [erledigt, setErledigt] = useState<boolean>(entry?.erledigt ?? false);
   const [saving,   setSaving]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [mailLoading, setMailLoading] = useState(false);
   const [savedId,  setSavedId]  = useState<string | null>(entry?.id ?? null);
   const [justSaved, setJustSaved] = useState(false);
+  const [companyEmail, setCompanyEmail] = useState("");
+
+  // Firma-Mail (Settings → E-Mail) vorab laden, damit der Mail-Button beim Klick
+  // sofort/synchron öffnet — mailto nach einem await kann von Browsern (v.a. mobil)
+  // als Popup geblockt werden, wenn es nicht direkt in der Klick-Geste passiert.
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return null;
+      return supabase.from("profiles").select("email").eq("user_id", session.user.id).maybeSingle();
+    }).then(res => {
+      if (!cancelled && res?.data?.email) setCompanyEmail(res.data.email as string);
+    }).catch(() => { /* Firma-Mail optional — Mail-Button funktioniert auch ohne */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const duration = start && end
     ? formatDuration(calculateWorkDuration(start, end, 0).net_minutes)
@@ -138,22 +153,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
     onClose();
   }
 
-  async function handleMailSend() {
-    setMailLoading(true);
-    let to = "";
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: prof } = await supabase.from("profiles").select("email").eq("user_id", session.user.id).maybeSingle();
-        to = (prof?.email as string | null) ?? "";
-      }
-    } catch {
-      // Firma-Mail konnte nicht geladen werden — Mail öffnet trotzdem, nur ohne Empfänger.
-    } finally {
-      setMailLoading(false);
-    }
-
+  function handleMailSend() {
     const subjectParts = [`Notdienst-Bericht ${date}`, kunde.trim(), adresse.trim()].filter(Boolean);
     const subject = encodeURIComponent(subjectParts.join(" – "));
     const lines = [
@@ -165,7 +165,8 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
       ergebnis ? `\nErgebnis / Feststellungen:\n${ergebnis}` : "",
       note     ? `\nNotiz: ${note}`        : "",
     ].filter(Boolean).join("\n");
-    window.open(`mailto:${encodeURIComponent(to)}?subject=${subject}&body=${encodeURIComponent(lines)}`);
+    // Direkter, synchroner Aufruf innerhalb der Klick-Geste (siehe useEffect oben).
+    window.location.href = `mailto:${encodeURIComponent(companyEmail)}?subject=${subject}&body=${encodeURIComponent(lines)}`;
   }
 
   const taStyle: React.CSSProperties = {
@@ -365,13 +366,13 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
           </button>
 
           {/* Per Mail */}
-          <button onClick={handleMailSend} disabled={mailLoading} style={{
+          <button onClick={handleMailSend} style={{
             width:"100%", padding:14, background:"#ea4335", border:"none",
             borderRadius:12, color:"white", fontFamily:"'Syne',sans-serif",
             fontSize:14, fontWeight:800, cursor:"pointer",
             display:"flex", alignItems:"center", justifyContent:"center", gap:8,
           }}>
-            <span style={{ fontSize:18 }}>📧</span> {mailLoading ? "Öffnet..." : "Per Mail senden"}
+            <span style={{ fontSize:18 }}>📧</span> Per Mail senden
           </button>
           <p style={{ fontSize:11, color:"var(--muted)", textAlign:"center" }}>
             📎 Fotos bitte manuell anhängen

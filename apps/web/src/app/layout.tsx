@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/ui/CookieBanner";
 import { SupportButton } from "@/components/ui/SupportButton";
+import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { RegisterSW } from "@/components/ui/RegisterSW";
 import { InstallPrompt } from "@/components/ui/InstallPrompt";
 import { QueryProvider } from "@/providers/QueryProvider";
@@ -89,6 +90,7 @@ export default async function RootLayout({
           <QueryProvider>
             {children}
             <SupportButton />
+            <ScrollToTopButton />
             <CookieBanner />
             <InstallPrompt />
             <RegisterSW />

@@ -555,6 +555,20 @@ body:has(.floating-scan) .support-fab {
   }
 }
 
+/* Nach-oben-Button — links-unten, spiegelbildlich zu support-fab */
+.scroll-top-fab {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 9998;
+}
+@media (max-width: 767px) {
+  .scroll-top-fab {
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    left: 16px;
+  }
+}
+
 @media (max-width: 767px) {
 
   /* Tighter page paddings on mobile */

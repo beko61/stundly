@@ -1,5 +1,52 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (97) – v0.57.0: Kullanıcı bug report — 3 madde (Notdienst freeze, mail subject, scroll-to-top)
+
+### Kullanıcı raporu (canlı sitede)
+1. "Bir Notdienst giriyorum tüm bilgileri kaydediyorum donuyor ve kayıtlar siliniyor."
+2. "Mail gönder yaptığımda konu kısmına tarih yazıyor ama kunde ismi yazmıyor adres yazmıyor, bunların yazması gerek."
+3. "Sayfanın altına gidince direkt üste çıkamıyorum."
+
+### 1) NotdienstModal — freeze + sessiz kayıt kaybı (KÖK BUG)
+`handleSave` içinde `if (!session?.user) return;` erken çıkışı `setSaving(false)` ve
+`onClose()` çağırmadan dönüyordu → session süresi dolmuş/henüz hydrate olmamışsa buton
+sonsuza kadar "Speichern..." durumunda kalır (donma). Ayrıca `insert`/`update`
+response'undaki `error` hiç kontrol edilmiyordu — RLS/constraint hatası olursa
+`data` null gelir, `onSave` çağrılmaz, modal sessizce kapanır → kullanıcı için "kayıt
+girildi ama kayboldu / silindi" izlenimi. Try/catch/finally eklendi, `error` kontrol
+edilip kullanıcıya kırmızı uyarı kutusunda gösteriliyor artık, `saving` her koşulda
+`finally`'de false'a dönüyor. Aynı sessiz-hata paterni `handleDelete`'te de vardı,
+oraya da `error` kontrolü eklendi.
+- Dosya: `apps/web/src/components/tracker/NotdienstModal.tsx`
+
+### 2) Notdienst mail — subject'te sadece tarih vardı
+`handleMailSend` subject'i sabit `Notdienst-Bericht ${date}` idi; Kunde ve Adresse
+sadece body'de yer alıyordu. Artık subject `Notdienst-Bericht {date} – {kunde} – {adresse}`
+formatında (boş alanlar filtrelenir).
+- Dosya: `apps/web/src/components/tracker/NotdienstModal.tsx`
+
+### 3) Scroll-to-top FAB eklendi
+Uzun sayfalarda (ör. tracker, bir ayın tüm günleri) aşağı indikten sonra üste dönmenin
+yolu yoktu. `SupportButton` (sağ-alt) ile simetrik, sol-altta yeni `ScrollToTopButton`
+— 400px'den fazla scroll'da beliriyor, tıklanınca `window.scrollTo({top:0, behavior:"smooth"})`.
+Root layout'a global eklendi (tüm sayfalarda çalışır), mobilde bottom-nav'ın üstünde kalacak
+şekilde CSS offset'i `support-fab` ile aynı desende.
+- Yeni dosya: `apps/web/src/components/ui/ScrollToTopButton.tsx`
+- Dosya: `apps/web/src/app/globals.css` (`.scroll-top-fab`)
+- Dosya: `apps/web/src/app/layout.tsx`
+
+### Validation
+- TS clean · ESLint clean · Vitest 422/422 pass
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/NotdienstModal.tsx`
+- ADD: `apps/web/src/components/ui/ScrollToTopButton.tsx`
+- MOD: `apps/web/src/app/globals.css`
+- MOD: `apps/web/src/app/layout.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.56.1 → 0.57.0
+
+---
+
 ## 2026-07-12 (96) – v0.56.1 HOTFIX: Vercel build fix (React 19 + @react-pdf/renderer)
 
 ### Bug

@@ -65,6 +65,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   const [note,     setNote]     = useState(entry?.note       ?? "");
   const [erledigt, setErledigt] = useState<boolean>(entry?.erledigt ?? false);
   const [saving,   setSaving]   = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const duration = start && end
     ? formatDuration(calculateWorkDuration(start, end, 0).net_minutes)
@@ -78,44 +79,61 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
 
   async function handleSave() {
     setSaving(true);
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
+    setSaveError(null);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setSaveError("Session abgelaufen — bitte Seite neu laden und erneut versuchen.");
+        return;
+      }
 
-    const payload = {
-      user_id:    session.user.id,
-      date,
-      start_time: start,
-      end_time:   end,
-      note:       note     || null,
-      kunde:      kunde    || null,
-      adresse:    adresse  || null,
-      problem:    problem  || null,
-      ergebnis:   ergebnis || null,
-      erledigt,
-    };
+      const payload = {
+        user_id:    session.user.id,
+        date,
+        start_time: start,
+        end_time:   end,
+        note:       note     || null,
+        kunde:      kunde    || null,
+        adresse:    adresse  || null,
+        problem:    problem  || null,
+        ergebnis:   ergebnis || null,
+        erledigt,
+      };
 
-    if (entry) {
-      const { data } = await supabase.from("notdienst_entries").update(payload).eq("id", entry.id).select().single();
-      if (data) onSave(data as NotdienstEntry);
-    } else {
-      const { data } = await supabase.from("notdienst_entries").insert(payload).select().single();
-      if (data) onSave(data as NotdienstEntry);
+      const { data, error } = entry
+        ? await supabase.from("notdienst_entries").update(payload).eq("id", entry.id).select().single()
+        : await supabase.from("notdienst_entries").insert(payload).select().single();
+
+      if (error || !data) {
+        setSaveError(error?.message || "Speichern fehlgeschlagen — bitte erneut versuchen.");
+        return;
+      }
+
+      onSave(data as NotdienstEntry);
+      onClose();
+    } catch {
+      setSaveError("Netzwerkfehler — bitte erneut versuchen.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    onClose();
   }
 
   async function handleDelete() {
     if (!entry) return;
     const supabase = createClient();
-    await supabase.from("notdienst_entries").delete().eq("id", entry.id);
+    const { error } = await supabase.from("notdienst_entries").delete().eq("id", entry.id);
+    if (error) {
+      setSaveError(error.message || "Löschen fehlgeschlagen — bitte erneut versuchen.");
+      return;
+    }
     onDelete?.(entry.id);
     onClose();
   }
 
   function handleMailSend() {
-    const subject = encodeURIComponent(`Notdienst-Bericht ${date}`);
+    const subjectParts = [`Notdienst-Bericht ${date}`, kunde.trim(), adresse.trim()].filter(Boolean);
+    const subject = encodeURIComponent(subjectParts.join(" – "));
     const lines = [
       `Datum: ${date}`,
       `Uhrzeit: ${start} – ${end} (${duration})`,
@@ -292,6 +310,17 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
               }} />
             </button>
           </div>
+
+          {saveError && (
+            <div style={{
+              background: "color-mix(in srgb, var(--red) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--red) 35%, transparent)",
+              borderRadius: 10, padding: "10px 12px",
+              color: "var(--red)", fontSize: 12, fontWeight: 600,
+            }}>
+              ⚠️ {saveError}
+            </div>
+          )}
 
           {/* Speichern */}
           <button onClick={handleSave} disabled={saving} style={{

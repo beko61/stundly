@@ -232,20 +232,27 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                   borderBottom: idx<ndEntries.length-1?"1px solid var(--surface2)":"none" }}
                   onClick={e => { e.stopPropagation(); setNdModal(nd); }}>
                   <span style={{ fontSize:10, color:"var(--orange)", fontWeight:700, flexShrink:0 }}>Nd {idx+1}</span>
-                  <div style={{ display:"flex", gap:5, flex:1, flexWrap:"wrap" }}>
-                    {[
-                      { label:"Start", val:nd.start_time },
-                      { label:"Ende",  val:nd.end_time },
-                      { label:"Std",   val:ndDur },
-                    ].map(({ label, val }) => (
-                      <div key={label} className="time-chip" style={{ borderColor:"var(--orange)" }}>
-                        <span style={{ color:"var(--muted)", fontSize:9 }}>{label}</span>
-                        <span style={{ fontSize:11, color:"var(--orange)" }}>{val}</span>
-                      </div>
-                    ))}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                      {[
+                        { label:"Start", val:nd.start_time },
+                        { label:"Ende",  val:nd.end_time },
+                        { label:"Std",   val:ndDur },
+                      ].map(({ label, val }) => (
+                        <div key={label} className="time-chip" style={{ borderColor:"var(--orange)" }}>
+                          <span style={{ color:"var(--muted)", fontSize:9 }}>{label}</span>
+                          <span style={{ fontSize:11, color:"var(--orange)" }}>{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Kunde unter den Zeiten, max. 2 Zeilen — lange Texte blähen die Zeile nicht mehr auf */}
                     {nd.kunde && (
-                      <div className="time-chip">
-                        <span style={{ color:"var(--muted)", fontSize:9 }}>📋 {nd.kunde}</span>
+                      <div style={{
+                        marginTop:4, fontSize:11, color:"var(--muted)", lineHeight:1.35,
+                        display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
+                        overflow:"hidden", overflowWrap:"anywhere",
+                      }}>
+                        📋 {nd.kunde}
                       </div>
                     )}
                   </div>

@@ -1,5 +1,26 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (103) – v0.59.1: Zeiterfassung — Notdienst açıklaması saatlerin altında
+
+### Kullanıcı isteği
+"Notdienst girdiğimde açıklama saatlerin yanında, altında olsun çünkü kutu çok büyüyor."
+
+### Yapılan
+`DayEntry.tsx` Notdienst alt satırı: Kunde metni Start/Ende/Std chip'leriyle aynı flex-wrap
+satırında bir chip içindeydi (9px, uzun metinde çok satırlı şişkin kutu). Artık chip'lerin
+ALTINDA ayrı bir satır (11px, muted), en fazla 2 satır (`-webkit-line-clamp: 2`), `minWidth: 0`
+ile satırı genişletmiyor. Tam metin Notdienst modalında (tıklayınca) görülüyor.
+Görsel kontrol: app'in `.time-chip` CSS'iyle vorher/nachher mock, 375px genişlik.
+
+### Validation
+- TS clean · ESLint clean · Vitest 425/425
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/DayEntry.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.59.0 → 0.59.1
+
+---
+
 ## 2026-09-27 (102) – v0.59.0: Überstunden tek kaynak — Urlaub ile Berichte aynı rakam
 
 ### Kullanıcı raporu

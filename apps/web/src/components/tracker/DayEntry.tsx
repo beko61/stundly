@@ -34,6 +34,19 @@ const STATUS_ICON: Record<DayType, string> = {
   arbeiten:"✓", urlaub:"🏖", krank:"🤒", notdienst:"🚨", feiertag:"🎉", frei:"—",
 };
 
+/** Notiz/Kunde unter den Zeit-Chips — max. 2 Zeilen, bläht die Tageszeile nicht auf. */
+function NoteLine({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div style={{
+      marginTop:4, fontSize:11, color:"var(--muted)", lineHeight:1.35, whiteSpace:"pre-line",
+      display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
+      overflow:"hidden", overflowWrap:"anywhere",
+    }}>
+      {icon} {text}
+    </div>
+  );
+}
+
 interface Props {
   date:       string;
   entry?:     TimeEntry | null;
@@ -165,60 +178,56 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
 
         {/* Time strip */}
         {entry?.start_time && entry?.end_time && (
-          <div style={{ display:"flex", gap:6, padding:"0 14px 10px", flexWrap:"wrap" }}>
-            {[
-              { label:"Start", val:entry.start_time },
-              { label:"Pause", val:`${String(Math.floor(entry.break_minutes/60)).padStart(2,"0")}:${String(entry.break_minutes%60).padStart(2,"0")}` },
-              { label:"Ende",  val:entry.end_time },
-              { label:"Std",   val:netHours??"-" },
-            ].map(({ label, val }) => (
-              <div key={label} className="time-chip">
-                <span style={{ color:"var(--muted)", fontSize:10 }}>{label}</span>
-                <span style={{ fontWeight:500 }}>{val}</span>
-              </div>
-            ))}
-            {entry.is_night_shift && (
-              <div className="time-chip" style={{ borderColor:"var(--accent2)" }}>
-                <span style={{ color:"var(--accent2)", fontSize:10 }}>🌙 Nacht</span>
-              </div>
-            )}
-            {entry.note && (
-              <div className="time-chip">
-                <span style={{ color:"var(--muted)", fontSize:10, whiteSpace:"pre-line" }}>📝 {entry.note}</span>
-              </div>
-            )}
+          <div style={{ padding:"0 14px 10px" }}>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {[
+                { label:"Start", val:entry.start_time },
+                { label:"Pause", val:`${String(Math.floor(entry.break_minutes/60)).padStart(2,"0")}:${String(entry.break_minutes%60).padStart(2,"0")}` },
+                { label:"Ende",  val:entry.end_time },
+                { label:"Std",   val:netHours??"-" },
+              ].map(({ label, val }) => (
+                <div key={label} className="time-chip">
+                  <span style={{ color:"var(--muted)", fontSize:10 }}>{label}</span>
+                  <span style={{ fontWeight:500 }}>{val}</span>
+                </div>
+              ))}
+              {entry.is_night_shift && (
+                <div className="time-chip" style={{ borderColor:"var(--accent2)" }}>
+                  <span style={{ color:"var(--accent2)", fontSize:10 }}>🌙 Nacht</span>
+                </div>
+              )}
+            </div>
+            {entry.note && <NoteLine icon="📝" text={entry.note} />}
           </div>
         )}
 
         {/* Urlaub / Krank / Feiertag — voller Zeitstreifen wie Arbeiten (08:00–17:00, 1h Pause, 8h netto) */}
         {entry && !entry.start_time && entry.day_type !== DAY_TYPES.FREI && (
-          <div style={{ padding:"0 14px 10px", display:"flex", gap:6, flexWrap:"wrap" }}>
-            {isPaidAbsence ? (
-              <>
-                {[
-                  { label:"Start", val: STANDARD_TIMES.start },
-                  { label:"Pause", val: "01:00" },
-                  { label:"Ende",  val: STANDARD_TIMES.end },
-                  { label:"Std",   val: netHours ?? "08:00" },
-                ].map(({ label, val }) => (
-                  <div key={label} className="time-chip" style={{ borderColor: STATUS_COLOR[entry.day_type] }}>
-                    <span style={{ color:"var(--muted)", fontSize:10 }}>{label}</span>
-                    <span style={{ color: STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:600 }}>{val}</span>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <div className="time-chip" style={{ borderColor:STATUS_COLOR[entry.day_type] }}>
-                <span style={{ color:STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:700 }}>
-                  {STATUS_ICON[entry.day_type]} {entry.day_type.charAt(0).toUpperCase()+entry.day_type.slice(1)}
-                </span>
-              </div>
-            )}
-            {entry.note && (
-              <div className="time-chip">
-                <span style={{ color:"var(--muted)", fontSize:10, whiteSpace:"pre-line" }}>📝 {entry.note}</span>
-              </div>
-            )}
+          <div style={{ padding:"0 14px 10px" }}>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {isPaidAbsence ? (
+                <>
+                  {[
+                    { label:"Start", val: STANDARD_TIMES.start },
+                    { label:"Pause", val: "01:00" },
+                    { label:"Ende",  val: STANDARD_TIMES.end },
+                    { label:"Std",   val: netHours ?? "08:00" },
+                  ].map(({ label, val }) => (
+                    <div key={label} className="time-chip" style={{ borderColor: STATUS_COLOR[entry.day_type] }}>
+                      <span style={{ color:"var(--muted)", fontSize:10 }}>{label}</span>
+                      <span style={{ color: STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:600 }}>{val}</span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="time-chip" style={{ borderColor:STATUS_COLOR[entry.day_type] }}>
+                  <span style={{ color:STATUS_COLOR[entry.day_type], fontSize:11, fontWeight:700 }}>
+                    {STATUS_ICON[entry.day_type]} {entry.day_type.charAt(0).toUpperCase()+entry.day_type.slice(1)}
+                  </span>
+                </div>
+              )}
+            </div>
+            {entry.note && <NoteLine icon="📝" text={entry.note} />}
           </div>
         )}
 
@@ -245,16 +254,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                         </div>
                       ))}
                     </div>
-                    {/* Kunde unter den Zeiten, max. 2 Zeilen — lange Texte blähen die Zeile nicht mehr auf */}
-                    {nd.kunde && (
-                      <div style={{
-                        marginTop:4, fontSize:11, color:"var(--muted)", lineHeight:1.35,
-                        display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
-                        overflow:"hidden", overflowWrap:"anywhere",
-                      }}>
-                        📋 {nd.kunde}
-                      </div>
-                    )}
+                    {nd.kunde && <NoteLine icon="📋" text={nd.kunde} />}
                   </div>
                   <button
                     type="button"

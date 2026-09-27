@@ -1,5 +1,26 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-27 (104) – v0.59.2: Zeiterfassung — Notiz her gün tipinde saatlerin altında
+
+### Kullanıcı isteği
+"Bunu normal çalışma saatlerine de uygula." (v0.59.1'deki Notdienst düzeni)
+
+### Yapılan
+`DayEntry.tsx`'te ortak `NoteLine` bileşeni (11px, muted, max 2 satır line-clamp, `pre-line` —
+çok satırlı notlar korunur). Üç yerde kullanılıyor:
+- Arbeiten günü: 📝 Notiz artık Start/Pause/Ende/Std (+🌙 Nacht) chip'lerinin ALTINDA.
+- Urlaub/Krank/Feiertag günü: 📝 Notiz aynı şekilde altta.
+- Notdienst: 📋 Kunde (v0.59.1'deki inline stil → NoteLine).
+
+### Validation
+- TS clean · ESLint clean · Vitest 425/425
+
+### Değişen dosyalar
+- MOD: `apps/web/src/components/tracker/DayEntry.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.59.1 → 0.59.2
+
+---
+
 ## 2026-09-27 (103) – v0.59.1: Zeiterfassung — Notdienst açıklaması saatlerin altında
 
 ### Kullanıcı isteği

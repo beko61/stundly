@@ -196,7 +196,7 @@ const plans = [
 
 const faqs = [
   { q: "Ist Stundly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
-  { q: "Muss ich eine Kreditkarte angeben?", a: "Nein. Die kostenlose Testphase ist vollständig ohne Zahlungsdaten – während der Beta-Phase sogar 3 Monate komplett gratis." },
+  { q: "Muss ich eine Kreditkarte angeben?", a: `Nein. Die kostenlose Testphase ist vollständig ohne Zahlungsdaten – während der Beta-Phase sogar bis ${BETA_END_DATE_LABEL} komplett gratis.` },
   { q: "Kann ich Stundly in Deutschland nutzen?", a: "Ja. Stundly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
   { q: "Gibt es eine mobile App?", a: "Ja. Stundly ist als PWA für iOS und Android verfügbar und funktioniert auch offline." },
 ];
@@ -235,7 +235,7 @@ export default async function LandingPage() {
           fontWeight: 700,
           letterSpacing: "0.04em",
         }}>
-          🎁 BETA: 3 Monate komplett kostenlos — alle Funktionen freigeschaltet bis {BETA_END_DATE_LABEL} (noch {betaDaysRemaining()} Tage)
+          🎁 BETA: komplett kostenlos — alle Funktionen freigeschaltet bis {BETA_END_DATE_LABEL} (noch {betaDaysRemaining()} Tage)
         </div>
       )}
 
@@ -290,7 +290,7 @@ export default async function LandingPage() {
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 28px" }}>
-              {BETA_MODE ? "3 Monate gratis starten" : "14 Tage gratis testen"}
+              {BETA_MODE ? "Kostenlos starten" : "14 Tage gratis testen"}
             </Link>
             <Link href="/demo" className="btn" style={{
               fontSize: 16, padding: "14px 28px",
@@ -304,7 +304,7 @@ export default async function LandingPage() {
             <p style={{ marginTop: 18, fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
               Beta-Preis lebenslang: <span style={{ textDecoration: "line-through", color: "var(--muted)", opacity: 0.7 }}>€19,99</span>{" "}
               <strong style={{ color: "var(--accent2)", fontSize: 15 }}>€5,99/Monat</strong>
-              <span style={{ color: "var(--muted)" }}> · nach 3 Monaten gratis · Keine Kreditkarte</span>
+              <span style={{ color: "var(--muted)" }}> · bis {BETA_END_DATE_LABEL} gratis · Keine Kreditkarte</span>
             </p>
           ) : (
             <p style={{ marginTop: 16, fontSize: 12, color: "var(--muted)" }}>
@@ -614,7 +614,7 @@ export default async function LandingPage() {
           }}>
             <div style={{ fontSize: 44, marginBottom: 16 }}>🎁</div>
             <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>
-              Beta-Phase: 3 Monate komplett kostenlos
+              Beta-Phase: komplett kostenlos
             </h2>
             <p style={{ color: "var(--text)", fontSize: 15, lineHeight: 1.7, marginBottom: 22 }}>
               Stundly ist gerade neu gestartet. Bis zum <strong>{BETA_END_DATE_LABEL}</strong> bekommst
@@ -728,7 +728,7 @@ export default async function LandingPage() {
         </h2>
         <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 32 }}>
           {BETA_MODE
-            ? "3 Monate Beta-Zugang kostenlos – keine Kreditkarte – sofort loslegen"
+            ? `Beta-Zugang kostenlos bis ${BETA_END_DATE_LABEL} – keine Kreditkarte – sofort loslegen`
             : "14 Tage kostenlos – keine Kreditkarte – sofort loslegen"}
         </p>
         <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>

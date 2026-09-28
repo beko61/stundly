@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BETA_END_DATE_LABEL } from "@/lib/beta";
 import { useDemoState, computeStats } from "./state";
 import { UebersichtTab } from "./UebersichtTab";
 import { ZeitTab } from "./ZeitTab";
@@ -212,8 +213,8 @@ function DemoPage() {
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
             {hasEdits
-              ? "Konto erstellen und du bekommst alle Funktionen 3 Monate gratis. Deine Daten bleiben in der Cloud, synchron auf Handy & Desktop."
-              : "3 Monate Beta-Zugang gratis. Keine Kreditkarte, keine Verpflichtung. Sofort loslegen mit deinen echten Daten."
+              ? `Konto erstellen und du bekommst alle Funktionen bis ${BETA_END_DATE_LABEL} gratis. Deine Daten bleiben in der Cloud, synchron auf Handy & Desktop.`
+              : `Beta-Zugang gratis bis ${BETA_END_DATE_LABEL}. Keine Kreditkarte, keine Verpflichtung. Sofort loslegen mit deinen echten Daten.`
             }
           </p>
           <Link href="/register" className="btn btn-primary" style={{

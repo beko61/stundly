@@ -1,5 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
-import { BETA_MODE, BETA_END_DATE, isBetaActive, betaDaysRemaining } from "@/lib/beta";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { BETA_MODE, BETA_END_DATE, BETA_END_DATE_LABEL, isBetaActive, betaDaysRemaining } from "@/lib/beta";
+
+// Relativ zu BETA_END_DATE — eine Verlängerung der Beta bricht die Tests nicht.
+const END = new Date(`${BETA_END_DATE}T12:00:00Z`);
+const daysFromEnd = (d: number) => new Date(END.getTime() + d * 86400000);
+
+afterEach(() => { vi.useRealTimers(); });
 
 describe("Beta config", () => {
   it("BETA_END_DATE format YYYY-MM-DD", () => {
@@ -9,46 +15,44 @@ describe("Beta config", () => {
   it("BETA_MODE boolean", () => {
     expect(typeof BETA_MODE).toBe("boolean");
   });
+
+  it("Label ist deutsches Langformat", () => {
+    expect(BETA_END_DATE_LABEL).toMatch(/^\d{2}\. [A-Za-zäöüÄÖÜ]+ \d{4}$/);
+  });
 });
 
 describe("isBetaActive", () => {
-  it("BETA_MODE=true ve bugün < BETA_END_DATE → active", () => {
-    // BETA_END_DATE = 2026-09-07; bu test sabit tarih ile yapılır
+  it("vor BETA_END_DATE → active (wenn BETA_MODE)", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-01"));
+    vi.setSystemTime(daysFromEnd(-60));
     expect(isBetaActive()).toBe(BETA_MODE);
-    vi.useRealTimers();
   });
 
-  it("BETA_END_DATE'den sonra → false", () => {
+  it("nach BETA_END_DATE → false", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2027-01-01"));
+    vi.setSystemTime(daysFromEnd(1));
     expect(isBetaActive()).toBe(false);
-    vi.useRealTimers();
   });
 
-  it("BETA_END_DATE'in tam günü → hâlâ active", () => {
+  it("am BETA_END_DATE selbst → noch active", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-09-07T12:00:00Z"));
+    vi.setSystemTime(END);
     expect(isBetaActive()).toBe(BETA_MODE);
-    vi.useRealTimers();
   });
 });
 
 describe("betaDaysRemaining", () => {
-  it("BETA_END_DATE'den 30 gün önce → ~30", () => {
+  it("30 Tage vor Ende → ~30", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-08T00:00:00Z"));
+    vi.setSystemTime(daysFromEnd(-30));
     const r = betaDaysRemaining();
     expect(r).toBeGreaterThanOrEqual(29);
     expect(r).toBeLessThanOrEqual(31);
-    vi.useRealTimers();
   });
 
-  it("Beta bittikten sonra → 0", () => {
+  it("nach Ende → 0 (nie negativ)", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2027-01-01"));
+    vi.setSystemTime(daysFromEnd(30));
     expect(betaDaysRemaining()).toBe(0);
-    vi.useRealTimers();
   });
 });

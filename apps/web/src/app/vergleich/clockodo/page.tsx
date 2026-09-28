@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BETA_END_DATE_LABEL } from "@/lib/beta";
 
 export const metadata: Metadata = {
   title: "Stundly vs. Clockodo — Zeiterfassung für Handwerker",
@@ -31,7 +32,7 @@ interface Row {
 const rows: Row[] = [
   { category: "Preis pro Monat (nach Beta)", stundly: "€5,99 pauschal",       clockodo: "ab €10/Nutzer",     advantage: "stundly" },
   { category: "Team-Tarif",                  stundly: "€19,99 flat (bis 10 MA)", clockodo: "je Nutzer",       advantage: "stundly" },
-  { category: "Kostenlose Testphase",        stundly: "3 Monate (Beta) / 14 Tage regulär", clockodo: "14 Tage", advantage: "tie" },
+  { category: "Kostenlose Testphase",        stundly: `Beta bis ${BETA_END_DATE_LABEL} / 14 Tage regulär`, clockodo: "14 Tage", advantage: "tie" },
   { category: "Zielgruppe",                  stundly: "Handwerksbetriebe",     clockodo: "Alle Branchen",     advantage: "stundly" },
   { category: "Sprache",                     stundly: "Deutsch",               clockodo: "Deutsch",           advantage: "tie" },
   { category: "Server-Standort",             stundly: "EU (Frankfurt)",        clockodo: "EU (Deutschland)",  advantage: "tie" },
@@ -170,7 +171,7 @@ export default function VergleichClockodoPage() {
             Selber testen — kostenlos
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
-            3 Monate Beta-Zugang. Keine Kreditkarte. Danach lebenslang{" "}
+            Beta-Zugang gratis bis {BETA_END_DATE_LABEL}. Keine Kreditkarte. Danach lebenslang{" "}
             <span style={{ textDecoration: "line-through", opacity: 0.7 }}>€19,99</span>{" "}
             <strong style={{ color: "var(--accent2)" }}>€5,99/Monat</strong>.
           </p>

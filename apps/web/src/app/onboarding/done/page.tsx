@@ -149,7 +149,7 @@ function DoneContent() {
         fontSize: 13, color: "var(--accent2)", fontWeight: 600,
       }}>
         {isBetaActive()
-          ? `🎁 Beta-Phase: Alle Funktionen 3 Monate kostenlos bis ${BETA_END_DATE_LABEL}`
+          ? `🎁 Beta-Phase: Alle Funktionen kostenlos bis ${BETA_END_DATE_LABEL}`
           : "✓ 14 Tage kostenlos testen – keine Kreditkarte erforderlich"}
       </div>
 

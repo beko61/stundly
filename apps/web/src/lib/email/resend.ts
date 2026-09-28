@@ -82,7 +82,7 @@ export async function sendWelcomeEmail({
     from: FROM,
     to,
     subject: isBeta
-      ? "🎁 Willkommen bei Stundly – 3 Monate komplett kostenlos!"
+      ? `🎁 Willkommen bei Stundly – kostenlos bis ${BETA_END_DATE_LABEL}!`
       : "Willkommen bei Stundly!",
     html: `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f13; color: #e8e8f0; padding: 40px 32px; border-radius: 16px;">
@@ -94,7 +94,7 @@ export async function sendWelcomeEmail({
         <div style="background: linear-gradient(135deg, rgba(124,106,247,0.18), rgba(192,132,252,0.18)); border: 1px solid rgba(192,132,252,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
           <p style="font-size: 13px; font-weight: 800; color: #c084fc; letter-spacing: 1px; margin: 0 0 8px;">🎁 BETA-TESTER</p>
           <p style="color: #e8e8f0; font-size: 14px; line-height: 1.7; margin: 0;">
-            Du bekommst <strong>alle Funktionen 3 Monate komplett kostenlos</strong> — bis zum
+            Du bekommst <strong>alle Funktionen komplett kostenlos</strong> — bis zum
             <strong>${BETA_END_DATE_LABEL}</strong> (noch ${daysLeft} Tage).
             Keine Kreditkarte, keine versteckten Kosten.
           </p>

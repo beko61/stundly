@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -82,6 +82,10 @@ export default function PricingPage() {
   const [interval, setInterval] = useState<Interval>("monthly");
   const [loading, setLoading]   = useState<PlanId | null>(null);
   const [error, setError]       = useState<string | null>(null);
+  // Seite ist statisch vorgerendert — Countdown erst im Browser rechnen, sonst friert die Zahl
+  // auf den Build-Tag ein (und weicht beim Hydrieren vom Server-HTML ab).
+  const [betaDaysLeft, setBetaDaysLeft] = useState<number | null>(null);
+  useEffect(() => { setBetaDaysLeft(betaDaysRemaining()); }, []);
 
   async function handleCheckout(plan: PlanId) {
     setError(null);
@@ -133,7 +137,7 @@ export default function PricingPage() {
       </nav>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "60px 24px" }}>
-        {/* BETA-Modus: Plan-Auswahl ist während der 3-monatigen Beta-Phase ausgeblendet. */}
+        {/* BETA-Modus: Plan-Auswahl ist während der Beta-Phase ausgeblendet. */}
         {BETA_MODE && (
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 36 }}>
@@ -153,14 +157,14 @@ export default function PricingPage() {
                 🎁 Beta-Phase
               </div>
               <h1 style={{ fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, marginBottom: 16, lineHeight: 1.15 }}>
-                3 Monate <span style={{ color: "var(--accent2)" }}>100% kostenlos</span>
+                Alle Funktionen <span style={{ color: "var(--accent2)" }}>100% kostenlos</span>
               </h1>
               <p style={{ color: "var(--text)", fontSize: 17, lineHeight: 1.7, marginBottom: 8 }}>
                 Stundly ist gerade neu gestartet — und du bekommst <strong>alle Funktionen</strong> bis
                 zum <strong>{BETA_END_DATE_LABEL}</strong> komplett gratis.
               </p>
               <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 32 }}>
-                Keine Kreditkarte. Keine versteckten Kosten. Noch {betaDaysRemaining()} Tage übrig.
+                Keine Kreditkarte. Keine versteckten Kosten.{betaDaysLeft !== null && <> Noch {betaDaysLeft} Tage übrig.</>}
               </p>
             </div>
 

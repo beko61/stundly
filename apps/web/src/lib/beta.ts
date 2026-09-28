@@ -4,7 +4,10 @@
  * Während BETA_MODE = true:
  *   - Pricing-Seite zeigt nur eine "Kostenlos starten" CTA, keine Pläne.
  *   - /api/stripe/checkout liefert 403.
- *   - Landing-Banner: "3 Monate 100% kostenlos – alle Funktionen".
+ *   - Landing-Banner: "komplett kostenlos bis <BETA_END_DATE_LABEL>".
+ *
+ * Texte nennen KEINE feste Dauer ("3 Monate"), sondern immer BETA_END_DATE_LABEL —
+ * eine Verlängerung ist damit nur diese eine Datumszeile.
  *   - Welcome-E-Mail erwähnt Beta-Tester-Vorteile.
  *
  * Wenn BETA_MODE = false oder BETA_END_DATE in der Vergangenheit:
@@ -17,8 +20,8 @@
 
 export const BETA_MODE = true;
 
-/** 3 Monate Beta-Phase: Stundly Live 07.06.2026 → Beta endet 07.09.2026 */
-export const BETA_END_DATE = "2026-09-07";
+/** Beta: Live 07.06.2026; ursprünglich bis 07.09.2026, am 28.09.2026 verlängert bis 31.03.2027. */
+export const BETA_END_DATE = "2027-03-31";
 
 /** Lokal formatiertes Datum für die UI ("07. September 2026") */
 export const BETA_END_DATE_LABEL = new Date(BETA_END_DATE)

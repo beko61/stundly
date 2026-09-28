@@ -1,5 +1,35 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (109) – v0.60.3: Beta 31.03.2027'ye uzatıldı + metinler tarihe bağlandı
+
+### Kullanıcı kararı
+Beta (07.09.2026'da dolmuştu) → **31.03.2027'ye uzat**. `BETA_MODE` açık kalır, ödeme kapalı.
+
+### Yapılan
+- `lib/beta.ts`: `BETA_END_DATE = "2027-03-31"`.
+- 23 metin: sabit "3 Monate" ifadeleri kaldırıldı → hepsi `BETA_END_DATE_LABEL` ("31. März 2027")
+  kullanıyor. Bir sonraki uzatma = tek satır. Dosyalar: landing (banner, CTA, FAQ, alt CTA),
+  pricing (başlık, meta description), register/agb meta, demo, handwerker, notdienst-verwaltung,
+  vergleich/clockodo, onboarding/done, hoş geldin e-postası (konu + gövde).
+- `/pricing` statik (○) client sayfası: "Noch X Tage übrig" build gününde donuyordu (canlıdaki
+  "0 Tage"nin sebebi) ve hydration farkı yaratırdı → artık mount sonrası tarayıcıda hesaplanıyor.
+- `beta.test.ts` sabit tarihler yerine BETA_END_DATE'e göreli (+ label format testi).
+
+### Doğrulama
+- Lokal production (`next build && next start`): /pricing "Noch 184 Tage übrig", "Am 31. März 2027
+  starten die regulären Pläne"; landing banner "bis 31. März 2027 (noch 184 Tage)". Konsoldaki
+  /login script hataları sadece lokal (Vercel Analytics script'leri lokalde yok; canlıda 200).
+- TS clean · ESLint clean · Vitest 459/459 · `next build` clean
+
+### Değişen dosyalar
+- MOD: `apps/web/src/lib/beta.ts`, `src/lib/email/resend.ts`, `src/__tests__/unit/beta.test.ts`
+- MOD: `src/app/page.tsx`, `pricing/page.tsx`, `pricing/layout.tsx`, `(auth)/register/layout.tsx`,
+  `agb/page.tsx`, `demo/page.tsx`, `handwerker/page.tsx`, `notdienst-verwaltung/page.tsx`,
+  `vergleich/clockodo/page.tsx`, `onboarding/done/page.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.60.2 → 0.60.3
+
+---
+
 ## 2026-09-28 (108) – v0.60.2 HOTFIX: Stripe webhook middleware tarafından engelleniyordu + site denetimi
 
 ### Site denetimi (kullanıcı: "tüm siteyi kontrol et")

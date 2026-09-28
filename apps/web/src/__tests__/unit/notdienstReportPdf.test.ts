@@ -9,7 +9,7 @@ const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
 
 const base: NotdienstReportInput = {
   date: "2026-09-27", start: "18:10", end: "19:40", duration: "1h 30m",
-  kunde: "Frau Kraft, 2. OG rechts", adresse: "Wiehbergstrasse 3, 30519 Hannover",
+  kunde: "Frau Kraft, 2. OG rechts", telefon: "0511 987654", adresse: "Wiehbergstrasse 3, 30519 Hannover",
   problem: "WC-Spuelung undicht", ergebnis: "Dichtung getauscht\nFunktion geprueft", note: "",
   fotoAnzahl: 0, signature: null,
   firma: { name: "Sanitaer Meier GmbH", strasse: "Hauptstr. 1", plz: "30159", ort: "Hannover", telefon: "0511 123", email: "info@meier.de", logo: null },
@@ -28,7 +28,7 @@ describe("generateNotdienstReportPdf", () => {
     const pdf = await pdfText(base);
     expect(pdf.startsWith("%PDF-")).toBe(true);
     for (const t of ["NOTDIENST-BERICHT", "Sanitaer Meier GmbH", "27.09.2026", "Frau Kraft, 2. OG rechts",
-      "Wiehbergstrasse 3, 30519 Hannover", "Yusuf Bektas", "WC-Spuelung undicht", "Dichtung getauscht", "Funktion geprueft"]) {
+      "Wiehbergstrasse 3, 30519 Hannover", "0511 987654", "Yusuf Bektas", "WC-Spuelung undicht", "Dichtung getauscht", "Funktion geprueft"]) {
       expect(pdf).toContain(t);
     }
     expect(pages(pdf)).toBe(1);

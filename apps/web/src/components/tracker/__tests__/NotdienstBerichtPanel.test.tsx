@@ -92,7 +92,7 @@ import { NotdienstBerichtPanel, type BerichtDaten } from "../NotdienstBerichtPan
 
 const BERICHT: BerichtDaten = {
   date: "2026-09-27", start: "18:10", end: "19:40", duration: "1h 30m",
-  kunde: "Frau Kraft", adresse: "Wiehbergstraße 3, 30519 Hannover",
+  kunde: "Frau Kraft", telefon: "0511 987654", adresse: "Wiehbergstraße 3, 30519 Hannover",
   problem: "WC undicht", ergebnis: "Dichtung getauscht", note: "",
 };
 
@@ -177,14 +177,19 @@ describe("NotdienstBerichtPanel", () => {
     fireEvent.click(shareBtn);
     // synchron in der Klick-Geste — ohne waitFor (sonst würde der Browser das Teilen blockieren)
     expect(shareMock).toHaveBeenCalledTimes(1);
-    const [files, opts] = shareMock.mock.calls[0] as unknown as [File[], { title: string }];
+    const [files, opts] = shareMock.mock.calls[0] as unknown as [File[], { title: string; text: string }];
     expect(files.map(f => [f.name, f.type])).toEqual([
       ["Notdienst-Bericht_2026-09-27_Frau-Kraft.pdf", "application/pdf"],
       ["Notdienst_2026-09-27_Frau-Kraft_Foto-1.jpg", "image/jpeg"],
       ["Notdienst_2026-09-27_Frau-Kraft_Foto-2.jpg", "image/jpeg"],
     ]);
     expect(await files[1]!.text()).toBe("F1");
-    expect(opts.title).toBe("Notdienst-Bericht 27.09.2026");
+    // Betreff + kompletter Bericht als Mail-Text, zusätzlich zu den Anhängen
+    expect(opts.title).toBe("Notdienst-Bericht 27.09.2026 – Frau Kraft – Wiehbergstraße 3, 30519 Hannover");
+    expect(opts.text).toContain("Telefon: 0511 987654");
+    expect(opts.text).toContain("Problem:\nWC undicht");
+    expect(opts.text).toContain("• Dichtung getauscht");
+    expect(opts.text).toContain("Anhänge: Bericht (PDF) + 2 Fotos");
   });
 
   it("geänderte Formulardaten → alter Bericht verfällt, muss neu erstellt werden", async () => {

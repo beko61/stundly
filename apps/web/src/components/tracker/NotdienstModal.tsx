@@ -18,6 +18,7 @@ export interface NotdienstEntry {
   end_time: string;
   note: string | null;
   kunde: string | null;
+  kunde_telefon?: string | null;
   adresse: string | null;
   problem: string | null;
   ergebnis: string | null;
@@ -56,36 +57,6 @@ function defaultEnd(start: string): string {
   return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
 }
 
-export interface NotdienstMailInput {
-  to: string;
-  date: string;
-  start: string;
-  end: string;
-  duration: string;
-  kunde: string;
-  adresse: string;
-  problem: string;
-  ergebnis: string;
-  note: string;
-}
-
-/** mailto-URL für den Notdienst-Bericht. Betreff: Datum – Kunde – Adresse (leere Teile entfallen). */
-export function buildNotdienstMailto(m: NotdienstMailInput): string {
-  const subjectParts = [`Notdienst-Bericht ${m.date}`, m.kunde.trim(), m.adresse.trim()].filter(Boolean);
-  const lines = [
-    `Datum: ${m.date}`,
-    `Uhrzeit: ${m.start} – ${m.end} (${m.duration})`,
-    m.kunde    ? `Kunde: ${m.kunde}`         : "",
-    m.adresse  ? `Adresse: ${m.adresse}`     : "",
-    m.problem  ? `\nProblem:\n${m.problem}`  : "",
-    m.ergebnis ? `\nErgebnis / Feststellungen:\n${m.ergebnis}` : "",
-    m.note     ? `\nNotiz: ${m.note}`        : "",
-  ].filter(Boolean).join("\n");
-  // "@" bleibt unkodiert — manche Mail-Apps (Gmail/Outlook mobil) dekodieren %40 im Empfänger nicht.
-  const to = encodeURIComponent(m.to.trim()).replace(/%40/g, "@");
-  return `mailto:${to}?subject=${encodeURIComponent(subjectParts.join(" – "))}&body=${encodeURIComponent(lines)}`;
-}
-
 export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props) {
   const modalRef = useModalA11y<HTMLDivElement>({ onClose });
   // DB liefert Zeiten teils als "18:00:00" — <input type="time"> soll HH:MM zeigen.
@@ -95,6 +66,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   // Bei neuen Einträgen läuft Ende automatisch mit (Start + 1h), bis der User Ende selbst setzt.
   const [endTouched, setEndTouched] = useState(!!entry);
   const [kunde,    setKunde]    = useState(entry?.kunde      ?? "");
+  const [kundeTelefon, setKundeTelefon] = useState(entry?.kunde_telefon ?? "");
   const initAdr = splitAdresse(entry?.adresse);
   const [strasse,  setStrasse]  = useState(initAdr.strasse);
   const [plz,      setPlz]      = useState(initAdr.plz);
@@ -110,22 +82,6 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedId,  setSavedId]  = useState<string | null>(entry?.id ?? null);
   const [justSaved, setJustSaved] = useState(false);
-  const [companyEmail, setCompanyEmail] = useState("");
-
-  // Firma-Mail (Settings → E-Mail) vorab laden, damit der Mail-Button beim Klick
-  // sofort/synchron öffnet — mailto nach einem await kann von Browsern (v.a. mobil)
-  // als Popup geblockt werden, wenn es nicht direkt in der Klick-Geste passiert.
-  useEffect(() => {
-    let cancelled = false;
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) return null;
-      return supabase.from("profiles").select("email").eq("user_id", session.user.id).maybeSingle();
-    }).then(res => {
-      if (!cancelled && res?.data?.email) setCompanyEmail(res.data.email as string);
-    }).catch(() => { /* Firma-Mail optional — Mail-Button funktioniert auch ohne */ });
-    return () => { cancelled = true; };
-  }, []);
 
   // Straßen je PLZ einmal laden, dann beim Tippen clientseitig filtern
   useEffect(() => {
@@ -183,6 +139,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
         end_time:   end,
         note:       note     || null,
         kunde:      kunde    || null,
+        ...(kundeTelefon.trim() || entry?.kunde_telefon ? { kunde_telefon: kundeTelefon.trim() || null } : {}),
         adresse:    adresse  || null,
         problem:    problem  || null,
         ergebnis:   ergebnis || null,
@@ -200,8 +157,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
 
       if (!savedId) setSavedId((data as NotdienstEntry).id);
       onSave(data as NotdienstEntry);
-      // Modal bleibt offen — Mail direkt aus dem gespeicherten Eintrag senden,
-      // ohne ihn erneut öffnen zu müssen. Schließen macht der User über ✕.
+      // Modal bleibt offen — Fotos/Unterschrift/Bericht direkt anschließen. Schließen über ✕.
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2500);
     } catch {
@@ -221,13 +177,6 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
     }
     onDelete?.(savedId);
     onClose();
-  }
-
-  function handleMailSend() {
-    // Direkter, synchroner Aufruf innerhalb der Klick-Geste (siehe useEffect oben).
-    window.location.href = buildNotdienstMailto({
-      to: companyEmail, date, start, end, duration, kunde, adresse, problem, ergebnis, note,
-    });
   }
 
   const taStyle: React.CSSProperties = {
@@ -265,6 +214,22 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             <label className="label">Kunde (Name, Stockwerk)</label>
             <input className="input" type="text" value={kunde} onChange={e => setKunde(e.target.value)}
               placeholder="z.B. Frau Ermakov/Kraft, 2. OG rechts" />
+          </div>
+
+          {/* Telefon des Kunden + Anrufen */}
+          <div>
+            <label className="label" htmlFor="nd-kunde-telefon">Telefon (Kunde)</label>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <input id="nd-kunde-telefon" className="input" type="tel" inputMode="tel" autoComplete="tel"
+                value={kundeTelefon} onChange={e => setKundeTelefon(e.target.value)}
+                placeholder="z.B. 0511 123456" style={{ flex:1, minWidth:0 }} />
+              {kundeTelefon.trim() && (
+                <a href={`tel:${kundeTelefon.replace(/[^\d+]/g, "")}`} aria-label="Kunde anrufen" title="Anrufen" style={{
+                  background:"var(--surface2)", border:"1px solid var(--green)", color:"var(--green)",
+                  padding:"11px 13px", borderRadius:10, fontSize:16, flexShrink:0, textDecoration:"none",
+                }}>📞</a>
+              )}
+            </div>
           </div>
 
           {/* Adresse: PLZ → Ort automatisch, Straße mit Vorschlägen + Google Maps */}
@@ -468,21 +433,8 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
           {/* Fotos, Kundenunterschrift, PDF-Bericht (braucht gespeicherten Einsatz) */}
           <NotdienstBerichtPanel
             notdienstId={savedId}
-            bericht={{ date, start, end, duration, kunde, adresse, problem, ergebnis, note }}
+            bericht={{ date, start, end, duration, kunde, telefon: kundeTelefon, adresse, problem, ergebnis, note }}
           />
-
-          {/* Per Mail */}
-          <button onClick={handleMailSend} style={{
-            width:"100%", padding:14, background:"#ea4335", border:"none",
-            borderRadius:12, color:"white", fontFamily:"'Syne',sans-serif",
-            fontSize:14, fontWeight:800, cursor:"pointer",
-            display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-          }}>
-            <span style={{ fontSize:18 }}>📧</span> Per Mail senden
-          </button>
-          <p style={{ fontSize:11, color:"var(--muted)", textAlign:"center" }}>
-            Nur Text — mit Fotos &amp; Unterschrift: „PDF-Bericht erstellen“
-          </p>
 
           {savedId && (
             <button onClick={handleDelete} style={{

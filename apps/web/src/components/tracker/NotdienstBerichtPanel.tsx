@@ -6,8 +6,9 @@ import SignatureCanvas from "react-signature-canvas";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image/compressImage";
 import { dataUrlToFile, shareOrDownload } from "@/lib/share/shareFile";
+import { buildBerichtText } from "@/lib/notdienst/berichtText";
 import {
-  generateNotdienstReportPdf, reportFileName, fotoFileName, formatDateDE, type NotdienstReportInput,
+  generateNotdienstReportPdf, reportFileName, fotoFileName, type NotdienstReportInput,
 } from "@/lib/pdf/notdienstReportPdf";
 import {
   MAX_FOTOS, useAddFoto, useDeleteAnhang, useNotdienstAnhaenge, useSaveUnterschrift,
@@ -15,7 +16,7 @@ import {
 
 /** Formularwerte des Einsatzes, die in den Bericht gehen. */
 export type BerichtDaten = Pick<NotdienstReportInput,
-  "date" | "start" | "end" | "duration" | "kunde" | "adresse" | "problem" | "ergebnis" | "note">;
+  "date" | "start" | "end" | "duration" | "kunde" | "telefon" | "adresse" | "problem" | "ergebnis" | "note">;
 
 interface Props {
   /** null = Einsatz noch nicht gespeichert (Anhänge brauchen die ID) */
@@ -174,10 +175,9 @@ export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
   function handleShare() {
     if (!report) return;
     // Direkt in der Klick-Geste — kein await davor (sonst blockiert der Browser das Teilen-Menü)
-    void shareOrDownload(report, {
-      title: `Notdienst-Bericht ${formatDateDE(bericht.date)}`,
-      text: [`Notdienst-Bericht ${formatDateDE(bericht.date)}`, bericht.kunde, bericht.adresse].filter(Boolean).join(" – "),
-    }).then(r => {
+    // Betreff + kompletter Bericht als Mail-Text (Outlook/Mail übernehmen ihn), PDF + Fotos als Anhänge
+    const { subject, body } = buildBerichtText({ ...bericht, fotoAnzahl: report.length - 1 });
+    void shareOrDownload(report, { title: subject, text: body }).then(r => {
       if (r === "downloaded") {
         setShareInfo(report.length > 1
           ? `📥 PDF + ${report.length - 1} Fotos heruntergeladen — im Mail-Programm als Anhänge hinzufügen.`

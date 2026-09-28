@@ -14,6 +14,7 @@ export interface NotdienstReportInput {
   end:       string;
   duration:  string;  // z.B. "1h 30m"
   kunde:     string;
+  telefon:   string;  // Telefon des Kunden
   adresse:   string;
   problem:   string;
   ergebnis:  string;
@@ -104,6 +105,7 @@ export async function generateNotdienstReportPdf(input: NotdienstReportInput): P
     ["Datum",    formatDateDE(input.date)],
     ["Uhrzeit",  `${input.start} – ${input.end} Uhr  (${input.duration})`],
     ["Kunde",    input.kunde],
+    ["Telefon",  input.telefon],
     ["Adresse",  input.adresse],
     ["Techniker", input.techniker.name],
     ["Fotos",    input.fotoAnzahl > 0 ? `${input.fotoAnzahl} (als separate Dateien angehängt)` : ""],

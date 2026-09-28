@@ -1,5 +1,38 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (115) – v0.63.0: Notdienst — "Per Mail" kalktı, paylaşımda mail metni, Kunde-Telefon
+
+### Kullanıcı geri bildirimi
+"Güzel olmuş. Per Mail kalmasına gerek yok, kaldırabiliriz; paylaştan Outlook yeterli. PDF bilgileri
+ayrıca mailde de yazsın, ikisi de olsun. Kunde tarafına telefon sekmesi de ekleyelim."
+
+### Yapılan
+- **"Per Mail senden" kaldırıldı** (+ modal açılışında firma e-postasını çeken fetch, `buildNotdienstMailto`).
+  Not: mailto "Kime"yi otomatik dolduruyordu; paylaşım menüsü alıcıyı ayarlayamaz → Outlook'ta seçilir.
+- **Paylaşım = PDF + fotolar (ek) + tam rapor metni (mail gövdesi)**: yeni `lib/notdienst/berichtText.ts`
+  → `subject` (Notdienst-Bericht TT.MM.JJJJ – Kunde – Adresse) = share `title`, `body` (Datum, Uhrzeit,
+  Kunde, Telefon, Adresse, Problem, Ergebnis maddeli, Notiz, "Anhänge: Bericht (PDF) + N Fotos") = `text`.
+- **Telefon (Kunde)**: modalda Kunde altında alan (type=tel) + 📞 `tel:` arama butonu; PDF'te "Telefon"
+  satırı; mail metninde.
+- **Migration 030** (`notdienst_entries.kunde_telefon text`, idempotent) — kullanıcı çalıştırmalı.
+  Güvenli sıra: telefon sadece doluysa (veya önceden doluysa, silme için null) payload'a giriyor →
+  migration'dan önce de normal kayıt çalışıyor.
+
+### Testler
+- `berichtText.test.ts` (4): konu, tam gövde, boş alanlar, tekil/çoğul.
+- Modal: Per Mail yok; telefon kaydı + 📞 href; telefonsuz payload'da alan yok; silinen numara → null.
+- PDF: Telefon satırı. Panel: share title/text (konu, telefon, problem, maddeler, ek sayısı).
+
+### Validation
+- TS clean · ESLint clean · Vitest 495/495 (42 dosya) · `next build` clean
+
+### Değişen dosyalar
+- ADD: `supabase/migrations/030_notdienst_kunde_telefon.sql`, `apps/web/src/lib/notdienst/berichtText.ts` (+ test)
+- MOD: `components/tracker/NotdienstModal.tsx`, `NotdienstBerichtPanel.tsx`, `lib/pdf/notdienstReportPdf.ts` (+ testler)
+- MOD: `apps/web/src/lib/version.ts` — 0.62.1 → 0.63.0
+
+---
+
 ## 2026-09-28 (114) – v0.62.1: Notdienst-Bericht — Fotos als EINZELNE Dateien (nicht im PDF)
 
 ### Kullanıcı geri bildirimi (migration 029'u çalıştırmadan önce)

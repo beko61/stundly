@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { NotdienstModal, buildNotdienstMailto, type NotdienstEntry } from "../NotdienstModal";
+import { NotdienstModal, type NotdienstEntry } from "../NotdienstModal";
 
 // ── Supabase-Client Mock ────────────────────────────────────────────────────
 
@@ -52,41 +52,6 @@ beforeEach(() => {
   mockInsert.mockImplementation(async (p: Record<string, unknown>) => ({ data: savedRow("nd-1", p), error: null }));
   mockUpdate.mockImplementation(async (id: string, p: Record<string, unknown>) => ({ data: savedRow(id, p), error: null }));
   mockDelete.mockResolvedValue({ error: null });
-});
-
-// ── buildNotdienstMailto ────────────────────────────────────────────────────
-
-describe("buildNotdienstMailto", () => {
-  const base = {
-    to: "firma@test.de", date: "2026-09-27", start: "17:00", end: "18:00", duration: "1:00",
-    kunde: "Frau Kraft, 2. OG", adresse: "Kniestraße 22, Hannover", problem: "", ergebnis: "", note: "",
-  };
-
-  it("Empfänger = Firma-Mail, @ bleibt unkodiert", () => {
-    expect(buildNotdienstMailto(base).startsWith("mailto:firma@test.de?")).toBe(true);
-  });
-
-  it("Betreff enthält Datum, Kunde und Adresse", () => {
-    const subject = new URL(buildNotdienstMailto(base)).searchParams.get("subject");
-    expect(subject).toBe("Notdienst-Bericht 2026-09-27 – Frau Kraft, 2. OG – Kniestraße 22, Hannover");
-  });
-
-  it("leere Kunde/Adresse werden im Betreff weggelassen", () => {
-    const subject = new URL(buildNotdienstMailto({ ...base, kunde: "  ", adresse: "" })).searchParams.get("subject");
-    expect(subject).toBe("Notdienst-Bericht 2026-09-27");
-  });
-
-  it("ohne Firma-Mail: leerer Empfänger, Mail öffnet trotzdem", () => {
-    expect(buildNotdienstMailto({ ...base, to: "" }).startsWith("mailto:?subject=")).toBe(true);
-  });
-
-  it("Body enthält alle ausgefüllten Felder", () => {
-    const body = new URL(buildNotdienstMailto({ ...base, problem: "WC undicht" })).searchParams.get("body");
-    expect(body).toContain("Kunde: Frau Kraft, 2. OG");
-    expect(body).toContain("Adresse: Kniestraße 22, Hannover");
-    expect(body).toContain("Problem:\nWC undicht");
-    expect(body).not.toContain("Notiz:");
-  });
 });
 
 // ── NotdienstModal ──────────────────────────────────────────────────────────
@@ -149,9 +114,8 @@ describe("NotdienstModal", () => {
   });
 
   it("keine Session: Meldung statt endlosem 'Speichern...'", async () => {
-    renderModal();
-    await waitFor(() => expect(mockGetSession).toHaveBeenCalled()); // mount-Fetch der Firma-Mail
     mockGetSession.mockResolvedValueOnce({ data: { session: null } });
+    renderModal();
     fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
 
     await screen.findByText(/Session abgelaufen/);
@@ -159,15 +123,37 @@ describe("NotdienstModal", () => {
     expect(mockInsert).not.toHaveBeenCalled();
   });
 
-  it("Mail-Klick macht keinen Netzwerk-Call (Firma-Mail wurde schon beim Öffnen geladen)", async () => {
+  it("kein 'Per Mail senden' mehr — Versand läuft über 'Bericht teilen'", () => {
     renderModal();
-    await waitFor(() => expect(mockProfile).toHaveBeenCalledTimes(1));
-    const sessionCalls = mockGetSession.mock.calls.length;
+    expect(screen.queryByRole("button", { name: /Per Mail senden/ })).not.toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: /Per Mail senden/ }));
+  it("Telefon des Kunden: wird gespeichert, 📞 ruft die Nummer an", async () => {
+    const { onSave } = renderModal();
+    const tel = screen.getByLabelText("Telefon (Kunde)");
+    expect(screen.queryByRole("link", { name: "Kunde anrufen" })).not.toBeInTheDocument();
+    fireEvent.change(tel, { target: { value: "0511 12 34-56" } });
+    expect(screen.getByRole("link", { name: "Kunde anrufen" })).toHaveAttribute("href", "tel:0511123456");
 
-    expect(mockGetSession.mock.calls.length).toBe(sessionCalls);
-    expect(mockProfile).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(mockInsert.mock.calls[0]![0]).toMatchObject({ kunde_telefon: "0511 12 34-56" });
+  });
+
+  it("ohne Telefon wird das Feld nicht gesendet (Speichern klappt auch vor Migration 030)", async () => {
+    const { onSave } = renderModal();
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(mockInsert.mock.calls[0]![0]).not.toHaveProperty("kunde_telefon");
+  });
+
+  it("vorhandene Nummer löschen → wird auf null gesetzt", async () => {
+    const { onSave } = renderModal(savedRow("nd-7", { date: "2026-09-27", start_time: "18:00", end_time: "19:00", kunde_telefon: "0511 1" }));
+    expect(screen.getByLabelText("Telefon (Kunde)")).toHaveValue("0511 1");
+    fireEvent.change(screen.getByLabelText("Telefon (Kunde)"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /Aktualisieren/ }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(mockUpdate.mock.calls[0]![1]).toMatchObject({ kunde_telefon: null });
   });
 });
 

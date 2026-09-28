@@ -14,6 +14,9 @@
 import type { TimeEntry } from "@workly/shared";
 import { makePdfTextSafe } from "./pdfSafe";
 
+/** Link in der Fußzeile ("Erstellt mit Stundly") */
+const STUNDLY_URL = "https://stundly.de";
+
 const MONTHS_DE = [
   "Januar","Februar","März","April","Mai","Juni",
   "Juli","August","September","Oktober","November","Dezember"
@@ -432,7 +435,10 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promi
   doc.text(supLabel, R - 35, y + 4, { align: "center" });
   y += 12;
   doc.setFontSize(6.5); doc.setTextColor(140);
-  doc.text(`Erstellt am ${heuteStr} mit Stundly`, W/2, y, { align: "center" });
+  const footer = `Erstellt am ${heuteStr} mit Stundly · stundly.de`;
+  doc.text(footer, W/2, y, { align: "center" });
+  const fw = doc.getTextWidth(footer);
+  doc.link(W/2 - fw/2, y - 2.5, fw, 3.5, { url: STUNDLY_URL });
 
   doc.save(`Monatsbericht_${MONTHS_DE[input.month - 1]}_${input.year}.pdf`);
 }

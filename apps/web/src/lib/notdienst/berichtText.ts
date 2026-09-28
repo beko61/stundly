@@ -41,6 +41,8 @@ export function buildBerichtText(b: BerichtTextInput): { subject: string; body: 
     ergebnis         ? `\nErgebnis / Feststellungen:\n${ergebnis}` : "",
     b.note.trim()    ? `\nNotiz: ${b.note.trim()}` : "",
     `\n${anhaenge}`,
+    // Dezente Absenderzeile — Empfänger (Auftraggeber, Kollegen) lernen Stundly kennen
+    `\n—\nErstellt mit Stundly · https://stundly.de`,
   ].filter(Boolean).join("\n");
 
   return { subject, body };

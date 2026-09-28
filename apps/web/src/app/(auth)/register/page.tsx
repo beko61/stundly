@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
+import { SIGNUP_SOURCES, isReferralCode } from "@/lib/marketing/referral";
 
 function mapError(msg: string): string {
   if (msg.includes("already registered") || msg.includes("already been registered"))
@@ -25,6 +26,9 @@ function RegisterForm() {
   const params = useSearchParams();
   const token        = params.get("token");
   const inviteEmail  = params.get("email");
+  // Empfehlungslink eines Nutzers (/register?ref=abcd1234)
+  const refParam     = params.get("ref");
+  const referredBy   = isReferralCode(refParam) ? refParam : null;
 
   const [fullName, setFullName]   = useState("");
   const [email, setEmail]         = useState(inviteEmail ?? "");
@@ -34,6 +38,7 @@ function RegisterForm() {
   const [loading, setLoading]     = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
   const [companyName, setCompanyName]   = useState<string | null>(null);
+  const [source, setSource]             = useState(referredBy ? "kollege" : "");
 
   // P1 fix — Password strength: min 10 karakter + en az 1 rakam veya
   // özel karakter. Payroll-adjacent SaaS için 6 karakter compliance riski.
@@ -114,7 +119,14 @@ function RegisterForm() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: {
+          full_name: fullName,
+          // Freiwillige Angabe + Empfehlungscode — Auswertung siehe lib/marketing/referral
+          ...(source ? { signup_source: source } : {}),
+          ...(referredBy ? { referred_by: referredBy } : {}),
+        },
+      },
     });
 
     if (signUpError) {
@@ -237,6 +249,21 @@ function RegisterForm() {
             Mindestens 10 Zeichen, mit mindestens einer Zahl oder einem Sonderzeichen.
           </p>
         </div>
+
+        {!token && (
+          <div>
+            <label className="label" htmlFor="signup-source">Wie hast du von Stundly erfahren? (optional)</label>
+            <select
+              id="signup-source"
+              className="input"
+              value={source}
+              onChange={e => setSource(e.target.value)}
+            >
+              <option value="">Bitte wählen…</option>
+              {SIGNUP_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+        )}
 
         <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
           <input

@@ -1,5 +1,41 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (123) – v0.67.0: Büyüme — "Erstellt mit Stundly", davet linki, "nereden duydun"
+
+### Kullanıcı isteği
+"Müşteri/kullanıcı çekelim, nasıl reklam yapabiliriz" → plan sunuldu (ürün içi büyüme, çevre, kısa video,
+SEO araç sayfaları, listeler, iş birlikleri, en son ücretli reklam). "Bir yerden başla" → ürün içi 3 parça.
+
+### 1. "Erstellt mit Stundly" (her paylaşılan rapor = bedava reklam)
+- Notdienst-Bericht PDF fußzeile: "Erstellt am … mit Stundly · stundly.de · Seite x/y" — **tıklanabilir link**
+- Monatsbericht PDF fußzeile: aynı, tıklanabilir
+- Notdienst paylaşım mail metninin sonu: "—\nErstellt mit Stundly · https://stundly.de"
+
+### 2. Davet linki ("Kollegen einladen")
+- `lib/marketing/referral.ts`: kod = user id'nin ilk 8 hex karakteri → `/register?ref=xxxxxxxx`
+- `components/ui/InviteColleaguesCard`: link + 📤 Teilen (navigator.share, senkron) + 💬 WhatsApp + 🔗 Kopieren
+  → Dashboard en altı + Profil & Settings (E-Mail Nachrichten üstü)
+- Ödül vaadi YOK (kullanıcı henüz karar vermedi — beta sonrası ek avantaj önerildi)
+
+### 3. "Wie hast du von Stundly erfahren?" (kayıt, isteğe bağlı)
+- Seçenekler: Kollege, Notdienst-Bericht/PDF, Google, Instagram/TikTok, Facebook, YouTube, Arbeitgeber, Andere
+- ref ile gelince "Kollege" önseçili; davetle (token) kayıtta soru gizli
+- Kaydedilen yer: auth `raw_user_meta_data` (`signup_source`, `referred_by`) — migration yok
+- Datenschutz §2'ye freiwillige Angabe eklendi
+- Değerlendirme (SQL Editor):
+  `select raw_user_meta_data->>'signup_source' as quelle, count(*) from auth.users group by 1;`
+  `select raw_user_meta_data->>'referred_by' as ref, count(*) from auth.users where raw_user_meta_data ? 'referred_by' group by 1;`
+
+### Test
+- Vitest 530/530 (+3 referral, +1 PDF link annotation `/URI (https://stundly.de)`, berichtText beklentisi güncellendi)
+- /register?ref=… tarayıcıda: soru görünüyor, "Kollege / Freund" önseçili · ESLint · tsc · `next build` clean
+
+### Sıradaki (plan)
+- Ücretsiz araç sayfası: Überstundenrechner (SEO), sonra Notdienst-Pauschale-Rechner, Stundenzettel-Vorlage
+- Google Search Console, OMR Reviews / Capterra kaydı (kullanıcı)
+
+---
+
 ## 2026-09-28 (122) – v0.66.0: Hatırlatma mailleri (kayıt olup kullanmayanlar / uzun süre giriş yapmayanlar)
 
 ### Kullanıcı isteği

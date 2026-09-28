@@ -21,7 +21,7 @@ export default function DatenschutzPage() {
           },
           {
             title: "2. Welche Daten wir erheben",
-            content: "Wir erheben folgende personenbezogene Daten:\n• E-Mail-Adresse (bei Registrierung)\n• Name (optional)\n• Arbeitszeitdaten (von Ihnen eingetragen)\n• IP-Adresse (technisch notwendig)\n• Zahlungsdaten (über Stripe, wir speichern keine Kartendaten)",
+            content: "Wir erheben folgende personenbezogene Daten:\n• E-Mail-Adresse (bei Registrierung)\n• Name (optional)\n• Wie Sie auf Stundly aufmerksam wurden bzw. über wessen Empfehlungslink Sie sich registriert haben (freiwillig, zur Verbesserung unseres Angebots)\n• Arbeitszeitdaten (von Ihnen eingetragen)\n• IP-Adresse (technisch notwendig)\n• Zahlungsdaten (über Stripe, wir speichern keine Kartendaten)",
           },
           {
             title: "3. Zweck der Datenverarbeitung",

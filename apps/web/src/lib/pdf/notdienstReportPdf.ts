@@ -8,6 +8,9 @@
 
 import { makePdfTextSafe } from "./pdfSafe";
 
+/** Link in der Fußzeile ("Erstellt mit Stundly") */
+const STUNDLY_URL = "https://stundly.de";
+
 export interface NotdienstReportInput {
   date:      string;  // YYYY-MM-DD
   start:     string;  // HH:MM
@@ -179,7 +182,11 @@ export async function generateNotdienstReportPdf(input: NotdienstReportInput): P
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p);
     doc.setFontSize(7); doc.setTextColor(140);
-    doc.text(`Erstellt am ${erstellt} mit Stundly · Seite ${p}/${pages}`, W / 2, 292, { align: "center" });
+    const footer = `Erstellt am ${erstellt} mit Stundly · stundly.de · Seite ${p}/${pages}`;
+    doc.text(footer, W / 2, 292, { align: "center" });
+    // Fußzeile klickbar → stundly.de (Empfänger des Berichts lernen Stundly kennen)
+    const fw = doc.getTextWidth(footer);
+    doc.link(W / 2 - fw / 2, 289.5, fw, 3.5, { url: STUNDLY_URL });
   }
 
   return doc.output("blob");

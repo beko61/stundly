@@ -54,6 +54,12 @@ describe("generateNotdienstReportPdf", () => {
     expect(pdf).toContain("Seite 1/1");
   });
 
+  it("Fußzeile: 'Erstellt mit Stundly' mit klickbarem Link", async () => {
+    const pdf = await pdfText(base);
+    expect(pdf).toContain("stundly.de");
+    expect(pdf).toMatch(/\/URI \(https:\/\/stundly\.de\)/);
+  });
+
   it("langer Text → Seitenumbruch mit Seitenzahlen", async () => {
     const lang = Array.from({ length: 80 }, (_, i) => `Feststellung ${i + 1}`).join("\n");
     const pdf = await pdfText({ ...base, ergebnis: lang });

@@ -30,13 +30,16 @@ describe("buildBerichtText", () => {
       "Notiz: Material 12 €",
       "",
       "Anhänge: Bericht (PDF) + 2 Fotos",
+      "",
+      "—",
+      "Erstellt mit Stundly · https://stundly.de",
     ].join("\n"));
   });
 
   it("leere Felder entfallen; ohne Fotos nur PDF-Anhang", () => {
     const r = buildBerichtText({ ...b, kunde: "", telefon: " ", adresse: "", problem: "", ergebnis: "", note: "", fotoAnzahl: 0 });
     expect(r.subject).toBe("Notdienst-Bericht 27.09.2026");
-    expect(r.body).toBe("Datum: 27.09.2026\nUhrzeit: 18:10 – 19:40 Uhr (1h 30m)\n\nAnhang: Bericht (PDF)");
+    expect(r.body).toBe("Datum: 27.09.2026\nUhrzeit: 18:10 – 19:40 Uhr (1h 30m)\n\nAnhang: Bericht (PDF)\n\n—\nErstellt mit Stundly · https://stundly.de");
   });
 
   it("ein Foto → Singular", () => {

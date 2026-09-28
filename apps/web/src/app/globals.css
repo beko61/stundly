@@ -570,11 +570,12 @@ body:has(.floating-scan) .support-fab {
   }
 }
 
-/* Nach-oben-Button — links-unten, spiegelbildlich zu support-fab */
+/* Nach-oben-Button — links-unten, spiegelbildlich zu support-fab.
+   Desktop: rechts neben der Sidebar (240px), sonst liegt er über "Abmelden". */
 .scroll-top-fab {
   position: fixed;
   bottom: 24px;
-  left: 24px;
+  left: calc(240px + 24px);
   z-index: 9998;
 }
 @media (max-width: 767px) {
@@ -641,6 +642,22 @@ body:has(.floating-scan) .support-fab {
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+/* Einheitlicher Seitentitel (Größe über die Media-Queries: 18px mobil, 24px Desktop) */
+.page-header h1 {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* Kopfzeile auf dieselbe Breite wie der Seiteninhalt (960px) — sonst stehen
+   Titel/Filter am Bildschirmrand und der Inhalt schmal in der Mitte. */
+.page-header-contained > * {
+  max-width: 928px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ═══════════════════════════════════════════════

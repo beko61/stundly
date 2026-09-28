@@ -306,3 +306,15 @@ describe("NotdienstModal — offline", () => {
     expect(getOutbox()).toHaveLength(1);
   });
 });
+
+describe("NotdienstModal — Validierung", () => {
+  it("Start = Ende → Hinweis, kein Speichern", async () => {
+    renderModal({
+      id: "nd-9", user_id: "u1", date: "2026-09-22", start_time: "19:00:00", end_time: "19:00:00",
+      note: null, kunde: "Herr Malak", adresse: null, problem: null, ergebnis: null, erledigt: false,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Aktualisieren/ }));
+    expect(await screen.findByText(/Start und Ende sind gleich/)).toBeInTheDocument();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});

@@ -1,5 +1,47 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (121) – v0.65.1: Zeiterfassung + Berichte — tasarım / tutarlılık düzeltmeleri
+
+### Kullanıcı isteği
+Ekran görüntüleriyle: "bu sayfalarda eksik, yanlış, uyuşmayan neler var — tasarım, yazı tipi, uygunluk".
+15 madde listelendi, kullanıcı "tekte düzelt" dedi.
+
+### Hatalar
+1. Offline işareti ⏳ → 📤 (⏳ zaten Notdienst "unbezahlt" simgesiydi, çakışıyordu)
+2. Nach-oben-Button masaüstünde sidebar'ın "Abmelden" butonunun üstündeydi → `left: 240px + 24px`
+3. Gün satırındaki × onaysız siliyordu → `confirm("Eintrag vom TT.MM. löschen?")`
+4. Notdienst Start = Ende (0h) kaydedilebiliyordu → "Start und Ende sind gleich" uyarısı (Ende < Start = gece, izinli)
+
+### Tutarlılık
+5. Başlıklar: Zeiterfassung küçük gri büyük harf, Berichte 22px → ikisi de `.page-header h1` (800, 24px / mobil 18px)
+6. Dauer formatı tek: `lib/utils/formatDur` → "8h 15m", "30m", "1h", Differenz "+23h"/"−1h 30m".
+   Tracker (DayEntry, MonthlySummary, NotdienstWeekly, NotdienstModal) + Berichte. Uhrzeiten HH:MM kaldı;
+   CSV makine okunur HH:MM kaldı.
+7. Urlaub/Krank/Feiertag: Berichte tablosu da Tracker gibi 08:00 / 17:00 / 1h (soluk renk) gösteriyor
+8. Tarih "09-01" → "01.09."; Start/Ende "07:45:00" → "07:45"
+
+### Tasarım
+9. Berichte üst kısım: Monat/Jahr segment + Jahr + Monat tek satır, kompakt; başlık/filtre içerikle aynı
+   genişlikte (`.page-header-contained`, 960px). İçerik 1000 → 960.
+10. CSV / PDF → standart `.btn` (secondary / primary), okunur boyut
+11. Krank / Feiertag / Notdienst satırı KPI kartlarıyla aynı stil; alt yazılar 12px (önce 8-10px)
+12. Differenz altında döküm: "103h 15m + 72h Urlaub/Krank/Feiertag + 21h 45m Notdienst − 174h Soll"
+13. Notdienst chip'leri normal chip boyutunda (9/11px → 10/12px), "Nd 1" 11px
+14. Zeiterfassung: Jahr + Monat tek satır, içerikle hizalı; Jahr seçici artık mor dolgu değil (ana aksiyon
+    gibi görünüyordu); MonthNav'daki kullanılmayan Supabase oturum çağrısı kaldırıldı
+15. En küçük yazılar 9px → 10px (MonthlySummary, Berichte)
+
+### Doğrulama
+- Vitest 516/516 (+3 formatDur, +1 Notdienst Start=Ende) · ESLint clean · tsc clean · `next build` clean
+- Görsel kontrol yapılamadı (sayfalar giriş istiyor) → kullanıcı teyidi bekleniyor
+
+### Değişen dosyalar
+- NEU `lib/utils/formatDur.ts` (+ test)
+- MOD `DayEntry.tsx`, `MonthNav.tsx`, `MonthlySummary.tsx`, `NotdienstWeekly.tsx`, `NotdienstModal.tsx`,
+  `reports/page.tsx`, `globals.css`, `version.ts` 0.65.0 → 0.65.1
+
+---
+
 ## 2026-09-28 (120) – v0.65.0: Offline mod (Zeiten + Notdienst internetsiz)
 
 ### Kullanıcı isteği

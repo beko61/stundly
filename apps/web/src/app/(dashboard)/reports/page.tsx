@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
-import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
+import { calculateWorkDuration, DAY_TYPES } from "@workly/shared";
+import { formatDur, formatDayMonth } from "@/lib/utils/formatDur";
 import type { TimeEntry } from "@workly/shared";
 import { YearPicker } from "@/components/ui/YearPicker";
 // generateMonthlyReportPDF: dynamic import — ~200KB @react-pdf/renderer + jspdf
@@ -28,16 +29,21 @@ const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Ok
 
 interface DonutSlice { value: number; color: string; label: string; }
 
-/** Saat:dakika formatı, eski programa benzer "+61:58" */
+/** Differenz mit Vorzeichen ("+23h", "−1h 30m") — einheitliches Dauer-Format (formatDur). */
 function minsToHM(min: number): string {
-  const sign = min < 0 ? "-" : "+";
-  const abs = Math.abs(Math.round(min));
-  return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
+  return formatDur(min, true);
 }
 function minsToHMNoSign(min: number): string {
+  return formatDur(Math.abs(min));
+}
+/** CSV bleibt maschinenlesbar: HH:MM */
+function csvHM(min: number): string {
   const abs = Math.abs(Math.round(min));
   return `${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
 }
+
+/** Anzeige-Zeiten für Urlaub/Krank/Feiertag — identisch mit der Zeiterfassung (DayEntry). */
+const STANDARD_TIMES = { start: "08:00", end: "17:00", pauseMin: 60 };
 
 function ReportDonut({ arbeitenDays, urlaubDays, krankDays, feiertagDays }: {
   arbeitenDays: number; urlaubDays: number; krankDays: number; feiertagDays: number;
@@ -89,7 +95,7 @@ function ReportDonut({ arbeitenDays, urlaubDays, krankDays, feiertagDays }: {
           pointerEvents:"none",
         }}>
           <span style={{ fontFamily:"'DM Mono',monospace", fontSize:22, fontWeight:700, color:"var(--text)", lineHeight:1 }}>{total}</span>
-          <span style={{ fontSize:9, color:"var(--muted)", fontWeight:700, marginTop:2, textTransform:"uppercase", letterSpacing:"0.08em" }}>Tage</span>
+          <span style={{ fontSize:10, color:"var(--muted)", fontWeight:700, marginTop:2, textTransform:"uppercase", letterSpacing:"0.08em" }}>Tage</span>
         </div>
       </div>
 
@@ -304,8 +310,7 @@ export default function ReportsPage() {
     });
   }, [entries, year, month, mode, feiertage]);
 
-  const fmt = (min: number) => formatDuration(Math.round(Math.abs(min)));
-  const sign = (min: number) => min>=0?"+":"-";
+  const fmt = (min: number) => formatDur(Math.abs(min));
 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError]     = useState<string | null>(null);
@@ -382,7 +387,7 @@ export default function ReportsPage() {
       const dow = ["So","Mo","Di","Mi","Do","Fr","Sa"][d.getDay()]!;
       let dur = "";
       if (e.start_time && e.end_time) {
-        dur = fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes);
+        dur = csvHM(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes);
       } else if (
         e.day_type === DAY_TYPES.URLAUB ||
         e.day_type === DAY_TYPES.KRANK ||
@@ -390,7 +395,7 @@ export default function ReportsPage() {
       ) {
         dur = "08:00";
       }
-      rows.push([e.date, dow, e.day_type, e.start_time??"-", e.end_time??"-",
+      rows.push([e.date, dow, e.day_type, e.start_time?.slice(0, 5) ?? "-", e.end_time?.slice(0, 5) ?? "-",
         String(e.break_minutes), dur, e.note??""]);
     }
     const csv = rows.map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
@@ -405,28 +410,24 @@ export default function ReportsPage() {
 
   return (
     <>
-      <div className="page-header">
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, gap:8, flexWrap:"wrap" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800 }}>Berichte & Export</h1>
-          <div style={{ display:"flex", gap:8 }}>
-            <button onClick={exportCSV} style={{ background:"color-mix(in srgb,var(--green) 15%,transparent)", border:"1px solid var(--green)", color:"var(--green)", padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700 }}>
+      <div className="page-header page-header-contained">
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, gap:10, flexWrap:"wrap" }}>
+          <h1>Berichte & Export</h1>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            <button onClick={exportCSV} className="btn btn-secondary">
               ⬇ CSV
             </button>
             {mode==="month" && (
               <button
                 onClick={() => void exportPDF()}
                 disabled={pdfLoading || loading || entries.length===0}
+                className="btn btn-primary"
                 style={{
-                  background:"color-mix(in srgb,var(--accent2) 15%,transparent)",
-                  border:"1px solid var(--accent2)",
-                  color:"var(--accent2)",
-                  padding:"6px 12px", borderRadius:8,
                   cursor: (pdfLoading || entries.length===0) ? "not-allowed" : "pointer",
                   opacity: (pdfLoading || entries.length===0) ? 0.6 : 1,
-                  fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700,
                 }}
               >
-                {pdfLoading ? "📄 ..." : "📄 Monatsbericht PDF"}
+                {pdfLoading ? "📄 Wird erstellt…" : "📄 Monatsbericht PDF"}
               </button>
             )}
           </div>
@@ -436,47 +437,42 @@ export default function ReportsPage() {
             marginBottom:10, padding:"8px 12px",
             background:"color-mix(in srgb, var(--red) 12%, transparent)",
             border:"1px solid color-mix(in srgb, var(--red) 30%, transparent)",
-            color:"var(--red)", borderRadius:8, fontSize:11,
+            color:"var(--red)", borderRadius:8, fontSize:12,
           }}>
             ❌ {pdfError}
           </div>
         )}
-        <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-          {(["month","year"] as const).map(v => (
-            <button key={v} onClick={() => setMode(v)} style={{
-              flex:1, padding:"8px", borderRadius:10, cursor:"pointer",
-              background:mode===v?"var(--accent)":"var(--surface)",
-              border:`1px solid ${mode===v?"var(--accent)":"var(--border)"}`,
-              color:mode===v?"white":"var(--muted)",
-              fontFamily:"'Syne',sans-serif", fontSize:12, fontWeight:700,
-            }}>{v==="month"?"📋 Monat":"📊 Jahr"}</button>
-          ))}
-        </div>
+        {/* Filter in einer Zeile: Ansicht (Monat/Jahr) · Jahr · Monat */}
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+          <div role="tablist" aria-label="Ansicht" style={{ display:"flex", gap:4, padding:4, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12 }}>
+            {(["month","year"] as const).map(v => (
+              <button key={v} role="tab" aria-selected={mode===v} onClick={() => setMode(v)} style={{
+                padding:"8px 16px", minHeight:36, borderRadius:9, cursor:"pointer", border:"none",
+                background:mode===v?"var(--accent)":"transparent",
+                color:mode===v?"white":"var(--muted)",
+                fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:700,
+              }}>{v==="month"?"📋 Monat":"📊 Jahr"}</button>
+            ))}
+          </div>
 
-        {mode==="month" ? (
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-            <div>
-              <label className="label">Jahr</label>
-              <select className="input" value={year} onChange={e=>setYear(+e.target.value)} style={{appearance:"none"}}>
+          {mode==="month" ? (
+            <>
+              <select className="input" aria-label="Jahr" value={year} onChange={e=>setYear(+e.target.value)} style={{ width:"auto", minWidth:110 }}>
                 {[2025,2026,2027,2028].map(y=><option key={y} value={y}>{y}</option>)}
               </select>
-            </div>
-            <div>
-              <label className="label">Monat</label>
-              <select className="input" value={month} onChange={e=>setMonth(+e.target.value)} style={{appearance:"none"}}>
+              <select className="input" aria-label="Monat" value={month} onChange={e=>setMonth(+e.target.value)} style={{ width:"auto", minWidth:150 }}>
                 {MONTHS.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
               </select>
+            </>
+          ) : (
+            <div style={{ minWidth:200 }}>
+              <YearPicker value={year} onChange={setYear} />
             </div>
-          </div>
-        ) : (
-          <div>
-            <label className="label">Jahr</label>
-            <YearPicker value={year} onChange={setYear} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <div style={{ padding:"16px 16px 40px", maxWidth: 1000, margin: "0 auto" }}>
+      <div style={{ padding:"16px 16px 40px", maxWidth: 960, margin: "0 auto" }}>
         {loading ? (
           <div
             role="status"
@@ -547,43 +543,35 @@ export default function ReportsPage() {
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
               {[
                 { label:"GEARBEITET",  val:fmt(stats.workedMinPure), color:"green",  hint:`Soll: ${fmt(stats.targetMin)}` },
-                { label:"DIFFERENZ",   val:`${sign(stats.diffMin)}${fmt(stats.diffMin)}`, color:stats.diffMin>=0?"blue":"red", hint:mode === "year" ? "ganzes Jahr inkl. Planung" : stats.diffMin>=0?"Überstunden":"Minderstunden" },
+                // Differenz = Gearbeitet + bezahlte Abwesenheit (Urlaub/Krank/Feiertag) + Notdienst − Soll
+                { label:"DIFFERENZ",   val:formatDur(stats.diffMin, true), color:stats.diffMin>=0?"blue":"red",
+                  hint:`${fmt(stats.workedMinPure)} + ${fmt(stats.paidAbsenceMin)} Urlaub/Krank/Feiertag + ${fmt(stats.ndMin)} Notdienst − ${fmt(stats.targetMin)} Soll${mode === "year" ? " (ganzes Jahr)" : ""}` },
                 { label:"ARBEITSTAGE", val:`${stats.arbeitenDays} / ${stats.workDaysInPeriod}`, color:"purple", hint:"Erfasst / Werktage" },
                 { label:"URLAUB",      val:`${stats.urlaub} T`, color:"blue", hint:mode === "year" ? `Rest ${Math.max(0, vacTotal - stats.urlaub)}/${vacTotal}` : "Tage" },
               ].map(c=>(
                 <div key={c.label} className={`card ${c.color}`}>
                   <div className="label">{c.label}</div>
                   <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:500 }}>{c.val}</div>
-                  <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>{c.hint}</div>
+                  <div style={{ fontSize:12, color:"var(--muted)", marginTop:4, lineHeight:1.4 }}>{c.hint}</div>
                 </div>
               ))}
             </div>
 
-            {/* Abwesenheit Zeile — Krank/Feiertag saatleri ile */}
-            <div className="card" style={{ padding:"12px 16px", marginBottom:14, display:"flex", gap:18, flexWrap:"wrap", justifyContent:"space-around" }}>
-              <div style={{ textAlign:"center" }}>
-                <div style={{ fontSize:9, color:"var(--muted)", fontWeight:700, letterSpacing:"0.08em" }}>🤒 KRANK</div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:18, color:"var(--red)", fontWeight:700 }}>{stats.krank}<span style={{ fontSize:11, color:"var(--muted)" }}> T</span></div>
-                {stats.krankMin > 0 && (
-                  <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>{fmt(stats.krankMin)}</div>
-                )}
-              </div>
-              <div style={{ textAlign:"center" }}>
-                <div style={{ fontSize:9, color:"var(--muted)", fontWeight:700, letterSpacing:"0.08em" }}>🎉 FEIERTAG</div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:18, color:"var(--yellow)", fontWeight:700 }}>{stats.feiertag}<span style={{ fontSize:11, color:"var(--muted)" }}> T</span></div>
-                {stats.feiertag > 0 && (
-                  <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>{fmt(stats.feiertag * 8 * 60)}</div>
-                )}
-              </div>
-              {mode === "month" && (
-                <div style={{ textAlign:"center" }}>
-                  <div style={{ fontSize:9, color:"var(--muted)", fontWeight:700, letterSpacing:"0.08em" }}>🚨 NOTDIENST</div>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:18, color:"var(--orange)", fontWeight:700 }}>{stats.notdienst}<span style={{ fontSize:11, color:"var(--muted)" }}>×</span></div>
-                  {stats.ndMin > 0 && (
-                    <div style={{ fontSize:10, color:"var(--muted)", marginTop:2 }}>{minsToHMNoSign(stats.ndMin)}</div>
-                  )}
+            {/* Abwesenheit Zeile — gleiche Optik wie die KPI-Karten */}
+            <div className="card" style={{ padding:"14px 16px", marginBottom:14, display:"grid", gridTemplateColumns:`repeat(${mode === "month" ? 3 : 2}, 1fr)`, gap:12 }}>
+              {[
+                { label:"🤒 Krank",    color:"var(--red)",    val:`${stats.krank} T`,    sub: stats.krankMin > 0 ? fmt(stats.krankMin) : null },
+                { label:"🎉 Feiertag", color:"var(--yellow)", val:`${stats.feiertag} T`, sub: stats.feiertag > 0 ? fmt(stats.feiertag * 8 * 60) : null },
+                ...(mode === "month"
+                  ? [{ label:"🚨 Notdienst", color:"var(--orange)", val:`${stats.notdienst}×`, sub: stats.ndMin > 0 ? fmt(stats.ndMin) : null }]
+                  : []),
+              ].map(x => (
+                <div key={x.label} style={{ textAlign:"center" }}>
+                  <div className="label" style={{ color:x.color, marginBottom:4 }}>{x.label}</div>
+                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:500 }}>{x.val}</div>
+                  {x.sub && <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{x.sub}</div>}
                 </div>
-              )}
+              ))}
             </div>
 
             {/* Year mode — Donut chart for visual year overview */}
@@ -646,7 +634,7 @@ export default function ReportsPage() {
                 </summary>
                 <div style={{ borderTop:"1px solid var(--border)" }}>
                   {/* Table header */}
-                  <div style={{ padding:"10px 16px", fontSize:9, color:"var(--muted)", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", display:"grid", gridTemplateColumns:"50px 60px 1fr 80px", gap:8 }}>
+                  <div style={{ padding:"10px 16px", fontSize:10, color:"var(--muted)", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", display:"grid", gridTemplateColumns:"50px 60px 1fr 80px", gap:8 }}>
                     <span>Monat</span><span>KW</span><span>Nd</span><span style={{ textAlign:"right" }}>Überstd</span>
                   </div>
                   {ndByWeek.map(w => (
@@ -714,25 +702,32 @@ export default function ReportsPage() {
                     frei:"var(--muted)", wochenende:"var(--muted)",
                   };
                   let dur = "—";
-                  if (e?.day_type === DAY_TYPES.ARBEITEN && e.start_time && e.end_time) {
-                    dur = fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes);
-                  } else if (
+                  // Urlaub/Krank/Feiertag: Standardzeiten gedimmt anzeigen — wie in der Zeiterfassung
+                  const paidAbsence =
                     e?.day_type === DAY_TYPES.URLAUB ||
                     e?.day_type === DAY_TYPES.KRANK ||
                     e?.day_type === DAY_TYPES.FEIERTAG ||
-                    (!e && d.isFeiertag)
-                  ) {
-                    dur = "08:00";
+                    (!e && d.isFeiertag);
+                  const workday = d.dow !== 0 && d.dow !== 6;
+                  if (e?.day_type === DAY_TYPES.ARBEITEN && e.start_time && e.end_time) {
+                    dur = fmt(calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes);
+                  } else if (paidAbsence && workday) {
+                    dur = fmt(8 * 60);
                   }
+                  const std = paidAbsence && workday && !e?.start_time;
+                  const startTxt = e?.start_time ? e.start_time.slice(0, 5) : std ? STANDARD_TIMES.start : "–";
+                  const endTxt   = e?.end_time   ? e.end_time.slice(0, 5)   : std ? STANDARD_TIMES.end   : "–";
+                  const pauseTxt = e?.start_time ? fmt(e.break_minutes) : std ? fmt(STANDARD_TIMES.pauseMin) : "–";
+                  const timeColor = std ? "var(--muted)" : "var(--text)";
                   const rowBg = d.isWeekend && !e ? "color-mix(in srgb, var(--muted) 6%, transparent)" : undefined;
                   return (
                     <div key={d.date} className="report-table-row" style={{ padding:"10px 14px", borderBottom:"1px solid var(--surface2)", display:"grid", gridTemplateColumns:"60px 60px 1fr 80px 80px 60px 60px", gap:8, alignItems:"center", fontSize:12, background: rowBg }}>
-                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{d.date.slice(5)}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{formatDayMonth(d.date)}</span>
                       <span style={{ color:"var(--muted)", fontWeight:700 }}>{dow}</span>
                       <span style={{ color:COLOR[typLabel]??"var(--text)", fontWeight:700, textTransform:"capitalize" }}>{typLabel}</span>
-                      <span style={{ fontFamily:"'DM Mono',monospace" }}>{e?.start_time ?? "-"}</span>
-                      <span style={{ fontFamily:"'DM Mono',monospace" }}>{e?.end_time ?? "-"}</span>
-                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{e ? `${e.break_minutes}m` : "-"}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace", color:timeColor }}>{startTxt}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace", color:timeColor }}>{endTxt}</span>
+                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{pauseTxt}</span>
                       <span style={{ fontFamily:"'DM Mono',monospace", color: dur === "—" ? "var(--muted)" : "var(--green)" }}>{dur}</span>
                     </div>
                   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDur } from "@/lib/utils/formatDur";
 import { useMemo, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
@@ -41,10 +42,9 @@ function getDayStdMins(dow: number): number {
   return 8 * 60;
 }
 
+/** Dauer im einheitlichen Format ("8h 15m") — siehe lib/utils/formatDur. */
 function minsToTime(min: number): string {
-  const sign = min < 0 ? "-" : "";
-  const abs = Math.abs(min);
-  return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
+  return formatDur(min);
 }
 
 export function NotdienstWeekly() {

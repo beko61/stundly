@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import type React from "react";
 import { createClient } from "@/lib/supabase/client";
-import { calculateWorkDuration, formatDuration } from "@workly/shared";
+import { calculateWorkDuration } from "@workly/shared";
+import { formatDur } from "@/lib/utils/formatDur";
 import { useModalA11y } from "@/hooks/useModalA11y";
 import { NotdienstBerichtPanel } from "./NotdienstBerichtPanel";
 import { useOnline, useOutbox } from "@/hooks/useOffline";
@@ -121,7 +122,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   }
 
   const duration = start && end
-    ? formatDuration(calculateWorkDuration(start, end, 0).net_minutes)
+    ? formatDur(calculateWorkDuration(start, end, 0).net_minutes)
     : "--";
 
   function openMaps() {
@@ -131,8 +132,13 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   }
 
   async function handleSave() {
-    setSaving(true);
     setSaveError(null);
+    // Start = Ende ergibt 0h (Ende vergessen). Ende < Start ist erlaubt (über Mitternacht).
+    if (start.slice(0, 5) === end.slice(0, 5)) {
+      setSaveError("Start und Ende sind gleich — bitte die Endzeit eintragen.");
+      return;
+    }
+    setSaving(true);
     let userId: string | null = null;
 
     // Ohne Netz: in die Offline-Outbox, wird automatisch übertragen (OfflineSync)

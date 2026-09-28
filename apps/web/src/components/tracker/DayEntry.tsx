@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TimeEntry, DayType } from "@workly/shared";
-import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared";
+import { calculateWorkDuration, DAY_TYPES } from "@workly/shared";
+import { formatDur, formatDayMonth } from "@/lib/utils/formatDur";
 import { TimeEntryModal } from "./TimeEntryModal";
 import { NotdienstModal, type NotdienstEntry } from "./NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
@@ -109,9 +110,9 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
   const showSollstunden  = isPaidAbsence || isAutoHoliday;
 
   const netHours = workDuration
-    ? formatDuration(workDuration.net_minutes)
+    ? formatDur(workDuration.net_minutes)
     : showSollstunden
-      ? formatDuration(getDayStdMins(date))
+      ? formatDur(getDayStdMins(date))
       : null;
   const netColor = entry
     ? STATUS_COLOR[entry.day_type]
@@ -147,7 +148,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                 {STATUS_ICON[entry.day_type]} {entry.day_type.charAt(0).toUpperCase()+entry.day_type.slice(1)}
                 {isPendingRow(entry) && (
                   <span title="Offline gespeichert — wird übertragen, sobald Internet da ist"
-                    style={{ fontSize:10, fontWeight:600, color:"var(--muted)", marginLeft:6 }}>⏳ nicht übertragen</span>
+                    style={{ fontSize:11, fontWeight:600, color:"var(--muted)", marginLeft:6 }}>📤 nicht übertragen</span>
                 )}
               </div>
             ) : isFeiertag ? (
@@ -187,7 +188,12 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                   display:"inline-flex", alignItems:"center", justifyContent:"center",
                   borderRadius:8,
                 }}
-                onClick={async e => { e.stopPropagation(); await onDelete(entry.id); }}>×</button>
+                onClick={async e => {
+                  e.stopPropagation();
+                  // Das × liegt direkt neben den Stunden — ohne Rückfrage zu leicht versehentlich getippt
+                  if (!confirm(`Eintrag vom ${formatDayMonth(date)} löschen?`)) return;
+                  await onDelete(entry.id);
+                }}>×</button>
             )}
           </div>
         </div>
@@ -198,7 +204,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
             <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
               {[
                 { label:"Start", val:hhmm(entry.start_time) },
-                { label:"Pause", val:`${String(Math.floor(entry.break_minutes/60)).padStart(2,"0")}:${String(entry.break_minutes%60).padStart(2,"0")}` },
+                { label:"Pause", val:formatDur(entry.break_minutes) },
                 { label:"Ende",  val:hhmm(entry.end_time) },
                 { label:"Std",   val:netHours??"-" },
               ].map(({ label, val }) => (
@@ -225,9 +231,9 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                 <>
                   {[
                     { label:"Start", val: STANDARD_TIMES.start },
-                    { label:"Pause", val: "01:00" },
+                    { label:"Pause", val: formatDur(STANDARD_TIMES.pauseMin) },
                     { label:"Ende",  val: STANDARD_TIMES.end },
-                    { label:"Std",   val: netHours ?? "08:00" },
+                    { label:"Std",   val: netHours ?? formatDur(8 * 60) },
                   ].map(({ label, val }) => (
                     <div key={label} className="time-chip" style={{ borderColor: STATUS_COLOR[entry.day_type] }}>
                       <span style={{ color:"var(--muted)", fontSize:10 }}>{label}</span>
@@ -251,13 +257,13 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
         {ndEntries.length > 0 && (
           <div style={{ padding:"0 14px 8px", borderTop:"1px solid var(--border)" }}>
             {ndEntries.map((nd, idx) => {
-              const ndDur = formatDuration(calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes);
+              const ndDur = formatDur(calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes);
               return (
                 <div key={nd.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0",
                   borderBottom: idx<ndEntries.length-1?"1px solid var(--surface2)":"none" }}
                   onClick={e => { e.stopPropagation(); setNdModal(nd); }}>
-                  <span style={{ fontSize:10, color:"var(--orange)", fontWeight:700, flexShrink:0 }}>
-                    Nd {idx+1}{isPendingRow(nd) && <span title="Offline gespeichert — noch nicht übertragen"> ⏳</span>}
+                  <span style={{ fontSize:11, color:"var(--orange)", fontWeight:700, flexShrink:0 }}>
+                    Nd {idx+1}{isPendingRow(nd) && <span title="Offline gespeichert — noch nicht übertragen"> 📤</span>}
                   </span>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
@@ -267,8 +273,8 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                         { label:"Std",   val:ndDur },
                       ].map(({ label, val }) => (
                         <div key={label} className="time-chip" style={{ borderColor:"var(--orange)" }}>
-                          <span style={{ color:"var(--muted)", fontSize:9 }}>{label}</span>
-                          <span style={{ fontSize:11, color:"var(--orange)" }}>{val}</span>
+                          <span style={{ color:"var(--muted)", fontSize:10 }}>{label}</span>
+                          <span style={{ fontWeight:500, color:"var(--orange)" }}>{val}</span>
                         </div>
                       ))}
                     </div>

@@ -79,3 +79,21 @@ export function formatMinutes(mins: number): string {
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
 }
+
+/**
+ * Teammitglied derselben Firma laden — null, wenn der Nutzer nicht (mehr) zur Firma gehört.
+ * Für alle Firmen-Routen, die auf Daten eines Mitarbeiters zugreifen.
+ */
+export async function getTeamMember(
+  admin: ReturnType<typeof createAdminClient>,
+  companyId: string,
+  userId: string,
+): Promise<{ user_id: string; role: string; full_name: string | null } | null> {
+  const { data } = await admin
+    .from("profiles")
+    .select("user_id, role, full_name, company_id, deleted_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data || data.company_id !== companyId || data.deleted_at) return null;
+  return { user_id: data.user_id as string, role: data.role as string, full_name: (data.full_name as string | null) ?? null };
+}

@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (130) – (kod yok) Firma paneli workflow — Migration 033 + başlangıç (DEVAM EDECEK)
+
+Kullanıcı kararı: firma paneli için 4 bölümün hepsi (Notdienst+raporlar, düzeltme+ay onayı, sözleşme saati+izin
+hakkı firmada, modern/mobil). Prensip: çalışan yazar, firma görür/onaylar/gerekçeyle düzeltir, gizlice değiştiremez.
+- NEU `supabase/migrations/033_company_workflow.sql` (kullanıcıya verildi, çalıştırması bekleniyor):
+  profiles.contract_weekly_hours/contract_vacation_days/contract_start (+ trigger: sadece service_role),
+  salary_settings trigger (sözleşme varsa Soll = hafta×52/12, izin hakkı), month_closings, entry_corrections,
+  kilitli ay trigger'ı (time_entries + notdienst; Notdienst ayı = hafta Pazar'ı), Notdienst erledigt'i firma
+  çalışanı değiştiremez.
+- `lib/company/admin.ts`: `getTeamMember()` yardımcı fonksiyonu
+- SIRADAKİ: API contract/notdienst paid/anhaenge; çalışan detayında Notdienst+raporlar, sözleşme formu, Soll
+  sabit 174 yerine sözleşme + ND dahil; çalışan tarafı kilitler (SettingsCard, DayEntry/NotdienstModal
+  erledigt, dashboard mergeSettings DB öncelikli); sonra ay gönder/onay + düzeltme UI; sonra mobil görünüm.
+
+---
+
 ## 2026-09-28 (129) – v0.71.1: Kokpit tarihi Türkçe
 
 Kullanıcı Kokpit'i test etti (4 kullanıcı, aktivasyon %75, pasif 14+ = 3, hiç kullanmamış = 1 — rakamlar tutarlı;

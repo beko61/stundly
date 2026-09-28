@@ -55,43 +55,6 @@ export function timeEntriesPrefix(userId: string | null | undefined) {
   return ["time_entries", userId ?? "anon"] as const;
 }
 
-export function liveEntryKey(userId: string | null | undefined) {
-  return ["time_entries", userId ?? "anon", "live"] as const;
-}
-
-/** Nach jeder Änderung: Monat + laufender Live-Eintrag + Bereichs-Queries (Dashboard). */
-function invalidateAfterWrite(qc: ReturnType<typeof useQueryClient>, userId: string | null | undefined, date: string) {
-  const [y, m] = date.split("-").map(Number);
-  if (y && m) void qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
-  void qc.invalidateQueries({ queryKey: liveEntryKey(userId) });
-  void qc.invalidateQueries({ queryKey: ["time_entries_range", userId ?? "anon"] });
-}
-
-// ── Query: laufender Live-Eintrag (Start/Stop-Timer), max. einer ─────────────
-export function useLiveEntryQuery() {
-  const userId = useSessionUserId();
-
-  return useQuery({
-    queryKey: liveEntryKey(userId),
-    enabled:  typeof userId === "string",
-    queryFn:  async (): Promise<TimeEntry | null> => {
-      if (!userId) return null;
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("time_entries")
-        .select("*")
-        .eq("user_id", userId)
-        .contains("tags", ["live"])
-        .is("end_time", null)
-        .order("date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw new Error(error.message);
-      return (data as TimeEntry | null) ?? null;
-    },
-  });
-}
-
 // ── Query: month range read ───────────────────────────────────────────────────
 export function useTimeEntriesQuery(year: number, month: number) {
   const userId = useSessionUserId();
@@ -162,7 +125,11 @@ export function useCreateTimeEntry() {
       if (error) throw new Error(error.message);
       return data as TimeEntry;
     },
-    onSuccess: (created) => invalidateAfterWrite(qc, userId, created.date),
+    onSuccess: (created) => {
+      // Ay/yıl'ı date'den çıkar → sadece o ay'ın query'sini invalide et
+      const [y, m] = created.date.split("-").map(Number);
+      if (y && m) qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
+    },
   });
 }
 
@@ -183,7 +150,10 @@ export function useUpdateTimeEntry() {
       if (error) throw new Error(error.message);
       return data as TimeEntry;
     },
-    onSuccess: (updated) => invalidateAfterWrite(qc, userId, updated.date),
+    onSuccess: (updated) => {
+      const [y, m] = updated.date.split("-").map(Number);
+      if (y && m) qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
+    },
   });
 }
 
@@ -200,6 +170,9 @@ export function useDeleteTimeEntry() {
       if (error) throw new Error(error.message);
       return { id, date };
     },
-    onSuccess: ({ date }) => invalidateAfterWrite(qc, userId, date),
+    onSuccess: ({ date }) => {
+      const [y, m] = date.split("-").map(Number);
+      if (y && m) qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
+    },
   });
 }

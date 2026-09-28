@@ -11,7 +11,6 @@ import { usePrivacyMode } from "@/lib/privacy";
 import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
-import { LiveTimerCard } from "@/components/tracker/LiveTimerCard";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -467,8 +466,6 @@ export default function DashboardPage() {
         <h1>{greeting}{name ? `, ${name}` : ""} 👋</h1>
         <p>Hier ist deine Übersicht.</p>
       </div>
-
-      <LiveTimerCard />
 
       {/* Month picker */}
       <div className="dash-month-picker">

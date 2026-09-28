@@ -32,7 +32,6 @@ vi.mock("@/components/tracker/MonthNav",        () => ({ MonthNav: () => null })
 vi.mock("@/components/tracker/MonthlySummary",  () => ({ MonthlySummary: () => null }));
 vi.mock("@/components/tracker/NotdienstWeekly", () => ({ NotdienstWeekly: () => null }));
 vi.mock("@/components/tracker/PhotoScanModal",  () => ({ PhotoScanModal: () => null }));
-vi.mock("@/components/tracker/LiveTimerCard",   () => ({ LiveTimerCard: () => null }));
 vi.mock("@/components/ui/WelcomeBanner",        () => ({ WelcomeBanner: () => null }));
 vi.mock("@/components/tracker/DayEntry", () => ({
   DayEntry: ({ date, ndEntries }: { date: string; ndEntries: unknown[] }) =>

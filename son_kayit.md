@@ -1,5 +1,17 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (119) – v0.64.1: Canlı sayaç geri alındı
+
+### Kullanıcı kararı
+"Yok geri al bunu istemiyorum" — v0.64.0 canlı sayaç (#118) tamamen kaldırıldı (`git revert 70ee19e`).
+Kod v0.63.2 durumuna döndü (LiveTimerCard, lib/tracker/liveTimer, useLiveEntryQuery, DayEntry/TimeEntryModal
+live-uyarlamaları, .live-dot CSS, testler). Tekrar önerme.
+
+### Değişen dosyalar
+- Revert: #118'deki tüm dosyalar · `version.ts` 0.64.0 → 0.64.1
+
+---
+
 ## 2026-09-28 (118) – v0.64.0: Canlı sayaç (Arbeitsbeginn / Pause / Feierabend)
 
 ### Kullanıcı isteği

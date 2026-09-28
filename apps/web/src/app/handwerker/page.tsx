@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BETA_END_DATE_LABEL } from "@/lib/beta";
 
 export const metadata: Metadata = {
-  title: "Zeiterfassung für Handwerker — Stundly",
+  title: "Zeiterfassung für Handwerker",
   description: "Zeiterfassung speziell für deutsche Handwerksbetriebe: Notdienst-Verwaltung, Brutto→Netto live, ArbZG-Warnungen, DATEV-Export. Solo & KMU.",
   keywords: [
     "Zeiterfassung Handwerker",

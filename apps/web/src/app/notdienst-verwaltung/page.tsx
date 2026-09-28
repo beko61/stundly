@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BETA_END_DATE_LABEL } from "@/lib/beta";
 
 export const metadata: Metadata = {
-  title: "Notdienst-Verwaltung für Handwerker — Stundly",
+  title: "Notdienst-Verwaltung für Handwerker",
   description: "Notdienst-Einsätze richtig erfassen: Wochen-Zuordnung zum Vormonat, Bonus-Berechnung, Handy-Eintrag. Speziell für Sanitär, Elektro, Heizungsbau.",
   keywords: [
     "Notdienst Erfassung",

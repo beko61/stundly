@@ -158,7 +158,7 @@ const features = [
   { icon: "💰", title: "Lohnberechnung", desc: "Automatische Gehaltsberechnung mit Überstundenzuschlag, Notdienst und Nachtbonus." },
   { icon: "📄", title: "PDF Export", desc: "Professionelle Berichte und Urlaubsanträge als PDF – direkt per E-Mail versenden." },
   { icon: "🏖️", title: "Urlaubsverwaltung", desc: "Urlaubsanträge erstellen, unterschreiben und als PDF exportieren. BURLG-konform." },
-  { icon: "📱", title: "Mobile App", desc: "iOS & Android App – auch offline nutzbar. Daten werden automatisch synchronisiert." },
+  { icon: "📱", title: "Mobile App", desc: "Auf iOS & Android wie eine App installierbar – Daten sind auf Handy und PC automatisch synchron." },
 ];
 
 const plans = [
@@ -198,7 +198,7 @@ const faqs = [
   { q: "Ist Stundly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
   { q: "Muss ich eine Kreditkarte angeben?", a: `Nein. Die kostenlose Testphase ist vollständig ohne Zahlungsdaten – während der Beta-Phase sogar bis ${BETA_END_DATE_LABEL} komplett gratis.` },
   { q: "Kann ich Stundly in Deutschland nutzen?", a: "Ja. Stundly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
-  { q: "Gibt es eine mobile App?", a: "Ja. Stundly ist als PWA für iOS und Android verfügbar und funktioniert auch offline." },
+  { q: "Gibt es eine mobile App?", a: "Ja. Stundly lässt sich auf iOS und Android wie eine App auf den Startbildschirm installieren (PWA). Zum Speichern von Einträgen wird eine Internetverbindung benötigt." },
 ];
 
 export default async function LandingPage() {

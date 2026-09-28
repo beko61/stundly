@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ContactForm } from "./form";
 
 export const metadata: Metadata = {
-  title: "Kontakt · Stundly",
+  title: "Kontakt",
   description: "Frage, Feedback oder Bug-Report? Schreib direkt an den Entwickler von Stundly — Solo-Indie, Antwort meist in 24h.",
 };
 

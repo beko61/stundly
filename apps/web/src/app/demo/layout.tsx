@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Demo · Stundly",
+  title: "Demo",
   description: "Stundly live ausprobieren — ohne Konto, ohne Anmeldung. Sieh, wie Zeiterfassung, Lohnberechnung und Urlaubsanträge funktionieren.",
   robots: { index: true, follow: true },
 };

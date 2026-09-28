@@ -4,7 +4,7 @@ import { homePathForRole } from "@/lib/auth/homePath";
 import { PasswordChangeForm } from "./form";
 
 export const metadata = {
-  title: "Passwort ändern · Stundly",
+  title: "Passwort ändern",
   description: "Setze dein Passwort, bevor du fortfährst.",
 };
 

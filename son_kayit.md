@@ -1,5 +1,36 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (112) – v0.61.1: Denetim küçükleri — başlıklar, offline metni, temizlik, env dokümantasyonu
+
+### Yapılan
+- **Çift marka başlığı** (root template zaten " · Stundly" ekliyor): demo, kontakt, password-change,
+  handwerker, notdienst-verwaltung → sadece sayfa adı. (OpenGraph başlıkları değişmedi.)
+- **"Offline" vaadi düzeltildi** (landing feature kartı + SSS): PWA olarak kurulabilir, kayıt için
+  internet gerekir — gerçekte offline yazma yok.
+- **Ölü kod**: `components/ui/StatusBadge.tsx`, `store/authStore.ts` silindi; kullanılmayan paketler
+  `dexie`, `dexie-react-hooks`, `date-fns`, `@stripe/stripe-js` kaldırıldı (mobile de kullanmıyor).
+  `i18n/config.ts` knip'e göre "unused" ama next.config'te string path — KALDI.
+- **`.env.example`**: CRON_SECRET, SUPPORT_TO_EMAIL, NEXT_PUBLIC_SUPPORT_EMAIL(_MODE),
+  NEXT_PUBLIC_SENTRY_DSN eklendi; kullanılmayan NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY çıkarıldı
+  (checkout sunucu redirect'i).
+
+### Bilinçli olarak yapılmadı
+- **404 → /login** (girişsiz bilinmeyen URL): middleware "varsayılan korumalı" çalışıyor; bunu
+  "sadece listelenen yollar korumalı"ya çevirmek, listeye eklenmeyen yeni bir sayfayı açıkta
+  bırakma riski taşır. Güvenlik > küçük SEO kazancı.
+- **Sentry**: hesap + DSN gerekiyor (kullanıcı kararı).
+
+### Validation
+- TS clean · ESLint clean · Vitest 470/470 · `next build` clean
+
+### Değişen dosyalar
+- MOD: `apps/web/src/app/{demo/layout,kontakt/page,password-change/page,handwerker/page,notdienst-verwaltung/page,page}.tsx`
+- DEL: `apps/web/src/components/ui/StatusBadge.tsx`, `apps/web/src/store/authStore.ts`
+- MOD: `apps/web/package.json`, `package-lock.json`, `apps/web/.env.example`
+- MOD: `apps/web/src/lib/version.ts` — 0.61.0 → 0.61.1
+
+---
+
 ## 2026-09-28 (111) – v0.61.0: DSGVO — Settings'te "Daten herunterladen" + "Konto löschen"
 
 ### Neden (denetim #108)

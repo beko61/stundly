@@ -1,5 +1,29 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (110) – v0.60.4: Next.js 15.5.14 → 15.5.26 (güvenlik)
+
+### Neden
+`npm audit`: next 15.5.14 için 2 critical (RCE: Image Optimization/AVIF, Windows-hosted) +
+çok sayıda high — aralarında **Middleware/Proxy bypass** (segment-prefetch, dynamic route param
+injection) — bizim sayfa koruması middleware'e dayandığı için doğrudan ilgili. Hepsi <15.5.24'te.
+Aynı minor'ın en yenisi 15.5.26'ya çıkıldı (+ eslint-config-next 15.5.26).
+
+### Doğrulama
+- Lockfile değişikliği küçük (±57 satır, sadece next/@next/* paketleri).
+- Lokal production (`next start`): / ve /pricing 200, /dashboard, /tracker, /api/address → 307 /login,
+  webhook → 400 "No signature" (middleware geçiyor, imza kontrolü çalışıyor).
+- TS clean · ESLint clean · Vitest 459/459 · `next build` (15.5.26) clean
+
+### Not
+Root `node_modules/next@14.2.35` (next-intl peer'i, runtime'da kullanılmıyor) audit'te hâlâ görünür —
+lockfile hoisting temizliği ayrı iş (react-dom@18 ile aynı kök neden).
+
+### Değişen dosyalar
+- MOD: `apps/web/package.json`, `package-lock.json`
+- MOD: `apps/web/src/lib/version.ts` — 0.60.3 → 0.60.4
+
+---
+
 ## 2026-09-28 (109) – v0.60.3: Beta 31.03.2027'ye uzatıldı + metinler tarihe bağlandı
 
 ### Kullanıcı kararı

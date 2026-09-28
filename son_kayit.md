@@ -1,5 +1,32 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (116) – v0.63.1: iPhone — Eingabefelder zoomen nicht mehr rein
+
+### Kullanıcı raporu
+"Notdienst yazarken Problem yerinde ekran büyüyor, sabit kalsın, hep kötü oluyor."
+
+### Kök neden
+iOS Safari, font-size < 16px olan bir input/textarea'ya dokunulunca sayfayı yakınlaştırır ve geri
+uzaklaştırmaz. `.input` 14px, Notdienst Problem/Ergebnis textarea'ları inline 13px → her dokunuşta zoom.
+Tüm uygulamayı etkiliyordu (TimeEntry, Settings, Urlaub… formları).
+
+### Fix (`globals.css`)
+- `@media (max-width: 767px), (pointer: coarse)`: input (checkbox/radio/range hariç), textarea, select
+  → `font-size: 16px !important` (inline style'ları da ezer).
+- `html { -webkit-text-size-adjust: 100%; text-size-adjust: 100% }` — yatay çevirmede font şişmesi yok.
+- Pinch-zoom açık kaldı (layout.tsx viewport, WCAG 1.4.4) — maximum-scale KULLANILMADI.
+
+### Doğrulama (lokal prod, tarayıcı)
+- Mobil (375px, touch): /kontakt tüm alanlar computed 16px; inline 13px textarea → 16px.
+- Masaüstü (1280px, fine pointer): inline 13px → 13px, `.input` değişmedi (desktop görünümü aynı).
+- ESLint clean · `next build` clean · Vitest 495/495
+
+### Değişen dosyalar
+- MOD: `apps/web/src/app/globals.css`
+- MOD: `apps/web/src/lib/version.ts` — 0.63.0 → 0.63.1
+
+---
+
 ## 2026-09-28 (115) – v0.63.0: Notdienst — "Per Mail" kalktı, paylaşımda mail metni, Kunde-Telefon
 
 ### Kullanıcı geri bildirimi

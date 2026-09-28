@@ -49,6 +49,9 @@ html {
   color-scheme: dark;
   overflow-x: clip;
   max-width: 100vw;
+  /* iOS vergrößert Schrift sonst beim Drehen ins Querformat */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 html[data-theme="light"] {
   color-scheme: light;
@@ -226,6 +229,18 @@ body {
 }
 .input:focus  { border-color: var(--accent); }
 .input::placeholder { color: var(--muted); }
+
+/* iOS Safari zoomt beim Antippen jedes Eingabefelds mit Schrift < 16px in die Seite
+   und zoomt nicht zurück ("Bildschirm wird groß" beim Notdienst-Problem u.a.).
+   Auf Handys/Touch daher alle Formularfelder mind. 16px — !important schlägt auch
+   Inline-Styles (z.B. Textareas mit fontSize 13). Pinch-Zoom bleibt erlaubt (WCAG 1.4.4). */
+@media (max-width: 767px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
 
 /* Label */
 .label {

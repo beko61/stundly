@@ -41,7 +41,7 @@ export default function DatenschutzPage() {
           },
           {
             title: "7. Datenlöschung",
-            content: "Sie können Ihr Konto jederzeit in den Einstellungen löschen. Nach der Anfrage werden alle personenbezogenen Daten innerhalb von 30 Tagen unwiderruflich gelöscht. Rechnungsdaten werden gemäß § 147 AO 10 Jahre aufbewahrt.",
+            content: "Sie können Ihr Konto jederzeit unter Profil & Settings → „Datenschutz & Konto“ löschen. Nach der Anfrage werden alle personenbezogenen Daten nach 30 Tagen unwiderruflich gelöscht; bis dahin können Sie den Antrag dort widerrufen. Ist Ihr Konto Teil eines Firmenkontos, ist Ihr Arbeitgeber Verantwortlicher — die Löschung beantragen Sie dann bei ihm, da Arbeitszeitnachweise gesetzlichen Aufbewahrungspflichten unterliegen (§ 16 Abs. 2 ArbZG). Eine Kopie Ihrer Daten (Art. 15, 20 DSGVO) können Sie an derselben Stelle als Datei herunterladen. Rechnungsdaten werden gemäß § 147 AO 10 Jahre aufbewahrt.",
           },
           {
             title: "8. Drittanbieter (Auftragsverarbeiter)",

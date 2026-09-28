@@ -1,5 +1,43 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (111) – v0.61.0: DSGVO — Settings'te "Daten herunterladen" + "Konto löschen"
+
+### Neden (denetim #108)
+Datenschutz sayfası "Konto in den Einstellungen löschen" vaat ediyordu ama UI yoktu;
+`/api/dsgvo/{export,delete}` hiç çağrılmıyordu → dsgvo-process cron'u boşa çalışıyordu.
+
+### Yapılan
+- Yeni `components/settings/PrivacyAccountCard.tsx` ("🔒 Datenschutz & Konto", "Daten zurücksetzen"ün üstünde):
+  - 📦 Meine Daten herunterladen → `GET /api/dsgvo/export` → JSON dosyası (sunucu dosya adıyla)
+  - 🗑 Konto löschen… → modal, `LÖSCHEN` yazınca aktif → `POST /api/dsgvo/delete`
+  - Açık talep varsa tarih + "Löschantrag widerrufen" (`DELETE`)
+  - Firma hesabı: silme butonu yok, "işverenden talep et" bilgisi
+- `/api/dsgvo/delete`: yeni `GET` (pending + selfService); **firma hesabında POST → 403**
+  (işveren = sorumlu, §16 ArbZG saklama yükümlülüğü); insert/update hataları artık 500 dönüyor;
+  widerruf audit log'a yazılıyor.
+- `/api/dsgvo/export`: eksik tablolar eklendi — **notdienst_entries** (kunde/adresse kişisel veri!),
+  **salary_records**, deletion_requests; kullanılmayan daily_logs çıkarıldı; dosya adı
+  `workly-daten-*` → `stundly-daten-*`.
+- Datenschutz §7 metni gerçek akışa göre güncellendi (yer, widerruf, firma hesabı, export).
+
+### Testler (+11)
+- `api/dsgvo/__tests__/dsgvo.test.ts` (6, node env, in-memory admin mock): 401, durum, 30 gün + idempotent
+  + audit, widerruf, firma hesabı 403, export içerik/dosya adı/sadece kendi verisi.
+- `components/settings/__tests__/PrivacyAccountCard.test.tsx` (5): LÖSCHEN onayı → tarih → widerruf,
+  açık talep gösterimi, firma hesabı, download dosya adı, export hata mesajı.
+
+### Validation
+- TS clean · ESLint clean · Vitest 470/470 (37 dosya)
+
+### Değişen dosyalar
+- ADD: `apps/web/src/components/settings/PrivacyAccountCard.tsx` (+ test)
+- ADD: `apps/web/src/app/api/dsgvo/__tests__/dsgvo.test.ts`
+- MOD: `apps/web/src/app/api/dsgvo/delete/route.ts`, `export/route.ts`
+- MOD: `apps/web/src/app/(dashboard)/settings/page.tsx`, `apps/web/src/app/datenschutz/page.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.60.4 → 0.61.0
+
+---
+
 ## 2026-09-28 (110) – v0.60.4: Next.js 15.5.14 → 15.5.26 (güvenlik)
 
 ### Neden

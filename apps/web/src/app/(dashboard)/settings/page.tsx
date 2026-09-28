@@ -8,6 +8,7 @@ import { parseInternetsizExport } from "@/lib/import/internetsizImport";
 import type { ImportPayload } from "@/lib/import/internetsizImport";
 import { AutoFillReports } from "@/components/settings/AutoFillReports";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
+import { PrivacyAccountCard } from "@/components/settings/PrivacyAccountCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 interface Profile {
@@ -694,6 +695,9 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* ── Datenschutz & Konto (DSGVO Export / Löschung) ── */}
+        <PrivacyAccountCard />
 
         {/* ── Daten zurücksetzen ── */}
         <div className="card" style={{ borderColor: "color-mix(in srgb, var(--red) 30%, transparent)" }}>

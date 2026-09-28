@@ -1,5 +1,38 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (127) – v0.70.0: Super-Admin — Unternehmen löschen, Firmenliste verbessert, User-Löschen repariert
+
+### Kullanıcı raporu
+"Admin paneli iyileştirelim, ben Unternehmen'leri silemiyorum."
+
+### Kök neden
+- /superadmin/companies sadece salt-okunur bir tabloydu — silme hiç yoktu.
+- Ek bulgu: kullanıcı silme de çoğu hesapta çalışmıyordu — API `profiles.email` ile onaylıyordu, ama bu alan
+  çoğu kullanıcıda boş (sadece Ayarlar'da doluyor) → "Benutzer nicht gefunden" / onay boş.
+
+### Yeni: firma silme
+- API `DELETE /api/superadmin/companies/[id]?confirm=<Firmenname>&users=1`
+  - Firma adı birebir onay (büyük/küçük harf fark etmez); aktif ücretli Stripe aboneliği → 409 (önce Stripe'ta iptal)
+  - Abonelik + davetler FK cascade ile gider
+  - `users=1` yoksa: üyeler kalır → role `individual`, company_id null (kendi saatleri korunur)
+  - `users=1`: üye hesapları tamamen silinir (auth.users → tüm veri cascade)
+  - Süper admin ve çağıran kişi hiçbir zaman silinmez, sadece firmadan ayrılır
+  - Audit (`superadmin.company_deleted`) önce ve company_id=null yazılır (cascade'de kaybolmasın)
+- UI `CompaniesTable`: arama (firma/sahip e-postası/şehir), sütunlar Sahip · Çalışan (x / max) · USt-Id alt satır,
+  "Sil" → modal: üye sayısı, "Çalışan hesaplarını da sil" kutusu, firma adı yazılmadan buton kapalı, sonuç bildirimi
+- Ortak `lib/superadmin/auth.ts` (checkSuperAdmin + adminClient) — users route da bunu kullanıyor
+
+### Düzeltme: kullanıcı silme
+- DELETE users/[id]: onay e-postası artık auth.users'tan (getUserById), profiles.email sadece yedek
+- /superadmin/users: listede boş e-postalar auth.users'tan dolduruluyor (görünüm + silme onayı)
+
+### Test
+- Vitest 558/558 (+5 API: 403, yanlış ad 400, Stripe 409, bireysele çevirme + audit null, users=1 süper admin/çağıran
+  korunur; +3 UI: ad yazılmadan kapalı, URL + satır kalkar, Stripe'ta buton yok, arama) · ESLint · tsc · build
+- Görsel kontrol yapılamadı (süper admin girişi gerekir)
+
+---
+
 ## 2026-09-28 (126) – v0.69.1: Fiyatlar tek kaynak + tek beta sözü (%50 dauerhaft), Streichpreis yok
 
 ### Kullanıcı sorusu / kararı

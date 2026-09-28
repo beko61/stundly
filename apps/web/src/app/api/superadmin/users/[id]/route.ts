@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
-
-async function checkSuperAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await supabase.from("profiles").select("role").eq("user_id", user.id).single();
-  if (profile?.role !== "super_admin") return null;
-  return user;
-}
+import { checkSuperAdmin } from "@/lib/superadmin/auth";
 
 // PATCH /api/superadmin/users/[id]
 // Body: { role?: string } | { is_active?: boolean }
@@ -76,18 +67,20 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Hedef kullanıcının email'ini oku ve confirm ile eşleşiyor mu doğrula
-  const { data: target } = await admin
-    .from("profiles")
-    .select("email, company_id")
-    .eq("user_id", id)
-    .single();
+  // Hedef kullanıcının email'ini oku ve confirm ile eşleşiyor mu doğrula.
+  // profiles.email ist oft leer (nur in den Einstellungen gepflegt) → Login-E-Mail aus auth.users.
+  const [{ data: prof }, { data: authData }] = await Promise.all([
+    admin.from("profiles").select("email, company_id").eq("user_id", id).maybeSingle(),
+    admin.auth.admin.getUserById(id),
+  ]);
+  const targetEmail = (authData?.user?.email ?? prof?.email ?? "").toLowerCase();
+  const target = { email: targetEmail, company_id: prof?.company_id ?? null };
 
-  if (!target?.email) {
+  if (!authData?.user && !prof) {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
 
-  if (target.email.toLowerCase() !== confirmEmail) {
+  if (!targetEmail || targetEmail !== confirmEmail) {
     return NextResponse.json(
       { error: "Bestätigung stimmt nicht mit der E-Mail überein." },
       { status: 400 }

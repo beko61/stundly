@@ -13,6 +13,15 @@ export default async function SuperAdminUsersPage() {
     .order("created_at", { ascending: false })
     .limit(500);
 
+  // profiles.email ist oft leer → Login-E-Mail aus auth.users ergänzen (für Anzeige + Lösch-Bestätigung)
+  const authEmails = new Map<string, string>();
+  for (let page = 1; page < 20; page++) {
+    const { data } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    for (const u of data?.users ?? []) if (u.email) authEmails.set(u.id, u.email);
+    if (!data || data.users.length < 1000) break;
+  }
+  for (const u of users ?? []) u.email = authEmails.get(u.user_id as string) ?? u.email;
+
   const roleCounts = (users ?? []).reduce<Record<string, number>>((acc, u) => {
     acc[u.role] = (acc[u.role] ?? 0) + 1;
     return acc;

@@ -1,5 +1,38 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (124) – v0.68.0: Überstundenrechner (SEO araç sayfası) + Notdienst-Pazar metin düzeltmesi
+
+### Kullanıcı isteği
+Büyüme planının 2. adımı: "edelim" → ücretsiz Überstundenrechner sayfası (Google'dan ziyaretçi → kayıt).
+
+### Sayfa `/ueberstundenrechner` (herkese açık, giriş yok)
+- İki mod: **Pro Tag** (Mo–So Beginn/Ende/Pause, gece vardiyası doğru) · **Stunden gesamt** (Woche/Monat)
+- Vertrag Wochenstunden, optional Stundenlohn + Zuschlag (0/10/25/50 %) → Überstunden (+/−), Arbeitstage, Wert €
+- §3 ArbZG uyarısı: günlük > 10 h, haftalık > 48 h
+- Örnek hafta 07:00–16:30 → ilk bakışta "+2h 30m" (0h değil)
+- İçerik: formül açıklaması + 5 SSS (BAG 04.05.2022 – 5 AZR 359/21 ispat yükü, §3/§4 ArbZG, zamlar, Minusstunden)
+  + hukuki uyarı notu; **FAQPage JSON-LD** (Google zengin sonuç)
+- CTA: hesaplayıcı altında + sayfa sonunda "Kostenlos starten" → /register
+- Metadata/canonical/keywords, sitemap (0.8), middleware PUBLIC_PATHS, landing footer + /notdienst-verwaltung linki
+- Mobil: satır başına kart (Tag + Netto üstte, 3 alan altta), "Je Tag: Beginn · Ende · Pause" ipucu;
+  375px'te taşma yok (ölçüldü)
+- Mantık `lib/tools/ueberstunden.ts` (parseHours "38,5"/"38:30", dayMinutes, calcUeberstunden, Monat = 52/12 Wochen)
+
+### Düzeltme — Notdienst ay kuralı metinleri
+Kod (`weekMonth.notdienstMonthOf`) haftayı **Pazar'ın ayına** sayıyor, ama 5 metin "Montag" diyordu
+(MonthlySummary bilgi kutusu, NotdienstWeekly tooltip, /handwerker, /notdienst-verwaltung ×2 + meta description).
+Hepsi "Sonntag" + doğru örnek (28. Apr – 4. Mai → Mai) olarak düzeltildi.
+
+### Test
+- Vitest 542/542 (+7 ueberstunden mantık, +5 bileşen: örnek hafta, Samstag, Monat+Lohn+Zuschlag 166,67 €,
+  Minus/ungültig, ArbZG) · ESLint · tsc · `next build` clean
+- Tarayıcı: masaüstü 1280 + mobil 375 görsel kontrol, `<title>` ve FAQPage JSON-LD HTML'de
+
+### Kullanıcıya düşen
+- Google Search Console'a stundly.de ekle → sitemap gönder (https://stundly.de/sitemap.xml)
+
+---
+
 ## 2026-09-28 (123) – v0.67.0: Büyüme — "Erstellt mit Stundly", davet linki, "nereden duydun"
 
 ### Kullanıcı isteği

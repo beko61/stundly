@@ -45,7 +45,7 @@ const painPoints = [
 
 const features = [
   { icon: "🚨", title: "Notdienst mit Wochen-Zuordnung",
-    desc: "Sa-So Einsatz? Bonus geht automatisch zum Monat des Wochen-Anfangs (Montag). Kein manuelles Verschieben." },
+    desc: "Sa-So Einsatz? Die ganze Woche zählt automatisch zum Monat ihres Sonntags. Kein manuelles Verschieben." },
   { icon: "📷", title: "Foto-Scan (KI)",
     desc: "Papier-Stundenzettel abfotografiert, KI liest Datum + Uhrzeiten. Bei Kunden vor Ort ideal." },
   { icon: "🏖", title: "Urlaub PDF mit Unterschrift",

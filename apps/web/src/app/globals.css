@@ -138,6 +138,27 @@ body {
 .card.purple::before { background: var(--accent2); }
 .card.orange::before { background: var(--orange); }
 
+/* Überstundenrechner (/ueberstundenrechner): Wochen-Tabelle, mobil als Karte je Tag */
+.uer-row {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) minmax(0, 1fr) 110px 70px;
+  gap: 8px;
+  align-items: center;
+}
+.uer-row .input { min-width: 0; width: 100%; }
+.uer-head { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.uer-mobile-hint { display: none; margin: 0; font-size: 12px; color: var(--muted); }
+@media (max-width: 600px) {
+  .uer-head { display: none; }
+  .uer-mobile-hint { display: block; }
+  .uer-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 72px;
+    padding: 10px; border: 1px solid var(--border); border-radius: 10px;
+  }
+  .uer-row > span:first-child { grid-column: 1 / 3; }
+  .uer-row > span:last-child { grid-column: 3; grid-row: 1; }
+}
+
 /* Time chip */
 .time-chip {
   display: inline-flex;

@@ -163,8 +163,8 @@ export function NotdienstWeekly() {
           🚨 Notdienst — Wochenübersicht
           <InfoTooltip title="So liest sich diese Tabelle" color="var(--orange)">
             <strong>KW</strong>: Kalenderwoche. Eine Woche wird dem Monat
-            zugeordnet, in dem ihr Montag liegt — auch wenn Notdienste am
-            Wochenende in den Folgemonat fallen.
+            zugeordnet, in dem ihr Sonntag liegt — auch wenn Notdienste zu
+            Wochenbeginn noch im Vormonat liegen.
             {"\n\n"}
             <strong>Nd-Std</strong>: Anzahl Einsätze · Summe der
             Notdienst-Stunden in dieser Woche.

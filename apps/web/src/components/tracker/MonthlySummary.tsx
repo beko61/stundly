@@ -287,8 +287,8 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
                 am jeweiligen Tag.
                 {"\n\n"}
                 <strong>Monatszuordnung:</strong> Eine Notdienst-Woche zählt
-                immer zu dem Monat, in dem ihr Montag liegt. Beispiel: KW vom
-                28. Apr (Mo) bis 4. Mai (So) → komplett April.
+                immer zu dem Monat, in dem ihr Sonntag liegt. Beispiel: KW vom
+                28. Apr (Mo) bis 4. Mai (So) → komplett Mai.
                 {"\n\n"}
                 <strong>Bezahlt-Status:</strong> ✅ erledigt / ⏳ offen — Tippe
                 im Tag auf das Symbol, um umzuschalten. Notdienst wird oft erst

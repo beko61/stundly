@@ -4,7 +4,7 @@ import { BETA_END_DATE_LABEL } from "@/lib/beta";
 
 export const metadata: Metadata = {
   title: "Notdienst-Verwaltung für Handwerker",
-  description: "Notdienst-Einsätze richtig erfassen: Wochen-Zuordnung zum Vormonat, Bonus-Berechnung, Handy-Eintrag. Speziell für Sanitär, Elektro, Heizungsbau.",
+  description: "Notdienst-Einsätze richtig erfassen: automatische Wochen-Zuordnung zum Monat, Bonus-Berechnung, Handy-Eintrag. Speziell für Sanitär, Elektro, Heizungsbau.",
   keywords: [
     "Notdienst Erfassung",
     "Notdienst Verwaltung Handwerker",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 const problems = [
   {
     q: "Wann gehört ein Wochenend-Notdienst zu welchem Monat?",
-    a: "Bei Stundly: Der Monat des Wochen-Montags. Beispiel: Notdienst-Woche 28. April – 4. Mai → komplett April. Kein manuelles Verschieben, keine Verwirrung bei der Lohnabrechnung.",
+    a: "Bei Stundly: Der Monat des Wochen-Sonntags. Beispiel: Notdienst-Woche 28. April – 4. Mai → komplett Mai. Kein manuelles Verschieben, keine Verwirrung bei der Lohnabrechnung.",
   },
   {
     q: "Wie viel Bonus zahle ich pro Einsatz?",
@@ -103,7 +103,7 @@ export default function NotdienstLandingPage() {
             { step: "1", title: "Notdienst-Eintrag anlegen",
               desc: "Am Handy auf den Tag tippen → „+ Notdienst hinzufügen“. Uhrzeit, Kunde, Notiz — fertig." },
             { step: "2", title: "Wochen-Regel automatisch",
-              desc: "Der Einsatz gehört zu dem Kalendermonat, in dem der Wochen-Montag liegt. Kein Verschieben nötig." },
+              desc: "Der Einsatz gehört zu dem Kalendermonat, in dem der Wochen-Sonntag liegt. Kein Verschieben nötig." },
             { step: "3", title: "Bonus wird berechnet",
               desc: "Anzahl Einsätze × dein €/Tag Bonus (aus Lohn-Einstellungen). Fließt in Brutto → Netto." },
             { step: "4", title: "Bezahlt-Status verwalten",
@@ -158,6 +158,8 @@ export default function NotdienstLandingPage() {
             <Link href="/handwerker" style={{ color: "var(--accent2)" }}>Für Handwerker</Link>
             {" · "}
             <Link href="/vergleich/clockodo" style={{ color: "var(--accent2)" }}>Vergleich Clockodo</Link>
+            {" · "}
+            <Link href="/ueberstundenrechner" style={{ color: "var(--accent2)" }}>Überstundenrechner</Link>
           </div>
         </div>
       </section>

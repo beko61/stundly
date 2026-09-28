@@ -1,5 +1,39 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (122) – v0.66.0: Hatırlatma mailleri (kayıt olup kullanmayanlar / uzun süre giriş yapmayanlar)
+
+### Kullanıcı isteği
+"Kayıt oluyoruz ya, böyle kullanıcı girmeyince hatırlatma maili gönderebilir miyiz — baksın, girsin, kullansın."
+
+### Kurallar (`lib/email/reminders.ts` → `decideReminder`)
+- **start** — kayıttan ≥ 2 gün sonra hâlâ hiç kayıt yok (Beispieldaten sayılmaz) → "Dein Stundly ist startklar"
+- **start2** — ≥ 7 gün, hâlâ boş, "start"tan ≥ 4 gün sonra → ikinci ve son "başla" maili
+- **comeback** — verisi var ama ≥ 14 gündür ne kayıt ne giriş → "Seit N Tagen nichts eingetragen";
+  bir duraklama başına en fazla 1 mail (tekrar aktif olup yine 14 gün susarsa yeni mail)
+- Aktivite = son time_entries.updated_at / notdienst created_at / auth last_sign_in_at (en yenisi)
+- Sadece is_active, silinmemiş, e-postası onaylı, hatırlatmayı kapatmamış kullanıcılar; tur başına max 200
+
+### Parçalar
+- Cron `/api/cron/reminders` — her gün 08:00 UTC (vercel.json); `?dry=1` sadece kararları döner
+- Abonelikten çıkma: her mailde HMAC imzalı link + `List-Unsubscribe` / One-Click (RFC 8058) başlıkları
+  - `/api/email/unsubscribe`: GET = onay sayfası (Outlook Safe Links gibi tarayıcılar linki açınca
+    yanlışlıkla çıkmasın), POST = kapat. Middleware PUBLIC_PATHS'e eklendi.
+- Ayarlar → E-Mail Nachrichten → "Erinnerungen" anahtarı (ayrı sorgu: migration yoksa sadece gizli)
+- Datenschutz §3: servis e-postaları + Art. 6 (1) f + abonelikten çıkma bilgisi
+- **Migration 031** `profiles.reminder_emails_enabled` (default true), `reminder_last_type`, `reminder_last_sent_at`
+  → kullanıcı SQL Editor'da çalıştıracak. Çalışmadan cron 500 döner (zararsız), ayar gizli kalır.
+
+### Test
+- Vitest 526/526 (+7 reminders: kurallar/token/şablon, +3 unsubscribe route: GET değişmez, POST kapatır, sahte token 400)
+- Mail HTML'i tarayıcıda görsel kontrol edildi (start) · ESLint · tsc · `next build` clean
+
+### Değişen dosyalar
+- NEU `lib/email/reminders.ts`, `app/api/cron/reminders/route.ts`, `app/api/email/unsubscribe/route.ts`,
+  `supabase/migrations/031_reminder_emails.sql`, testler
+- MOD `vercel.json` (+cron), `middleware.ts`, `settings/page.tsx`, `datenschutz/page.tsx`, `version.ts` 0.65.1 → 0.66.0
+
+---
+
 ## 2026-09-28 (121) – v0.65.1: Zeiterfassung + Berichte — tasarım / tutarlılık düzeltmeleri
 
 ### Kullanıcı isteği

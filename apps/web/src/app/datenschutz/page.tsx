@@ -25,7 +25,7 @@ export default function DatenschutzPage() {
           },
           {
             title: "3. Zweck der Datenverarbeitung",
-            content: "Die Daten werden ausschließlich zur Bereitstellung des Stundly-Dienstes verwendet:\n• Authentifizierung und Kontoverwaltung\n• Speicherung und Anzeige Ihrer Arbeitszeitdaten\n• Berechnungen (Lohn, Überstunden)\n• PDF-Erstellung und -Export\n• Kundensupport",
+            content: "Die Daten werden ausschließlich zur Bereitstellung des Stundly-Dienstes verwendet:\n• Authentifizierung und Kontoverwaltung\n• Speicherung und Anzeige Ihrer Arbeitszeitdaten\n• Berechnungen (Lohn, Überstunden)\n• PDF-Erstellung und -Export\n• Kundensupport\n• Service-E-Mails zur Nutzung des Dienstes: Erinnerungen, wenn nach der Registrierung oder seit längerer Zeit keine Zeiten eingetragen wurden (Art. 6 Abs. 1 lit. f DSGVO — berechtigtes Interesse an einer vollständigen Zeiterfassung). Jederzeit abbestellbar über den Link in jeder Mail oder unter Profil & Settings → E-Mail Nachrichten.",
           },
           {
             title: "4. Rechtsgrundlage",

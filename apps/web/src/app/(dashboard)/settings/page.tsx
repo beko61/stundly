@@ -154,6 +154,20 @@ export default function SettingsPage() {
 
   useEffect(() => { void load(); }, []);
 
+  // Erinnerungs-Mails (Migration 031) — eigene Abfrage: fehlt die Spalte noch,
+  // bleibt der Schalter ausgeblendet und der Rest der Seite funktioniert normal.
+  const [reminders, setReminders] = useState<boolean | null>(null);
+  useEffect(() => {
+    void (async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data, error } = await supabase
+        .from("profiles").select("reminder_emails_enabled").eq("user_id", session.user.id).maybeSingle();
+      if (!error) setReminders((data?.reminder_emails_enabled as boolean | null | undefined) ?? true);
+    })();
+  }, []);
+
   async function load() {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -204,6 +218,9 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from("profiles")
       .upsert({ user_id: session.user.id, ...profile }, { onConflict: "user_id" });
+    if (!error && reminders !== null) {
+      await supabase.from("profiles").update({ reminder_emails_enabled: reminders }).eq("user_id", session.user.id);
+    }
 
     setSaving(false);
     if (error) {
@@ -543,6 +560,34 @@ export default function SettingsPage() {
               </div>
             </div>
           </label>
+
+          {reminders !== null && (
+            <label
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                background: "var(--surface2)", borderRadius: 10, cursor: "pointer",
+                border: `1px solid ${reminders ? "color-mix(in srgb, var(--accent2) 40%, transparent)" : "var(--border)"}`,
+                marginTop: 8,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={reminders}
+                onChange={(e) => setReminders(e.target.checked)}
+                style={{ width: 18, height: 18, accentColor: "var(--accent)", flexShrink: 0 }}
+                aria-label="Erinnerungen"
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                  Erinnerungen
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, lineHeight: 1.5 }}>
+                  Eine kurze Mail, wenn du länger als 14 Tage nichts eingetragen hast —
+                  damit keine Überstunden oder Notdienste verloren gehen.
+                </div>
+              </div>
+            </label>
+          )}
         </div>
 
         {/* Save */}

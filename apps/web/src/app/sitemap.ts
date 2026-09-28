@@ -84,6 +84,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${APP_URL}/stundenzettel-vorlage`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${APP_URL}/vergleich/clockodo`,
       lastModified: now,
       changeFrequency: "monthly",

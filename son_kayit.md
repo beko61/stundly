@@ -1,5 +1,30 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (125) – v0.69.0: Stundenzettel-Vorlage (SEO araç sayfası, PDF indirme)
+
+### Kullanıcı isteği
+Büyüme planı 3. adım — "tamam devam edelim dediğinden" → Stundenzettel-Vorlage (A) seçildi.
+
+### Sayfa `/stundenzettel-vorlage` (herkese açık, giriş yok)
+- Form: Monat, Jahr (geçen/bu/gelecek), Feiertage-Bundesland (ops.), Name, Firma (ops.) → **PDF indir**
+- PDF (`lib/pdf/stundenzettelVorlagePdf.ts`, A4, tek sayfa): ayın tüm günleri + Wochentag, hafta sonu gri,
+  Feiertag sarı + adı, sütunlar Beginn/Ende/Pause/Stunden/Tätigkeit-Baustelle, Summe satırı, Soll/Überstunden/
+  Urlaub/Krank alanları, 2 imza çizgisi, altbilgi "Vorlage von Stundly · stundly.de" (tıklanabilir link)
+- jsPDF sayfa açılışında önceden yükleniyor → indirme tıklamada senkron (iOS await sonrası engeller)
+- İndirince "Kostenlos testen" yönlendirmesi; veriler cihazda kalıyor (sunucuya gitmiyor)
+- İçerik: "Das steht auf der Vorlage" + 5 SSS (BAG 13.09.2022 1 ABR 22/21 Erfassungspflicht, §16(2) ArbZG,
+  §17 MiLoG + §2a SchwarzArbG 7 gün/2 yıl, saklama, dijital) + hukuki uyarı; FAQPage JSON-LD
+- Metadata/canonical, sitemap, middleware PUBLIC_PATHS, landing footer + Überstundenrechner'den link
+
+### Test
+- Vitest 546/546 (+3 PDF: Ekim 2026 NI 31 gün + Einheit/Reformationstag + link; Şubat 28 gün tatilsiz;
+  dosya adı Maerz; +1 form: önyükleme, girdiler, save dosya adı, sonrası CTA)
+- Test sayesinde bulunan hata: imza çizgisinde `doc.line` eksik y2 → düzeltildi
+- PDF pdf.js ile görsel kontrol edildi (tek sayfa, tablo/renkler/imza/altbilgi) · mobil 375 form taşmasız
+  (Bundesland seçimi tam genişlik) · ESLint · tsc · `next build` clean
+
+---
+
 ## 2026-09-28 (124) – v0.68.0: Überstundenrechner (SEO araç sayfası) + Notdienst-Pazar metin düzeltmesi
 
 ### Kullanıcı isteği

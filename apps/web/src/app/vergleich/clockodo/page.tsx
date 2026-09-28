@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BETA_END_DATE_LABEL } from "@/lib/beta";
+import { BETA_PRICE_LINE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Stundly vs. Clockodo — Zeiterfassung für Handwerker",
@@ -171,9 +172,7 @@ export default function VergleichClockodoPage() {
             Selber testen — kostenlos
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
-            Beta-Zugang gratis bis {BETA_END_DATE_LABEL}. Keine Kreditkarte. Danach lebenslang{" "}
-            <span style={{ textDecoration: "line-through", opacity: 0.7 }}>€19,99</span>{" "}
-            <strong style={{ color: "var(--accent2)" }}>€5,99/Monat</strong>.
+            Beta-Zugang gratis bis {BETA_END_DATE_LABEL}. Keine Kreditkarte. {BETA_PRICE_LINE}.
           </p>
           <Link href="/register" className="btn btn-primary" style={{ fontSize: 14, padding: "12px 28px", display: "inline-block" }}>
             Stundly starten →

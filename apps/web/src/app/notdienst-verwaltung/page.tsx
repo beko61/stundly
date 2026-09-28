@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BETA_END_DATE_LABEL } from "@/lib/beta";
+import { BETA_PRICE_LINE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Notdienst-Verwaltung für Handwerker",
@@ -149,7 +150,7 @@ export default function NotdienstLandingPage() {
             Notdienst richtig erfassen — kostenlos testen
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
-            Beta-Zugang gratis bis {BETA_END_DATE_LABEL}. Keine Kreditkarte. Danach lebenslang €5,99/Monat statt €19,99.
+            Beta-Zugang gratis bis {BETA_END_DATE_LABEL}. Keine Kreditkarte. {BETA_PRICE_LINE}.
           </p>
           <Link href="/register" className="btn btn-primary" style={{ fontSize: 14, padding: "12px 28px", display: "inline-block" }}>
             Kostenlos starten →

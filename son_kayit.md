@@ -1,5 +1,36 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (126) – v0.69.1: Fiyatlar tek kaynak + tek beta sözü (%50 dauerhaft), Streichpreis yok
+
+### Kullanıcı sorusu / kararı
+"Üye fiyatlarını şimdi belirlemek ya da göstermek mantıklı mı?" → Evet, ama sitede 4 çelişkili söz vardı:
+- Landing/Handwerker/Notdienst/Clockodo: "~~€19,99~~ €5,99 lebenslang" (farklı paketleri karşılaştıran
+  Streichpreis — Einzelperson zaten 5,99 → yanıltıcı, UWG § 5 / PAngV § 11 Abmahnung riski)
+- Landing alt + Welcome-Mail + /pricing Beta-Box: "50 % lebenslangen Rabatt"
+- /pricing (Beta sonrası banner): "30 % für immer, erste 20 Kunden, Code BETA30"
+Kullanıcı kararı (28.09): **fiyatlar aynen** (5,99 / 19,99 / 49,99; yıllık 59 / 199 / 499) +
+**Beta-Tester dauerhaft 50 % günstiger** (2,99 / 9,99 / 24,99), her yerde tek söz.
+
+### Değişiklikler
+- NEU `lib/pricing.ts`: PLAN_PRICES (monthly/yearly/beta), BETA_DISCOUNT_PCT=50, PAID_START_LABEL (01.04.2027),
+  `euro()`, BETA_PRICE_LINE ("Danach für Beta-Tester dauerhaft 50 % günstiger: ab 2,99 €/Monat (regulär ab 5,99 €)")
+- Tüm üstü çizili fiyatlar kaldırıldı (landing ×2, /handwerker, /notdienst-verwaltung, /vergleich/clockodo)
+- /pricing (beta modunda): yeni "Preise ab 01.04.2027" bölümü — 3 kart: regulär + für Beta-Tester,
+  "Endpreise · § 19 UStG · jährlich 2 Monate gratis"; Beta-Box metni tek söze çekildi
+- /pricing (beta sonrası): BETA30/%30/ilk 20 müşteri → "%50, bis 31.03.2027 registriert, automatisch abgezogen"
+- Welcome-Mail: "dauerhaft 50 % weniger für den Plan deiner Wahl"
+- Landing/pricing plan fiyatları artık PLAN_PRICES'tan
+
+### ⚠️ Ödeme kurulunca (kullanıcı "en son bakarız" dedi) yapılacak
+- Stripe checkout: beta kullanıcısına (kayıt ≤ BETA_END_DATE) **%50 otomatik** uygulanmalı — şu an
+  `lib/stripe/server.ts` sadece elle promo kodu (BETA30 yorumu) destekliyor; metinler "otomatisch" diyor.
+
+### Test
+- Vitest 550/550 (+4 pricing: beta ≤ %50 regulär, yıllık ≤ 10 ay, 01.04.2027, tek cümle)
+- /pricing 1280px: 3 kart, taşma yok, metinler doğru; landing HTML'de line-through yok · tsc · ESLint · build
+
+---
+
 ## 2026-09-28 (125) – v0.69.0: Stundenzettel-Vorlage (SEO araç sayfası, PDF indirme)
 
 ### Kullanıcı isteği

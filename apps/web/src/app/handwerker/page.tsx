@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BETA_END_DATE_LABEL } from "@/lib/beta";
+import { BETA_PRICE_LINE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Zeiterfassung für Handwerker",
@@ -158,8 +159,7 @@ export default function HandwerkerLandingPage() {
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
             Bis {BETA_END_DATE_LABEL} komplett kostenlos während der Beta-Phase. Keine Kreditkarte,
-            keine Verpflichtung. Danach nur <span style={{ textDecoration: "line-through", opacity: 0.7 }}>€19,99</span>{" "}
-            <strong style={{ color: "var(--accent2)" }}>€5,99/Monat</strong> lebenslang.
+            keine Verpflichtung. {BETA_PRICE_LINE}.
           </p>
           <Link href="/register" className="btn btn-primary" style={{ fontSize: 15, padding: "12px 28px", display: "inline-block" }}>
             Jetzt registrieren →

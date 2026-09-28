@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
+import { BETA_DISCOUNT_PCT, PAID_START_LABEL, PLAN_PRICES, euro, type PaidPlanId } from "@/lib/pricing";
 
 type PlanId  = "individual" | "team" | "business";
 type Interval = "monthly" | "yearly";
@@ -37,8 +38,8 @@ const PLANS: Plan[] = [
     id: "individual",
     name: "Einzelperson",
     desc: "Für Freelancer & Selbstständige",
-    monthlyPrice: 5.99,
-    yearlyPrice:  4.92,         // 59/12 ≈ 4.92, ~17% Ersparnis (2 Monate gratis)
+    monthlyPrice: PLAN_PRICES.individual.monthly,
+    yearlyPrice:  PLAN_PRICES.individual.yearly / 12,   // 2 Monate gratis
     features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
     cta: "14 Tage gratis testen",
   },
@@ -46,8 +47,8 @@ const PLANS: Plan[] = [
     id: "team",
     name: "Team",
     desc: "Für Handwerk-Betriebe bis 10 MA",
-    monthlyPrice: 19.99,
-    yearlyPrice:  16.58,        // 199/12 ≈ 16.58
+    monthlyPrice: PLAN_PRICES.team.monthly,
+    yearlyPrice:  PLAN_PRICES.team.yearly / 12,
     highlight: true,
     badge: "BELIEBTESTE WAHL",
     features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
@@ -57,8 +58,8 @@ const PLANS: Plan[] = [
     id: "business",
     name: "Unternehmen",
     desc: "Für größere Betriebe",
-    monthlyPrice: 49.99,
-    yearlyPrice:  41.58,        // 499/12 ≈ 41.58
+    monthlyPrice: PLAN_PRICES.business.monthly,
+    yearlyPrice:  PLAN_PRICES.business.yearly / 12,
     features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
     cta: "14 Tage gratis testen",
   },
@@ -214,10 +215,36 @@ export default function PricingPage() {
             }}>
               <strong style={{ color: "var(--accent2)" }}>💡 Was passiert nach der Beta?</strong>
               <br />
-              Am {BETA_END_DATE_LABEL} starten die regulären Pläne. Beta-Tester (du!) erhalten
-              <strong> 50% lebenslangen Rabatt</strong> als Dankeschön. Du entscheidest dann, ob
-              du weitermachen möchtest — niemand bucht dir automatisch etwas ab.
+              Ab {PAID_START_LABEL} gelten die regulären Preise. Wer sich bis zum {BETA_END_DATE_LABEL}
+              registriert, zahlt als Beta-Tester <strong>dauerhaft {BETA_DISCOUNT_PCT} % weniger</strong>. Du entscheidest
+              dann selbst, ob du weitermachen möchtest — niemand bucht dir automatisch etwas ab.
             </div>
+
+            {/* Preise ab Beta-Ende — transparent, ohne Streichpreise (reguläre Preise wurden noch nie verlangt) */}
+            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 14, textAlign: "center" }}>
+              Preise ab {PAID_START_LABEL}
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12, marginBottom: 12 }}>
+              {(Object.keys(PLAN_PRICES) as PaidPlanId[]).map((id) => {
+                const p = PLAN_PRICES[id];
+                const desc = PLANS.find((x) => x.id === id)?.desc ?? "";
+                return (
+                  <div key={id} className="card" style={{ padding: "18px 18px" }}>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>{desc}</div>
+                    <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 10 }}>{p.name}</div>
+                    <div style={{ fontSize: 13, color: "var(--muted)" }}>regulär</div>
+                    <div style={{ fontSize: 22, fontWeight: 800 }}>{euro(p.monthly)}<span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}> / Monat</span></div>
+                    <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8, background: "color-mix(in srgb, var(--accent2) 12%, transparent)" }}>
+                      <div style={{ fontSize: 12, color: "var(--accent2)", fontWeight: 700 }}>für Beta-Tester</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: "var(--accent2)" }}>{euro(p.beta)}<span style={{ fontSize: 12, fontWeight: 500 }}> / Monat</span></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", marginBottom: 32, lineHeight: 1.6 }}>
+              Endpreise · gemäß § 19 UStG ohne Umsatzsteuer (Kleinunternehmer) · jährliche Zahlung: 2 Monate gratis
+            </p>
 
             <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", lineHeight: 1.8 }}>
               Mit der Nutzung akzeptierst du unsere{" "}
@@ -258,10 +285,10 @@ export default function PricingPage() {
           <div style={{ fontSize: 28 }}>🎁</div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", marginBottom: 2 }}>
-              Beta-Tester-Aktion: 30% Rabatt für immer
+              Beta-Tester: dauerhaft {BETA_DISCOUNT_PCT} % Rabatt
             </div>
             <div style={{ fontSize: 12, color: "var(--muted)" }}>
-              Nur für die ersten 20 Kunden. Code <strong style={{ color: "var(--accent2)" }}>BETA30</strong> beim Checkout eingeben.
+              Für alle, die sich bis zum {BETA_END_DATE_LABEL} registriert haben — wird beim Checkout automatisch abgezogen.
             </div>
           </div>
         </div>

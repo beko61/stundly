@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { homePathForRole } from "@/lib/auth/homePath";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
+import { BETA_DISCOUNT_PCT, PLAN_PRICES, euro } from "@/lib/pricing";
 
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
 
@@ -165,7 +166,7 @@ const plans = [
   {
     id: "individual",
     name: "Einzelperson",
-    price: "5,99",
+    price: PLAN_PRICES.individual.monthly.toFixed(2).replace(".", ","),
     period: "/ Monat",
     desc: "Für Freelancer & Selbstständige",
     features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
@@ -175,7 +176,7 @@ const plans = [
   {
     id: "team",
     name: "Team",
-    price: "19,99",
+    price: PLAN_PRICES.team.monthly.toFixed(2).replace(".", ","),
     period: "/ Monat",
     desc: "Für Handwerk-Betriebe bis 10 MA",
     features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
@@ -185,7 +186,7 @@ const plans = [
   {
     id: "business",
     name: "Unternehmen",
-    price: "49,99",
+    price: PLAN_PRICES.business.monthly.toFixed(2).replace(".", ","),
     period: "/ Monat",
     desc: "Für größere Betriebe",
     features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
@@ -302,9 +303,8 @@ export default async function LandingPage() {
 
           {BETA_MODE ? (
             <p style={{ marginTop: 18, fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
-              Beta-Preis lebenslang: <span style={{ textDecoration: "line-through", color: "var(--muted)", opacity: 0.7 }}>€19,99</span>{" "}
-              <strong style={{ color: "var(--accent2)", fontSize: 15 }}>€5,99/Monat</strong>
-              <span style={{ color: "var(--muted)" }}> · bis {BETA_END_DATE_LABEL} gratis · Keine Kreditkarte</span>
+              <strong style={{ color: "var(--accent2)" }}>Bis {BETA_END_DATE_LABEL} kostenlos</strong>
+              <span style={{ color: "var(--muted)" }}> · danach für Beta-Tester dauerhaft {BETA_DISCOUNT_PCT} % günstiger · Keine Kreditkarte</span>
             </p>
           ) : (
             <p style={{ marginTop: 16, fontSize: 12, color: "var(--muted)" }}>
@@ -622,7 +622,7 @@ export default async function LandingPage() {
               versteckten Kosten.
             </p>
             <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>
-              Beta-Tester erhalten danach <strong style={{ color: "var(--accent2)" }}>50% lebenslangen Rabatt</strong> als Dankeschön.
+              Beta-Tester zahlen danach <strong style={{ color: "var(--accent2)" }}>dauerhaft {BETA_DISCOUNT_PCT} % weniger</strong> — als Dankeschön.
             </p>
             {/* Beta anchor pricing */}
             <div style={{
@@ -632,10 +632,9 @@ export default async function LandingPage() {
               border: "1px dashed color-mix(in srgb, var(--accent2) 40%, transparent)",
               borderRadius: 12, marginBottom: 24,
             }}>
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>Danach nur</span>
-              <span style={{ fontSize: 14, textDecoration: "line-through", color: "var(--muted)", opacity: 0.65 }}>€19,99</span>
-              <span style={{ fontSize: 22, fontWeight: 800, color: "var(--accent2)" }}>€5,99</span>
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>/Monat</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>Für Beta-Tester danach ab</span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "var(--accent2)" }}>{euro(PLAN_PRICES.individual.beta)}</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>/Monat · regulär {euro(PLAN_PRICES.individual.monthly)}</span>
             </div>
             <div style={{ marginTop: 4 }}>
               <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 32px", display: "inline-block" }}>

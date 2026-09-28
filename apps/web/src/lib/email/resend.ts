@@ -100,8 +100,8 @@ export async function sendWelcomeEmail({
           </p>
         </div>
         <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
-          Als Dankeschön für deinen Beta-Test bekommst du nach der Beta <strong style="color: #c084fc;">50% lebenslangen Rabatt</strong>
-          auf den Plan deiner Wahl.
+          Als Dankeschön für deinen Beta-Test zahlst du nach der Beta <strong style="color: #c084fc;">dauerhaft 50 % weniger</strong>
+          für den Plan deiner Wahl.
         </p>
         ` : `
         <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">

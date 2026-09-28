@@ -28,6 +28,9 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }));
 
+// Anhänge/PDF-Panel hat eigene Tests (NotdienstBerichtPanel.test.tsx) und braucht React Query
+vi.mock("../NotdienstBerichtPanel", () => ({ NotdienstBerichtPanel: () => null }));
+
 const SESSION = { data: { session: { user: { id: "u1" } } } };
 
 function savedRow(id: string, payload: Record<string, unknown>): NotdienstEntry {

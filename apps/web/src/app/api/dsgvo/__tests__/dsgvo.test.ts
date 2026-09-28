@@ -93,6 +93,7 @@ describe("DSGVO Export", () => {
   it("enthält Notdienst- und Lohnaufzeichnungen, Dateiname stundly-daten-*.json", async () => {
     db.notdienst_entries  = [{ user_id: "u1", date: "2026-09-01", kunde: "Frau Kraft", adresse: "Wiehbergstraße 3" }];
     db.salary_records     = [{ user_id: "u1", year: 2026, month: 8 }];
+    db.notdienst_anhaenge = [{ user_id: "u1", art: "foto", data: "data:image/jpeg;base64,xx" }];
     db.time_entries       = [{ user_id: "u1", date: "2026-09-02" }, { user_id: "other", date: "2026-09-02" }];
 
     const res = await exp.GET();
@@ -100,6 +101,7 @@ describe("DSGVO Export", () => {
     expect(res.headers.get("Content-Disposition")).toMatch(/filename="stundly-daten-\d{4}-\d{2}-\d{2}\.json"/);
     const body = await res.json() as Record<string, unknown[]>;
     expect(body.notdienst_entries).toHaveLength(1);
+    expect(body.notdienst_anhaenge).toHaveLength(1);
     expect(body.salary_records).toHaveLength(1);
     expect(body.time_entries).toHaveLength(1); // nur eigene Daten
     expect(queried).not.toContain("daily_logs");

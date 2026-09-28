@@ -5,6 +5,7 @@ import type React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration } from "@workly/shared";
 import { useModalA11y } from "@/hooks/useModalA11y";
+import { NotdienstBerichtPanel } from "./NotdienstBerichtPanel";
 import {
   filterStreets, joinAdresse, splitAdresse, type StreetSuggestion,
 } from "@/lib/address/streets";
@@ -464,6 +465,12 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             {saving ? "Speichern..." : savedId ? "💾 Aktualisieren" : "💾 Speichern"}
           </button>
 
+          {/* Fotos, Kundenunterschrift, PDF-Bericht (braucht gespeicherten Einsatz) */}
+          <NotdienstBerichtPanel
+            notdienstId={savedId}
+            bericht={{ date, start, end, duration, kunde, adresse, problem, ergebnis, note }}
+          />
+
           {/* Per Mail */}
           <button onClick={handleMailSend} style={{
             width:"100%", padding:14, background:"#ea4335", border:"none",
@@ -474,7 +481,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
             <span style={{ fontSize:18 }}>📧</span> Per Mail senden
           </button>
           <p style={{ fontSize:11, color:"var(--muted)", textAlign:"center" }}>
-            📎 Fotos bitte manuell anhängen
+            Nur Text — mit Fotos &amp; Unterschrift: „PDF-Bericht erstellen“
           </p>
 
           {savedId && (

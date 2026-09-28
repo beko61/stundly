@@ -32,10 +32,11 @@ export async function GET() {
 
   // Alle personenbezogenen Tabellen des Users — inkl. Notdienst (Kunde/Adresse) und
   // Lohnaufzeichnungen, die hier früher fehlten.
-  const [profile, timeEntries, notdienst, salarySettings, salaryRecords, vacations, deletionRequests] = await Promise.all([
+  const [profile, timeEntries, notdienst, anhaenge, salarySettings, salaryRecords, vacations, deletionRequests] = await Promise.all([
     admin.from("profiles").select("*").eq("user_id", user.id).single(),
     admin.from("time_entries").select("*").eq("user_id", user.id).order("date"),
     admin.from("notdienst_entries").select("*").eq("user_id", user.id).order("date"),
+    admin.from("notdienst_anhaenge").select("*").eq("user_id", user.id),
     admin.from("salary_settings").select("*").eq("user_id", user.id),
     admin.from("salary_records").select("*").eq("user_id", user.id),
     admin.from("vacation_requests").select("*").eq("user_id", user.id),
@@ -49,6 +50,7 @@ export async function GET() {
     profile: profile.data,
     time_entries: timeEntries.data ?? [],
     notdienst_entries: notdienst.data ?? [],
+    notdienst_anhaenge: anhaenge.data ?? [],   // Fotos + Kundenunterschriften (Data-URLs)
     salary_settings: salarySettings.data ?? [],
     salary_records: salaryRecords.data ?? [],
     vacation_requests: vacations.data ?? [],

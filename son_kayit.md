@@ -1,5 +1,65 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (113) – v0.62.0: Notdienst — Fotos + Kundenunterschrift + PDF-Bericht (Teilen)
+
+### Kullanıcı kararları
+- Fotos + Unterschrift **kaydedilsin** (sonra tekrar rapor üretilebilsin, kanıt).
+- Gönderim: **Paylaş menüsü** (mobil: Mail/WhatsApp… PDF ekli; masaüstü: PDF iner).
+
+### ⚠️ Migration 029 — kullanıcı Supabase SQL Editor'da çalıştırmalı
+`supabase/migrations/029_notdienst_anhaenge.sql`: yeni tablo `notdienst_anhaenge`
+(notdienst_id FK ON DELETE CASCADE, user_id FK CASCADE, art foto|unterschrift, data = Data-URL ≤1,6 MB,
+unterzeichner), unique 1 imza/einsatz, RLS (kendi select/insert/delete; insert sadece kendi einsatz'ına),
+firma-admin read (015 ile aynı `is_company_member_of_admin`). İdempotent. Migration olmadan UI
+"gerade nicht verfügbar" der, PDF-Bericht yine çalışır.
+Neden ayrı tablo: tracker aylık ND listesi select(*) — fotolar (≈100 KB) sadece einsatz açılınca yüklensin.
+Neden Data-URL/DB (Storage değil): logo/imza ile aynı desen, CASCADE ile DSGVO silme otomatik, export'ta var.
+
+### Yapılan
+- `NotdienstBerichtPanel` (modal'da "Speichern" altında; kayıtlı einsatz gerekir):
+  📷 foto ekle (kamera/galeri, çoklu, max 6, önizleme + ✕ sil) · ✍️ müşteri imzası (isim kunde ile
+  dolu, parmakla, boş imza reddedilir, kenar boşluğu kırpılır, "Neu" ile değiştirilir) ·
+  📄 "PDF-Bericht erstellen" → 📤 "Bericht teilen".
+- **İki adımlı paylaşım**: PDF önce üretilir, paylaşım ayrı tıklamada SENKRON çağrılır (mailto
+  dersi: `await` sonrası tarayıcı paylaşımı bloklar). Form/ekler değişince eski rapor düşer.
+- `lib/pdf/notdienstReportPdf.ts`: briefkopf (logo, firma), einsatz verileri, Problem/Ergebnis
+  (satır = madde)/Notiz, fotolar 2'li grid (oran korunur, sayfa taşması), imzalar (teknisyen:
+  profil imzası; müşteri: isim + tarih/saat), sayfa altbilgisi "Seite x/y". Dosya adı
+  `Notdienst-Bericht_<datum>_<kunde>.pdf` (umlaut → ae/oe/ue/ss).
+- `lib/image/compressImage.ts`: max 1280 px JPEG, kalite düşürerek ≤1,5 MB, EXIF yönü.
+- `lib/share/shareFile.ts`: navigator.share(files) → AbortError = iptal; desteklenmez/NotAllowed → indirme.
+- `hooks/queries/useNotdienstAnhaenge.ts` (RQ): liste, foto ekle, sil, imza değiştir.
+- DSGVO export'a `notdienst_anhaenge` eklendi.
+
+### 🐞 Bulunan hata: PDF'lerde karakter kaybı (tüm PDF'ler)
+jsPDF standart fontu sadece Latin-1 çizer; – — • € … „ “ SESSİZCE siliniyordu. Aylık raporda imza
+satırı "Ad — Tarih" → "Ad  Tarih" idi; kullanıcı metinlerindeki tırnak/€ kayboluyordu.
+Yeni `lib/pdf/pdfSafe.ts` (`pdfSafe` + `makePdfTextSafe(doc)`: doc.text/splitTextToSize sarmalanır):
+– — → "-", • → "·", „ “ → ", € → EUR, … → ..., emoji → silinir. Uygulandı: notdienst raporu,
+**aylık rapor**, **Urlaub PDF**.
+
+### Testler (+19)
+- `notdienstReportPdf.test.ts` (5, node): içerik, madde, sayfa taşması, imzalar, bozuk görsel, özel karakterler, dosya adı.
+- `pdfSafe.test.ts` (3) · `shareFile.test.ts` (4)
+- `NotdienstBerichtPanel.test.tsx` (7): kayıtsız ipucu, foto ekle/sil, max 6, imza akışı, rapor →
+  paylaşım senkron, veri değişince rapor düşer, tablo yokken (migration öncesi) davranış.
+- `NotdienstModal.test.tsx`: panel mock'landı. DSGVO export testi ekleri kapsıyor.
+- Görsel: gerçek görsellerle örnek PDF üretildi, pdf.js ile render edilip kontrol edildi (2 sayfa).
+
+### Validation
+- TS clean · ESLint clean · Vitest 489/489 (41 dosya) · `next build` clean (/tracker 25.8 kB)
+
+### Değişen dosyalar
+- ADD: `supabase/migrations/029_notdienst_anhaenge.sql`
+- ADD: `apps/web/src/components/tracker/NotdienstBerichtPanel.tsx` (+ test)
+- ADD: `apps/web/src/lib/pdf/notdienstReportPdf.ts`, `lib/pdf/pdfSafe.ts`, `lib/image/compressImage.ts`,
+  `lib/share/shareFile.ts`, `hooks/queries/useNotdienstAnhaenge.ts` (+ testler)
+- MOD: `components/tracker/NotdienstModal.tsx` (+ test), `lib/pdf/monthlyReportPdf.ts`,
+  `app/(dashboard)/vacation/page.tsx`, `app/api/dsgvo/export/route.ts` (+ test)
+- MOD: `apps/web/src/lib/version.ts` — 0.61.1 → 0.62.0
+
+---
+
 ## 2026-09-28 (112) – v0.61.1: Denetim küçükleri — başlıklar, offline metni, temizlik, env dokümantasyonu
 
 ### Yapılan

@@ -12,6 +12,7 @@
  */
 
 import type { TimeEntry } from "@workly/shared";
+import { makePdfTextSafe } from "./pdfSafe";
 
 const MONTHS_DE = [
   "Januar","Februar","März","April","Mai","Juni",
@@ -206,7 +207,8 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promi
   const heute = new Date();
   const heuteStr = `${pad2(heute.getDate())}.${pad2(heute.getMonth()+1)}.${heute.getFullYear()}`;
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  // Latin-1-sicher: "Name — Datum" verlor sonst den Gedankenstrich (siehe pdfSafe)
+  const doc = makePdfTextSafe(new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" }));
   const W = 210, L = 14, R = 196, CW = R - L;
   let y = 14;
 

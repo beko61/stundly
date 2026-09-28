@@ -25,6 +25,7 @@ import { useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 import { useQueryClient } from "@tanstack/react-query";
+import { makePdfTextSafe } from "@/lib/pdf/pdfSafe";
 
 // Direct time_entries upsert sonrası tüm time_entries query'lerini invalide et.
 // (month + range key'leri ayrı prefix'lerde olduğu için predicate kullanıyoruz.)
@@ -548,7 +549,7 @@ export default function VacationPage() {
     }
 
     const { default: jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const doc = makePdfTextSafe(new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" }));
     const p = profile;
 
     // Sayfa boyutları — A4: 210×297mm, sol margin 18, sağ margin 192

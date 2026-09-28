@@ -1,5 +1,54 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (108) – v0.60.2 HOTFIX: Stripe webhook middleware tarafından engelleniyordu + site denetimi
+
+### Site denetimi (kullanıcı: "tüm siteyi kontrol et")
+Yapılanlar: route envanteri (38 sayfa, 29 API), kırık link / yetim route taraması, canlı HTTP testi
+(public/korumalı/API/cron/webhook), kod ↔ migration şema karşılaştırması, env değişkenleri, knip
+(kullanılmayan dosya/paket/export), public sayfalarda tarayıcı konsolu, sitemap, npm audit.
+
+Sağlam: kodda kırık link yok · 13 public sayfa + sitemap 200 · konsol hatası yok · korumalı sayfa/API
+girişsiz 307/401 · cron'lar 401 (CRON_SECRET Vercel'de tanımlı, yoksa 500 dönerdi) · şema uyumlu
+(uyarılar enum-tip yanlış alarmıydı) · TS/lint/test/build temiz.
+
+Bulgular:
+- 🔴 **Stripe webhook** — `/api/stripe/webhook` PUBLIC_PATHS'te değildi (ilk commit'ten beri) →
+  Stripe'ın POST'u (cookie yok) 307 → /login, Stripe teslimatı başarısız sayar → abonelik
+  olayları hiç işlenmedi. **Bu sürümde düzeltildi.**
+- 🔴 **Beta süresi doldu**: `BETA_END_DATE = 2026-09-07`, `BETA_MODE = true` → site "0 Tage übrig"
+  diyor, planlar gizli, ama `isBetaActive()` false → checkout API açık. Kullanıcı kararı: **uzat**
+  (yeni tarih bekleniyor).
+- 🔴 Next.js 15.5.14 kritik advisory (audit: 3 critical / 10 high, çoğu expo/build tooling) — açık.
+- 🟠 DSGVO: Datenschutz "Konto in den Einstellungen löschen" diyor ama Settings'te silme/export
+  butonu yok; `/api/dsgvo/{delete,export}` bağlı değil → dsgvo-process cron'u boşa çalışıyor — açık.
+- 🟠 Davet sistemi ölü (`/api/email/invite`, `/join/[token]`, `/api/invitations/accept`) — v0.33.0'da
+  `/team` kaldırılınca davet oluşturma gitti. Kullanıcı kararı: **dokunma**.
+- 🟠 SSS "funktioniert auch offline" — dexie hiç kullanılmıyor, iddia fazla — açık.
+- 🟡 Çift marka başlığı (demo, kontakt, handwerker, notdienst-verwaltung, password-change);
+  bilinmeyen URL → /login (404 yerine); kullanılmayan dosyalar (StatusBadge, i18n/config,
+  authStore), paketler (dexie, dexie-react-hooks, date-fns, @stripe/stripe-js), tablolar
+  (daily_logs, activity_logs, plan_features); belgelenmemiş env (CRON_SECRET, SUPPORT_TO_EMAIL,
+  NEXT_PUBLIC_SUPPORT_EMAIL[_MODE], NEXT_PUBLIC_SENTRY_DSN); Sentry paketi kurulu değil — açık.
+
+### Fix (bu sürüm)
+- `middleware.ts`: PUBLIC_PATHS'e `/api/stripe/webhook` (route kendi Stripe imzasını doğruluyor).
+- Yeni `__tests__/unit/middleware.test.ts` (node env, 5 test): webhook/cron/contact serbest,
+  korumalı yollar hâlâ /login, benzer isimli yollar (`webhook-admin`, `portal`) serbest değil,
+  girişliyken /login → /dashboard. Mutation: fix kaldırılınca webhook testi FAIL.
+- ⚠️ Kullanıcı yapmalı: Stripe Dashboard → Developers → Webhooks: endpoint
+  `https://stundly.de/api/stripe/webhook` + olaylar (checkout.session.completed,
+  customer.subscription.updated/deleted, invoice.payment_failed) + `STRIPE_WEBHOOK_SECRET` Vercel'de.
+
+### Validation
+- TS clean · ESLint clean · Vitest 458/458 (35 dosya)
+
+### Değişen dosyalar
+- MOD: `apps/web/src/middleware.ts`
+- ADD: `apps/web/src/__tests__/unit/middleware.test.ts`
+- MOD: `apps/web/src/lib/version.ts` — 0.60.1 → 0.60.2
+
+---
+
 ## 2026-09-28 (107) – v0.60.1: Açılışta Dashboard (Super Admin Admin Panel'e düşüyordu)
 
 ### Kullanıcı raporu

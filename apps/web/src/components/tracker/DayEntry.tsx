@@ -7,6 +7,7 @@ import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared
 import { TimeEntryModal } from "./TimeEntryModal";
 import { NotdienstModal, type NotdienstEntry } from "./NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
+import { isLive, pauseSince } from "@/lib/tracker/liveTimer";
 
 const WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 
@@ -198,6 +199,31 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
               {entry.is_night_shift && (
                 <div className="time-chip" style={{ borderColor:"var(--accent2)" }}>
                   <span style={{ color:"var(--accent2)", fontSize:10 }}>🌙 Nacht</span>
+                </div>
+              )}
+            </div>
+            {entry.note && <NoteLine icon="📝" text={entry.note} />}
+          </div>
+        )}
+
+        {/* Offener Eintrag — Live-Timer läuft (oder Ende noch nicht eingetragen) */}
+        {entry?.start_time && !entry.end_time && (
+          <div style={{ padding:"0 14px 10px" }}>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              <div className="time-chip">
+                <span style={{ color:"var(--muted)", fontSize:10 }}>Start</span>
+                <span style={{ fontWeight:500 }}>{hhmm(entry.start_time)}</span>
+              </div>
+              {isLive(entry) ? (
+                <div className="time-chip" style={{ borderColor: pauseSince(entry) ? "var(--yellow)" : "var(--green)" }}>
+                  <span style={{ color: pauseSince(entry) ? "var(--yellow)" : "var(--green)", fontSize:11, fontWeight:700 }}>
+                    {pauseSince(entry) ? "⏸ Pause" : <><span className="live-dot">●</span> läuft</>}
+                  </span>
+                </div>
+              ) : (
+                <div className="time-chip">
+                  <span style={{ color:"var(--muted)", fontSize:10 }}>Ende</span>
+                  <span style={{ fontWeight:500 }}>–</span>
                 </div>
               )}
             </div>

@@ -1,5 +1,36 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (118) – v0.64.0: Canlı sayaç (Arbeitsbeginn / Pause / Feierabend)
+
+### Kullanıcı isteği
+"Canlı sayaç deneyelim" — işe başlarken tek dokunuş, bitince süre otomatik girilsin.
+
+### Tasarım
+- Durum tamamen günün `time_entries` kaydında → uygulama kapansa / başka cihazda da devam eder, **migration yok**:
+  - çalışıyor: `start_time` dolu, `end_time` NULL, `tags` içinde `"live"`
+  - molada: ek tag `"pause:HH:MM"`; "Weiter"de mola dakikaları `break_minutes`'a eklenir
+- Açık kayıtlar (end NULL) zaten tüm istatistik/PDF/export'larda atlanıyor → yarım gün hesabı bozmaz.
+- Feierabend: end = şimdi; kaydedilen mola §4 ArbZG minimumunun altındaysa (>6h→30, >9h→45) tamamlanır,
+  kartta "auf gesetzliche Mindestpause ergänzt" yazar.
+- Gece vardiyası (22:00→06:00) doğru; >14 saat açık kalırsa "Feierabend vergessen?" + manuel bitiş saati.
+- Bugün zaten kayıt varsa (ör. Monatsbefüllung ile doldurulmuş) → "Heute erfasst 07:00–16:00" +
+  "▶ Live neu starten" (onaylı, kaydı değiştirir). Urlaub/Krank/Feiertag günü → kart gizli.
+
+### Değişiklikler
+- NEU `lib/tracker/liveTimer.ts` — saf mantık (start/pause/resume/stop/restart, net süre, §4 pause)
+- NEU `components/tracker/LiveTimerCard.tsx` — Dashboard (selamlamanın altı) + Zeiten (MonthNav altı)
+- `useTimeEntries.ts`: `useLiveEntryQuery` (tags ∋ live, end NULL); tüm mutasyonlar ay + live + range
+  query'lerini invalide ediyor (Dashboard yıllık rakamlar da tazelenir)
+- `TimeEntryModal`: çalışan kayıtta Ende boş gelir ("Live-Zeit läuft" notu); boş bırakılırsa timer devam
+  eder (önceden kaydetmek 17:00 ile bitirirdi). `requiredPauseMinutes` artık liveTimer'dan.
+- `DayEntry`: açık kayıt için "Start 07:12 · ● läuft / ⏸ Pause" chip'leri
+- `globals.css`: `.live-dot` nabız animasyonu (reduced-motion'da kapalı)
+
+### Doğrulama
+- Vitest 513/513 (+12 liveTimer, +6 LiveTimerCard) · ESLint clean · tsc clean · `next build` clean
+
+---
+
 ## 2026-09-28 (117) – v0.63.2: iPhone — Auto-Zoom endgültig aus (maximum-scale nur für iOS)
 
 ### Kullanıcı raporu

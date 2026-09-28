@@ -138,6 +138,11 @@ body {
 .card.purple::before { background: var(--accent2); }
 .card.orange::before { background: var(--orange); }
 
+/* Live-Timer: pulsierender Punkt */
+.live-dot { display: inline-block; animation: live-pulse 1.6s ease-in-out infinite; }
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
 /* Time chip */
 .time-chip {
   display: inline-flex;

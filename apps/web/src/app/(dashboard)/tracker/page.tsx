@@ -7,6 +7,7 @@ import { MonthNav } from "@/components/tracker/MonthNav";
 import { MonthlySummary } from "@/components/tracker/MonthlySummary";
 import { NotdienstWeekly } from "@/components/tracker/NotdienstWeekly";
 import { DayEntry } from "@/components/tracker/DayEntry";
+import { LiveTimerCard } from "@/components/tracker/LiveTimerCard";
 import { PhotoScanModal } from "@/components/tracker/PhotoScanModal";
 import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -143,6 +144,9 @@ export default function TrackerPage() {
   return (
     <>
       <MonthNav />
+      <div style={{ padding: "0 16px", maxWidth: 960, margin: "0 auto" }}>
+        <LiveTimerCard />
+      </div>
       <MonthlySummary feiertage={feiertage} />
       {sampleCount > 0 && (
         <div

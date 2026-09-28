@@ -12,17 +12,8 @@ import {
 import type { TimeEntry, DayType } from "@workly/shared";
 import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
 import { useModalA11y } from "@/hooks/useModalA11y";
-
-/**
- * §4 ArbZG — Pausenregelung. Brutto Arbeitszeit bazlı (konservatif):
- *   >6h → 30 min, >9h → 45 min. Shared `getMinRequiredBreak` netto bekliyor,
- *   burada UX için brutto kullanılıyor (biraz daha erken uyarı verir).
- */
-function requiredPauseMinutes(bruttoMinutes: number): number {
-  if (bruttoMinutes > 9 * 60) return 45;
-  if (bruttoMinutes > 6 * 60) return 30;
-  return 0;
-}
+// §4 ArbZG Pausenregelung (brutto, konservativ) — gemeinsam mit dem Live-Timer.
+import { isLive, requiredPauseMinutes } from "@/lib/tracker/liveTimer";
 
 function calcBruttoMinutes(start: string, end: string, isOvernight: boolean): number {
   const [sh, sm] = start.split(":").map(Number);
@@ -65,7 +56,8 @@ function getDefaults(dayOfWeek: number, existing?: TimeEntry | null, feiertag?: 
     return {
       dayType:      existing.day_type,
       startTime:    existing.start_time  ?? "08:00",
-      endTime:      existing.end_time    ?? "17:00",
+      // Laufender Live-Timer: Ende leer lassen, sonst würde Speichern ihn mit 17:00 beenden.
+      endTime:      existing.end_time    ?? (isLive(existing) ? "" : "17:00"),
       breakMinutes: existing.break_minutes,
       isNightShift: existing.is_night_shift,
       note:         existing.note ?? "",
@@ -102,6 +94,9 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
   const [error,        setError]        = useState<string | null>(null);
 
   const needsTime  = dayType === DAY_TYPES.ARBEITEN || dayType === DAY_TYPES.NOTDIENST;
+  const running    = isLive(entry);
+  // Timer läuft weiter, solange das Ende leer bleibt.
+  const keepRunning = running && needsTime && !endTime;
 
   // §4 ArbZG uyarısı — brutto süreye göre gerekli pause
   const pauseCheck = useMemo(() => {
@@ -146,11 +141,11 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
       date,
       day_type:       dayType,
       start_time:     needsTime ? startTime : null,
-      end_time:       needsTime ? endTime   : null,
+      end_time:       needsTime && endTime ? endTime : null,
       break_minutes:  needsTime ? breakMinutes : 0,
       is_night_shift: isNightShift,
       note:           note || null,
-      tags:           [] as string[],
+      tags:           keepRunning ? (entry?.tags ?? []) : [] as string[],
     };
 
     const result = entry
@@ -242,6 +237,16 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
           </div>
 
           {/* Time inputs */}
+          {running && (
+            <div role="status" style={{
+              padding: "8px 10px", borderRadius: 8, fontSize: 12, lineHeight: 1.4,
+              background: "color-mix(in srgb, var(--green) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--green) 35%, transparent)",
+              color: "var(--green)",
+            }}>
+              ⏱ Live-Zeit läuft. Ende leer lassen, damit der Timer weiterläuft.
+            </div>
+          )}
           {needsTime && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

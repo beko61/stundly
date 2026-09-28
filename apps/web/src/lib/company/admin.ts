@@ -89,11 +89,12 @@ export async function getTeamMember(
   companyId: string,
   userId: string,
 ): Promise<{ user_id: string; role: string; full_name: string | null } | null> {
-  const { data } = await admin
+  const { data: row } = await admin
     .from("profiles")
     .select("user_id, role, full_name, company_id, deleted_at")
     .eq("user_id", userId)
     .maybeSingle();
+  const data = row as Record<string, unknown> | null;
   if (!data || data.company_id !== companyId || data.deleted_at) return null;
   return { user_id: data.user_id as string, role: data.role as string, full_name: (data.full_name as string | null) ?? null };
 }

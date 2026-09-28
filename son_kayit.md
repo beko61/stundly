@@ -1,5 +1,28 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (117) – v0.63.2: iPhone — Auto-Zoom endgültig aus (maximum-scale nur für iOS)
+
+### Kullanıcı raporu
+v0.63.1 sonrası test: "oluyor" — Problem alanına dokununca ekran hâlâ büyüyor.
+
+### Fix (`app/layout.tsx`)
+- `export const viewport` → `generateViewport()`: User-Agent iPhone/iPad/iPod ise `maximum-scale=1`.
+  iOS Safari bu değerde input-fokus zoom'unu yapmaz; iki parmakla pinch-zoom iOS'ta yine çalışır
+  (Safari maximum-scale'i jestler için yok sayar). Android'de otomatik zoom yok → orada eklenmez,
+  pinch-zoom açık kalır (WCAG 1.4.4).
+- v0.63.1'deki 16px CSS kuralı yerinde kaldı (ikinci güvence).
+
+### Doğrulama (lokal prod)
+- iPhone UA → `width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover`
+- Android UA → `maximum-scale` yok
+- tsc clean · `next build` clean
+
+### Değişen dosyalar
+- MOD: `apps/web/src/app/layout.tsx`
+- MOD: `apps/web/src/lib/version.ts` — 0.63.1 → 0.63.2
+
+---
+
 ## 2026-09-28 (116) – v0.63.1: iPhone — Eingabefelder zoomen nicht mehr rein
 
 ### Kullanıcı raporu

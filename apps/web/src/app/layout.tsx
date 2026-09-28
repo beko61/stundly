@@ -1,6 +1,7 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/ui/CookieBanner";
@@ -55,16 +56,25 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  // Pinch-zoom bewusst erlaubt (WCAG 1.4.4 — Resize text)
-  viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#7c6af7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f0f13" },
-  ],
-};
+const IOS_UA = /iPhone|iPad|iPod/i;
+
+export async function generateViewport(): Promise<Viewport> {
+  const ua = (await headers()).get("user-agent") ?? "";
+  return {
+    width: "device-width",
+    initialScale: 1,
+    // iOS zoomt beim Fokus auf Eingabefelder automatisch rein. maximum-scale=1
+    // verhindert das; Pinch-Zoom bleibt auf iOS trotzdem möglich (Safari ignoriert
+    // maximum-scale für Gesten). Android zoomt nicht automatisch → dort weglassen,
+    // damit Pinch-Zoom erlaubt bleibt (WCAG 1.4.4 — Resize text).
+    ...(IOS_UA.test(ua) ? { maximumScale: 1 } : {}),
+    viewportFit: "cover",
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#7c6af7" },
+      { media: "(prefers-color-scheme: dark)", color: "#0f0f13" },
+    ],
+  };
+}
 
 export default async function RootLayout({
   children,

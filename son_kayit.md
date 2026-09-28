@@ -1,5 +1,16 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (129) – v0.71.1: Kokpit tarihi Türkçe
+
+Kullanıcı Kokpit'i test etti (4 kullanıcı, aktivasyon %75, pasif 14+ = 3, hiç kullanmamış = 1 — rakamlar tutarlı;
+Migration 032 uygulandı). Beta bitiş tarihi Türkçe panelde "31. März 2027" (Almanca) çıkıyordu →
+`tr-TR` formatı "31 Mart 2027". Not: yarın 10:00 ilk hatırlatma turu bu 4 kişiye gidecek (3 comeback + 1 start) —
+kullanıcıya test hesaplarını silmesi/pasif yapması hatırlatıldı.
+
+- MOD `app/superadmin/page.tsx`, `version.ts` 0.71.0 → 0.71.1
+
+---
+
 ## 2026-09-28 (128) – v0.71.0: Süper admin paneli yenilendi — Beta kokpiti, kullanıcı detayı, işlem geçmişi, mobil, Türkçe
 
 ### Kullanıcı isteği

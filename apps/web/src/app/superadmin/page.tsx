@@ -2,7 +2,10 @@ import Link from "next/link";
 import { adminClient } from "@/lib/superadmin/auth";
 import { loadSuperadminUsers } from "@/lib/superadmin/data";
 import { computeCockpit } from "@/lib/superadmin/metrics";
-import { BETA_END_DATE_LABEL, betaDaysRemaining, isBetaActive } from "@/lib/beta";
+import { BETA_END_DATE, betaDaysRemaining, isBetaActive } from "@/lib/beta";
+
+/** Panel ist Türkisch → Datum "31 Mart 2027" statt "31. März 2027" */
+const BETA_END_TR = new Date(`${BETA_END_DATE}T12:00:00`).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
 import { PLAN_PRICES, euro, type PaidPlanId } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +42,7 @@ export default async function SuperAdminKokpit() {
       <h1 className="sa-title">Kokpit</h1>
       <p className="sa-sub">
         {beta
-          ? <>Beta aktif · {BETA_END_DATE_LABEL} tarihine <strong style={{ color: "var(--text)" }}>{betaDaysRemaining()} gün</strong> kaldı</>
+          ? <>Beta aktif · {BETA_END_TR} tarihine <strong style={{ color: "var(--text)" }}>{betaDaysRemaining()} gün</strong> kaldı</>
           : "Genel bakış"}
       </p>
 
@@ -118,7 +121,7 @@ export default async function SuperAdminKokpit() {
           <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>Gelir</h3>
           {beta && paying.length === 0 ? (
             <p className="sa-muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
-              Beta boyunca ödeme yok. {BETA_END_DATE_LABEL} sonrası burada MRR / ARR görünecek
+              Beta boyunca ödeme yok. {BETA_END_TR} sonrası burada MRR / ARR görünecek
               (beta kullanıcıları %50 indirimli).
             </p>
           ) : (

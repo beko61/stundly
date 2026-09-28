@@ -5,7 +5,7 @@
  */
 export async function compressImage(
   file: Blob,
-  { maxSide = 1280, quality = 0.72, maxChars = 1_500_000 } = {},
+  { maxSide = 1600, quality = 0.8, maxChars = 1_500_000 } = {},
 ): Promise<string> {
   const img = await decode(file);
   const scale = Math.min(1, maxSide / Math.max(img.width, img.height));

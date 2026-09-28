@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { shareOrDownload } from "@/lib/share/shareFile";
+import { shareOrDownload, dataUrlToFile } from "@/lib/share/shareFile";
 
 const file = new File(["%PDF"], "Notdienst-Bericht_2026-09-27.pdf", { type: "application/pdf" });
 
@@ -23,6 +23,26 @@ describe("shareOrDownload", () => {
     expect(await shareOrDownload(file, { title: "Bericht", text: "Hallo" })).toBe("shared");
     expect(share).toHaveBeenCalledWith({ files: [file], title: "Bericht", text: "Hallo" });
     expect(downloads).toEqual([]);
+  });
+
+  it("mehrere Dateien (PDF + Fotos) gehen gemeinsam ins Teilen-Menü bzw. werden alle geladen", async () => {
+    const foto = new File(["x"], "Notdienst_2026-09-27_Foto-1.jpg", { type: "image/jpeg" });
+    const share = vi.fn(async () => {});
+    stubNavigator(share, () => true);
+    expect(await shareOrDownload([file, foto], { title: "Bericht" })).toBe("shared");
+    expect(share).toHaveBeenCalledWith({ files: [file, foto], title: "Bericht" });
+
+    stubNavigator(undefined, undefined);
+    const downloads = captureDownloads();
+    expect(await shareOrDownload([file, foto], { title: "Bericht" })).toBe("downloaded");
+    expect(downloads).toEqual(["Notdienst-Bericht_2026-09-27.pdf", "Notdienst_2026-09-27_Foto-1.jpg"]);
+  });
+
+  it("dataUrlToFile: MIME-Typ, Name und Bytes korrekt", async () => {
+    const f = dataUrlToFile("data:image/jpeg;base64," + btoa("JPEGDATA"), "a.jpg");
+    expect(f.name).toBe("a.jpg");
+    expect(f.type).toBe("image/jpeg");
+    expect(await f.text()).toBe("JPEGDATA");
   });
 
   it("Teilen abgebrochen → kein Download", async () => {

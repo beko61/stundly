@@ -5,9 +5,9 @@ import type React from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image/compressImage";
-import { shareOrDownload } from "@/lib/share/shareFile";
+import { dataUrlToFile, shareOrDownload } from "@/lib/share/shareFile";
 import {
-  generateNotdienstReportPdf, reportFileName, formatDateDE, type NotdienstReportInput,
+  generateNotdienstReportPdf, reportFileName, fotoFileName, formatDateDE, type NotdienstReportInput,
 } from "@/lib/pdf/notdienstReportPdf";
 import {
   MAX_FOTOS, useAddFoto, useDeleteAnhang, useNotdienstAnhaenge, useSaveUnterschrift,
@@ -87,7 +87,8 @@ export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
   }, [sigOpen]);
 
   // ── Bericht: erst erzeugen, dann (in eigener Klick-Geste) teilen ──
-  const [report, setReport] = useState<File | null>(null);
+  // report = [PDF, Foto-1.jpg, …] — Fotos als einzelne Dateien (Auftraggeber leiten sie weiter)
+  const [report, setReport] = useState<File[] | null>(null);
   const [generating, setGenerating] = useState(false);
   const [shareInfo, setShareInfo] = useState<string | null>(null);
   const stamp = JSON.stringify([bericht, (anhaenge.data ?? []).map(a => a.id)]);
@@ -144,7 +145,7 @@ export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
         : { data: null };
       const blob = await generateNotdienstReportPdf({
         ...bericht,
-        photos: fotos.map(f => f.data),
+        fotoAnzahl: fotos.length,
         signature: unterschrift
           ? { data: unterschrift.data, name: unterschrift.unterzeichner ?? "", signedAt: unterschrift.created_at }
           : null,
@@ -157,7 +158,12 @@ export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
           signature: p?.signature_data ?? null,
         },
       });
-      setReport(new File([blob], reportFileName(bericht.date, bericht.kunde), { type: "application/pdf" }));
+      const pdf = new File([blob], reportFileName(bericht.date, bericht.kunde), { type: "application/pdf" });
+      const bilder = fotos.map((f, i) => {
+        const mime = f.data.match(/^data:([^;]+)/)?.[1] ?? "image/jpeg";
+        return dataUrlToFile(f.data, fotoFileName(bericht.date, bericht.kunde, i + 1, mime));
+      });
+      setReport([pdf, ...bilder]);
     } catch {
       setError("PDF-Bericht konnte nicht erstellt werden.");
     } finally {
@@ -172,7 +178,11 @@ export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
       title: `Notdienst-Bericht ${formatDateDE(bericht.date)}`,
       text: [`Notdienst-Bericht ${formatDateDE(bericht.date)}`, bericht.kunde, bericht.adresse].filter(Boolean).join(" – "),
     }).then(r => {
-      if (r === "downloaded") setShareInfo("📥 PDF heruntergeladen — im Mail-Programm als Anhang hinzufügen.");
+      if (r === "downloaded") {
+        setShareInfo(report.length > 1
+          ? `📥 PDF + ${report.length - 1} Fotos heruntergeladen — im Mail-Programm als Anhänge hinzufügen.`
+          : "📥 PDF heruntergeladen — im Mail-Programm als Anhang hinzufügen.");
+      }
     });
   }
 
@@ -275,7 +285,7 @@ export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
             📤 Bericht teilen
           </button>
           <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
-            {shareInfo ?? `${report.name} · per Mail, WhatsApp … senden`}
+            {shareInfo ?? `PDF${report.length > 1 ? ` + ${report.length - 1} Foto${report.length > 2 ? "s" : ""} als einzelne Dateien` : ""} · per Mail, WhatsApp … senden`}
           </div>
         </>
       ) : (

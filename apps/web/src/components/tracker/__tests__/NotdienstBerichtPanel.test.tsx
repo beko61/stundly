@@ -68,7 +68,10 @@ vi.mock("@/lib/pdf/notdienstReportPdf", async (orig) => ({
 }));
 
 const shareMock = vi.fn(async () => "shared" as const);
-vi.mock("@/lib/share/shareFile", () => ({ shareOrDownload: (...a: unknown[]) => shareMock(...(a as [])) }));
+vi.mock("@/lib/share/shareFile", async (orig) => ({
+  ...(await orig<typeof import("@/lib/share/shareFile")>()),
+  shareOrDownload: (...a: unknown[]) => shareMock(...(a as [])),
+}));
 
 // Signatur-Pad: jsdom hat kein Canvas → schlanker Stub mit der benutzten API
 const padState = vi.hoisted(() => ({ empty: false }));
@@ -150,30 +153,37 @@ describe("NotdienstBerichtPanel", () => {
     expect(h.inserts.at(-1)).toEqual({ notdienst_id: "nd-1", art: "unterschrift", data: "data:image/png;base64,SIG", unterzeichner: "Erika Kraft" });
   });
 
-  it("Bericht: erst erstellen (mit Fotos, Unterschrift, Firma, Techniker), dann sofort im Klick teilen", async () => {
+  it("Bericht: PDF (Fotos NICHT eingebettet) + Fotos als EINZELNE Dateien, sofort im Klick geteilt", async () => {
     h.rows = [
-      { id: "f1", notdienst_id: "nd-1", art: "foto", data: "data:image/jpeg;base64,F1", unterzeichner: null, created_at: "2026-09-27T10:00:00Z" },
+      { id: "f1", notdienst_id: "nd-1", art: "foto", data: "data:image/jpeg;base64," + btoa("F1"), unterzeichner: null, created_at: "2026-09-27T10:00:00Z" },
+      { id: "f2", notdienst_id: "nd-1", art: "foto", data: "data:image/jpeg;base64," + btoa("F2"), unterzeichner: null, created_at: "2026-09-27T10:01:00Z" },
       { id: "s1", notdienst_id: "nd-1", art: "unterschrift", data: "data:image/png;base64,S", unterzeichner: "Erika Kraft", created_at: "2026-09-27T17:45:00.000Z" },
     ];
     renderPanel();
-    await screen.findByAltText("Foto 1");
+    await screen.findByAltText("Foto 2");
     fireEvent.click(screen.getByRole("button", { name: /PDF-Bericht erstellen/ }));
 
-    const shareBtn = await screen.findByRole("button", { name: /Bericht teilen/ });
+    await waitFor(() => { const e = screen.queryByRole("alert"); if (e) throw new Error("PANEL-ALERT: " + e.textContent); expect(screen.getByRole("button", { name: /Bericht teilen/ })).toBeTruthy(); });
+    const shareBtn = screen.getByRole("button", { name: /Bericht teilen/ });
     expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({
-      kunde: "Frau Kraft", photos: ["data:image/jpeg;base64,F1"],
+      kunde: "Frau Kraft", fotoAnzahl: 2,
       signature: { data: "data:image/png;base64,S", name: "Erika Kraft", signedAt: "2026-09-27T17:45:00.000Z" },
       firma: expect.objectContaining({ name: "Meier GmbH", ort: "Hannover" }),
       techniker: { name: "Yusuf Bektas", signature: "data:image/png;base64,TECH" },
     }));
-    expect(screen.getByText(/Notdienst-Bericht_2026-09-27_Frau-Kraft\.pdf/)).toBeInTheDocument();
+    expect((pdfMock.mock.calls[0] as unknown as [object])[0]).not.toHaveProperty("photos");
+    expect(screen.getByText(/PDF \+ 2 Fotos als einzelne Dateien/)).toBeInTheDocument();
 
     fireEvent.click(shareBtn);
     // synchron in der Klick-Geste — ohne waitFor (sonst würde der Browser das Teilen blockieren)
     expect(shareMock).toHaveBeenCalledTimes(1);
-    const [file, opts] = shareMock.mock.calls[0] as unknown as [File, { title: string }];
-    expect(file.name).toBe("Notdienst-Bericht_2026-09-27_Frau-Kraft.pdf");
-    expect(file.type).toBe("application/pdf");
+    const [files, opts] = shareMock.mock.calls[0] as unknown as [File[], { title: string }];
+    expect(files.map(f => [f.name, f.type])).toEqual([
+      ["Notdienst-Bericht_2026-09-27_Frau-Kraft.pdf", "application/pdf"],
+      ["Notdienst_2026-09-27_Frau-Kraft_Foto-1.jpg", "image/jpeg"],
+      ["Notdienst_2026-09-27_Frau-Kraft_Foto-2.jpg", "image/jpeg"],
+    ]);
+    expect(await files[1]!.text()).toBe("F1");
     expect(opts.title).toBe("Notdienst-Bericht 27.09.2026");
   });
 

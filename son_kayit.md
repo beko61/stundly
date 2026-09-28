@@ -1,5 +1,33 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (114) – v0.62.1: Notdienst-Bericht — Fotos als EINZELNE Dateien (nicht im PDF)
+
+### Kullanıcı geri bildirimi (migration 029'u çalıştırmadan önce)
+"Resmi gömersek ana firmaya ya da başka firmaya gönderemeyiz; resimler ayrı isteniyor, PDF içinde değil."
+
+### Yapılan
+- PDF artık fotoğraf GÖMMÜYOR; einsatz verilerinde "Fotos: N (als separate Dateien angehängt)" satırı.
+- "Bericht teilen" tek paylaşımda **[PDF, Foto-1.jpg, Foto-2.jpg, …]** gönderir (navigator.share files[]);
+  masaüstünde hepsi ayrı indirilir. Dosya adları: `Notdienst_<datum>_<kunde>_Foto-<n>.jpg`.
+- `shareOrDownload` artık `File | File[]`; yeni `dataUrlToFile`.
+- Fotolar doğrudan firmalara gideceği için kalite 1280px/0.72 → **1600px/0.8** (≤1,5 MB limit aynı).
+- Migration 029 DEĞİŞMEDİ (fotolar yine kaydediliyor, sadece gönderim şekli değişti).
+
+### Testler
+- PDF: foto gömülmüyor (görsel sayısı = 2 imza), sayı satırı, uzun metinde sayfa taşması; foto dosya adları.
+- shareFile: çoklu dosya paylaşım/indirme, dataUrlToFile.
+- Panel: paylaşılan dosyalar = PDF + 2 JPEG (isim, tip, içerik), generator'a `fotoAnzahl`.
+
+### Validation
+- TS clean · ESLint clean · Vitest 493/493 · `next build` clean
+
+### Değişen dosyalar
+- MOD: `lib/pdf/notdienstReportPdf.ts`, `lib/share/shareFile.ts`, `lib/image/compressImage.ts`,
+  `components/tracker/NotdienstBerichtPanel.tsx` (+ ilgili testler)
+- MOD: `apps/web/src/lib/version.ts` — 0.62.0 → 0.62.1
+
+---
+
 ## 2026-09-28 (113) – v0.62.0: Notdienst — Fotos + Kundenunterschrift + PDF-Bericht (Teilen)
 
 ### Kullanıcı kararları

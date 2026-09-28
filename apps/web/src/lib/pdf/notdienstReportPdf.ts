@@ -1,6 +1,8 @@
 /**
  * Notdienst-Bericht als PDF (A4) — Briefkopf wie der Monatsbericht, dann Einsatzdaten,
- * Problem / Ergebnis, Fotos (2 pro Zeile) und Unterschriften (Techniker + Kunde).
+ * Problem / Ergebnis / Notiz und Unterschriften (Techniker + Kunde).
+ * Fotos werden NICHT eingebettet: Auftraggeber wollen sie als einzelne Dateien (zum
+ * Weiterleiten) — der Bericht nennt nur die Anzahl, geteilt werden PDF + JPEGs zusammen.
  * Gibt einen Blob zurück; Teilen/Download übernimmt der Aufrufer (lib/share/shareFile).
  */
 
@@ -16,7 +18,7 @@ export interface NotdienstReportInput {
   problem:   string;
   ergebnis:  string;
   note:      string;
-  photos:    string[];                                          // Data-URLs
+  fotoAnzahl: number;                                           // Fotos gehen als separate Dateien mit
   signature: { data: string; name: string; signedAt: string } | null;
   firma: {
     name: string; strasse?: string; plz?: string; ort?: string;
@@ -42,11 +44,22 @@ function imgFormat(dataUrl: string): "PNG" | "JPEG" {
   return /^data:image\/png/i.test(dataUrl) ? "PNG" : "JPEG";
 }
 
-export function reportFileName(date: string, kunde: string): string {
-  const slug = kunde.trim()
+function kundeSlug(kunde: string): string {
+  return kunde.trim()
     .replace(/[äÄ]/g, "ae").replace(/[öÖ]/g, "oe").replace(/[üÜ]/g, "ue").replace(/ß/g, "ss")
     .replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+
+export function reportFileName(date: string, kunde: string): string {
+  const slug = kundeSlug(kunde);
   return `Notdienst-Bericht_${date}${slug ? `_${slug}` : ""}.pdf`;
+}
+
+/** Foto-Anhang: "Notdienst_2026-09-27_Frau-Kraft_Foto-1.jpg" */
+export function fotoFileName(date: string, kunde: string, nr: number, mime = "image/jpeg"): string {
+  const slug = kundeSlug(kunde);
+  const ext = mime === "image/png" ? "png" : "jpg";
+  return `Notdienst_${date}${slug ? `_${slug}` : ""}_Foto-${nr}.${ext}`;
 }
 
 export async function generateNotdienstReportPdf(input: NotdienstReportInput): Promise<Blob> {
@@ -93,6 +106,7 @@ export async function generateNotdienstReportPdf(input: NotdienstReportInput): P
     ["Kunde",    input.kunde],
     ["Adresse",  input.adresse],
     ["Techniker", input.techniker.name],
+    ["Fotos",    input.fotoAnzahl > 0 ? `${input.fotoAnzahl} (als separate Dateien angehängt)` : ""],
   ];
   doc.setFontSize(10);
   for (const [label, value] of rows) {
@@ -128,30 +142,6 @@ export async function generateNotdienstReportPdf(input: NotdienstReportInput): P
   section("Problem", input.problem);
   section("Ergebnis / Feststellungen", input.ergebnis, true);
   section("Notiz", input.note);
-
-  // ── Fotos: 2 pro Zeile, Seitenverhältnis erhalten ───────────
-  if (input.photos.length > 0) {
-    ensure(14);
-    doc.setDrawColor(200); doc.setLineWidth(0.2); doc.line(L, y - 2, R, y - 2);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-    doc.text(`Fotos (${input.photos.length})`, L, y + 3);
-    y += 8;
-    const GAP = 6, BOX_W = (CW - GAP) / 2, BOX_H = 68;
-    for (let i = 0; i < input.photos.length; i += 2) {
-      ensure(BOX_H + 4);
-      for (let j = 0; j < 2 && i + j < input.photos.length; j++) {
-        const data = input.photos[i + j]!;
-        try {
-          const p = doc.getImageProperties(data);
-          const s = Math.min(BOX_W / p.width, BOX_H / p.height);
-          const w = p.width * s, h = p.height * s;
-          const x = L + j * (BOX_W + GAP) + (BOX_W - w) / 2;
-          doc.addImage(data, imgFormat(data), x, y + (BOX_H - h) / 2, w, h);
-        } catch { /* defektes Foto überspringen */ }
-      }
-      y += BOX_H + 4;
-    }
-  }
 
   // ── Unterschriften ──────────────────────────────────────────
   ensure(40);

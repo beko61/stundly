@@ -88,12 +88,20 @@ export default function TrackerPage() {
   // Load bundesland from profile for correct public holidays
   useEffect(() => {
     async function loadBundesland() {
+      // Offline-Start: zuletzt bekanntes Bundesland (Feiertage) sofort nutzen
+      try {
+        const cached = localStorage.getItem("stundly_bundesland");
+        if (cached) setBundesland(cached);
+      } catch { /* ignore */ }
       const supabase = (await import("@/lib/supabase/client")).createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       const { data } = await supabase
         .from("profiles").select("bundesland").eq("user_id", session.user.id).single();
-      if (data?.bundesland) setBundesland(data.bundesland as string);
+      if (data?.bundesland) {
+        setBundesland(data.bundesland as string);
+        try { localStorage.setItem("stundly_bundesland", data.bundesland as string); } catch { /* ignore */ }
+      }
     }
     // Feiertage ändern Zeilen (Feiertag-Label, "+ Notdienst") → erst danach scrollen
     void loadBundesland().finally(() => setBundeslandReady(true));

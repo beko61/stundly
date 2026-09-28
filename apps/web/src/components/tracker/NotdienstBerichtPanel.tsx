@@ -22,6 +22,8 @@ interface Props {
   /** null = Einsatz noch nicht gespeichert (Anhänge brauchen die ID) */
   notdienstId: string | null;
   bericht: BerichtDaten;
+  /** Kein Netz oder Einsatz noch nicht übertragen → Anhänge/Bericht vorübergehend aus */
+  offline?: boolean;
 }
 
 const box: React.CSSProperties = {
@@ -64,7 +66,9 @@ function trimmedSignature(canvas: HTMLCanvasElement): string {
   return out.toDataURL("image/png");
 }
 
-export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
+export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = false }: Props) {
+  // Offline: Anhänge nicht laden/speichern (Einsatz evtl. noch nicht auf dem Server)
+  const notdienstId = offline ? null : id;
   const anhaenge = useNotdienstAnhaenge(notdienstId);
   const addFoto = useAddFoto(notdienstId);
   const delAnhang = useDeleteAnhang(notdienstId);
@@ -94,6 +98,15 @@ export function NotdienstBerichtPanel({ notdienstId, bericht }: Props) {
   const [shareInfo, setShareInfo] = useState<string | null>(null);
   const stamp = JSON.stringify([bericht, (anhaenge.data ?? []).map(a => a.id)]);
   useEffect(() => { setReport(null); setShareInfo(null); }, [stamp]);
+
+  if (offline && id) {
+    return (
+      <div style={{ ...box, color: "var(--muted)", fontSize: 12, lineHeight: 1.6 }}>
+        📴 Kein Internet — Fotos, Unterschrift und PDF-Bericht gehen wieder, sobald die
+        Verbindung da ist und der Einsatz übertragen wurde.
+      </div>
+    );
+  }
 
   if (!notdienstId) {
     return (

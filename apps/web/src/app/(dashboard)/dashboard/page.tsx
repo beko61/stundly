@@ -141,7 +141,7 @@ export default function DashboardPage() {
   // ── React Query — 5 hook, dedup üzerinden 5 network call ──
   const { data: entriesRaw     = [], isLoading: lMonth     } = useTimeEntriesQuery(selectedYear, selectedMonth);
   const { data: ndRaw          = [], isLoading: lNd        } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
-  const { data: yearEntriesRaw = [], isLoading: lYearEntry } = useTimeEntriesRangeQuery(yearStart, yearEnd);
+  const { data: yearEntriesRaw = [], isLoading: lYearEntry, status: yearStatus } = useTimeEntriesRangeQuery(yearStart, yearEnd);
   const { data: yearNdRaw      = [], isLoading: lYearNd    } = useNotdienstEntriesQuery(yearStart, yearNdEnd);
   const { data: last7Raw       = [], isLoading: lLast7     } = useTimeEntriesRangeQuery(last7Start, todayStr);
   const { data: salaryData }                                  = useSalarySettingsQuery();
@@ -350,7 +350,8 @@ export default function DashboardPage() {
   if (loading) return <div style={{ textAlign: "center", padding: 80, color: "var(--muted)" }}>Laden…</div>;
 
   // Yeni kullanıcı: yıl boyu hiç entry yok → setup guide göster
-  const isNewUser = yearEntries.length === 0;
+  // (nur nach erfolgreichem Laden — offline ohne gespeicherte Daten ist "leer" ≠ "neu")
+  const isNewUser = yearStatus === "success" && yearEntries.length === 0;
 
   if (isNewUser) {
     return (

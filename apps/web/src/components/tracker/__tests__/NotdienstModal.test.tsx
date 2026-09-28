@@ -262,3 +262,47 @@ describe("NotdienstModal — Adresse", () => {
     expect(mockInsert.mock.calls[0]![0]).toMatchObject({ adresse: "Hinterhof 2, 30519 Hannover" });
   });
 });
+
+// ── Offline ─────────────────────────────────────────────────────────────────
+
+describe("NotdienstModal — offline", () => {
+  const setOnline = (v: boolean) => Object.defineProperty(navigator, "onLine", { value: v, configurable: true });
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem("stundly_last_uid", "u1");
+    setOnline(false);
+  });
+  afterEach(() => { setOnline(true); vi.restoreAllMocks(); });
+
+  it("ohne Netz: Speichern landet in der Outbox mit fester UUID, kein Server-Aufruf", async () => {
+    const { getOutbox } = await import("@/lib/offline/outbox");
+    const { onSave } = renderModal();
+    fireEvent.change(screen.getByPlaceholderText(/Ermakov/), { target: { value: "Frau Kraft" } });
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+
+    await screen.findByText(/Offline gespeichert/);
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockGetSession).not.toHaveBeenCalled();
+    const [op] = getOutbox();
+    expect(op).toMatchObject({ kind: "nd_upsert", isNew: true, userId: "u1", row: { kunde: "Frau Kraft", date: "2026-09-27" } });
+    expect(op!.kind === "nd_upsert" && op!.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ _pending: true, kunde: "Frau Kraft" }));
+
+    // Zweites Speichern → gleiche ID, weiterhin ein Insert
+    fireEvent.change(screen.getByPlaceholderText(/Ermakov/), { target: { value: "Frau Kraft-Meyer" } });
+    fireEvent.click(screen.getByRole("button", { name: /Aktualisieren/ }));
+    await waitFor(() => expect(getOutbox()[0]).toMatchObject({ isNew: true, row: { kunde: "Frau Kraft-Meyer" } }));
+    expect(getOutbox()).toHaveLength(1);
+  });
+
+  it("Netzwerkfehler trotz 'online' → ebenfalls Outbox statt Fehlermeldung", async () => {
+    setOnline(true);
+    mockInsert.mockResolvedValue({ data: null, error: { message: "TypeError: Failed to fetch" } });
+    const { getOutbox } = await import("@/lib/offline/outbox");
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    await screen.findByText(/Offline gespeichert/);
+    expect(getOutbox()).toHaveLength(1);
+  });
+});

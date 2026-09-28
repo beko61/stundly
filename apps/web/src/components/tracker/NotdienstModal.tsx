@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration, formatDuration } from "@workly/shared";
 import { useModalA11y } from "@/hooks/useModalA11y";
 import { NotdienstBerichtPanel } from "./NotdienstBerichtPanel";
+import { useOnline, useOutbox } from "@/hooks/useOffline";
+import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
+import { hasPending } from "@/lib/offline/outbox";
+import { offlineDeleteNotdienst, offlineSaveNotdienst } from "@/lib/offline/notdienst";
 import {
   filterStreets, joinAdresse, splitAdresse, type StreetSuggestion,
 } from "@/lib/address/streets";
@@ -82,6 +86,11 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedId,  setSavedId]  = useState<string | null>(entry?.id ?? null);
   const [justSaved, setJustSaved] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
+  const online = useOnline();
+  const { pending } = useOutbox();
+  // Noch nicht übertragen → Anhänge (brauchen den Eintrag auf dem Server) erst nach dem Sync
+  const notSynced = !!savedId && pending.some(o => o.key === `nd:${savedId}`);
 
   // Straßen je PLZ einmal laden, dann beim Tippen clientseitig filtern
   useEffect(() => {
@@ -124,16 +133,35 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
+    let userId: string | null = null;
+
+    // Ohne Netz: in die Offline-Outbox, wird automatisch übertragen (OfflineSync)
+    const saveOffline = (payload: Record<string, unknown>) => {
+      if (!userId) return false;
+      const row = offlineSaveNotdienst(userId, savedId, { ...payload, date } as { date: string });
+      if (!savedId) setSavedId(row.id);
+      onSave(row as unknown as NotdienstEntry);
+      setSavedOffline(true);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 4000);
+      return true;
+    };
+
+    let payload: Record<string, unknown> | null = null;
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
+      if (!isOffline()) {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        userId = session?.user?.id ?? null;
+      }
+      if (!userId && isOffline()) userId = cachedUserId();
+      if (!userId) {
         setSaveError("Session abgelaufen — bitte Seite neu laden und erneut versuchen.");
         return;
       }
 
-      const payload = {
-        user_id:    session.user.id,
+      payload = {
+        user_id:    userId,
         date,
         start_time: start,
         end_time:   end,
@@ -146,10 +174,17 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
         erledigt,
       };
 
+      if (isOffline() || (savedId && hasPending(`nd:${savedId}`))) {
+        saveOffline(payload);
+        return;
+      }
+
+      const supabase = createClient();
       const { data, error } = savedId
         ? await supabase.from("notdienst_entries").update(payload).eq("id", savedId).select().single()
         : await supabase.from("notdienst_entries").insert(payload).select().single();
 
+      if (error && isNetworkError(error) && saveOffline(payload)) return;
       if (error || !data) {
         setSaveError(error?.message || "Speichern fehlgeschlagen — bitte erneut versuchen.");
         return;
@@ -158,9 +193,11 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
       if (!savedId) setSavedId((data as NotdienstEntry).id);
       onSave(data as NotdienstEntry);
       // Modal bleibt offen — Fotos/Unterschrift/Bericht direkt anschließen. Schließen über ✕.
+      setSavedOffline(false);
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2500);
-    } catch {
+    } catch (e) {
+      if (payload && isNetworkError(e) && saveOffline(payload)) return;
       setSaveError("Netzwerkfehler — bitte erneut versuchen.");
     } finally {
       setSaving(false);
@@ -169,8 +206,18 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
 
   async function handleDelete() {
     if (!savedId) return;
+    const deleteOffline = () => {
+      const uid = cachedUserId();
+      if (!uid) return false;
+      offlineDeleteNotdienst(uid, savedId);
+      onDelete?.(savedId);
+      onClose();
+      return true;
+    };
+    if ((isOffline() || hasPending(`nd:${savedId}`)) && deleteOffline()) return;
     const supabase = createClient();
     const { error } = await supabase.from("notdienst_entries").delete().eq("id", savedId);
+    if (error && isNetworkError(error) && deleteOffline()) return;
     if (error) {
       setSaveError(error.message || "Löschen fehlgeschlagen — bitte erneut versuchen.");
       return;
@@ -417,7 +464,9 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
               borderRadius: 10, padding: "10px 12px",
               color: "var(--green)", fontSize: 12, fontWeight: 600,
             }}>
-              ✅ Gespeichert — du kannst jetzt direkt die Mail senden.
+              {savedOffline
+                ? "📴 Offline gespeichert — wird automatisch übertragen, sobald wieder Internet da ist."
+                : "✅ Gespeichert — Fotos, Unterschrift und Bericht kannst du jetzt direkt hinzufügen."}
             </div>
           )}
 
@@ -433,6 +482,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
           {/* Fotos, Kundenunterschrift, PDF-Bericht (braucht gespeicherten Einsatz) */}
           <NotdienstBerichtPanel
             notdienstId={savedId}
+            offline={!online || notSynced}
             bericht={{ date, start, end, duration, kunde, telefon: kundeTelefon, adresse, problem, ergebnis, note }}
           />
 

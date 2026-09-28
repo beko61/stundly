@@ -20,28 +20,14 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { useSessionUserId } from "@/hooks/useSessionUserId";
+import { hasPending } from "@/lib/offline/outbox";
+import { isNetworkError, isOffline } from "@/lib/offline/network";
+import {
+  findCachedTimeEntry, offlineDeleteTimeEntry, offlineUpsertTimeEntry, toRow, type MaybePending,
+} from "@/lib/offline/timeEntries";
 import type { TimeEntry } from "@workly/shared";
-import { useEffect, useState } from "react";
 
-// ── Utility: current user id (client-side session) ───────────────────────────
-function useSessionUserId(): string | null | undefined {
-  // undefined  → henüz belirlenmedi (loading)
-  // null       → session yok (unauthenticated)
-  // string     → user id
-  const [uid, setUid] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!cancelled) setUid(session?.user?.id ?? null);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  return uid;
-}
 
 export function timeEntriesKey(userId: string | null | undefined, year: number, month: number) {
   return ["time_entries", userId ?? "anon", year, month] as const;
@@ -106,73 +92,100 @@ export function useTimeEntriesRangeQuery(start: string, end: string) {
   });
 }
 
-// ── Mutation: create (upsert on conflict user_id,date) ────────────────────────
+// ── Mutations ─────────────────────────────────────────────────────────────────
+// Offline-fähig: ohne Netz (oder bei Netzwerkfehler, oder wenn für den Tag schon eine
+// Änderung in der Outbox wartet → Reihenfolge) landet die Änderung in der Offline-Outbox
+// (lib/offline) und erscheint sofort im Cache mit `_pending`. OfflineSync sendet sie später.
 type CreatePayload = Omit<TimeEntry, "id" | "user_id" | "created_at" | "updated_at" | "synced_at">;
+
+/** Supabase-Aufruf; Netzwerkfehler → "network" statt Exception. */
+async function tryOnline<T>(fn: () => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T | "network"> {
+  try {
+    const { data, error } = await fn();
+    if (error) {
+      if (isNetworkError(error)) return "network";
+      throw new Error(error.message);
+    }
+    return data as T;
+  } catch (e) {
+    if (isNetworkError(e)) return "network";
+    throw e;
+  }
+}
+
+function useInvalidateAfterWrite() {
+  const qc = useQueryClient();
+  return (userId: string | null | undefined, entry: { date: string; _pending?: boolean }) => {
+    if (entry._pending) return; // offline: Cache ist schon aktuell, Refetch würde ihn überschreiben
+    const [y, m] = entry.date.split("-").map(Number);
+    if (y && m) void qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
+    void qc.invalidateQueries({ queryKey: ["time_entries_range", userId ?? "anon"] });
+  };
+}
 
 export function useCreateTimeEntry() {
   const qc = useQueryClient();
   const userId = useSessionUserId();
+  const invalidate = useInvalidateAfterWrite();
 
   return useMutation({
-    mutationFn: async (entry: CreatePayload) => {
+    mutationFn: async (entry: CreatePayload): Promise<MaybePending<TimeEntry>> => {
       if (!userId) throw new Error("Not authenticated");
-      const supabase = createClient();
-      const { data, error } = await supabase
+      const offline = () => offlineUpsertTimeEntry(qc, userId, toRow(entry));
+      if (isOffline() || hasPending(`te:${entry.date}`)) return offline();
+      const res = await tryOnline<TimeEntry>(() => createClient()
         .from("time_entries")
         .upsert({ ...entry, user_id: userId }, { onConflict: "user_id,date" })
         .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return data as TimeEntry;
+        .single());
+      return res === "network" ? offline() : res;
     },
-    onSuccess: (created) => {
-      // Ay/yıl'ı date'den çıkar → sadece o ay'ın query'sini invalide et
-      const [y, m] = created.date.split("-").map(Number);
-      if (y && m) qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
-    },
+    onSuccess: (created) => invalidate(userId, created),
   });
 }
 
-// ── Mutation: update by id ────────────────────────────────────────────────────
 export function useUpdateTimeEntry() {
   const qc = useQueryClient();
   const userId = useSessionUserId();
+  const invalidate = useInvalidateAfterWrite();
 
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<TimeEntry> }) => {
-      const supabase = createClient();
-      const { data, error } = await supabase
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<TimeEntry> }): Promise<MaybePending<TimeEntry>> => {
+      const cached = userId ? findCachedTimeEntry(qc, userId, id) : null;
+      const offline = () => {
+        if (!userId || !cached) throw new Error("Offline — Eintrag konnte nicht zwischengespeichert werden.");
+        return offlineUpsertTimeEntry(qc, userId, toRow({ ...cached, ...patch }));
+      };
+      if (isOffline() || id.startsWith("offline-") || (cached && hasPending(`te:${cached.date}`))) return offline();
+      const res = await tryOnline<TimeEntry>(() => createClient()
         .from("time_entries")
         .update(patch)
         .eq("id", id)
         .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return data as TimeEntry;
+        .single());
+      return res === "network" ? offline() : res;
     },
-    onSuccess: (updated) => {
-      const [y, m] = updated.date.split("-").map(Number);
-      if (y && m) qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
-    },
+    onSuccess: (updated) => invalidate(userId, updated),
   });
 }
 
-// ── Mutation: delete by id ────────────────────────────────────────────────────
-// date bilgisi id'de yok — silinen row cache'te tespit edilir ve o ay invalide.
+// date bilgisi id'de yok — çağıran verir, o ay invalide.
 export function useDeleteTimeEntry() {
   const qc = useQueryClient();
   const userId = useSessionUserId();
+  const invalidate = useInvalidateAfterWrite();
 
   return useMutation({
     mutationFn: async ({ id, date }: { id: string; date: string }) => {
-      const supabase = createClient();
-      const { error } = await supabase.from("time_entries").delete().eq("id", id);
-      if (error) throw new Error(error.message);
-      return { id, date };
+      const offline = () => {
+        if (!userId) throw new Error("Not authenticated");
+        offlineDeleteTimeEntry(qc, userId, date);
+        return { id, date, _pending: true };
+      };
+      if (isOffline() || id.startsWith("offline-") || hasPending(`te:${date}`)) return offline();
+      const res = await tryOnline<null>(() => createClient().from("time_entries").delete().eq("id", id));
+      return res === "network" ? offline() : { id, date };
     },
-    onSuccess: ({ date }) => {
-      const [y, m] = date.split("-").map(Number);
-      if (y && m) qc.invalidateQueries({ queryKey: timeEntriesKey(userId, y, m) });
-    },
+    onSuccess: (deleted) => invalidate(userId, deleted),
   });
 }

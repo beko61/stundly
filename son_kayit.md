@@ -1,5 +1,53 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (120) – v0.65.0: Offline mod (Zeiten + Notdienst internetsiz)
+
+### Kullanıcı isteği
+Fikir listesinden "Offline mod" seçildi: internet yokken (bodrum, şantiye) giriş yapılabilsin,
+bağlantı gelince otomatik kaydedilsin.
+
+### Nasıl çalışıyor
+1. **Uygulama internetsiz açılır** — `public/sw.js` yeniden yazıldı:
+   - `/_next/static/*` cache-first (hash'li, değişmez), max 400 dosya
+   - sayfalar network-first; internet yoksa ya da 4 sn cevap gelmezse (zayıf çekim) cache'ten
+   - hiç açılmamış sayfa offline → küçük "Kein Internet" sayfası (+ "Zu meinen Zeiten")
+   - OfflineSync oturum başına bir kez "precache" gönderir: /dashboard, /tracker, /vacation,
+     /reports, /salary, /settings + HTML'deki tüm JS/CSS (route-group `(dashboard)` parantezleri dahil)
+   - RSC/fetch istekleri SW'den geçmez; offline başarısız olunca Next tam sayfa yükler → cache
+2. **Veriler görünür** — React Query cache'i localStorage'a yazılıyor (`lib/offline/cachePersist`):
+   time_entries, time_entries_range, notdienst_entries, salary_settings, vacation_requests; 30 gün.
+   gcTime 24 saat (ziyaret edilen aylar kaybolmasın).
+3. **Kayıtlar kuyruğa girer** — `lib/offline/outbox` (localStorage):
+   - Zeiten: günde tek kayıt → key `te:<tarih>`, sync'te upsert (user_id,date) / delete by date
+   - Notdienst: yeni kayda offline'da gerçek UUID verilir, sync'te aynı id ile upsert → id sabit
+   - aynı kayda sonraki değişiklikler birleştirilir; offline oluşturulup silinen hiç gönderilmez
+   - kayıt hemen listede görünür (`_pending`, "⏳ nicht übertragen" / Nd "⏳")
+   - mutasyonlar `networkMode: "always"` (yoksa RQ offline'da sessizce bekletirdi)
+   - "online" görünüp ağ hatası (Failed to fetch / Load failed) → yine kuyruğa
+4. **Otomatik gönderim** — `components/ui/OfflineSync` (dashboard layout): açılışta, "online"
+   olayında, uygulamaya dönünce, dakikada bir. Ağ hatası → dur; sunucu hatası → "nicht übertragen"
+   listesi (Details / Verwerfen). Üstte küçük durum hapı: 📴 Offline · 🔄 werden übertragen · ✓ übertragen.
+5. **Oturum** — `hooks/useSessionUserId` (4 kopya birleştirildi): offline'da token yenilenemezse son
+   bilinen user id. Çıkışta (SIGNED_OUT) kuyruk, cache, sayfa cache'i silinir.
+6. Notdienst fotoğraf/imza/PDF offline kapalı (kayıt sunucuda olmalı) — panelde açıklama var.
+7. Küçük: Tracker Bundesland localStorage'dan; Dashboard offline boşken "yeni kullanıcı" rehberi çıkmaz.
+
+### Test
+- Vitest 512/512 (+6 outbox, +5 sync, +4 useTimeEntries offline, +2 NotdienstModal offline)
+- SW: tarayıcı paneli localhost'ta SW'ye izin vermiyor → Node'da sahte cache/fetch ile senaryo testi
+  (online cache, offline cache, offline fallback, precache varlıkları, yavaş ağ 4 sn, clear) ✓;
+  gerçek build HTML'inden 13 varlık yolu doğru çıkarıldı, hepsi 200.
+- ESLint clean · tsc clean · `next build` clean
+
+### Değişen dosyalar
+- NEU: `lib/offline/{outbox,network,cachePersist,timeEntries,notdienst,sync}.ts`,
+  `hooks/useSessionUserId.ts`, `hooks/useOffline.ts`, `components/ui/OfflineSync.tsx`, testler
+- MOD: `public/sw.js`, `providers/QueryProvider.tsx`, `hooks/queries/useTimeEntries.ts` (+3 hook dosyası
+  useSessionUserId), `NotdienstModal.tsx`, `NotdienstBerichtPanel.tsx`, `DayEntry.tsx`,
+  `(dashboard)/layout.tsx`, `tracker/page.tsx`, `dashboard/page.tsx`, `version.ts` 0.64.1 → 0.65.0
+
+---
+
 ## 2026-09-28 (119) – v0.64.1: Canlı sayaç geri alındı
 
 ### Kullanıcı kararı

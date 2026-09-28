@@ -21,7 +21,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useSessionUserId } from "@/hooks/useSessionUserId";
 
 export interface NotdienstEntry {
   id:          string;
@@ -35,19 +35,6 @@ export interface NotdienstEntry {
   created_at:  string;
 }
 
-function useSessionUserId(): string | null | undefined {
-  const [uid, setUid] = useState<string | null | undefined>(undefined);
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!cancelled) setUid(session?.user?.id ?? null);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  return uid;
-}
 
 export function notdienstEntriesKey(userId: string | null | undefined, start: string, end: string) {
   return ["notdienst_entries", userId ?? "anon", start, end] as const;

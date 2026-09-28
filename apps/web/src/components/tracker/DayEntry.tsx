@@ -7,6 +7,9 @@ import { calculateWorkDuration, formatDuration, DAY_TYPES } from "@workly/shared
 import { TimeEntryModal } from "./TimeEntryModal";
 import { NotdienstModal, type NotdienstEntry } from "./NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
+import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
+import { hasPending } from "@/lib/offline/outbox";
+import { offlineSaveNotdienst } from "@/lib/offline/notdienst";
 
 const WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 
@@ -82,7 +85,12 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
   // Früher lud jede Tageszeile ihre Notdienste selbst (~30 Requests, nach dem Scroll-zu-heute
   // → Zeilen wuchsen nachträglich und schoben "heute" aus dem Bild). Jetzt: Monats-Query im
   // Tracker, hier nur invalidieren.
-  const refreshNd = () => { void qc.invalidateQueries({ queryKey: ["notdienst_entries"] }); };
+  // Offline gespeichert (_pending): Cache ist schon aktuell — ein Refetch würde ihn überschreiben.
+  const refreshNd = (saved?: unknown) => {
+    if ((saved as { _pending?: boolean } | undefined)?._pending) return;
+    void qc.invalidateQueries({ queryKey: ["notdienst_entries"] });
+  };
+  const isPendingRow = (row: unknown) => !!(row as { _pending?: boolean } | null)?._pending;
 
   const dayNum    = parseInt(date.split("-")[2] ?? "0", 10);
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -137,6 +145,10 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
             {entry ? (
               <div style={{ fontSize:13, fontWeight:700, color:STATUS_COLOR[entry.day_type], marginTop:1 }}>
                 {STATUS_ICON[entry.day_type]} {entry.day_type.charAt(0).toUpperCase()+entry.day_type.slice(1)}
+                {isPendingRow(entry) && (
+                  <span title="Offline gespeichert — wird übertragen, sobald Internet da ist"
+                    style={{ fontSize:10, fontWeight:600, color:"var(--muted)", marginLeft:6 }}>⏳ nicht übertragen</span>
+                )}
               </div>
             ) : isFeiertag ? (
               <div style={{ marginTop:1 }}>
@@ -244,7 +256,9 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                 <div key={nd.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0",
                   borderBottom: idx<ndEntries.length-1?"1px solid var(--surface2)":"none" }}
                   onClick={e => { e.stopPropagation(); setNdModal(nd); }}>
-                  <span style={{ fontSize:10, color:"var(--orange)", fontWeight:700, flexShrink:0 }}>Nd {idx+1}</span>
+                  <span style={{ fontSize:10, color:"var(--orange)", fontWeight:700, flexShrink:0 }}>
+                    Nd {idx+1}{isPendingRow(nd) && <span title="Offline gespeichert — noch nicht übertragen"> ⏳</span>}
+                  </span>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                       {[
@@ -264,15 +278,21 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                     type="button"
                     onClick={async (ev) => {
                       ev.stopPropagation();
-                      const supabase = createClient();
                       const newValue = !nd.erledigt;
+                      const offline = () => {
+                        const uid = cachedUserId();
+                        if (uid) offlineSaveNotdienst(uid, nd.id, { date: nd.date, erledigt: newValue });
+                      };
+                      if (isOffline() || hasPending(`nd:${nd.id}`)) { offline(); return; }
+                      const supabase = createClient();
                       const { data, error } = await supabase
                         .from("notdienst_entries")
                         .update({ erledigt: newValue })
                         .eq("id", nd.id)
                         .select()
                         .single();
-                      if (!error && data) refreshNd();
+                      if (error && isNetworkError(error)) offline();
+                      else if (!error && data) refreshNd();
                     }}
                     aria-label={nd.erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
                     title={nd.erledigt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}

@@ -18,22 +18,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { useSessionUserId } from "@/hooks/useSessionUserId";
 import type { VacationRequest } from "@workly/shared";
-import { useEffect, useState } from "react";
 
-function useSessionUserId(): string | null | undefined {
-  const [uid, setUid] = useState<string | null | undefined>(undefined);
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!cancelled) setUid(session?.user?.id ?? null);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  return uid;
-}
 
 export function vacationRequestsKey(userId: string | null | undefined) {
   return ["vacation_requests", userId ?? "anon"] as const;

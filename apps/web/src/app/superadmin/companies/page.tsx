@@ -1,6 +1,8 @@
 import { adminClient } from "@/lib/superadmin/auth";
 import CompaniesTable, { type CompanyRow } from "./CompaniesTable";
 
+export const dynamic = "force-dynamic";
+
 export default async function SuperAdminCompaniesPage() {
   const admin = adminClient();
 
@@ -11,6 +13,14 @@ export default async function SuperAdminCompaniesPage() {
     admin.from("subscriptions").select("company_id, plan, status, stripe_subscription_id"),
     admin.from("profiles").select("user_id, email, full_name, role, company_id").not("company_id", "is", null),
   ]);
+
+  // profiles.email ist oft leer → Login-E-Mail aus auth.users
+  const authEmail = new Map<string, string>();
+  for (let page = 1; page < 20; page++) {
+    const { data } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    for (const u of data?.users ?? []) if (u.email) authEmail.set(u.id, u.email);
+    if (!data || data.users.length < 1000) break;
+  }
 
   const subMap = new Map((subscriptions ?? []).map((s) => [s.company_id as string, s]));
   const byCompany = new Map<string, NonNullable<typeof members>>();
@@ -34,7 +44,7 @@ export default async function SuperAdminCompaniesPage() {
       plan:          (sub?.plan as string | undefined) ?? "trial",
       status:        (sub?.status as string | undefined) ?? null,
       paidStripe:    !!sub?.stripe_subscription_id && ["active", "past_due", "trialing"].includes(String(sub?.status)),
-      ownerEmail:    (owner?.email as string | null | undefined) ?? null,
+      ownerEmail:    owner ? authEmail.get(owner.user_id as string) ?? (owner.email as string | null) ?? null : null,
       memberCount:   list.length,
       superAdminMembers: list.filter((m) => m.role === "super_admin").length,
     };
@@ -42,8 +52,8 @@ export default async function SuperAdminCompaniesPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Alle Unternehmen</h1>
-      <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>{rows.length} Unternehmen registriert</p>
+      <h1 className="sa-title">Firmalar</h1>
+      <p className="sa-sub">{rows.length} firma kayıtlı</p>
       <CompaniesTable initialRows={rows} />
     </div>
   );

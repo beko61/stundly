@@ -1,92 +1,133 @@
-import { createClient } from "@/lib/supabase/server";
-import { createClient as createAdmin } from "@supabase/supabase-js";
-import { computeMrrTrend, type SubscriptionRow } from "@/lib/utils/mrrTrend";
-import { RevenueChart } from "./components/RevenueChart";
+import Link from "next/link";
+import { adminClient } from "@/lib/superadmin/auth";
+import { loadSuperadminUsers } from "@/lib/superadmin/data";
+import { computeCockpit } from "@/lib/superadmin/metrics";
+import { BETA_END_DATE_LABEL, betaDaysRemaining, isBetaActive } from "@/lib/beta";
+import { PLAN_PRICES, euro, type PaidPlanId } from "@/lib/pricing";
 
-export default async function SuperAdminDashboard() {
-  const supabase = await createClient();
+export const dynamic = "force-dynamic";
 
-  // Service role ile tüm verilere eriş
-  const admin = createAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+const REMINDER_LABELS: Record<string, string> = { start: "Başla", start2: "Başla (2.)", comeback: "Geri dön" };
 
-  const [
-    { count: totalCompanies },
-    { count: totalUsers },
-    { data: subscriptions },
-  ] = await Promise.all([
+export default async function SuperAdminKokpit() {
+  const admin = adminClient();
+  const [users, { count: companies }, { data: subs }] = await Promise.all([
+    loadSuperadminUsers(admin),
     admin.from("companies").select("*", { count: "exact", head: true }),
-    admin.from("profiles").select("*", { count: "exact", head: true }),
-    admin.from("subscriptions").select("plan, status, currency, created_at, canceled_at"),
+    admin.from("subscriptions").select("plan, status"),
   ]);
+  const c = computeCockpit(users, new Date());
 
-  const activeSubs = subscriptions?.filter(s => s.status === "active") ?? [];
-  const trialSubs = subscriptions?.filter(s => s.status === "trialing") ?? [];
+  const paying = (subs ?? []).filter((s) => s.status === "active");
+  const mrr = paying.reduce((sum, s) => sum + (PLAN_PRICES[s.plan as PaidPlanId]?.monthly ?? 0), 0);
+  const beta = isBetaActive();
+  const maxDaily = Math.max(1, ...c.daily.map((d) => Math.max(d.signups, d.active)));
 
-  const planPrices: Record<string, number> = { individual: 9.99, team: 29.99, business: 79.99 };
-  const mrr = activeSubs.reduce((sum, s) => sum + (planPrices[s.plan] ?? 0), 0);
-
-  // MRR trend — son 12 ay
-  const mrrTrend = computeMrrTrend((subscriptions ?? []) as SubscriptionRow[], 12);
-
-  // Son 5 şirket
-  const { data: recentCompanies } = await admin
-    .from("companies")
-    .select("id, name, country_code, created_at")
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  const stats = [
-    { label: "Unternehmen gesamt", value: totalCompanies ?? 0, icon: "🏢", color: "var(--blue)" },
-    { label: "Benutzer gesamt", value: totalUsers ?? 0, icon: "👥", color: "var(--accent2)" },
-    { label: "Aktive Abonnements", value: activeSubs.length, icon: "✅", color: "var(--green)" },
-    { label: "In Testphase", value: trialSubs.length, icon: "🔄", color: "var(--yellow)" },
-    { label: "MRR (netto)", value: `€${mrr.toFixed(2)}`, icon: "💶", color: "var(--green)" },
-    { label: "ARR (netto)", value: `€${(mrr * 12).toFixed(2)}`, icon: "📈", color: "var(--accent2)" },
+  const kpis: { v: string | number; l: string; h?: string; href?: string; color?: string }[] = [
+    { v: c.total, l: "Kullanıcı", h: `${companies ?? 0} firma`, href: "/superadmin/users" },
+    { v: c.signups7, l: "Yeni kayıt · 7 gün", h: `bugün ${c.signupsToday} · 30 gün ${c.signups30}`, color: "var(--accent2)" },
+    { v: c.active7, l: "Aktif · 7 gün", h: `30 gün: ${c.active30}`, href: "/superadmin/users?seg=active7", color: "var(--green)" },
+    { v: `%${c.activationRate}`, l: "Aktivasyon", h: `${c.activated} kişi en az 1 kayıt girdi`, color: c.activationRate >= 50 ? "var(--green)" : "var(--orange)" },
+    { v: c.neverUsed, l: "Hiç kullanmamış", h: "2+ gün önce kayıt, 0 kayıt", href: "/superadmin/users?seg=never", color: "var(--orange)" },
+    { v: c.inactive14, l: "Pasif 14+ gün", h: "önce kullandı, sonra bıraktı", href: "/superadmin/users?seg=inactive", color: "var(--red)" },
+    { v: c.unconfirmed, l: "E-posta onaysız", href: "/superadmin/users?seg=unconfirmed" },
+    { v: c.pendingDeletion, l: "Bekleyen silme talebi", h: "DSGVO, 30 gün sonra", href: "/superadmin/users?seg=deletion" },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>Super Admin Dashboard</h1>
-      <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 32 }}>Gesamtübersicht aller Kunden und Umsätze</p>
+      <h1 className="sa-title">Kokpit</h1>
+      <p className="sa-sub">
+        {beta
+          ? <>Beta aktif · {BETA_END_DATE_LABEL} tarihine <strong style={{ color: "var(--text)" }}>{betaDaysRemaining()} gün</strong> kaldı</>
+          : "Genel bakış"}
+      </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
-        {stats.map(stat => (
-          <div key={stat.label} className="card" style={{ padding: "20px" }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>{stat.icon}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: stat.color }}>{stat.value}</div>
-            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{stat.label}</div>
-          </div>
-        ))}
+      <div className="sa-grid">
+        {kpis.map((k) => {
+          const inner = (
+            <>
+              <div className="v" style={{ color: k.color ?? "var(--text)" }}>{k.v}</div>
+              <div className="l">{k.l}</div>
+              {k.h && <div className="h">{k.h}</div>}
+            </>
+          );
+          return k.href
+            ? <Link key={k.l} href={k.href} className="card sa-kpi">{inner}</Link>
+            : <div key={k.l} className="card sa-kpi">{inner}</div>;
+        })}
       </div>
 
-      {/* MRR trend chart — son 12 ay */}
-      <div style={{ marginBottom: 32 }}>
-        <RevenueChart data={mrrTrend} />
+      <h2 className="sa-section">Son 30 gün</h2>
+      <div className="card" style={{ padding: 16 }}>
+        <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
+          <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: "var(--accent2)", marginRight: 6 }} />Yeni kayıt</span>
+          <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: "var(--green)", marginRight: 6 }} />Kayıt giren kişi</span>
+        </div>
+        <div role="img" aria-label="Son 30 günün yeni kayıt ve aktif kullanıcı grafiği" style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 120 }}>
+          {c.daily.map((d) => (
+            <div key={d.date} title={`${d.date.slice(8, 10)}.${d.date.slice(5, 7)} · ${d.signups} kayıt · ${d.active} aktif`}
+              style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 1, height: "100%" }}>
+              <div style={{ flex: 1, height: `${(d.signups / maxDaily) * 100}%`, minHeight: d.signups ? 3 : 0, background: "var(--accent2)", borderRadius: "3px 3px 0 0" }} />
+              <div style={{ flex: 1, height: `${(d.active / maxDaily) * 100}%`, minHeight: d.active ? 3 : 0, background: "var(--green)", borderRadius: "3px 3px 0 0" }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 6 }}>
+          <span>{c.daily[0]!.date.slice(8, 10)}.{c.daily[0]!.date.slice(5, 7)}.</span>
+          <span>bugün</span>
+        </div>
       </div>
 
-      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Neueste Unternehmen</h2>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)" }}>
-              {["Unternehmen", "Land", "Registriert"].map(h => (
-                <th key={h} style={{ textAlign: "left", padding: "10px 14px", color: "var(--muted)", fontWeight: 600, fontSize: 11 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(recentCompanies ?? []).map((c, i) => (
-              <tr key={c.id} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
-                <td style={{ padding: "12px 14px", fontWeight: 600 }}>{c.name}</td>
-                <td style={{ padding: "12px 14px", color: "var(--muted)" }}>{c.country_code}</td>
-                <td style={{ padding: "12px 14px", color: "var(--muted)" }}>{new Date(c.created_at).toLocaleDateString("de-DE")}</td>
-              </tr>
+      <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", marginTop: 12 }}>
+        <div className="card" style={{ padding: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>Nereden geldiler?</h3>
+          {c.sources.map((s) => (
+            <div key={s.key} style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span>{s.label}</span><strong>{s.count}</strong>
+              </div>
+              <div style={{ height: 6, background: "var(--surface2)", borderRadius: 3, marginTop: 3 }}>
+                <div style={{ height: "100%", width: `${(s.count / Math.max(1, c.total)) * 100}%`, background: s.key === "none" ? "var(--muted)" : "var(--accent2)", borderRadius: 3 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="card" style={{ padding: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>En çok davet getirenler</h3>
+          {c.topReferrers.length === 0
+            ? <p className="sa-muted" style={{ fontSize: 13 }}>Henüz davet linkiyle gelen yok.</p>
+            : c.topReferrers.map((r) => (
+              <div key={r.code} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                <span>{r.name}</span><strong>{r.count}</strong>
+              </div>
             ))}
-          </tbody>
-        </table>
+
+          <h3 style={{ fontSize: 14, fontWeight: 800, margin: "18px 0 10px" }}>Hatırlatma mailleri · 7 gün</h3>
+          {Object.keys(c.reminders7).length === 0
+            ? <p className="sa-muted" style={{ fontSize: 13 }}>Son 7 günde hatırlatma gönderilmedi.</p>
+            : Object.entries(c.reminders7).map(([k, v]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0" }}>
+                <span>{REMINDER_LABELS[k] ?? k}</span><strong>{v}</strong>
+              </div>
+            ))}
+        </div>
+
+        <div className="card" style={{ padding: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>Gelir</h3>
+          {beta && paying.length === 0 ? (
+            <p className="sa-muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
+              Beta boyunca ödeme yok. {BETA_END_DATE_LABEL} sonrası burada MRR / ARR görünecek
+              (beta kullanıcıları %50 indirimli).
+            </p>
+          ) : (
+            <>
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 26, fontWeight: 800, color: "var(--green)" }}>{euro(mrr)}</div>
+              <div className="sa-muted" style={{ fontSize: 12 }}>MRR · {paying.length} aktif abonelik · ARR {euro(mrr * 12)}</div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

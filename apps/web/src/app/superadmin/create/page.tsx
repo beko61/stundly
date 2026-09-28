@@ -58,7 +58,7 @@ export default function CreateAccountPage() {
 
   return (
     <div style={{ maxWidth: 520 }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Hesap Oluştur</h1>
+      <h1 className="sa-title">Hesap oluştur</h1>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 28 }}>
         Yeni kullanıcı veya firma hesabı oluştur.
       </p>

@@ -1,246 +1,251 @@
 "use client";
-import { useState } from "react";
 
-type User = {
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  role: string;
-  plan: string;
-  is_active: boolean;
-  company_id: string | null;
-  created_at: string;
-  last_seen_at: string | null;
-};
+import { useMemo, useState } from "react";
+import type React from "react";
+import { inSegment, lastActivity, SOURCE_LABELS, type SaUser, type Segment } from "@/lib/superadmin/metrics";
 
 const ROLES = ["individual", "employee", "company_admin", "super_admin"];
-
-const roleColors: Record<string, string> = {
-  super_admin: "var(--red)",
-  company_admin: "var(--accent2)",
-  employee: "var(--blue)",
-  individual: "var(--green)",
+const ROLE_LABELS: Record<string, string> = {
+  individual: "Bireysel", employee: "Çalışan", company_admin: "Firma yöneticisi", super_admin: "Süper admin",
 };
+const ROLE_COLORS: Record<string, string> = {
+  super_admin: "var(--red)", company_admin: "var(--accent2)", employee: "var(--blue)", individual: "var(--green)",
+};
+const SEGMENTS: { key: Segment; label: string }[] = [
+  { key: "all", label: "Tümü" },
+  { key: "active7", label: "Aktif (7 gün)" },
+  { key: "never", label: "Hiç kullanmamış" },
+  { key: "inactive", label: "Pasif 14+ gün" },
+  { key: "unconfirmed", label: "E-posta onaysız" },
+  { key: "deletion", label: "Silme talebi" },
+];
 
-export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
+const DAY = 86_400_000;
+export function ago(iso: string | number | null, now = Date.now()): string {
+  if (!iso) return "hiç";
+  const t = typeof iso === "number" ? iso : new Date(iso).getTime();
+  if (!t) return "hiç";
+  const d = Math.floor((now - t) / DAY);
+  if (d <= 0) return "bugün";
+  if (d === 1) return "dün";
+  if (d < 30) return `${d} gün önce`;
+  if (d < 365) return `${Math.floor(d / 30)} ay önce`;
+  return `${Math.floor(d / 365)} yıl önce`;
+}
+const dateTR = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("tr-TR") : "–");
+
+const COLS = "minmax(200px, 2fr) 120px minmax(110px, 1fr) 95px 110px 70px";
+
+function csvCell(v: unknown) {
+  return `"${String(v ?? "").replace(/"/g, '""')}"`;
+}
+
+export default function UsersTable({ initialUsers, initialSegment = "all" }: { initialUsers: SaUser[]; initialSegment?: Segment }) {
   const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
-  const [loading, setLoading] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [segment, setSegment] = useState<Segment>(initialSegment);
+  const [role, setRole] = useState("all");
+  const [sort, setSort] = useState<"created" | "activity">("created");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [now] = useState(() => Date.now());
 
-  const filtered = users.filter(u => {
-    const matchSearch =
-      (u.full_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (u.email ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchRole = filterRole === "all" || u.role === filterRole;
-    return matchSearch && matchRole;
-  });
+  const counts = useMemo(
+    () => Object.fromEntries(SEGMENTS.map((s) => [s.key, users.filter((u) => inSegment(u, s.key, now)).length])),
+    [users, now],
+  );
 
-  async function changeRole(userId: string, role: string) {
-    setLoading(userId + "_role");
-    const res = await fetch(`/api/superadmin/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
-    });
-    if (res.ok) {
-      setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, role } : u));
-    }
-    setLoading(null);
-  }
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = users.filter((u) =>
+      inSegment(u, segment, now) &&
+      (role === "all" || u.role === role) &&
+      (!q || [u.name, u.email, u.companyName].some((v) => (v ?? "").toLowerCase().includes(q))));
+    return sort === "activity"
+      ? [...list].sort((a, b) => lastActivity(b) - lastActivity(a))
+      : list;
+  }, [users, search, segment, role, sort, now]);
 
-  async function toggleActive(userId: string, current: boolean) {
-    setLoading(userId + "_active");
-    const res = await fetch(`/api/superadmin/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active: !current }),
-    });
-    if (res.ok) {
-      setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, is_active: !current } : u));
-    }
-    setLoading(null);
-  }
+  const open = users.find((u) => u.id === openId) ?? null;
+  const patch = (id: string, p: Partial<SaUser>) => setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...p } : u)));
 
-  async function deleteUser(userId: string, email: string) {
-    setLoading(userId + "_delete");
-    // GÜVENLİK: ?confirm=<email> zorunlu (server-side double-check).
-    // Yanlış kullanıcıyı silmeyi imkansızlaştırır.
-    const url = `/api/superadmin/users/${userId}?confirm=${encodeURIComponent(email)}`;
-    const res = await fetch(url, { method: "DELETE" });
-    if (res.ok) {
-      setUsers(prev => prev.filter(u => u.user_id !== userId));
-    }
-    setConfirm(null);
-    setLoading(null);
+  function exportCsv() {
+    const head = ["E-Mail", "Name", "Rolle", "Firma", "Registriert", "Letzter Login", "Letzter Eintrag", "Tage erfasst", "Notdienste", "Quelle", "Bestätigt", "Aktiv"];
+    const rows = filtered.map((u) => [u.email, u.name, u.role, u.companyName, u.createdAt.slice(0, 10), u.lastSignInAt?.slice(0, 10), u.lastDataAt?.slice(0, 10), u.entryDays, u.ndCount, u.source, u.emailConfirmed ? "ja" : "nein", u.isActive ? "ja" : "nein"]);
+    const csv = [head, ...rows].map((r) => r.map(csvCell).join(";")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `stundly_kullanicilar_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
   }
 
   return (
     <div>
-      {/* Arama & Filtre */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="İsim veya e-posta ara..."
-          style={{
-            flex: 1, minWidth: 200, padding: "9px 14px",
-            background: "var(--surface2)", border: "1px solid var(--border)",
-            borderRadius: 10, color: "var(--text)", fontSize: 13,
-            outline: "none",
-          }}
-        />
-        <select
-          value={filterRole}
-          onChange={e => setFilterRole(e.target.value)}
-          style={{
-            padding: "9px 14px", background: "var(--surface2)",
-            border: "1px solid var(--border)", borderRadius: 10,
-            color: "var(--text)", fontSize: 13, cursor: "pointer",
-          }}
-        >
-          <option value="all">Tüm Roller</option>
-          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+        {SEGMENTS.map((s) => (
+          <button key={s.key} onClick={() => setSegment(s.key)} className="sa-chip" aria-pressed={segment === s.key}
+            style={{ border: "1px solid var(--border)", cursor: "pointer", padding: "6px 12px", fontSize: 12,
+              background: segment === s.key ? "var(--accent)" : "var(--surface2)", color: segment === s.key ? "#fff" : "var(--text)" }}>
+            {s.label} <span style={{ opacity: 0.7 }}>{counts[s.key]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        <input className="input" value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="İsim, e-posta veya firma ara..." style={{ flex: "1 1 220px", width: "auto" }} aria-label="Ara" />
+        <select className="input" value={role} onChange={(e) => setRole(e.target.value)} style={{ width: "auto" }} aria-label="Rol">
+          <option value="all">Tüm roller</option>
+          {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
         </select>
-        <div style={{ padding: "9px 14px", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 13, color: "var(--muted)" }}>
-          {filtered.length} kullanıcı
+        <select className="input" value={sort} onChange={(e) => setSort(e.target.value as "created" | "activity")} style={{ width: "auto" }} aria-label="Sıralama">
+          <option value="created">Yeni kayıt önce</option>
+          <option value="activity">Son aktivite önce</option>
+        </select>
+        <button className="btn btn-secondary" onClick={exportCsv}>⬇ CSV ({filtered.length})</button>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="sa-list">
+          <div className="sa-row sa-head" style={{ gridTemplateColumns: COLS }}>
+            <span>Kişi</span><span>Rol</span><span>Firma</span><span>Kayıt</span><span>Son aktivite</span><span>Gün</span>
+          </div>
+          {filtered.map((u) => (
+            <button key={u.id} className="sa-row" style={{ gridTemplateColumns: COLS, opacity: u.isActive ? 1 : 0.55 }} onClick={() => setOpenId(u.id)}>
+              <span className="sa-wide" style={{ minWidth: 0 }}>
+                <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {u.name || "—"} {!u.emailConfirmed && <span title="E-posta onaysız">✉️</span>} {u.pendingDeletion && <span title="Silme talebi">🗑</span>}
+                </strong>
+                <span className="sa-muted" style={{ fontSize: 12, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email ?? "—"}</span>
+              </span>
+              <span><span className="sa-cell-label">Rol</span><span className="sa-chip" style={{ color: ROLE_COLORS[u.role] }}>{ROLE_LABELS[u.role] ?? u.role}</span></span>
+              <span className="sa-muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span className="sa-cell-label">Firma</span>{u.companyName ?? "—"}</span>
+              <span className="sa-muted"><span className="sa-cell-label">Kayıt</span>{dateTR(u.createdAt)}</span>
+              <span><span className="sa-cell-label">Son aktivite</span>{ago(lastActivity(u) || null, now)}</span>
+              <span style={{ fontFamily: "'DM Mono',monospace" }}><span className="sa-cell-label">Gün</span>{u.entryDays}{u.ndCount ? <span className="sa-muted"> +{u.ndCount}N</span> : null}</span>
+            </button>
+          ))}
+          {filtered.length === 0 && <div style={{ textAlign: "center", padding: 32, color: "var(--muted)", fontSize: 13 }}>Kullanıcı bulunamadı.</div>}
         </div>
       </div>
 
-      {/* Tablo */}
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)" }}>
-              {["Ad Soyad", "E-Posta", "Rol", "Plan", "Durum", "Son Giriş", "Kayıt", "İşlemler"].map(h => (
-                <th key={h} style={{
-                  textAlign: "left", padding: "10px 12px",
-                  color: "var(--muted)", fontWeight: 600, fontSize: 10,
-                  textTransform: "uppercase", whiteSpace: "nowrap",
-                }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((u, i) => (
-              <tr key={u.user_id} style={{
-                borderBottom: "1px solid var(--border)",
-                background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)",
-                opacity: loading?.startsWith(u.user_id) ? 0.5 : 1,
-                transition: "opacity 0.2s",
-              }}>
-                <td style={{ padding: "10px 12px", fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {u.full_name ?? "–"}
-                </td>
-                <td style={{ padding: "10px 12px", color: "var(--muted)", fontSize: 11 }}>
-                  {u.email ?? "–"}
-                </td>
-                {/* Rol dropdown */}
-                <td style={{ padding: "10px 12px" }}>
-                  <select
-                    value={u.role}
-                    onChange={e => changeRole(u.user_id, e.target.value)}
-                    disabled={loading === u.user_id + "_role"}
-                    style={{
-                      background: "var(--surface2)", border: "1px solid var(--border)",
-                      borderRadius: 6, color: roleColors[u.role] ?? "var(--text)",
-                      fontSize: 11, fontWeight: 700, padding: "3px 6px", cursor: "pointer",
-                    }}
-                  >
-                    {ROLES.map(r => <option key={r} value={r} style={{ color: roleColors[r] }}>{r}</option>)}
-                  </select>
-                </td>
-                <td style={{ padding: "10px 12px", color: "var(--muted)" }}>{u.plan}</td>
-                {/* Aktif toggle */}
-                <td style={{ padding: "10px 12px" }}>
-                  <button
-                    onClick={() => toggleActive(u.user_id, u.is_active)}
-                    disabled={loading === u.user_id + "_active"}
-                    style={{
-                      padding: "3px 10px", borderRadius: 6, border: "none",
-                      cursor: "pointer", fontSize: 11, fontWeight: 700,
-                      background: u.is_active
-                        ? "color-mix(in srgb, var(--green) 15%, transparent)"
-                        : "color-mix(in srgb, var(--red) 15%, transparent)",
-                      color: u.is_active ? "var(--green)" : "var(--red)",
-                    }}
-                  >
-                    {u.is_active ? "Aktif" : "Pasif"}
-                  </button>
-                </td>
-                <td style={{ padding: "10px 12px", color: "var(--muted)", whiteSpace: "nowrap" }}>
-                  {u.last_seen_at ? new Date(u.last_seen_at).toLocaleDateString("tr-TR") : "–"}
-                </td>
-                <td style={{ padding: "10px 12px", color: "var(--muted)", whiteSpace: "nowrap" }}>
-                  {new Date(u.created_at).toLocaleDateString("tr-TR")}
-                </td>
-                {/* Sil butonu */}
-                <td style={{ padding: "10px 12px" }}>
-                  <button
-                    onClick={() => setConfirm({ id: u.user_id, name: u.full_name ?? u.email ?? u.user_id, email: u.email ?? "" })}
-                    disabled={loading === u.user_id + "_delete"}
-                    style={{
-                      padding: "3px 10px", borderRadius: 6, border: "none",
-                      cursor: "pointer", fontSize: 11, fontWeight: 700,
-                      background: "color-mix(in srgb, var(--red) 12%, transparent)",
-                      color: "var(--red)",
-                    }}
-                  >
-                    Sil
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--muted)", fontSize: 13 }}>
-            Kullanıcı bulunamadı.
-          </div>
-        )}
-      </div>
-
-      {/* Silme Onay Modalı */}
-      {confirm && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
-          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999,
-        }}>
-          <div className="card" style={{ padding: 32, maxWidth: 380, width: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-            <h3 style={{ fontWeight: 800, marginBottom: 10 }}>Kullanıcıyı Sil</h3>
-            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-              <strong style={{ color: "var(--text)" }}>{confirm.name}</strong> kalıcı olarak silinecek.
-              Bu işlem geri alınamaz.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => setConfirm(null)}
-                style={{
-                  flex: 1, padding: "10px 0", borderRadius: 10,
-                  background: "var(--surface2)", border: "1px solid var(--border)",
-                  color: "var(--text)", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                }}
-              >
-                İptal
-              </button>
-              <button
-                onClick={() => deleteUser(confirm.id, confirm.email)}
-                disabled={loading === confirm.id + "_delete"}
-                style={{
-                  flex: 1, padding: "10px 0", borderRadius: 10,
-                  background: "var(--red)", border: "none",
-                  color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                }}
-              >
-                {loading === confirm.id + "_delete" ? "Siliniyor..." : "Evet, Sil"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {open && <UserDrawer user={open} now={now} onClose={() => setOpenId(null)} onPatch={(p) => patch(open.id, p)}
+        onDeleted={() => { setUsers((prev) => prev.filter((u) => u.id !== open.id)); setOpenId(null); }} />}
     </div>
+  );
+}
+
+function UserDrawer({ user: u, now, onClose, onPatch, onDeleted }: {
+  user: SaUser; now: number; onClose: () => void; onPatch: (p: Partial<SaUser>) => void; onDeleted: () => void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [typed, setTyped] = useState("");
+
+  async function call(key: string, init: RequestInit, url = `/api/superadmin/users/${u.id}`): Promise<boolean> {
+    setBusy(key); setMsg(null);
+    try {
+      const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...init });
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) { setMsg({ ok: false, text: data.error ?? "İşlem başarısız" }); return false; }
+      return true;
+    } catch {
+      setMsg({ ok: false, text: "Ağ hatası" }); return false;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const act = async (action: string, ok: string) => {
+    if (await call(action, { method: "POST", body: JSON.stringify({ action }) })) setMsg({ ok: true, text: ok });
+  };
+
+  const row = (dt: string, dd: React.ReactNode) => (<><dt>{dt}</dt><dd>{dd}</dd></>);
+
+  return (
+    <>
+      <div className="sa-drawer-backdrop" onClick={onClose} />
+      <aside className="sa-drawer" role="dialog" aria-modal="true" aria-labelledby="sa-user-title">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 16 }}>
+          <div style={{ minWidth: 0 }}>
+            <h2 id="sa-user-title" style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>{u.name || "İsimsiz"}</h2>
+            <div className="sa-muted" style={{ fontSize: 13, overflowWrap: "anywhere" }}>{u.email}</div>
+          </div>
+          <button className="btn btn-ghost" onClick={onClose} aria-label="Kapat" style={{ padding: "6px 10px" }}>✕</button>
+        </div>
+
+        <dl className="sa-dl">
+          {row("Kayıt", `${dateTR(u.createdAt)} (${ago(u.createdAt, now)})`)}
+          {row("Son giriş", u.lastSignInAt ? `${dateTR(u.lastSignInAt)} (${ago(u.lastSignInAt, now)})` : "hiç")}
+          {row("Son kayıt", u.lastDataAt ? `${dateTR(u.lastDataAt)} (${ago(u.lastDataAt, now)})` : "hiç kayıt girmedi")}
+          {row("Girilen gün", `${u.entryDays} gün · ${u.ndCount} Notdienst`)}
+          {row("Firma", u.companyName ?? "—")}
+          {row("Nereden", u.source ? SOURCE_LABELS[u.source] ?? u.source : "belirtilmemiş")}
+          {row("Davet kodu", u.referredBy ?? "—")}
+          {row("E-posta", u.emailConfirmed ? "✓ onaylı" : "✉️ onaysız")}
+          {row("Hatırlatma", u.reminderLastType ? `${u.reminderLastType} · ${ago(u.reminderLastSentAt, now)}` : "gönderilmedi")}
+          {u.pendingDeletion && row("DSGVO", <span style={{ color: "var(--red)" }}>Silme talebi bekliyor</span>)}
+        </dl>
+
+        <h3 style={{ fontSize: 14, fontWeight: 800, margin: "22px 0 10px" }}>İşlemler</h3>
+        <div style={{ display: "grid", gap: 8 }}>
+          <label className="label" htmlFor="sa-role" style={{ marginBottom: 0 }}>Rol</label>
+          <select id="sa-role" className="input" value={u.role} disabled={busy === "role"}
+            onChange={async (e) => {
+              const r = e.target.value;
+              if (await call("role", { method: "PATCH", body: JSON.stringify({ role: r }) })) { onPatch({ role: r }); setMsg({ ok: true, text: "Rol güncellendi" }); }
+            }}>
+            {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          </select>
+
+          <button className="btn btn-secondary" disabled={busy === "active"}
+            onClick={async () => {
+              if (await call("active", { method: "PATCH", body: JSON.stringify({ is_active: !u.isActive }) })) {
+                onPatch({ isActive: !u.isActive }); setMsg({ ok: true, text: u.isActive ? "Hesap pasif yapıldı" : "Hesap aktif yapıldı" });
+              }
+            }}>
+            {u.isActive ? "⏸ Hesabı pasif yap (giriş engellenir)" : "▶ Hesabı tekrar aktif yap"}
+          </button>
+          <button className="btn btn-secondary" disabled={busy === "reset_password"} onClick={() => void act("reset_password", "Şifre sıfırlama maili gönderildi")}>
+            🔑 Şifre sıfırlama maili gönder
+          </button>
+          {!u.emailConfirmed && (
+            <button className="btn btn-secondary" disabled={busy === "resend_confirmation"} onClick={() => void act("resend_confirmation", "Onay maili tekrar gönderildi")}>
+              ✉️ Onay mailini tekrar gönder
+            </button>
+          )}
+          {u.email && (
+            <a className="btn btn-ghost" href={`mailto:${u.email}`} style={{ textDecoration: "none" }}>📧 E-posta yaz</a>
+          )}
+
+          {!confirmDel ? (
+            <button className="btn btn-danger" onClick={() => { setConfirmDel(true); setTyped(""); }}>🗑 Kullanıcıyı sil</button>
+          ) : (
+            <div style={{ border: "1px solid var(--red)", borderRadius: 10, padding: 12 }}>
+              <p style={{ fontSize: 13, color: "var(--red)", marginBottom: 8, lineHeight: 1.5 }}>
+                Hesap ve tüm verileri (saatler, Notdienst, izinler) kalıcı olarak silinir. Onay için e-postayı yaz:
+              </p>
+              <input className="input" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={u.email ?? ""} aria-label="E-posta onayı" autoComplete="off" />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmDel(false)}>İptal</button>
+                <button className="btn" style={{ flex: 1, background: "var(--red)", color: "#fff", opacity: typed.trim().toLowerCase() === (u.email ?? "").toLowerCase() ? 1 : 0.5 }}
+                  disabled={typed.trim().toLowerCase() !== (u.email ?? "").toLowerCase() || busy === "delete"}
+                  onClick={async () => {
+                    if (await call("delete", { method: "DELETE" }, `/api/superadmin/users/${u.id}?confirm=${encodeURIComponent(u.email ?? "")}`)) onDeleted();
+                  }}>
+                  {busy === "delete" ? "Siliniyor..." : "Kalıcı olarak sil"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {msg && (
+          <p role={msg.ok ? "status" : "alert"} style={{ marginTop: 14, fontSize: 13, color: msg.ok ? "var(--green)" : "var(--red)" }}>
+            {msg.ok ? "✓ " : "⚠️ "}{msg.text}
+          </p>
+        )}
+      </aside>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdmin } from "@supabase/supabase-js";
-import { checkSuperAdmin } from "@/lib/superadmin/auth";
+import { adminClient, checkSuperAdmin } from "@/lib/superadmin/auth";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://stundly.de";
 
 // PATCH /api/superadmin/users/[id]
 // Body: { role?: string } | { is_active?: boolean }
@@ -11,14 +12,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
 
-  const admin = createAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const admin = adminClient();
 
-  // Kendi rolünü değiştirmeyi engelle
+  // Kendi rolünü değiştirmeyi / kendini pasif yapmayı engelle (kilitlenirsin)
   if (body.role && id === caller.id) {
     return NextResponse.json({ error: "Kendi rolünü değiştiremezsin" }, { status: 400 });
+  }
+  if (body.is_active === false && id === caller.id) {
+    return NextResponse.json({ error: "Kendi hesabını pasif yapamazsın" }, { status: 400 });
   }
 
   const allowedRoles = ["super_admin", "company_admin", "employee", "individual"];
@@ -33,6 +34,50 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { error } = await admin.from("profiles").update(updateData).eq("user_id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  await admin.from("audit_log").insert({
+    actor_user_id: caller.id,
+    action:        body.role !== undefined ? "superadmin.user_role_changed" : "superadmin.user_active_changed",
+    resource_type: "auth_user",
+    resource_id:   id,
+    payload:       updateData,
+  });
+
+  return NextResponse.json({ success: true });
+}
+
+/**
+ * POST /api/superadmin/users/[id]  Body: { action: "reset_password" | "resend_confirmation" }
+ * Schickt dem Nutzer die Standard-Mail von Supabase Auth (kein Passwort sichtbar für den Admin).
+ */
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const caller = await checkSuperAdmin();
+  if (!caller) return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
+
+  const { id } = await params;
+  const { action } = await req.json().catch(() => ({ action: null })) as { action?: string | null };
+  const admin = adminClient();
+  const { data } = await admin.auth.admin.getUserById(id);
+  const email = data?.user?.email;
+  if (!email) return NextResponse.json({ error: "Kullanıcı bulunamadı" }, { status: 404 });
+
+  let error: { message: string } | null = null;
+  if (action === "reset_password") {
+    ({ error } = await admin.auth.resetPasswordForEmail(email, { redirectTo: `${APP_URL}/reset-password` }));
+  } else if (action === "resend_confirmation") {
+    if (data.user?.email_confirmed_at) return NextResponse.json({ error: "E-posta zaten onaylı" }, { status: 400 });
+    ({ error } = await admin.auth.resend({ type: "signup", email }));
+  } else {
+    return NextResponse.json({ error: "Geçersiz işlem" }, { status: 400 });
+  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_user_id: caller.id,
+    action:        `superadmin.${action}`,
+    resource_type: "auth_user",
+    resource_id:   id,
+    payload:       { email },
+  });
   return NextResponse.json({ success: true });
 }
 
@@ -62,10 +107,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     );
   }
 
-  const admin = createAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const admin = adminClient();
 
   // Hedef kullanıcının email'ini oku ve confirm ile eşleşiyor mu doğrula.
   // profiles.email ist oft leer (nur in den Einstellungen gepflegt) → Login-E-Mail aus auth.users.

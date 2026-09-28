@@ -1,5 +1,54 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-28 (128) – v0.71.0: Süper admin paneli yenilendi — Beta kokpiti, kullanıcı detayı, işlem geçmişi, mobil, Türkçe
+
+### Kullanıcı isteği
+"Admin panelini daha modern, kullanışlı yapalım — eksik ne, neler olmalı?" → 4 bölümün hepsi + dil Türkçe.
+
+### Bulunan sorunlar
+- Dashboard MRR eski fiyatlarla (9,99/29,99/79,99) hesaplıyordu; beta'da zaten hep 0
+- "Son giriş" hep boştu (`last_seen_at` hiçbir yerde yazılmıyor) → artık auth `last_sign_in_at`
+- Telefonda kullanılamıyordu (sabit 220px sidebar, geniş tablolar); dil TR/DE karışık
+- Rol/aktif değişiklikleri audit'e yazılmıyordu; kendini pasif yapmak mümkündü
+
+### 1. Kokpit (/superadmin)
+- KPI kartları (tıklanınca filtreli kullanıcı listesine gider): kullanıcı/firma, yeni kayıt 7g (bugün/30g),
+  aktif 7g/30g, **aktivasyon oranı** (≥1 kayıt giren %), hiç kullanmamış, pasif 14+ gün, e-posta onaysız,
+  bekleyen DSGVO silme talebi; beta'ya kalan gün
+- 30 günlük grafik (yeni kayıt + o gün kayıt giren) — kütüphanesiz CSS bar
+- "Nereden geldiler" (signup_source), en çok davet getirenler (referred_by → isim), hatırlatma mailleri 7g
+- Gelir: beta'da açıklama; ödeme başlayınca MRR/ARR `lib/pricing` fiyatlarıyla. Eski RevenueChart silindi.
+- Mantık `lib/superadmin/metrics.ts` (saf, test edildi), veri `lib/superadmin/data.ts`
+  (profiles + auth.users + firma adı + aktivite + deletion_requests, 1000-satır sayfalama)
+- **Migration 032** `superadmin_user_activity()` RPC (kullanıcı başı kayıt günü/son kayıt/Notdienst, sadece
+  service_role). Yoksa kod sayfalı okuma ile yedek çalışır.
+
+### 2. Kullanıcılar
+- Segment çipleri (sayılı): Tümü · Aktif 7g · Hiç kullanmamış · Pasif 14+ · Onaysız · Silme talebi (?seg= URL)
+- Arama (isim/e-posta/firma), rol filtresi, sıralama (yeni kayıt / son aktivite), CSV (filtreli, ; ayraçlı, BOM)
+- Satır → sağdan detay paneli: kayıt, son giriş, son kayıt, gün/Notdienst sayısı, firma, kaynak, davet kodu,
+  e-posta onayı, hatırlatma, DSGVO; işlemler: rol, aktif/pasif, **şifre sıfırlama maili**, **onay mailini tekrar
+  gönder**, mailto, silme (e-posta yazarak onay)
+- API: `POST /api/superadmin/users/[id]` {action: reset_password | resend_confirmation} + audit;
+  PATCH audit'e yazıyor, kendini pasif yapma engeli; tüm route `adminClient()` kullanıyor
+
+### 3. İşlem geçmişi (/superadmin/audit)
+- audit_log en yeni üstte, 100'lük sayfalar, "sadece süper admin" filtresi, Türkçe etiketler, aktör adı
+
+### 4. Görünüm
+- Yeni `sa-*` CSS: masaüstü sidebar (aktif sayfa vurgulu, `SaNav`), mobil üst bar + alt sekme çubuğu
+  (Kokpit/Kişiler/Firmalar/Geçmiş/Yeni), listeler mobilde kart, detay paneli tam ekran
+- Tüm panel Türkçe (Firmalar dahil); firma sahibi e-postası auth'tan
+
+### Test
+- Vitest 575/575 (+8 metrics, +5 UsersTable, +4 users API, companies testleri güncel) · ESLint · tsc · build
+- Görsel: geçici /demo/sa-preview (sahte veri) ile 375px ve 1280px kontrol edildi, taşma yok → sayfa silindi
+
+### Kullanıcıya düşen
+- Migration 032'yi çalıştır (yoksa yedek yöntem, biraz yavaş)
+
+---
+
 ## 2026-09-28 (127) – v0.70.0: Super-Admin — Unternehmen löschen, Firmenliste verbessert, User-Löschen repariert
 
 ### Kullanıcı raporu

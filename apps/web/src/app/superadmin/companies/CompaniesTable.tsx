@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type React from "react";
 
 export interface CompanyRow {
   id: string;
@@ -19,11 +18,10 @@ export interface CompanyRow {
   superAdminMembers: number;
 }
 
-const planLabels: Record<string, string> = { trial: "Testphase", individual: "Einzelperson", team: "Team", business: "Unternehmen" };
+const planLabels: Record<string, string> = { trial: "Deneme", individual: "Bireysel", team: "Team", business: "Unternehmen" };
+const COLS = "minmax(180px, 2fr) minmax(150px, 1.5fr) 80px minmax(110px, 1fr) 130px 90px 70px";
 const statusColors: Record<string, string> = { active: "var(--green)", trialing: "var(--yellow)", canceled: "var(--red)", past_due: "var(--orange)" };
 
-const th: React.CSSProperties = { textAlign: "left", padding: "10px 12px", color: "var(--muted)", fontWeight: 600, fontSize: 10, textTransform: "uppercase", whiteSpace: "nowrap" };
-const td: React.CSSProperties = { padding: "10px 12px" };
 
 export default function CompaniesTable({ initialRows }: { initialRows: CompanyRow[] }) {
   const [rows, setRows] = useState(initialRows);
@@ -87,43 +85,39 @@ export default function CompaniesTable({ initialRows }: { initialRows: CompanyRo
         </div>
       )}
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)" }}>
-              {["Unternehmen", "Sahip", "Çalışan", "Stadt", "Plan", "Status", "Seit", ""].map((h, i) => <th key={i} style={th}>{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((c, i) => (
-              <tr key={c.id} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
-                <td style={{ ...td, fontWeight: 700 }}>
-                  {c.name}
-                  {c.vatId && <div style={{ fontFamily: "monospace", fontSize: 10, color: "var(--muted)", fontWeight: 400 }}>{c.vatId}</div>}
-                </td>
-                <td style={{ ...td, color: "var(--muted)", fontSize: 11 }}>{c.ownerEmail ?? "–"}</td>
-                <td style={td}>{c.memberCount}{c.maxEmployees ? <span style={{ color: "var(--muted)" }}> / {c.maxEmployees}</span> : null}</td>
-                <td style={{ ...td, color: "var(--muted)" }}>{[c.city, c.country].filter(Boolean).join(", ") || "–"}</td>
-                <td style={td}>{planLabels[c.plan] ?? c.plan}</td>
-                <td style={td}>
-                  <span style={{ color: statusColors[c.status ?? ""] ?? "var(--muted)", fontWeight: 700, fontSize: 11 }}>{c.status ?? "–"}</span>
-                </td>
-                <td style={{ ...td, color: "var(--muted)", whiteSpace: "nowrap" }}>{new Date(c.createdAt).toLocaleDateString("de-DE")}</td>
-                <td style={td}>
-                  <button
-                    onClick={() => open(c)}
-                    style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, background: "color-mix(in srgb, var(--red) 12%, transparent)", color: "var(--red)" }}
-                  >
-                    Sil
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--muted)", fontSize: 13 }}>Firma bulunamadı.</div>
-        )}
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="sa-list">
+          <div className="sa-row sa-head" style={{ gridTemplateColumns: COLS }}>
+            <span>Firma</span><span>Sahip</span><span>Çalışan</span><span>Şehir</span><span>Plan</span><span>Kayıt</span><span />
+          </div>
+          {filtered.map((c) => (
+            <div key={c.id} className="sa-row" style={{ gridTemplateColumns: COLS }}>
+              <span className="sa-wide" style={{ minWidth: 0 }}>
+                <strong>{c.name}</strong>
+                {c.vatId && <span className="sa-muted" style={{ display: "block", fontFamily: "monospace", fontSize: 11 }}>{c.vatId}</span>}
+              </span>
+              <span className="sa-muted" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis" }}><span className="sa-cell-label">Sahip</span>{c.ownerEmail ?? "—"}</span>
+              <span><span className="sa-cell-label">Çalışan</span>{c.memberCount}{c.maxEmployees ? <span className="sa-muted"> / {c.maxEmployees}</span> : null}</span>
+              <span className="sa-muted"><span className="sa-cell-label">Şehir</span>{[c.city, c.country].filter(Boolean).join(", ") || "—"}</span>
+              <span>
+                <span className="sa-cell-label">Plan</span>{planLabels[c.plan] ?? c.plan}{" "}
+                <span style={{ color: statusColors[c.status ?? ""] ?? "var(--muted)", fontWeight: 700, fontSize: 11 }}>{c.status ?? ""}</span>
+              </span>
+              <span className="sa-muted" style={{ whiteSpace: "nowrap" }}><span className="sa-cell-label">Kayıt</span>{new Date(c.createdAt).toLocaleDateString("tr-TR")}</span>
+              <span>
+                <button
+                  onClick={() => open(c)}
+                  style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "color-mix(in srgb, var(--red) 12%, transparent)", color: "var(--red)" }}
+                >
+                  Sil
+                </button>
+              </span>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div style={{ textAlign: "center", padding: 40, color: "var(--muted)", fontSize: 13 }}>Firma bulunamadı.</div>
+          )}
+        </div>
       </div>
 
       {target && (

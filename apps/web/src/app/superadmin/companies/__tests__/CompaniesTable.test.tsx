@@ -8,7 +8,7 @@ const row = (over: Partial<CompanyRow> = {}): CompanyRow => ({
   ownerEmail: "chef@x.de", memberCount: 2, superAdminMembers: 0, ...over,
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); });
 
 describe("CompaniesTable", () => {
   it("Löschen erst nach exakter Namenseingabe; Erfolg entfernt Zeile", async () => {

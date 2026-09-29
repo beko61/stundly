@@ -1,5 +1,15 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-29 (135) – v0.73.2: Telefonda Firma-Panel / Admin Panel'e giriş yoktu
+
+Kullanıcı: "telefondan firma paneline, süper panele giremiyorum". Sebep: bu linkler sadece Sidebar'da; Sidebar mobilde
+gizli (`.sidebar { display:none }`), BottomNav'da (Start/Zeit/Berichte/Profil) yer yok.
+- NEU `components/ui/AdminPanelLinks.tsx`: company_admin/super_admin için "🏢 Firma-Panel" (+ super_admin'e "🛡 Admin Panel")
+  büyük butonlar — Profil (`/settings`) sayfasının en üstünde. Panellerden geri dönüş zaten üst çubukta ("Zur App →").
+- `version.ts` 0.73.1 → 0.73.2 · tsc/lint temiz · 619/619 test. Görsel test yok (sadece giriş yapmış admin görür).
+
+---
+
 ## 2026-09-29 (134) – v0.73.1: "Bugünkü Notdienst sayılmıyor" — Pazar kuralı artık ekranda yazıyor
 
 Kullanıcı (firma çalışanı hesabı): bugün girdiği Notdienst sayılmıyor, eski tarihtekiler sayılıyor. DB kontrol:

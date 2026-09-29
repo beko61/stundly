@@ -8,6 +8,7 @@ import { BUNDESLAENDER } from "@/lib/utils/feiertage";
 import { parseInternetsizExport } from "@/lib/import/internetsizImport";
 import type { ImportPayload } from "@/lib/import/internetsizImport";
 import { AutoFillReports } from "@/components/settings/AutoFillReports";
+import { AdminPanelLinks } from "@/components/ui/AdminPanelLinks";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { PrivacyAccountCard } from "@/components/settings/PrivacyAccountCard";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -350,6 +351,9 @@ export default function SettingsPage() {
       </div>
 
       <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 16, paddingBottom: 40, maxWidth: 960, margin: "0 auto" }}>
+
+        {/* Firmen-/Admin-Panel — mobil sonst nicht erreichbar (Sidebar ausgeblendet) */}
+        <AdminPanelLinks />
 
         {/* ── Firmendaten ── */}
         <div className="card">

@@ -30,6 +30,6 @@ create index if not exists profiles_active_idx
 comment on column public.profiles.deleted_at is
   'Soft-delete tarihi. null = aktif. Set ise mitarbeiter tüm UI listelerinden filtrelenir.';
 comment on column public.profiles.deleted_by is
-  'Soft-delete'i yapan company_admin (auth.users.id).';
+  'Company admin who soft-deleted this profile (auth.users.id).';
 
 select 'Migration 019 basarili: deleted_at + deleted_by + active index.' as result;

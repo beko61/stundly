@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import type { TimeEntry } from "@workly/shared";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
+import { AUTOFILL_TAG } from "@/lib/company/monthCheck";
 import {
   DEFAULT_STANDARD_TIMES,
   getStandardTimes,
@@ -96,6 +98,8 @@ export function AutoFillReports() {
 
   const remaining = loadingYear ? null : computeRemainingWorkdays();
   const fullyFilled = remaining === 0;
+  // Firmen-Mitarbeiter: keine Pauschal-Befüllung — die Firma braucht echte Zeiten
+  const isCompanyEmployee = !!useCompanyMembership().data?.isCompanyEmployee;
 
   /** Tüm yılın boş Mo-Fr günlerini standart saatlerle doldur. */
   async function handleYearFill() {
@@ -138,7 +142,8 @@ export function AutoFillReports() {
             break_minutes: isFriday ? std.friPause : std.monThuPause,
             is_night_shift: false,
             note: null,
-            tags: [],
+            // Markierung: Firma sieht, dass diese Tage automatisch befüllt wurden (lib/company/monthCheck)
+            tags: [AUTOFILL_TAG],
           });
         }
       }
@@ -260,7 +265,16 @@ export function AutoFillReports() {
         </select>
       </div>
 
-      {/* Year auto-fill */}
+      {/* Year auto-fill — nicht für Firmen-Mitarbeiter */}
+      {isCompanyEmployee ? (
+        <div style={{
+          padding: "12px 14px", borderRadius: 10, fontSize: 12, lineHeight: 1.5, color: "var(--muted)",
+          background: "var(--surface2)", border: "1px solid var(--border)",
+        }}>
+          🔒 Die Jahres-Befüllung ist bei Firmenkonten ausgeschaltet — deine Firma braucht deine echten Zeiten.
+          Die Standardzeiten oben werden weiter für neue Einträge im Tracker vorgeschlagen.
+        </div>
+      ) : (
       <button
         type="button"
         onClick={() => void handleYearFill()}
@@ -289,6 +303,7 @@ export function AutoFillReports() {
               ? `✓ ${year} ist komplett befüllt`
               : `⚡ ${year} komplett befüllen${remaining !== null ? ` · ${remaining} Werktage offen` : ""}`}
       </button>
+      )}
       {yearFillResult && (
         <div style={{
           padding: "10px 12px",

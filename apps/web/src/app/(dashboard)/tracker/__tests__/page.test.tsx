@@ -21,6 +21,12 @@ vi.mock("@/hooks/queries/useNotdienstEntries", () => ({
 vi.mock("@/hooks/queries/useCompanyMembership", () => ({
   useCompanyMembership: () => ({ data: { isCompanyEmployee: false, contract: null } }),
 }));
+vi.mock("@/hooks/queries/useCompanyWorkflow", () => ({
+  monthKey: (y: number, m: number) => `${y}-${m}`,
+  useMonthClosings: () => ({ data: undefined }),
+  useEntryCorrections: () => ({ data: undefined }),
+}));
+vi.mock("@/components/tracker/CompanyMonthBar", () => ({ CompanyMonthBar: () => null }));
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     auth: { getSession: async () => ({ data: { session: { user: { id: "u1" } } } }) },

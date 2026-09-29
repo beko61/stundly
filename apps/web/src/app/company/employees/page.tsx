@@ -16,6 +16,8 @@ interface EmployeeSummary {
   workDays:        number;
   vacationDays:    number;
   sickDays:        number;
+  /** Abschluss des Vormonats (Migration 033) */
+  prevMonthStatus?: "submitted" | "approved" | null;
 }
 
 interface Invitation {
@@ -187,6 +189,7 @@ export default function EmployeesPage() {
   if (loading) return <div style={{ color: "var(--muted)", padding: 32 }}>Laden...</div>;
 
   const monthName = new Date().toLocaleDateString("de-DE", { month: "long" });
+  const prevMonthName = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toLocaleDateString("de-DE", { month: "short" }); })();
 
   return (
     <div>
@@ -387,6 +390,12 @@ export default function EmployeesPage() {
                     </div>
                     <div style={{ fontSize: 10, color: "var(--muted)" }}>
                       {emp.workDays}T · {emp.vacationDays}🏖 · {emp.sickDays}🤒
+                    </div>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, marginTop: 2,
+                      color: emp.prevMonthStatus === "approved" ? "var(--green)" : emp.prevMonthStatus === "submitted" ? "var(--accent2)" : "var(--muted)",
+                    }}>
+                      {prevMonthName}: {emp.prevMonthStatus === "approved" ? "🔒 freigegeben" : emp.prevMonthStatus === "submitted" ? "📤 eingereicht" : "offen"}
                     </div>
                   </div>
 

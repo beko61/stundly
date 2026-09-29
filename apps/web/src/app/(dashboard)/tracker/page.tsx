@@ -19,7 +19,9 @@ import {
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { getFeiertage } from "@/lib/utils/feiertage";
-import { notdienstLoadRange } from "@/lib/utils/weekMonth";
+import { notdienstLoadRange, notdienstMonthOf } from "@/lib/utils/weekMonth";
+import { monthKey, useEntryCorrections, useMonthClosings } from "@/hooks/queries/useCompanyWorkflow";
+import { CompanyMonthBar } from "@/components/tracker/CompanyMonthBar";
 import type { NotdienstEntry } from "@/components/tracker/NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
 
@@ -46,8 +48,16 @@ export default function TrackerPage() {
   // isPending (nicht isLoading): in RQ v5 ist eine noch deaktivierte Query (Session lädt)
   // isLoading=false — der Scroll lief dann zu früh.
   const queriesReady = !entriesQ.isPending && !ndQ.isPending;
-  // Firmen-Mitarbeiter: Notdienst-"Bezahlt" setzt die Firma (Migration 033)
+  // Firmen-Mitarbeiter: Notdienst-"Bezahlt" setzt die Firma, freigegebene Monate sind gesperrt (Migration 033)
   const paidByCompany = !!useCompanyMembership().data?.isCompanyEmployee;
+  const closingsQ = useMonthClosings(paidByCompany);
+  const correctionsQ = useEntryCorrections(paidByCompany);
+  const isApproved = (y: number, m: number) => closingsQ.data?.get(monthKey(y, m))?.status === "approved";
+  const monthLocked = paidByCompany && isApproved(year, month);
+  const correctedDates = useMemo(
+    () => new Set((correctionsQ.data ?? []).map((c) => c.entry_date)),
+    [correctionsQ.data],
+  );
   const createMut = useCreateTimeEntry();
   const updateMut = useUpdateTimeEntry();
   const deleteMut = useDeleteTimeEntry();
@@ -155,6 +165,7 @@ export default function TrackerPage() {
     <>
       <MonthNav />
       <MonthlySummary feiertage={feiertage} />
+      {paidByCompany && <CompanyMonthBar year={year} month={month} />}
       {sampleCount > 0 && (
         <div
           role="status"
@@ -225,6 +236,9 @@ export default function TrackerPage() {
                 feiertag={feiertage[dateStr] || undefined}
                 ndEntries={ndByDate.get(dateStr) ?? EMPTY_ND}
                 paidByCompany={paidByCompany}
+                locked={monthLocked}
+                ndLocked={paidByCompany && (() => { const m = notdienstMonthOf(dateStr); return isApproved(m.year, m.month); })()}
+                corrected={correctedDates.has(dateStr)}
                 onCreate={create}
                 onUpdate={update}
                 onDelete={async (id) => { await remove(id, dateStr); }}

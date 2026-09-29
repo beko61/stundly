@@ -12,7 +12,8 @@ import { StundenzettelVorlageForm } from "../StundenzettelVorlageForm";
 describe("StundenzettelVorlageForm", () => {
   it("lädt jsPDF vor, erstellt beim Klick das PDF mit den Eingaben und zeigt danach den Hinweis", async () => {
     render(<StundenzettelVorlageForm />);
-    const btn = await screen.findByRole("button", { name: /herunterladen/ });
+    // jsPDF-Vorladen dauert bei voller Testsuite länger als das Standard-Timeout (1 s)
+    const btn = await screen.findByRole("button", { name: /herunterladen/ }, { timeout: 5000 });
     await waitFor(() => expect(btn).not.toBeDisabled());
 
     fireEvent.change(screen.getByLabelText("Monat"), { target: { value: "3" } });

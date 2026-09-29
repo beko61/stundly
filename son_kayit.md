@@ -1,5 +1,41 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-29 (133) – v0.73.0: Firma paneli Faz B — ay gönder/onay, gerekçeli düzeltme, otomatik kontroller
+
+Kullanıcı testte çalışanla girip Jahres-Befüllung'a bastı (254 gün tek seferde) → "firma çalışanında bu tehlikeli"
+tespiti; kullanıcı "alalım" dedi → Faz B ile birlikte yapıldı. Migration gerekmez (033'teki tablolar).
+
+### Çalışan (tracker)
+- NEU `components/tracker/CompanyMonthBar` (sadece firma çalışanı): "📤 Monat einreichen" / "eingereicht · Zurückziehen"
+  / "🔒 freigegeben"; firmanın ungesehene Korrekturen'i (Vorher → Nachher + Grund) + "Verstanden"
+- DayEntry: freigegebener ayda satır kilitli (🔒, modal/× yok), Notdienst kilidi Pazar-ayına göre, "✏️ korrigiert" işareti
+- NEU `hooks/queries/useCompanyWorkflow` (month_closings, entry_corrections — RLS ile okuma)
+- NEU API `POST /api/month/submit` (submit/withdraw; onaylanmış ayda 409), `POST /api/corrections/seen`
+- Jahres-Befüllung: firma çalışanında kapalı (açıklama kartı); tek başına kullananlarda eklenen günler `tags:["autofill"]`
+
+### Firma (çalışan detayı)
+- NEU `MonthClosingCard`: "✓ Monat freigeben" (Auffälligkeit varsa onay sorar) / "Wieder öffnen"
+- NEU Auffälligkeiten kartı — `lib/company/monthCheck.checkMonth`: >10h (§3), Pause (§4: >6h→30m, >9h→45m),
+  Ruhezeit <11h (§5, Notdienst-Ende dahil, Vormonat son günü dahil), eksik iş günü (geçmiş, tatil/Beschäftigungsbeginn hariç),
+  autofill toplu uyarı. Tabloda sorunlu günler kırmızı, "AUTO" ve "✎ KORR." rozetleri
+- NEU `CorrectionButton` (✎ her satırda): Status/Beginn/Ende/Pause veya silme + zorunlu Grund
+- NEU API `POST /api/company/corrections`: önce entry_corrections'a Vorher/Nachher+Grund (başarısızsa değişiklik yok),
+  sonra time_entries upsert/delete; yazma başarısızsa kayıt geri alınır. Audit `entry.corrected`
+- NEU API `POST /api/company/month-closings` (approve/reopen, audit `month.approved/reopened`)
+- Korrekturen listesi (Monat) + "vom Mitarbeiter gesehen ✓"
+- Mitarbeiter listesi: Vormonat durumu (offen / 📤 eingereicht / 🔒 freigegeben) — team-summary `prevMonthStatus`
+
+### Test
+- NEU `unit/monthCheck.test.ts` (9), `api/company/__tests__/monthWorkflow.test.ts` (15); tracker test mock'ları;
+  StundenzettelVorlageForm testi tam suite'te yavaş jsPDF yüzünden flaky → timeout 5 s. 617/617, tsc + lint temiz.
+- Görsel: /demo'da MonthClosingCard + düzeltme penceresi (telefon) kontrol edildi, silindi.
+
+### SIRADAKİ (Faz C)
+Mobil Übersicht (görev kartları + ilerleme halkası), Notdienst-Zentrale, Einsätze abrechnen CSV.
+Açık sorular hâlâ: Pauschale sabit mi? Nöbet sırası elle/otomatik?
+
+---
+
 ## 2026-09-29 (132) – v0.72.1: Firma paneli hiç açılmıyordu — Migration 019 + layout render hatası
 
 Kullanıcı: "çalışan ekleyemiyorum", sonra "Fehler-ID: 3957571891".

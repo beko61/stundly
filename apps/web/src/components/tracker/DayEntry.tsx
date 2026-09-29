@@ -76,12 +76,18 @@ interface Props {
   ndEntries:  NotdienstEntry[];
   /** Firmen-Mitarbeiter: Bezahlt-Status setzt die Firma — hier nur Anzeige */
   paidByCompany?: boolean;
-  onCreate:  (e: Omit<TimeEntry,"id"|"user_id"|"created_at"|"updated_at"|"synced_at">) => Promise<{error:string|null}|undefined>;
+  /** Monat von der Firma freigegeben → Tageseintrag nur lesen */
+  locked?: boolean;
+  /** Notdienst-Monat (Wochen-Sonntag) freigegeben → Notdienste nur lesen */
+  ndLocked?: boolean;
+  /** Firma hat diesen Tag korrigiert */
+  corrected?: boolean;
+  onCreate: (e: Omit<TimeEntry,"id"|"user_id"|"created_at"|"updated_at"|"synced_at">) => Promise<{error:string|null}|undefined>;
   onUpdate:   (id:string, patch:Partial<TimeEntry>) => Promise<{error:string|null}>;
   onDelete:   (id:string) => Promise<void>;
 }
 
-export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, ndEntries, paidByCompany = false, onCreate, onUpdate, onDelete }: Props) {
+export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, ndEntries, paidByCompany = false, locked = false, ndLocked = false, corrected = false, onCreate, onUpdate, onDelete }: Props) {
   const [modalOpen, setModalOpen]   = useState(false);
   const [ndModal, setNdModal]       = useState<"new" | NotdienstEntry | null>(null);
   const qc = useQueryClient();
@@ -133,8 +139,9 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
     <>
       <div className="day-entry" style={{ opacity: isWeekend && !entry && ndEntries.length===0 ? 0.55 : 1, ...borderStyle }}>
         {/* Main row */}
-        <div style={{ display:"flex", alignItems:"center", padding:"12px 14px", gap:12, cursor:"pointer" }}
-          onClick={() => setModalOpen(true)}>
+        <div style={{ display:"flex", alignItems:"center", padding:"12px 14px", gap:12, cursor: locked ? "default" : "pointer" }}
+          title={locked ? "Monat von deiner Firma freigegeben — Änderungen nur durch die Firma" : undefined}
+          onClick={() => { if (!locked) setModalOpen(true); }}>
           <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:500,
             color: isToday?"var(--accent2)":"var(--muted)", width:28, textAlign:"center", flexShrink:0 }}>
             {String(dayNum).padStart(2,"0")}
@@ -144,6 +151,8 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
             <div style={{ fontSize:12, color:"var(--muted)", fontWeight:600 }}>
               {WEEKDAYS[dayOfWeek]}
               {isToday && <span style={{ display:"inline-block", width:7, height:7, background:"var(--accent2)", borderRadius:"50%", marginLeft:6, verticalAlign:"middle" }} />}
+              {corrected && <span title="Von deiner Firma korrigiert" style={{ marginLeft:6, fontSize:10, color:"var(--yellow)", fontWeight:700 }}>✏️ korrigiert</span>}
+              {locked && <span aria-label="Gesperrt" style={{ marginLeft:6, fontSize:10 }}>🔒</span>}
             </div>
             {entry ? (
               <div style={{ fontSize:13, fontWeight:700, color:STATUS_COLOR[entry.day_type], marginTop:1 }}>
@@ -165,7 +174,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
               </div>
             ) : (
               <div style={{ fontSize:12, color:"var(--muted)", marginTop:1 }}>
-                {isWeekend ? "Wochenende" : "+ Eintrag hinzufügen"}
+                {isWeekend ? "Wochenende" : locked ? "—" : "+ Eintrag hinzufügen"}
               </div>
             )}
           </div>
@@ -179,7 +188,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                 {netHours}
               </span>
             )}
-            {entry && (
+            {entry && !locked && (
               <button
                 aria-label="Eintrag löschen"
                 style={{
@@ -263,7 +272,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
               return (
                 <div key={nd.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0",
                   borderBottom: idx<ndEntries.length-1?"1px solid var(--surface2)":"none" }}
-                  onClick={e => { e.stopPropagation(); setNdModal(nd); }}>
+                  onClick={e => { e.stopPropagation(); if (!ndLocked) setNdModal(nd); }}>
                   <span style={{ fontSize:11, color:"var(--orange)", fontWeight:700, flexShrink:0 }}>
                     Nd {idx+1}{isPendingRow(nd) && <span title="Offline gespeichert — noch nicht übertragen"> 📤</span>}
                   </span>
@@ -340,7 +349,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
         )}
 
         {/* + Notdienst hinzufügen — auch an Wochenenden + Feiertagen (DB-Eintrag nicht nötig) */}
-        {(entry || isWeekend || isFeiertag) && ndEntries.length < 6 && (
+        {(entry || isWeekend || isFeiertag) && ndEntries.length < 6 && !ndLocked && (
           <button onClick={e => { e.stopPropagation(); setNdModal("new"); }}
             style={{ width:"calc(100% - 28px)", margin:"0 14px 12px", padding:"7px",
               background:"transparent", border:"1px dashed var(--orange)", borderRadius:8,

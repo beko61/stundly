@@ -15,6 +15,25 @@ import { contractFromProfile, monthlyTargetFromWeekly } from "@/lib/company/cont
 import { calcMonthStats, DEFAULT_TARGET_HOURS_PER_MONTH } from "@/lib/utils/monthStats";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { getFeiertage } from "@/lib/utils/feiertage";
+import { checkMonth, AUTOFILL_TAG, type CheckEntry, type CheckKind } from "@/lib/company/monthCheck";
+import { MonthClosingCard } from "./MonthClosingCard";
+import { CorrectionButton } from "./CorrectionButton";
+
+const FINDING_LABEL: Record<CheckKind, { icon: string; label: string; color: string }> = {
+  over10h:  { icon: "⏱", label: "Über 10 Stunden",  color: "var(--red)" },
+  ruhezeit: { icon: "🌙", label: "Ruhezeit",         color: "var(--red)" },
+  pause:    { icon: "☕", label: "Pause zu kurz",    color: "var(--orange)" },
+  missing:  { icon: "❔", label: "Fehlender Tag",    color: "var(--yellow)" },
+  autofill: { icon: "⚡", label: "Automatisch",      color: "var(--yellow)" },
+};
+
+function describeCorr(e: Record<string, unknown> | null): string {
+  if (!e) return "kein Eintrag";
+  const t = (v: unknown) => (typeof v === "string" ? v.slice(0, 5) : "–");
+  const dt = String(e["day_type"] ?? "");
+  const label = dt.charAt(0).toUpperCase() + dt.slice(1);
+  return dt === "arbeiten" ? `${label} ${t(e["start_time"])}–${t(e["end_time"])}, ${Number(e["break_minutes"] ?? 0)}m Pause` : label;
+}
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const WEEKDAYS_SHORT = ["So","Mo","Di","Mi","Do","Fr","Sa"];
@@ -85,14 +104,36 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   const daysInMonth = new Date(year, month, 0).getDate();
   const lastDay  = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
 
-  // 3) Time entries (bu ay)
-  const { data: entries } = await admin
+  // 3) Time entries (bu ay + Vortag für die Ruhezeit-Prüfung am 1.)
+  const prevDayDate = new Date(Date.UTC(year, month - 1, 0));
+  const prevDay = prevDayDate.toISOString().slice(0, 10);
+  const { data: entriesWithPrev } = await admin
     .from("time_entries")
-    .select("id, date, start_time, end_time, break_minutes, day_type, note, is_night_shift")
+    .select("id, date, start_time, end_time, break_minutes, day_type, note, is_night_shift, tags")
     .eq("user_id", userId)
-    .gte("date", firstDay)
+    .gte("date", prevDay)
     .lte("date", lastDay)
     .order("date", { ascending: true });
+  const entries = (entriesWithPrev ?? []).filter((e) => e.date >= firstDay);
+
+  // Monatsabschluss + Korrekturen dieses Monats (Migration 033)
+  const [{ data: closingRow }, { data: correctionRows }] = await Promise.all([
+    admin.from("month_closings")
+      .select("status, submitted_at, approved_at")
+      .eq("user_id", userId).eq("year", year).eq("month", month)
+      .maybeSingle(),
+    admin.from("entry_corrections")
+      .select("id, entry_date, before, after, reason, created_at, seen_at")
+      .eq("user_id", userId)
+      .gte("entry_date", firstDay).lte("entry_date", lastDay)
+      .order("created_at", { ascending: false }),
+  ]);
+  const closing = closingRow as { status: "submitted" | "approved"; submitted_at: string | null; approved_at: string | null } | null;
+  const corrections = (correctionRows ?? []) as {
+    id: string; entry_date: string; reason: string; created_at: string; seen_at: string | null;
+    before: Record<string, unknown> | null; after: Record<string, unknown> | null;
+  }[];
+  const correctedDates = new Set(corrections.map((c) => c.entry_date));
 
   // 4) Tüm Urlaubsanträge (zaman sınırı yok)
   const { data: vacations } = await admin
@@ -139,6 +180,20 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       erledigt:      !!n.erledigt,
     }));
   const ndOffen = ndEntries.filter((n) => !n.erledigt).length;
+
+  // Auffälligkeiten (ArbZG, fehlende Tage, automatisch befüllt)
+  const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const findings = checkMonth({
+    entries:   (entriesWithPrev ?? []) as CheckEntry[],
+    ndEntries: ((ndRaw ?? []) as Record<string, unknown>[]).map((n) => ({
+      date: n.date as string, start_time: (n.start_time as string | null) ?? null, end_time: (n.end_time as string | null) ?? null,
+    })),
+    year, month,
+    feiertage: getFeiertage(year, (employee.bundesland as string | null) ?? "NI"),
+    todayISO:  todayLocal,
+    startDate: contract?.start_date ?? null,
+  });
+  const findingDates = new Set(findings.filter((f) => f.kind !== "autofill").map((f) => f.date));
 
   // Prev/Next ay linkleri
   const prevMonth = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
@@ -249,6 +304,45 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
           </Link>
         </div>
       </div>
+
+      {/* Monatsabschluss */}
+      <MonthClosingCard
+        key={`${year}-${month}`}
+        userId={userId}
+        year={year}
+        month={month}
+        monthLabel={`${MONTHS[month - 1]} ${year}`}
+        status={closing?.status ?? null}
+        submittedAt={closing?.submitted_at ?? null}
+        approvedAt={closing?.approved_at ?? null}
+        findingsCount={findings.length}
+      />
+
+      {/* Auffälligkeiten */}
+      {findings.length > 0 && (
+        <div className="card" style={{ padding: "14px 18px", marginBottom: 20 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>
+            ⚠️ {findings.length} Auffälligkeit{findings.length === 1 ? "" : "en"}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {findings.map((f, i) => {
+              const fl = FINDING_LABEL[f.kind];
+              return (
+                <div key={`${f.kind}-${f.date}-${i}`} style={{ display: "flex", gap: 8, fontSize: 13, alignItems: "baseline", flexWrap: "wrap" }}>
+                  <span style={{ color: fl.color, fontWeight: 700, minWidth: 150 }}>{fl.icon} {fl.label}</span>
+                  {f.kind !== "autofill" && (
+                    <span style={{ fontWeight: 700 }}>{f.date.slice(8, 10)}.{f.date.slice(5, 7)}.</span>
+                  )}
+                  <span style={{ color: "var(--muted)" }}>{f.text}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 10 }}>
+            Mit ✎ in der Tabelle korrigieren — der Mitarbeiter sieht Änderung und Grund.
+          </div>
+        </div>
+      )}
 
       {/* Summary stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 28 }}>
@@ -381,7 +475,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
-                {["Datum","Tag","Status","Start","Ende","Pause","Stunden"].map((h) => (
+                {["Datum","Tag","Status","Start","Ende","Pause","Stunden",""].map((h) => (
                   <th key={h} style={{
                     textAlign: "left", padding: "10px 14px",
                     fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase",
@@ -395,12 +489,16 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
                 const dt = e?.day_type ?? null;
                 const isWeekend = d.dow === 0 || d.dow === 6;
                 const nm = e ? netMinutesForEntry(e) : 0;
+                const flagged = findingDates.has(d.dateStr);
+                const isAuto = !!e && ((e.tags as string[] | null) ?? []).includes(AUTOFILL_TAG);
 
                 return (
                   <tr key={d.dateStr} style={{
                     borderBottom: "1px solid var(--border)",
-                    background: isWeekend && !e ? "rgba(255,255,255,0.015)" : "transparent",
-                    opacity: isWeekend && !e ? 0.55 : 1,
+                    background: flagged
+                      ? "color-mix(in srgb, var(--red) 7%, transparent)"
+                      : isWeekend && !e ? "rgba(255,255,255,0.015)" : "transparent",
+                    opacity: isWeekend && !e && !flagged ? 0.55 : 1,
                   }}>
                     <td style={{ padding: "10px 14px", fontWeight: 700 }}>
                       {String(d.dayNum).padStart(2, "0")}.{String(month).padStart(2, "0")}.
@@ -414,6 +512,12 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
                       ) : (
                         <span style={{ color: "var(--muted)" }}>—</span>
                       )}
+                      {isAuto && (
+                        <span title="Automatisch mit Standardzeiten befüllt" style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: "var(--yellow)" }}>AUTO</span>
+                      )}
+                      {correctedDates.has(d.dateStr) && (
+                        <span title="Von der Firma korrigiert" style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: "var(--accent2)" }}>✎ KORR.</span>
+                      )}
                     </td>
                     <td style={{ padding: "10px 14px" }}>{e?.start_time?.slice(0, 5) ?? "—"}</td>
                     <td style={{ padding: "10px 14px" }}>{e?.end_time?.slice(0, 5) ?? "—"}</td>
@@ -425,6 +529,13 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
                     <td style={{ padding: "10px 14px", fontWeight: 700, color: nm > 0 ? "var(--accent2)" : "var(--muted)" }}>
                       {nm > 0 ? formatMinutes(nm) : "—"}
                     </td>
+                    <td style={{ padding: "6px 10px", textAlign: "right" }}>
+                      <CorrectionButton
+                        userId={userId}
+                        date={d.dateStr}
+                        entry={e ? { day_type: e.day_type, start_time: e.start_time, end_time: e.end_time, break_minutes: e.break_minutes } : null}
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -432,6 +543,29 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
           </table>
         </div>
       </div>
+
+      {/* Korrekturen dieses Monats — transparent, mit Grund und Gelesen-Status */}
+      {corrections.length > 0 && (
+        <>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Korrekturen · {MONTHS[month - 1]} {year}</h2>
+          <div className="card" style={{ padding: 0, marginBottom: 32, overflow: "hidden" }}>
+            {corrections.map((c, i) => (
+              <div key={c.id} style={{ padding: "10px 14px", borderBottom: i < corrections.length - 1 ? "1px solid var(--border)" : "none", fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <strong>{c.entry_date.slice(8, 10)}.{c.entry_date.slice(5, 7)}.</strong>
+                  <span style={{ fontSize: 11, color: c.seen_at ? "var(--green)" : "var(--muted)" }}>
+                    {c.seen_at ? "✓ vom Mitarbeiter gesehen" : "noch nicht gesehen"}
+                  </span>
+                </div>
+                <div style={{ color: "var(--muted)" }}>{describeCorr(c.before)} → <span style={{ color: "var(--text)" }}>{describeCorr(c.after)}</span></div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                  Grund: „{c.reason}“ · {new Date(c.created_at).toLocaleDateString("de-DE")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Notdienst — Einsätze mit Details, Fotos, Unterschrift, PDF; Bezahlt setzt die Firma */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>

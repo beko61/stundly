@@ -66,11 +66,23 @@ export async function GET(req: NextRequest) {
         .order("created_at", { ascending: false })
     : { data: [] };
 
+  // 3b) Abschluss-Status des Vormonats (wird nach Monatsende eingereicht) — Migration 033
+  const pm = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 };
+  const { data: closings } = userIds.length > 0
+    ? await admin
+        .from("month_closings")
+        .select("user_id, status")
+        .in("user_id", userIds)
+        .eq("year", pm.y).eq("month", pm.m)
+    : { data: [] };
+  const closingMap = new Map(((closings ?? []) as { user_id: string; status: string }[]).map((c) => [c.user_id, c.status]));
+
   // 4) Aggregate per employee
   const summaries = empList.map((emp) => {
     const entries = (timeEntries ?? []).filter((t) => t.user_id === emp.user_id);
     const monthlyMinutes = entries.reduce((sum, e) => sum + netMinutesForEntry(e), 0);
     return {
+      prevMonthStatus: (closingMap.get(emp.user_id) ?? null) as "submitted" | "approved" | null,
       user_id:        emp.user_id,
       full_name:      emp.full_name,
       email:          emp.email,
@@ -102,6 +114,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     month:                `${y}-${String(m).padStart(2, "0")}`,
+    prevMonth:            `${pm.y}-${String(pm.m).padStart(2, "0")}`,
     employees:            summaries,
     totalMinutes,
     pendingVacationCount: pendingList.length,

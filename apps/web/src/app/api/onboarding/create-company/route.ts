@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   // Idempotent: kullanıcı zaten company_admin ise geri dön
   const { data: existing } = await supabase
     .from("profiles")
-    .select("role, company_id")
+    .select("role, company_id, bundesland")
     .eq("user_id", user.id)
     .single();
 
@@ -100,13 +100,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Fehler beim Erstellen des Unternehmens." }, { status: 500 });
   }
 
-  // 2. Profile — role + company_id + bundesland
+  // 2. Profile — role + company_id (+ bundesland nur, wenn noch keins gesetzt)
+  //    super_admin bleibt super_admin (sonst verliert der Inhaber das Admin-Panel —
+  //    super_admin hat im Firmen-Panel ohnehin alle Rechte).
+  //    Ein vorhandenes persönliches Bundesland nicht überschreiben (Feiertage in den eigenen Zeiten).
   const { error: profileErr } = await admin
     .from("profiles")
     .update({
-      role: "company_admin",
+      role: existing?.role === "super_admin" ? "super_admin" : "company_admin",
       company_id: company.id,
-      bundesland,
+      ...(existing?.bundesland ? {} : { bundesland }),
     })
     .eq("user_id", user.id);
 

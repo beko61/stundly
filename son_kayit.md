@@ -1,5 +1,19 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-29 (136) – v0.73.3: Firma kurmak süper admin rolünü siliyordu
+
+Kullanıcı ana hesabıyla (süper admin, 254 Arbeitszeit, 125 Notdienst, 6 Urlaub) "Zuzz" firmasını kurdu ve "firmayı
+silersem saatlerim gider mi?" diye sordu. Kontrol: veriler yerinde, AMA `create-company` rolü her zaman
+`company_admin` yapıyordu → süper admin yetkisi kaybolmuştu. Ayrıca kişisel Bundesland firma Bundesland'ıyla eziliyordu.
+- FIX `api/onboarding/create-company`: super_admin rolü korunur; mevcut kişisel Bundesland ezilmez
+- NEU test `api/onboarding/__tests__/createCompany.test.ts` (3)
+- Kullanıcının rolü veritabanında geri alınmalı (onay bekleniyor)
+- Firma silme (süper admin paneli, "hesapları da sil" işaretsiz): hesaplar + Arbeitszeit/Notdienst/Urlaub kalır;
+  sadece firma, abonelik, davetler, month_closings, entry_corrections (company_id cascade) gider.
+- `version.ts` 0.73.2 → 0.73.3
+
+---
+
 ## 2026-09-29 (135) – v0.73.2: Telefonda Firma-Panel / Admin Panel'e giriş yoktu
 
 Kullanıcı: "telefondan firma paneline, süper panele giremiyorum". Sebep: bu linkler sadece Sidebar'da; Sidebar mobilde

@@ -1,5 +1,27 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-29 (132) – v0.72.1: Firma paneli hiç açılmıyordu — Migration 019 + layout render hatası
+
+Kullanıcı: "çalışan ekleyemiyorum", sonra "Fehler-ID: 3957571891".
+
+### Kök nedenler
+1. **Migration 019 canlıda hiç uygulanmamıştı**: yorum satırındaki apostrof (`'Soft-delete'i yapan...'`) SQL'i
+   bozuyordu → transaction geri alındı → `profiles.deleted_at` yok. Firma layout'u bu kolonu okuyor → sorgu hatası
+   → profil null → /tracker'a yönlendirme. Ayrıca 024 (rate_limit_events) da yoktu (rate limit fail-open çalışıyordu).
+   Canlı DB service key ile REST üzerinden yoklandı. 019 dosyası düzeltildi; kullanıcı 019+024'ü çalıştırdı (teyit: kolonlar var).
+2. **Layout render hatası** (019 düzelince ortaya çıktı): `company/layout.tsx` Server Component'ti ama `<Link>`'e
+   `onMouseEnter/onMouseLeave` veriyordu → "Event handlers cannot be passed to Client Component props" → 500
+   (Fehler-ID = digest). Lokal /demo sayfasında birebir yeniden üretildi.
+
+### Düzeltme
+- NEU `company/components/CompanyNav.tsx` (client, aktif sayfa vurgulu) — hover CSS ile (`sa-*` sınıfları)
+- `company/layout.tsx`: süper admin paneliyle aynı iskelet → telefonda üst bar + alt sekme çubuğu (Start/Team/Berichte/Log/Abo)
+- `company/employees/page.tsx`: firması olmayan hesapta sonsuz "Laden..." yerine hata mesajı
+- Tarama: başka Server Component'te event handler yok. Diğer migration'larda dengesiz tırnak yok.
+- `version.ts` 0.72.0 → 0.72.1 · tsc/lint temiz · 593/593 test
+
+---
+
 ## 2026-09-29 (131) – v0.72.0: Firma paneli Faz A — sözleşme, Notdienst görünümü, bezahlt firmada
 
 Rakip analizi (clockin, Crewmeister, Clockodo, Papershift, TimeTac, 123erfasst, Craftnote, HERO + OMR yorumları) ve

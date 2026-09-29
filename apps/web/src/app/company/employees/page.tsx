@@ -68,7 +68,11 @@ export default function EmployeesPage() {
     const { data: profile } = await supabase
       .from("profiles").select("company_id").eq("user_id", user.id).single();
 
-    if (!profile?.company_id) return;
+    if (!profile?.company_id) {
+      setError("Deinem Konto ist keine Firma zugeordnet.");
+      setLoading(false);
+      return;
+    }
     setCompanyId(profile.company_id);
 
     // Team summary — includeDeleted=true ile soft-deleted da gelir, frontend ayırır

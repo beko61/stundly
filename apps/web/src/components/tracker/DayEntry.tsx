@@ -74,12 +74,14 @@ interface Props {
   feiertag?:  string | undefined; // holiday name if applicable
   /** Notdienst-Einträge dieses Tages — vom Tracker einmal pro Monat geladen (React Query). */
   ndEntries:  NotdienstEntry[];
-  onCreate:   (e: Omit<TimeEntry,"id"|"user_id"|"created_at"|"updated_at"|"synced_at">) => Promise<{error:string|null}|undefined>;
+  /** Firmen-Mitarbeiter: Bezahlt-Status setzt die Firma — hier nur Anzeige */
+  paidByCompany?: boolean;
+  onCreate:  (e: Omit<TimeEntry,"id"|"user_id"|"created_at"|"updated_at"|"synced_at">) => Promise<{error:string|null}|undefined>;
   onUpdate:   (id:string, patch:Partial<TimeEntry>) => Promise<{error:string|null}>;
   onDelete:   (id:string) => Promise<void>;
 }
 
-export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, ndEntries, onCreate, onUpdate, onDelete }: Props) {
+export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, ndEntries, paidByCompany = false, onCreate, onUpdate, onDelete }: Props) {
   const [modalOpen, setModalOpen]   = useState(false);
   const [ndModal, setNdModal]       = useState<"new" | NotdienstEntry | null>(null);
   const qc = useQueryClient();
@@ -280,6 +282,19 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                     </div>
                     {nd.kunde && <NoteLine icon="📋" text={nd.kunde} />}
                   </div>
+                  {paidByCompany ? (
+                    <span
+                      role="img"
+                      aria-label={nd.erledigt ? "Von deiner Firma als bezahlt markiert" : "Noch nicht bezahlt — setzt deine Firma"}
+                      title={nd.erledigt ? "Von deiner Firma als bezahlt markiert" : "Noch nicht bezahlt — setzt deine Firma"}
+                      style={{
+                        fontSize: 20, lineHeight: 1, minWidth: 44, minHeight: 44,
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      {nd.erledigt ? "✅" : "⏳"}
+                    </span>
+                  ) : (
                   <button
                     type="button"
                     onClick={async (ev) => {
@@ -317,6 +332,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                   >
                     {nd.erledigt ? "✅" : "⏳"}
                   </button>
+                  )}
                 </div>
               );
             })}
@@ -345,6 +361,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
         <NotdienstModal
           date={date}
           entry={ndModal === "new" ? null : ndModal}
+          paidByCompany={paidByCompany}
           onSave={refreshNd}
           onDelete={refreshNd}
           onClose={() => setNdModal(null)}

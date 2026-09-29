@@ -85,7 +85,7 @@ export function formatMinutes(mins: number): string {
  * Für alle Firmen-Routen, die auf Daten eines Mitarbeiters zugreifen.
  */
 export async function getTeamMember(
-  admin: ReturnType<typeof createAdminClient>,
+  admin: NonNullable<Awaited<ReturnType<typeof getCompanyAdminContext>>>["admin"],
   companyId: string,
   userId: string,
 ): Promise<{ user_id: string; role: string; full_name: string | null } | null> {

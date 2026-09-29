@@ -76,6 +76,19 @@ describe("NotdienstModal", () => {
     expect(screen.getByRole("button", { name: /Aktualisieren/ })).toBeInTheDocument();
   });
 
+  it("Firmen-Mitarbeiter: kein Bezahlt-Schalter, erledigt wird nicht mitgeschickt", async () => {
+    const entry = { id: "nd-9", user_id: "u1", date: "2026-09-27", start_time: "18:00:00", end_time: "19:00:00",
+      note: null, kunde: "Frau Kraft", adresse: null, problem: null, ergebnis: null, erledigt: true } as NotdienstEntry;
+    render(<NotdienstModal date="2026-09-27" entry={entry} paidByCompany onSave={vi.fn()} onClose={vi.fn()} />);
+
+    expect(screen.getByText(/Bezahlt-Status setzt deine Firma/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /als (un)?bezahlt markieren/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Aktualisieren/ }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0]![1]).not.toHaveProperty("erledigt");
+  });
+
   it("zweites Speichern im selben Modal → update derselben id, kein zweiter insert", async () => {
     renderModal();
     fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));

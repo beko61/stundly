@@ -11,6 +11,8 @@ import { usePrivacyMode } from "@/lib/privacy";
 import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
+import { applyContract } from "@/lib/company/contract";
 import { InviteColleaguesCard } from "@/components/ui/InviteColleaguesCard";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -146,6 +148,7 @@ export default function DashboardPage() {
   const { data: yearNdRaw      = [], isLoading: lYearNd    } = useNotdienstEntriesQuery(yearStart, yearNdEnd);
   const { data: last7Raw       = [], isLoading: lLast7     } = useTimeEntriesRangeQuery(last7Start, todayStr);
   const { data: salaryData }                                  = useSalarySettingsQuery();
+  const { data: membership }                                  = useCompanyMembership();
 
   const loading = lMonth || lNd || lYearEntry || lYearNd || lLast7;
 
@@ -176,8 +179,9 @@ export default function DashboardPage() {
       notdienst_bonus:          Number(salaryData.notdienst_bonus)          || 0,
       urlaub_anspruch:          Number(salaryData.urlaub_anspruch)          || DEFAULT_SETTINGS.urlaub_anspruch,
     } : DEFAULT_SETTINGS;
-    return mergeSettings(base, localPatch);
-  }, [salaryData, localPatch]);
+    // Vertrag der Firma schlägt einen veralteten localStorage-Stand
+    return applyContract(mergeSettings(base, localPatch), membership?.contract);
+  }, [salaryData, localPatch, membership?.contract]);
 
   // Profile (isim + bundesland) — direkt supabase, single fetch on mount
   useEffect(() => {

@@ -1,5 +1,47 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-29 (131) – v0.72.0: Firma paneli Faz A — sözleşme, Notdienst görünümü, bezahlt firmada
+
+Rakip analizi (clockin, Crewmeister, Clockodo, Papershift, TimeTac, 123erfasst, Craftnote, HERO + OMR yorumları) ve
+5 yaratıcı / 10 kullanıcı bakış açısıyla konsept çıkarıldı (Übersicht görev kartları, Monatsabschluss + otomatik
+Auffälligkeiten, şeffaf düzeltme, Notdienst-Zentrale, Ruhezeit-Warnung, Lohn-Vorbereitung, Chef einladen).
+Kullanıcı: "1.den başla" → Faz A. **Migration 033 gerekli** (çalıştırılmadıysa sözleşme kartı "in Kürze verfügbar"
+der, geri kalan her şey çalışır).
+
+### Firma (Almanca)
+- Çalışan detayı: Soll artık sabit 174h değil → Vertrag (hafta×52/12) > çalışanın salary_settings > 174.
+  İstatistik `calcMonthStats` ile (çalışanın Bundesland tatilleri + Notdienst dahil, çalışanla aynı rakam).
+  Kartlar: Gearbeitet · Notdienst (adet, offen) · Soll · Differenz (inkl. ND) · Urlaub · Krank
+- NEU Notdienst bölümü (`TeamNotdienstList`): Pazar kuralıyla ay listesi, açılır detay (Kunde/Tel/Adresse/
+  Problem/Ergebnis/Notiz), fotoğraflar (büyütme), müşteri imzası, PDF-Bericht (çalışanın firma/imza verisiyle)
+  + fotoları ayrı indir, Bezahlt/Offen düğmesi, "Alle offenen als bezahlt"
+- NEU Vertrag kartı (`ContractCard`): Wochenstunden / Urlaubstage / Beschäftigt seit, "= X h Soll pro Monat",
+  Zurücksetzen (çalışan tekrar kendisi girer)
+- NEU API `PATCH /api/company/employees/[userId]/contract` (profiles.contract_* + en son salary_settings
+  güncellenir/yoksa eklenir, audit `employee.contract_updated`)
+- NEU API `PATCH /api/company/notdienst/[id]` {erledigt} (service role, audit `notdienst.marked_paid/unpaid`)
+- Foto/imza için API gerekmedi: RLS (029) firma adminine okuma izni veriyor
+
+### Çalışan
+- NEU `hooks/queries/useCompanyMembership` (rol + sözleşme; kolonlar yoksa sessizce null)
+- NEU `lib/company/contract.ts` (monthlyTargetFromWeekly, contractFromProfile, applyContract)
+- Maaş sayfası: sözleşme alanları 🔒 "Von deiner Firma festgelegt" (Soll, Urlaubsanspruch, Beschäftigt seit)
+- Dashboard: firmanın sözleşmesi eski localStorage değerini ezer
+- Tracker/DayEntry/NotdienstModal: firma çalışanında ⏳/✅ sadece gösterim, modalda "Den Bezahlt-Status setzt
+  deine Firma", kayıtta `erledigt` gönderilmez (DB trigger'ı da engelliyor)
+
+### Test
+- NEU `api/company/__tests__/workflowRoutes.test.ts` (11), `unit/companyContract.test.ts` (6),
+  NotdienstModal +1 (firma çalışanı); tracker page testine hook mock'u. 593/593 yeşil, tsc + lint temiz.
+- Görsel: geçici /demo sayfasında masaüstü + telefon kontrol edildi (silindi).
+
+### SIRADAKİ (Faz B)
+Çalışan "Monat einreichen" → firma onay/geri açma (month_closings, kilit), gerekçeli düzeltme (entry_corrections)
++ çalışanın düzeltmeyi görmesi, otomatik Auffälligkeiten, Krankmeldung onaysız. Açık sorular: Notdienst
+Pauschale sabit mi? Nöbet sırası elle mi otomatik mi?
+
+---
+
 ## 2026-09-28 (130) – (kod yok) Firma paneli workflow — Migration 033 + başlangıç (DEVAM EDECEK)
 
 Kullanıcı kararı: firma paneli için 4 bölümün hepsi (Notdienst+raporlar, düzeltme+ay onayı, sözleşme saati+izin

@@ -18,6 +18,9 @@ vi.mock("@/hooks/queries/useTimeEntries", () => ({
 vi.mock("@/hooks/queries/useNotdienstEntries", () => ({
   useNotdienstEntriesQuery: () => h.nd,
 }));
+vi.mock("@/hooks/queries/useCompanyMembership", () => ({
+  useCompanyMembership: () => ({ data: { isCompanyEmployee: false, contract: null } }),
+}));
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     auth: { getSession: async () => ({ data: { session: { user: { id: "u1" } } } }) },

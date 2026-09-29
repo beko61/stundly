@@ -7,7 +7,14 @@ import {
   calcKrankheitEpisodes,
   ENTGFG_KRANKHEIT_LIMIT_DAYS,
 } from "@workly/shared";
+import type { TimeEntry } from "@workly/shared";
 import { VacationDecisionButtons } from "./VacationDecisionButtons";
+import { TeamNotdienstList, type TeamNotdienst } from "./TeamNotdienstList";
+import { ContractCard } from "./ContractCard";
+import { contractFromProfile, monthlyTargetFromWeekly } from "@/lib/company/contract";
+import { calcMonthStats, DEFAULT_TARGET_HOURS_PER_MONTH } from "@/lib/utils/monthStats";
+import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
+import { getFeiertage } from "@/lib/utils/feiertage";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const WEEKDAYS_SHORT = ["So","Mo","Di","Mi","Do","Fr","Sa"];
@@ -53,11 +60,20 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   // 1) Çalışan profili — güvenlik: aynı company'de mi?
   const { data: employee } = await admin
     .from("profiles")
-    .select("user_id, full_name, email, role, is_active, last_seen_at, company_id, created_at")
+    .select("user_id, full_name, email, role, is_active, last_seen_at, company_id, created_at, bundesland")
     .eq("user_id", userId)
     .single();
 
   if (!employee || employee.company_id !== companyId) notFound();
+
+  // Vertragsdaten (Migration 033) — getrennt abfragen: fehlt die Spalte noch, läuft die Seite trotzdem
+  const { data: contractRow, error: contractErr } = await admin
+    .from("profiles")
+    .select("contract_weekly_hours, contract_vacation_days, contract_start")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const contractSupported = !contractErr;
+  const contract = contractFromProfile(contractRow as Record<string, unknown> | null);
 
   // 2) Ay seçimi — malformed query'lere karşı validate
   const now = new Date();
@@ -97,12 +113,32 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
     return { dateStr, dayNum, dow, entry: entryMap.get(dateStr) ?? null };
   });
 
-  const totalMin = (entries ?? []).reduce((s, e) => s + netMinutesForEntry(e), 0);
-  const workDays      = (entries ?? []).filter((e) => e.day_type === "arbeiten").length;
-  const vacationDays  = (entries ?? []).filter((e) => e.day_type === "urlaub").length;
-  const sickDays      = (entries ?? []).filter((e) => e.day_type === "krank").length;
-  const targetMin = 174 * 60;
-  const diffMin = totalMin - targetMin;
+  // Notdienst: Woche zählt zum Monat ihres Sonntags (wie beim Mitarbeiter)
+  const ndRange = notdienstLoadRange(year, month);
+  const { data: ndRaw } = await admin
+    .from("notdienst_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("date", ndRange.start)
+    .lte("date", ndRange.end)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true });
+  const ndEntries: TeamNotdienst[] = ((ndRaw ?? []) as Record<string, unknown>[])
+    .filter((n) => notdienstBelongsToMonth(n.date as string, year, month))
+    .map((n) => ({
+      id:            n.id as string,
+      date:          n.date as string,
+      start_time:    n.start_time as string,
+      end_time:      n.end_time as string,
+      kunde:         (n.kunde as string | null) ?? null,
+      kunde_telefon: (n.kunde_telefon as string | null) ?? null,
+      adresse:       (n.adresse as string | null) ?? null,
+      problem:       (n.problem as string | null) ?? null,
+      ergebnis:      (n.ergebnis as string | null) ?? null,
+      note:          (n.note as string | null) ?? null,
+      erledigt:      !!n.erledigt,
+    }));
+  const ndOffen = ndEntries.filter((n) => !n.erledigt).length;
 
   // Prev/Next ay linkleri
   const prevMonth = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
@@ -122,16 +158,33 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       .lte("date", yearEndISO),
     admin
       .from("salary_settings")
-      .select("urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over")
+      .select("monthly_target_hours, urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1),
   ]);
   const settings = (salarySettingsList ?? [])[0] ?? null;
-  const anspruch = Number(settings?.urlaub_anspruch ?? 30);
+
+  // Monatsstatistik — gleiche Rechnung wie beim Mitarbeiter (Feiertage seines Bundeslands, Notdienst inkl.)
+  // Soll: Vertrag der Firma > Lohn-Einstellung des Mitarbeiters > 174 h
+  const targetHours = contract?.weekly_hours != null
+    ? monthlyTargetFromWeekly(contract.weekly_hours)
+    : Number(settings?.monthly_target_hours) || DEFAULT_TARGET_HOURS_PER_MONTH;
+  const stats = calcMonthStats({
+    entries:   (entries ?? []) as unknown as TimeEntry[],
+    ndEntries: ndEntries,
+    feiertage: getFeiertage(year, (employee.bundesland as string | null) ?? "NI"),
+    year,
+    month,
+    targetHoursPerMonth: targetHours,
+  });
+  const targetMin = Math.round(stats.targetMin);
+  const diffMin   = Math.round(stats.diffMin);
+
+  const anspruch = Number(contract?.vacation_days ?? settings?.urlaub_anspruch ?? 30);
   const entitlement = calcAnnualEntitlement({
     annualAnspruch:  anspruch,
-    employmentStart: (settings?.employment_start_date as string | null) ?? null,
+    employmentStart: contract?.start_date ?? (settings?.employment_start_date as string | null) ?? null,
     employmentEnd:   (settings?.employment_end_date   as string | null) ?? null,
     year:            now.getFullYear(),
   });
@@ -200,13 +253,15 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       {/* Summary stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 28 }}>
         {[
-          { label: "Gesamt",     value: formatMinutes(totalMin),   color: "var(--accent2)" },
-          { label: "Soll",       value: formatMinutes(targetMin),  color: "var(--text)" },
+          { label: "Gearbeitet", value: formatMinutes(stats.workedMin), color: "var(--accent2)", sub: "inkl. Urlaub/Krank/Feiertag" },
+          { label: "Notdienst",  value: formatMinutes(stats.ndMin),     color: "var(--orange)",
+            sub: `${stats.ndCount} Einsatz${stats.ndCount === 1 ? "" : "e"}${ndOffen ? ` · ${ndOffen} offen` : ""}` },
+          { label: "Soll",       value: formatMinutes(targetMin),       color: "var(--text)",
+            sub: contract?.weekly_hours != null ? `Vertrag ${String(contract.weekly_hours).replace(".", ",")} h/Woche` : "laut Mitarbeiter" },
           { label: "Differenz",  value: `${diffMin >= 0 ? "+" : "−"}${formatMinutes(Math.abs(diffMin))}`,
-            color: diffMin >= 0 ? "var(--green)" : "var(--red)" },
-          { label: "Arbeitstage", value: workDays,     color: "var(--text)" },
-          { label: "Urlaub",      value: vacationDays, color: "var(--blue)" },
-          { label: "Krank",       value: sickDays,     color: "var(--red)" },
+            color: diffMin >= 0 ? "var(--green)" : "var(--red)", sub: "inkl. Notdienst" },
+          { label: "Urlaub",     value: `${stats.urlaubDays} T`, color: "var(--blue)", sub: null },
+          { label: "Krank",      value: `${stats.krankDays} T`,  color: "var(--red)",  sub: null },
         ].map((stat) => (
           <div key={stat.label} className="card" style={{ padding: "14px" }}>
             <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>
@@ -215,9 +270,14 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
             <div style={{ fontSize: 18, fontWeight: 800, color: stat.color }}>
               {stat.value}
             </div>
+            {stat.sub && <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{stat.sub}</div>}
           </div>
         ))}
       </div>
+
+      {/* Vertrag — Soll-Stunden, Urlaubsanspruch, Beschäftigungsbeginn (Migration 033) */}
+      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Vertrag</h2>
+      <ContractCard userId={userId} contract={contract} supported={contractSupported} />
 
       {/* Zeitkonto (Urlaub + Krankheit) — YIL bazlı */}
       <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
@@ -372,6 +432,25 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
           </table>
         </div>
       </div>
+
+      {/* Notdienst — Einsätze mit Details, Fotos, Unterschrift, PDF; Bezahlt setzt die Firma */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>Notdienst · {MONTHS[month - 1]} {year}</h2>
+        {ndOffen > 0 && (
+          <span style={{
+            background: "color-mix(in srgb, var(--orange) 15%, transparent)",
+            color: "var(--orange)",
+            fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999,
+            letterSpacing: "0.04em",
+          }}>
+            {ndOffen} UNBEZAHLT
+          </span>
+        )}
+      </div>
+      <p style={{ fontSize: 11, color: "var(--muted)", marginTop: -6, marginBottom: 10 }}>
+        Eine Notdienst-Woche zählt zu dem Monat, in dem ihr Sonntag liegt.
+      </p>
+      <TeamNotdienstList key={`${year}-${month}`} userId={userId} entries={ndEntries} />
 
       {/* Urlaubsanträge */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>

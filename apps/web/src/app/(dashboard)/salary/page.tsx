@@ -26,6 +26,8 @@ import { MonthBreakdown } from "./components/MonthBreakdown";
 import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery, useUpsertSalarySettings } from "@/hooks/queries/useSalarySettings";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
+import { applyContract } from "@/lib/company/contract";
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_S   = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -123,6 +125,19 @@ export default function SalaryPage() {
     }
     setSettingsLoaded(true);
   }, [salaryData, lSalarySettings, settingsLoaded]);
+
+  // Vertragsdaten der Firma haben Vorrang (Soll-Stunden, Urlaubsanspruch, Beschäftigt seit)
+  const { data: membership } = useCompanyMembership();
+  const contract = membership?.contract ?? null;
+  useEffect(() => {
+    if (!settingsLoaded || !contract) return;
+    setSettings(s => {
+      const n = applyContract(s, contract);
+      return n.monthly_target_hours === s.monthly_target_hours
+        && n.urlaub_anspruch === s.urlaub_anspruch
+        && n.employment_start_date === s.employment_start_date ? s : n;
+    });
+  }, [settingsLoaded, contract]);
 
   // Auto-save settings: localStorage + Supabase (debounced via RQ mutation)
   useEffect(() => {
@@ -424,6 +439,11 @@ export default function SalaryPage() {
           netto={nettoCalc.netto}
           fmtEur={fmtEur}
           whatIfNettoDelta={whatIfPlusOne.nettoDelta}
+          locked={{
+            monthly_target_hours:  contract?.weekly_hours  != null,
+            urlaub_anspruch:       contract?.vacation_days != null,
+            employment_start_date: contract?.start_date    != null,
+          }}
         />
 
         <TaxSettingsCard settings={settings} onChange={setSettings} />

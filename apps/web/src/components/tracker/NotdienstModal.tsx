@@ -33,6 +33,8 @@ export interface NotdienstEntry {
 interface Props {
   date: string;
   entry?: NotdienstEntry | null;
+  /** Firmen-Mitarbeiter: Bezahlt-Status setzt die Firma (Migration 033) — nur Anzeige */
+  paidByCompany?: boolean;
   onSave: (entry: NotdienstEntry) => void;
   onDelete?: (id: string) => void;
   onClose: () => void;
@@ -62,7 +64,7 @@ function defaultEnd(start: string): string {
   return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
 }
 
-export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props) {
+export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onDelete, onClose }: Props) {
   const modalRef = useModalA11y<HTMLDivElement>({ onClose });
   // DB liefert Zeiten teils als "18:00:00" — <input type="time"> soll HH:MM zeigen.
   const initStart = entry?.start_time?.slice(0, 5) ?? defaultStart();
@@ -177,7 +179,8 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
         adresse:    adresse  || null,
         problem:    problem  || null,
         ergebnis:   ergebnis || null,
-        erledigt,
+        // Bei Firmen-Mitarbeitern setzt die Firma den Bezahlt-Status — nicht mitschicken
+        ...(paidByCompany ? {} : { erledigt }),
       };
 
       if (isOffline() || (savedId && hasPending(`nd:${savedId}`))) {
@@ -419,9 +422,12 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
                 {erledigt ? "✅ Bezahlt" : "⏳ Noch offen"}
               </div>
               <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                Notdienst wird oft erst nächsten Monat ausgezahlt — hier markieren wenn das Geld da ist.
+                {paidByCompany
+                  ? "🔒 Den Bezahlt-Status setzt deine Firma."
+                  : "Notdienst wird oft erst nächsten Monat ausgezahlt — hier markieren wenn das Geld da ist."}
               </div>
             </div>
+            {!paidByCompany && (
             <button
               type="button"
               onClick={() => setErledigt(v => !v)}
@@ -450,6 +456,7 @@ export function NotdienstModal({ date, entry, onSave, onDelete, onClose }: Props
                 boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
               }} />
             </button>
+            )}
           </div>
 
           {saveError && (

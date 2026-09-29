@@ -17,6 +17,7 @@ import {
   useDeleteTimeEntry,
 } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstLoadRange } from "@/lib/utils/weekMonth";
 import type { NotdienstEntry } from "@/components/tracker/NotdienstModal";
@@ -45,6 +46,8 @@ export default function TrackerPage() {
   // isPending (nicht isLoading): in RQ v5 ist eine noch deaktivierte Query (Session lädt)
   // isLoading=false — der Scroll lief dann zu früh.
   const queriesReady = !entriesQ.isPending && !ndQ.isPending;
+  // Firmen-Mitarbeiter: Notdienst-"Bezahlt" setzt die Firma (Migration 033)
+  const paidByCompany = !!useCompanyMembership().data?.isCompanyEmployee;
   const createMut = useCreateTimeEntry();
   const updateMut = useUpdateTimeEntry();
   const deleteMut = useDeleteTimeEntry();
@@ -221,6 +224,7 @@ export default function TrackerPage() {
                 dayOfWeek={dow}
                 feiertag={feiertage[dateStr] || undefined}
                 ndEntries={ndByDate.get(dateStr) ?? EMPTY_ND}
+                paidByCompany={paidByCompany}
                 onCreate={create}
                 onUpdate={update}
                 onDelete={async (id) => { await remove(id, dateStr); }}

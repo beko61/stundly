@@ -53,11 +53,19 @@ type Props = {
   netto:           number;
   fmtEur:          (n: number) => string;
   whatIfNettoDelta: number;
+  /** Von der Firma im Vertrag festgelegte Felder — nur Anzeige (Migration 033) */
+  locked?:         Partial<Record<"monthly_target_hours" | "urlaub_anspruch" | "employment_start_date", boolean>>;
 };
+
+const lockedStyle = { opacity: 0.75, cursor: "not-allowed" } as const;
+
+function LockNote() {
+  return <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>🔒 Von deiner Firma festgelegt</div>;
+}
 
 export function SettingsCard({
   settings, onChange, loading, settingsSaved, month,
-  entriesCount, totalGross, netto, fmtEur, whatIfNettoDelta,
+  entriesCount, totalGross, netto, fmtEur, whatIfNettoDelta, locked = {},
 }: Props) {
   return (
     <>
@@ -93,6 +101,7 @@ export function SettingsCard({
             const isHourly = key === "hourly_rate";
             const rate = settings.hourly_rate ?? 0;
             const belowMindestlohn = isHourly && rate > 0 && rate < MINDESTLOHN_CURRENT;
+            const isLocked = (key === "monthly_target_hours" || key === "urlaub_anspruch") && !!locked[key];
             return (
               <div key={key}>
                 <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>
@@ -102,9 +111,12 @@ export function SettingsCard({
                 <input
                   className="input" type="number" step="0.01"
                   value={settings[key] as number}
-                  onChange={(e) => onChange(s => ({ ...s, [key]: parseFloat(e.target.value) || 0 }))}
-                  style={isHourly && belowMindestlohn ? { borderColor: "var(--red)" } : undefined}
+                  readOnly={isLocked}
+                  aria-readonly={isLocked || undefined}
+                  onChange={(e) => { if (!isLocked) onChange(s => ({ ...s, [key]: parseFloat(e.target.value) || 0 })); }}
+                  style={isLocked ? lockedStyle : isHourly && belowMindestlohn ? { borderColor: "var(--red)" } : undefined}
                 />
+                {isLocked && <LockNote />}
                 {isHourly && (
                   <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.5 }}>
                     <div style={{ color: belowMindestlohn ? "var(--red)" : "var(--muted)" }}>
@@ -144,8 +156,12 @@ export function SettingsCard({
             <input
               className="input" type="date"
               value={settings.employment_start_date ?? ""}
-              onChange={(e) => onChange(s => ({ ...s, employment_start_date: e.target.value || null }))}
+              readOnly={!!locked.employment_start_date}
+              aria-readonly={locked.employment_start_date || undefined}
+              onChange={(e) => { if (!locked.employment_start_date) onChange(s => ({ ...s, employment_start_date: e.target.value || null })); }}
+              style={locked.employment_start_date ? lockedStyle : undefined}
             />
+            {locked.employment_start_date && <LockNote />}
           </div>
           <div>
             <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>

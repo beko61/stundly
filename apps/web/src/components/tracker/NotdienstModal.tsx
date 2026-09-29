@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateWorkDuration } from "@workly/shared";
 import { formatDur } from "@/lib/utils/formatDur";
 import { useModalA11y } from "@/hooks/useModalA11y";
+import { notdienstOtherMonthHint } from "@/lib/utils/weekMonth";
 import { NotdienstBerichtPanel } from "./NotdienstBerichtPanel";
 import { useOnline, useOutbox } from "@/hooks/useOffline";
 import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
@@ -259,6 +260,9 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
           <div>
             <h2 id="notdienst-modal-title" style={{ fontSize:18, fontWeight:800, color:"var(--orange)" }}>🚨 Notdienst</h2>
             <p style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{date}</p>
+            {notdienstOtherMonthHint(date) && (
+              <p style={{ fontSize:11, color:"var(--orange)", marginTop:2 }}>📅 {notdienstOtherMonthHint(date)}</p>
+            )}
           </div>
           <button className="btn btn-ghost" onClick={onClose} aria-label="Schließen" style={{ padding:"6px 10px" }}>✕</button>
         </div>

@@ -3,6 +3,7 @@ import {
   weekSundayOf,
   weekMondayOf,
   notdienstMonthOf,
+  notdienstOtherMonthHint,
   notdienstBelongsToMonth,
   notdienstLoadRange,
   isoWeek,
@@ -92,5 +93,17 @@ describe("isoWeek", () => {
   });
   it("hafta 25 — Haziran ortası", () => {
     expect(isoWeek("2026-06-19")).toBe(25);
+  });
+});
+
+describe("notdienstOtherMonthHint", () => {
+  it("Woche endet im Folgemonat → Hinweis mit Monat und Sonntag", () => {
+    expect(notdienstOtherMonthHint("2026-09-29")).toBe("Zählt im Oktober (Woche endet am 04.10.)");
+    expect(notdienstOtherMonthHint("2026-12-29")).toBe("Zählt im Januar (Woche endet am 03.01.)");
+    expect(notdienstOtherMonthHint("2026-09-28")).toBe("Zählt im Oktober (Woche endet am 04.10.)");
+  });
+  it("Woche endet im selben Monat → kein Hinweis", () => {
+    expect(notdienstOtherMonthHint("2026-09-27")).toBeNull();
+    expect(notdienstOtherMonthHint("2026-09-01")).toBeNull();
   });
 });

@@ -43,6 +43,22 @@ export function notdienstBelongsToMonth(dateStr: string, year: number, month: nu
   return m.year === year && m.month === month;
 }
 
+const MONTH_NAMES = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+
+/**
+ * Hinweis für die UI, wenn ein Notdienst NICHT im Kalendermonat seines Datums zählt
+ * (Woche endet im Folgemonat), z. B. 29.09.2026 → "Zählt im Oktober (Woche endet am 04.10.)".
+ * null, wenn Datum und Abrechnungsmonat übereinstimmen.
+ */
+export function notdienstOtherMonthHint(dateStr: string): string | null {
+  const own = Number(dateStr.slice(5, 7));
+  const sun = weekSundayOf(dateStr);
+  if (sun.getMonth() + 1 === own) return null;
+  const dd = String(sun.getDate()).padStart(2, "0");
+  const mm = String(sun.getMonth() + 1).padStart(2, "0");
+  return `Zählt im ${MONTH_NAMES[sun.getMonth()]} (Woche endet am ${dd}.${mm}.)`;
+}
+
 /**
  * Bir Notdienst sorgusunda hangi tarih aralığını çekmemiz gerek?
  * Hafta-ay atfı yön bağımsız olarak güvenli: her iki uca 7 gün pay.

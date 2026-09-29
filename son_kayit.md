@@ -1,5 +1,16 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-29 (134) – v0.73.1: "Bugünkü Notdienst sayılmıyor" — Pazar kuralı artık ekranda yazıyor
+
+Kullanıcı (firma çalışanı hesabı): bugün girdiği Notdienst sayılmıyor, eski tarihtekiler sayılıyor. DB kontrol:
+kayıt doğru kaydedilmiş (29.09 21:27–22:27). Sebep hata değil, Notdienst kuralı: 28.09–04.10 haftasının Pazarı
+Ekim'de → Ekim'e sayılır. Kullanıcı bunu göremiyordu.
+- NEU `weekMonth.notdienstOtherMonthHint(date)` → "Zählt im Oktober (Woche endet am 04.10.)"
+- DayEntry: Notdienst listesinin üstünde turuncu 📅 ipucu; NotdienstModal başlığının altında aynı ipucu
+- Test: weekMonth +2. `version.ts` 0.73.0 → 0.73.1
+
+---
+
 ## 2026-09-29 (133) – v0.73.0: Firma paneli Faz B — ay gönder/onay, gerekçeli düzeltme, otomatik kontroller
 
 Kullanıcı testte çalışanla girip Jahres-Befüllung'a bastı (254 gün tek seferde) → "firma çalışanında bu tehlikeli"

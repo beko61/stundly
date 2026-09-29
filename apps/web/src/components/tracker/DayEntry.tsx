@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
 import { hasPending } from "@/lib/offline/outbox";
 import { offlineSaveNotdienst } from "@/lib/offline/notdienst";
+import { notdienstOtherMonthHint } from "@/lib/utils/weekMonth";
 
 const WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 
@@ -267,6 +268,12 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
         {/* Notdienst sub-entries */}
         {ndEntries.length > 0 && (
           <div style={{ padding:"0 14px 8px", borderTop:"1px solid var(--border)" }}>
+            {/* Woche endet im Folgemonat → Notdienst zählt dort (Wochen-Sonntag-Regel) */}
+            {notdienstOtherMonthHint(date) && (
+              <div style={{ fontSize:11, color:"var(--orange)", padding:"6px 0 0" }}>
+                📅 {notdienstOtherMonthHint(date)}
+              </div>
+            )}
             {ndEntries.map((nd, idx) => {
               const ndDur = formatDur(calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes);
               return (

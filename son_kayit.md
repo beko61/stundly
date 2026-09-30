@@ -1,5 +1,16 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-30 (139) – v0.76.0: Mobil menü firma paneli gibi (düz sekme çubuğu)
+
+Kullanıcı: telefonda Urlaub vb. açılır grup menüsünde; firma panelindeki alt menü gibi olsun istedi. Migration 035 teyit edildi (yoklandı).
+
+- `components/ui/BottomNav.tsx` yeniden yazıldı: açılır gruplar (Zeit→Urlaub, Berichte→Gehalt) kaldırıldı;
+  6 düz sekme Start · Zeit · Urlaub · Gehalt · Berichte · Profil. Firma panelinin `sa-bottom-nav` CSS'i kullanılıyor
+  (aktif sekme accent arka plan, var(--surface) → açık temada da doğru; eski sabit koyu arka plan gitti). z-index 100 korundu.
+- Görsel: 375px'te /demo sayfasıyla kontrol edildi (sayfa silindi). 653/653, tsc + lint temiz.
+
+---
+
 ## 2026-09-30 (138) – v0.75.0: Firma paneli Faz D — Lohn-Vorbereitung, Steuerberater, Montags-Überblick, Chef einladen
 
 Kullanıcı "D'yi yapalım". Migration 034 teyit edildi (yoklandı). **Migration 035 gerekli.**

@@ -651,7 +651,10 @@ export default async function CompanyDashboardPage() {
         {" · "}Max. Mitarbeiter: <span style={{ color: "var(--text)", fontWeight: 700 }}>{company?.max_employees ?? "–"}</span>
       </div>
 
-      <Link href="/company/audit" style={{ fontSize: 12, color: "var(--muted)" }}>🔒 Audit-Log — alle Änderungen im Firmenkonto</Link>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12 }}>
+        <Link href="/company/billing" style={{ color: "var(--muted)" }}>💳 Abonnement</Link>
+        <Link href="/company/audit" style={{ color: "var(--muted)" }}>🔒 Audit-Log — alle Änderungen im Firmenkonto</Link>
+      </div>
     </div>
   );
 }

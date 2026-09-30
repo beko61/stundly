@@ -29,6 +29,16 @@ export function inviteText(userId: string): string {
     `in der Beta komplett kostenlos. Probier's aus: ${inviteUrl(userId)}`;
 }
 
+/** "Chef einladen": Landingpage für Betriebe mit deinem Code */
+export function chefInviteUrl(userId: string): string {
+  return `${APP_URL}/firma?ref=${referralCode(userId)}`;
+}
+
+export function chefInviteText(userId: string): string {
+  return `Hallo Chef, ich erfasse meine Stunden und Notdienste mit Stundly. ` +
+    `Damit hättest du am Monatsende alles fertig — ohne Zettel abtippen: ${chefInviteUrl(userId)}`;
+}
+
 export const SIGNUP_SOURCES: { value: string; label: string }[] = [
   { value: "kollege",   label: "Kollege / Freund" },
   { value: "bericht",   label: "Notdienst-Bericht oder PDF von Stundly" },

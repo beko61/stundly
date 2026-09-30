@@ -1,5 +1,36 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-30 (138) – v0.75.0: Firma paneli Faz D — Lohn-Vorbereitung, Steuerberater, Montags-Überblick, Chef einladen
+
+Kullanıcı "D'yi yapalım". Migration 034 teyit edildi (yoklandı). **Migration 035 gerekli.**
+Pauschale → çalışan maaş hesabı sorusu hâlâ açık (dokunulmadı).
+
+- NEU `supabase/migrations/035_lohn_steuerberater.sql`: companies.steuerberater_email (+format check),
+  steuerberater_auto, steuerberater_last_sent (YYYY-MM, çift gönderim engeli), team_digest_enabled
+- NEU `/company/lohn` (Lohn-Vorbereitung, varsayılan: önceki ay): çalışan başına Soll / Arbeit / Urlaub-Krank-FT /
+  Ist / Notdienst / Saldo / Urlaub / Krank / Pauschale / Status + Summe satırı; "x/y freigegeben" uyarısı;
+  CSV (ondalık saat, ; , BOM — Excel/Lohnprogramm), PDF (A4 yatay, önceden üretilir — iOS senkron tık),
+  "✉️ An Steuerberater senden"; E-Mail ayarları kartı (#mail-einstellungen): adres, "Automatisch am 5.", "Montags-Überblick"
+- NEU `lib/company/lohn.ts` (computeLohnRows — calcMonthStats ile çalışanla aynı hesap, hm/dec, lohnCsv),
+  `lib/company/lohnData.ts` (loadLohnMonth/loadCompanySettings — sayfa, API, cron ortak; Soll: Vertrag > salary > 174;
+  her çalışanın kendi Bundesland tatilleri), `lib/pdf/lohnPdf.ts`, `lib/email/companyMails.ts` (HTML escape'li)
+- NEU API `POST /api/company/lohn/send` (rate limit 10/gün, replyTo = patron, audit), `PATCH /api/company/settings`
+  genişletildi (tüm alanlar opsiyonel; boş adres → otomatik kapanır)
+- NEU cron `/api/cron/steuerberater` (her ayın 5'i 06:00 UTC) + `/api/cron/team-digest` (Pazartesi 05:30 UTC) → vercel.json
+- NEU public `/firma` (patronlar için tanıtım; ?ref=<kod> → "Einer deiner Mitarbeiter nutzt Stundly schon", CTA register?ref),
+  middleware PUBLIC + sitemap
+- NEU `ChefEinladenCard` (Profil sayfası; sadece firması olmayanlara): WhatsApp / metni kopyala / sayfayı gör.
+  Mevcut davet sistemine dokunulmadı. referral.ts: chefInviteUrl/Text; useCompanyMembership: hasCompany
+- Menü: Übersicht · Team · Notdienst · Lohn · Berichte (mobil); Abo + Audit-Log yan menü ve Übersicht altında
+- Test: lohn (7), lohnRoutes (8: send, settings, cron). 653/653, tsc + lint temiz.
+  Görsel: /firma telefon (başlık kelime bölünmesi düzeltildi), Lohn butonları/ayar kartı /demo'da.
+
+### SIRADAKİ
+Firma paneli yol haritası (A–D) tamam. Açık: Pauschale çalışan maaşına yansısın mı? Sonraya: Kolonne erfassen,
+patron adına Foto-Scan, DATEV formatı, Azubi/Minijob uyarıları, Stripe (beta %50 otomatik).
+
+---
+
 ## 2026-09-30 (137) – v0.74.0: Firma paneli Faz C — Übersicht görev kartları, Notdienst-Zentrale, CSV
 
 Kullanıcı "C'den başla" dedi; açık iki soru cevapsız → ikisini de destekleyen varsayılan: Pauschale = firma ayarında

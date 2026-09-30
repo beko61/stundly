@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { InviteColleaguesCard } from "@/components/ui/InviteColleaguesCard";
+import { ChefEinladenCard } from "@/components/ui/ChefEinladenCard";
 import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import { BUNDESLAENDER } from "@/lib/utils/feiertage";
@@ -507,6 +508,7 @@ export default function SettingsPage() {
           )}
         </div>
 
+        <ChefEinladenCard />
         <InviteColleaguesCard />
 
         {/* E-Mail Nachrichten */}

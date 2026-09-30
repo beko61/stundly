@@ -21,6 +21,14 @@
     {
       "path": "/api/cron/reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/team-digest",
+      "schedule": "30 5 * * 1"
+    },
+    {
+      "path": "/api/cron/steuerberater",
+      "schedule": "0 6 5 * *"
     }
   ]
 }

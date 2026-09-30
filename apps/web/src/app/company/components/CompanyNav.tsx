@@ -7,8 +7,9 @@ const ITEMS = [
   { href: "/company/dashboard", label: "Übersicht",   short: "Start",    icon: "📊", mobile: true },
   { href: "/company/employees", label: "Mitarbeiter", short: "Team",     icon: "👥", mobile: true },
   { href: "/company/notdienst", label: "Notdienst",   short: "Notdienst", icon: "🚨", mobile: true },
+  { href: "/company/lohn",      label: "Lohn",        short: "Lohn",     icon: "💶", mobile: true },
   { href: "/company/reports",   label: "Berichte",    short: "Berichte", icon: "📋", mobile: true },
-  { href: "/company/billing",   label: "Abonnement",  short: "Abo",      icon: "💳", mobile: true },
+  { href: "/company/billing",   label: "Abonnement",  short: "Abo",      icon: "💳", mobile: false },
   { href: "/company/audit",     label: "Audit-Log",   short: "Log",      icon: "🔒", mobile: false },
 ];
 

@@ -18,6 +18,8 @@ import { contractFromProfile, type Contract } from "@/lib/company/contract";
 
 export interface CompanyMembership {
   isCompanyEmployee: boolean;
+  /** Gehört zu irgendeiner Firma (auch als Chef) */
+  hasCompany:        boolean;
   contract:          Contract | null;
 }
 
@@ -36,14 +38,14 @@ export function useCompanyMembership() {
         .maybeSingle();
       if (error) throw new Error(error.message);
       const isCompanyEmployee = !!p?.company_id && p.role === "employee";
-      if (!p?.company_id) return { isCompanyEmployee, contract: null };
+      if (!p?.company_id) return { isCompanyEmployee, hasCompany: false, contract: null };
 
       const { data: c, error: cErr } = await supabase
         .from("profiles")
         .select("contract_weekly_hours, contract_vacation_days, contract_start")
         .eq("user_id", userId!)
         .maybeSingle();
-      return { isCompanyEmployee, contract: cErr ? null : contractFromProfile(c as Record<string, unknown> | null) };
+      return { isCompanyEmployee, hasCompany: true, contract: cErr ? null : contractFromProfile(c as Record<string, unknown> | null) };
     },
   });
 }

@@ -5,7 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 // /api/stripe/webhook: Stripe sendet keine Session-Cookies — ohne diesen Eintrag leitete die
 // Middleware jeden Webhook per 307 auf /login um und Stripe verwarf ihn (seit dem Initial Commit).
 // Die Route prüft selbst die Stripe-Signatur (STRIPE_WEBHOOK_SECRET).
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/onboarding", "/", "/pricing", "/impressum", "/datenschutz", "/agb", "/avv", "/demo", "/kontakt", "/handwerker", "/notdienst-verwaltung", "/vergleich", "/ueberstundenrechner", "/stundenzettel-vorlage", "/api/contact", "/api/cron", "/api/stripe/webhook", "/api/email/unsubscribe"];
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/onboarding", "/", "/pricing", "/impressum", "/datenschutz", "/agb", "/avv", "/demo", "/kontakt", "/handwerker", "/notdienst-verwaltung", "/vergleich", "/ueberstundenrechner", "/stundenzettel-vorlage", "/firma", "/api/contact", "/api/cron", "/api/stripe/webhook", "/api/email/unsubscribe"];
 
 // Sadece company_admin veya super_admin erişebilir
 const COMPANY_ADMIN_PATHS = ["/company", "/team"];

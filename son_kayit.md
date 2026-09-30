@@ -7,7 +7,7 @@ silersem saatlerim gider mi?" diye sordu. Kontrol: veriler yerinde, AMA `create-
 `company_admin` yapıyordu → süper admin yetkisi kaybolmuştu. Ayrıca kişisel Bundesland firma Bundesland'ıyla eziliyordu.
 - FIX `api/onboarding/create-company`: super_admin rolü korunur; mevcut kişisel Bundesland ezilmez
 - NEU test `api/onboarding/__tests__/createCompany.test.ts` (3)
-- Kullanıcının rolü veritabanında geri alınmalı (onay bekleniyor)
+- Kullanıcı onayıyla ("sen yap") ana hesabın rolü service key ile tek satır `super_admin`'e geri alındı + audit_log `superadmin.role_restored` (30.09)
 - Firma silme (süper admin paneli, "hesapları da sil" işaretsiz): hesaplar + Arbeitszeit/Notdienst/Urlaub kalır;
   sadece firma, abonelik, davetler, month_closings, entry_corrections (company_id cascade) gider.
 - `version.ts` 0.73.2 → 0.73.3

@@ -1,5 +1,34 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-09-30 (137) – v0.74.0: Firma paneli Faz C — Übersicht görev kartları, Notdienst-Zentrale, CSV
+
+Kullanıcı "C'den başla" dedi; açık iki soru cevapsız → ikisini de destekleyen varsayılan: Pauschale = firma ayarında
+tek tutar (boş bırakılabilir), nöbet sırası = elle seçim + "freie Wochen reihum verteilen" düğmesi.
+**Migration 034 gerekli** (yoksa kartlar "In Kürze verfügbar" der, sayfa çalışır).
+
+- NEU `supabase/migrations/034_notdienst_zentrale.sql`: companies.notdienst_pauschale, tablo notdienst_rota
+  (company_id, week_start=Pazartesi, user_id; unique firma+hafta; firma üyeleri okuyabilir, yazma API ile)
+- NEU `/company/notdienst` (Notdienst-Zentrale): bu hafta kim nöbette, Ruhezeit uyarısı (§5, gece Einsatz'tan sonra
+  11 saat, Berlin saati), Rufbereitschaft planı (geçen hafta + 8 hafta, seçim + otomatik dağıt), Pauschale kartı
+  (ay toplamı / açık tutar), ay navigasyonu, tüm ekibin Einsatz listesi (isimli, detay/foto/imza/PDF, bezahlt,
+  hepsini bezahlt), "📥 Einsätze abrechnen (CSV)" (Excel/fatura programı için; ; ayraç, BOM, Almanca sayı)
+- NEU API `PATCH /api/company/settings` (Pauschale), `POST /api/company/notdienst-rota` (çoklu hafta, Pazartesi kontrolü,
+  sadece firma üyeleri) — audit'li
+- NEU `lib/company/notdienstZentrale.ts`: mondayOf, upcomingWeeks, autoDistribute, restUntil, berlinNowLocal, einsaetzeCsv
+- Übersicht (company/dashboard) yenilendi: Vormonat ilerleme halkası (freigegeben x/y), görev kartları (Ruhezeit,
+  Monat zur Freigabe, Auffälligkeiten, Urlaubsanträge, Notdienste unbezahlt, krank gemeldet) veya "✅ Alles erledigt";
+  KPI kartları tek satıra indi, Schnellaktionen kalktı (Audit-Log linki altta)
+- Menü: Übersicht · Team · Notdienst · Berichte · Abo (Audit-Log masaüstü kenar çubuğunda)
+- Çalışan tracker: "🚨 Diese/Nächste Woche hast du Rufbereitschaft" bandı (`useMyRota`)
+- TeamNotdienstList ekip modunda (isim + her Einsatz'ın kendi çalışanı için PDF)
+- Test: notdienstZentrale (10), zentrale routes (6). 638/638, tsc + lint temiz. Görsel: /demo'da telefon görünümü (silindi).
+
+### SIRADAKİ
+Faz D (Lohn-Vorbereitung, Steuerberater mail, pazartesi özeti, Chef einladen). Açık: Pauschale çalışanın maaş hesabına
+(salary_settings.notdienst_bonus) otomatik yansısın mı?
+
+---
+
 ## 2026-09-29 (136) – v0.73.3: Firma kurmak süper admin rolünü siliyordu
 
 Kullanıcı ana hesabıyla (süper admin, 254 Arbeitszeit, 125 Notdienst, 6 Urlaub) "Zuzz" firmasını kurdu ve "firmayı

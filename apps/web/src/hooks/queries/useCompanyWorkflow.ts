@@ -65,6 +65,25 @@ export function useEntryCorrections(enabled: boolean) {
   });
 }
 
+/** Eigene Rufbereitschafts-Wochen (Migration 034) — Montage ab dieser Woche. Fehlt die Tabelle → leer. */
+export function useMyRota(enabled: boolean, fromMonday: string, toMonday: string) {
+  const uid = useSessionUserId();
+  return useQuery({
+    queryKey: ["notdienst_rota", uid ?? "anon", fromMonday, toMonday],
+    enabled:  enabled && typeof uid === "string",
+    queryFn:  async (): Promise<string[]> => {
+      const { data, error } = await createClient()
+        .from("notdienst_rota")
+        .select("week_start")
+        .eq("user_id", uid!)
+        .gte("week_start", fromMonday)
+        .lte("week_start", toMonday);
+      if (error) return [];
+      return (data ?? []).map((r) => r.week_start as string);
+    },
+  });
+}
+
 export function useSubmitMonth() {
   const qc = useQueryClient();
   return useMutation({

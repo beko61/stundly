@@ -3,8 +3,9 @@
 import { useState } from "react";
 import type React from "react";
 import {
-  describeEntry, monthKey, useEntryCorrections, useMarkCorrectionsSeen, useMonthClosings, useSubmitMonth,
+  describeEntry, monthKey, useEntryCorrections, useMarkCorrectionsSeen, useMonthClosings, useMyRota, useSubmitMonth,
 } from "@/hooks/queries/useCompanyWorkflow";
+import { addDays, mondayOf } from "@/lib/company/notdienstZentrale";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const dateDE = (iso: string) => new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -34,6 +35,14 @@ export function CompanyMonthBar({ year, month }: { year: number; month: number }
   const seen = useMarkCorrectionsSeen();
   const [error, setError] = useState<string | null>(null);
 
+  // Rufbereitschaft diese / nächste Woche
+  const todayLocal = new Date();
+  const thisMonday = mondayOf(`${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, "0")}-${String(todayLocal.getDate()).padStart(2, "0")}`);
+  const nextMonday = addDays(thisMonday, 7);
+  const rota = useMyRota(true, thisMonday, nextMonday);
+  const dutyNow = (rota.data ?? []).includes(thisMonday);
+  const dutyNext = (rota.data ?? []).includes(nextMonday);
+
   const closing = closings.data?.get(monthKey(year, month)) ?? null;
   const unseen = (corrections.data ?? []).filter((c) => !c.seen_at);
 
@@ -47,6 +56,19 @@ export function CompanyMonthBar({ year, month }: { year: number; month: number }
 
   return (
     <>
+      {(dutyNow || dutyNext) && (
+        <div role="status" style={{ ...box, ...tint("var(--orange)") }}>
+          <span>
+            🚨 <strong style={{ color: "var(--orange)" }}>
+              {dutyNow ? "Diese Woche hast du Rufbereitschaft" : "Nächste Woche hast du Rufbereitschaft"}
+            </strong>
+            <span style={{ color: "var(--muted)" }}>
+              {" "}· {dayDE(dutyNow ? thisMonday : nextMonday)}–{dayDE(addDays(dutyNow ? thisMonday : nextMonday, 6))}
+              {dutyNow && dutyNext ? " · auch nächste Woche" : ""}
+            </span>
+          </span>
+        </div>
+      )}
       {unseen.length > 0 && (
         <div role="status" style={{ ...box, ...tint("var(--yellow)"), alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 200 }}>

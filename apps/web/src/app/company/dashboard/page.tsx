@@ -10,6 +10,9 @@ import {
   calcUrlaubskonto,
 } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
+import { getFeiertage } from "@/lib/utils/feiertage";
+import { checkMonth, type CheckEntry } from "@/lib/company/monthCheck";
+import { addDays, berlinNowLocal, restUntil } from "@/lib/company/notdienstZentrale";
 
 // v0.33.0: dashboard komple redesign — patronun günlük iş akışına odaklı.
 // HEUTE-Ansicht + Compliance-Warnings + Mitarbeiter-Übersicht eklendi.
@@ -163,6 +166,44 @@ export default async function CompanyDashboardPage() {
   const teamTotalMin = (monthEntries ?? []).reduce((sum, e) => sum + netMinutesForEntry(e), 0);
 
   // ─────────────────────────────────────────────────────────────
+  // Aufgaben (Faz C): Vormonat-Abschluss, offene Notdienste, Ruhezeit, Auffälligkeiten
+  // ─────────────────────────────────────────────────────────────
+  const nowLocal = berlinNowLocal();
+  const pm = now.getMonth() === 0 ? { y: now.getFullYear() - 1, m: 12 } : { y: now.getFullYear(), m: now.getMonth() };
+  const pmFirst = `${pm.y}-${String(pm.m).padStart(2, "0")}-01`;
+  const pmLast  = `${pm.y}-${String(pm.m).padStart(2, "0")}-${String(new Date(pm.y, pm.m, 0).getDate()).padStart(2, "0")}`;
+  const pmNd    = notdienstLoadRange(pm.y, pm.m);
+  const [{ data: pmClosings }, { data: pmEntries }, { data: pmNdRaw }, { count: unpaidNd }, { data: recentNd }] = userIds.length > 0
+    ? await Promise.all([
+        admin.from("month_closings").select("user_id, status").in("user_id", userIds).eq("year", pm.y).eq("month", pm.m),
+        admin.from("time_entries").select("user_id, date, day_type, start_time, end_time, break_minutes, tags")
+          .in("user_id", userIds).gte("date", addDays(pmFirst, -1)).lte("date", pmLast),
+        admin.from("notdienst_entries").select("user_id, date, start_time, end_time")
+          .in("user_id", userIds).gte("date", pmNd.start).lte("date", pmNd.end),
+        admin.from("notdienst_entries").select("id", { count: "exact", head: true })
+          .in("user_id", userIds).eq("erledigt", false).gte("date", addDays(todayISO, -120)),
+        admin.from("notdienst_entries").select("user_id, date, start_time, end_time")
+          .in("user_id", userIds).gte("date", addDays(todayISO, -1)).lte("date", todayISO),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }, { count: 0 }, { data: [] }];
+  const closingByUser = new Map(((pmClosings ?? []) as { user_id: string; status: string }[]).map((c) => [c.user_id, c.status]));
+  const pmApproved  = activeEmployees.filter((e) => closingByUser.get(e.user_id) === "approved").length;
+  const pmSubmitted = activeEmployees.filter((e) => closingByUser.get(e.user_id) === "submitted");
+  const feiertagePm = getFeiertage(pm.y, company?.bundesland ?? "NI");
+  const findingsByUser = new Map<string, number>();
+  for (const e of activeEmployees) {
+    const n = checkMonth({
+      entries:   ((pmEntries ?? []) as (CheckEntry & { user_id: string })[]).filter((t) => t.user_id === e.user_id),
+      ndEntries: ((pmNdRaw ?? []) as { user_id: string; date: string; start_time: string | null; end_time: string | null }[]).filter((t) => t.user_id === e.user_id),
+      year: pm.y, month: pm.m, feiertage: feiertagePm, todayISO,
+    }).length;
+    if (n > 0 && closingByUser.get(e.user_id) !== "approved") findingsByUser.set(e.user_id, n);
+  }
+  const rest = restUntil((recentNd ?? []) as { user_id: string; date: string; start_time: string | null; end_time: string | null }[], nowLocal);
+  const krankToday = (monthEntries ?? []).filter((e) => e.date === todayISO && e.day_type === "krank");
+  const pmLabel = new Date(pm.y, pm.m - 1, 1).toLocaleDateString("de-DE", { month: "long" });
+
+  // ─────────────────────────────────────────────────────────────
   // Per-employee aggregates
   // ─────────────────────────────────────────────────────────────
   type MonthEntry = {
@@ -310,21 +351,92 @@ export default async function CompanyDashboardPage() {
         </div>
       )}
 
-      {/* KPI kartları */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
-        {[
-          { label: "Aktive Mitarbeiter",         value: activeEmployees.length,            icon: "👥", color: "var(--blue)" },
-          { label: `Team-Stunden · ${monthName}`, value: formatMinutes(teamTotalMin),      icon: "⏱",  color: "var(--accent2)" },
-          { label: "Offene Einladungen",         value: pendingInvites ?? 0,               icon: "✉️", color: "var(--yellow)" },
-          { label: "Offene Urlaubsanträge",      value: pendingByUser.size,                icon: "🏖", color: "var(--orange)" },
-        ].map((stat) => (
-          <div key={stat.label} className="card" style={{ padding: "20px" }}>
-            <div style={{ fontSize: 24, marginBottom: 10 }}>{stat.icon}</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: stat.color, marginBottom: 4 }}>{stat.value}</div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>{stat.label}</div>
+      {/* ─────────────────────────────────────────────────────────
+          Aufgaben — was der Chef heute erledigen sollte
+          ───────────────────────────────────────────────────────── */}
+      {(() => {
+        const pendingVacTotal = (pendingVacationsAll ?? []).length;
+        const firstPendingVacUser = (pendingVacationsAll ?? [])[0]?.user_id;
+        const firstFindingUser = [...findingsByUser.keys()][0];
+        const findingsTotal = [...findingsByUser.values()].reduce((s, n) => s + n, 0);
+        type Task = { key: string; n?: number; text: string; sub?: string; href: string; tone: "red" | "orange" | "neutral" };
+        const tasks: Task[] = [
+          ...[...rest.entries()].map(([uid, until]): Task => ({
+            key: `rest-${uid}`, tone: "red", href: "/company/notdienst",
+            text: `${nameMap.get(uid) ?? "—"}: Ruhezeit bis ${until.slice(11, 16)} Uhr`,
+            sub: "nach Notdienst-Einsatz (§5 ArbZG)",
+          })),
+          ...(pmSubmitted.length ? [{
+            key: "submitted", n: pmSubmitted.length, tone: "orange" as const,
+            text: `${pmLabel} zur Freigabe`, href: `/company/employees/${pmSubmitted[0]!.user_id}?year=${pm.y}&month=${pm.m}`,
+          }] : []),
+          ...(findingsTotal ? [{
+            key: "findings", n: findingsTotal, tone: "red" as const,
+            text: `Auffälligkeit${findingsTotal === 1 ? "" : "en"} im ${pmLabel}`,
+            sub: `bei ${findingsByUser.size} Mitarbeiter${findingsByUser.size === 1 ? "" : "n"}`,
+            href: `/company/employees/${firstFindingUser}?year=${pm.y}&month=${pm.m}`,
+          }] : []),
+          ...(pendingVacTotal ? [{
+            key: "vac", n: pendingVacTotal, tone: "orange" as const,
+            text: `Urlaubsantr${pendingVacTotal === 1 ? "ag" : "äge"}`, href: `/company/employees/${firstPendingVacUser}`,
+          }] : []),
+          ...(unpaidNd ? [{
+            key: "nd", n: unpaidNd, tone: "neutral" as const,
+            text: `Notdienst${unpaidNd === 1 ? "" : "e"} unbezahlt`, href: "/company/notdienst",
+          }] : []),
+          ...krankToday.map((k): Task => ({
+            key: `krank-${k.user_id}`, tone: "neutral", href: `/company/employees/${k.user_id}`,
+            text: `${nameMap.get(k.user_id) ?? "—"} krank gemeldet`, sub: "nur zur Info — kein Antrag nötig",
+          })),
+        ];
+        const toneColor = { red: "var(--red)", orange: "var(--orange)", neutral: "var(--text)" };
+        const total = activeEmployees.length;
+        const pct = total ? pmApproved / total : 0;
+        const C = 2 * Math.PI * 19;
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 28 }}>
+            <Link href="/company/employees" className="card" style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "var(--text)" }}>
+              <svg width="54" height="54" viewBox="0 0 46 46" role="img" aria-label={`${pmApproved} von ${total} freigegeben`}>
+                <circle cx="23" cy="23" r="19" fill="none" stroke="var(--surface2)" strokeWidth="5" />
+                <circle cx="23" cy="23" r="19" fill="none" stroke={pct === 1 ? "var(--green)" : "var(--accent)"} strokeWidth="5"
+                  strokeDasharray={`${C * pct} ${C}`} transform="rotate(-90 23 23)" strokeLinecap="round" />
+                <text x="23" y="27" textAnchor="middle" fontSize="11" fontWeight="800" fill="currentColor">{pmApproved}/{total}</text>
+              </svg>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>{pmLabel} {pct === 1 ? "abgeschlossen" : "freigeben"}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                  {pct === 1 ? "Alle Monate freigegeben ✓" : `${pmSubmitted.length} eingereicht · ${total - pmApproved - pmSubmitted.length} offen`}
+                </div>
+              </div>
+            </Link>
+            {tasks.length === 0 ? (
+              <div className="card" style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 10, color: "var(--green)", fontWeight: 800 }}>
+                ✅ Alles erledigt
+              </div>
+            ) : tasks.map((t) => (
+              <Link key={t.key} href={t.href} className="card" style={{
+                padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: "var(--text)",
+                ...(t.tone !== "neutral" ? {
+                  background: `color-mix(in srgb, ${toneColor[t.tone]} 8%, var(--surface))`,
+                  border: `1px solid color-mix(in srgb, ${toneColor[t.tone]} 30%, transparent)`,
+                } : {}),
+              }}>
+                {t.n != null && <span style={{ fontSize: 22, fontWeight: 800, minWidth: 28, color: toneColor[t.tone] }}>{t.n}</span>}
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontWeight: 700, fontSize: 14, color: t.tone === "neutral" ? "var(--text)" : toneColor[t.tone] }}>{t.text}</span>
+                  {t.sub && <span style={{ display: "block", fontSize: 11, color: "var(--muted)" }}>{t.sub}</span>}
+                </span>
+                <span aria-hidden="true" style={{ color: "var(--muted)" }}>›</span>
+              </Link>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
+
+      <p style={{ fontSize: 12, color: "var(--muted)", margin: "-14px 0 24px" }}>
+        {activeEmployees.length} aktive Mitarbeiter · Team {monthName}: {formatMinutes(teamTotalMin)}
+        {(pendingInvites ?? 0) > 0 && <> · {pendingInvites} offene Einladungen</>}
+      </p>
 
       {/* ─────────────────────────────────────────────────────────
           HEUTE-Ansicht
@@ -539,22 +651,7 @@ export default async function CompanyDashboardPage() {
         {" · "}Max. Mitarbeiter: <span style={{ color: "var(--text)", fontWeight: 700 }}>{company?.max_employees ?? "–"}</span>
       </div>
 
-      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Schnellaktionen</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-        {[
-          { href: "/company/employees", icon: "➕", label: "Mitarbeiter verwalten", desc: "Neue anlegen, deaktivieren, löschen" },
-          { href: "/company/reports",   icon: "📋", label: "Berichte anzeigen",     desc: "Monatsauswertung + PDF/CSV" },
-          { href: "/company/billing",   icon: "💳", label: "Abonnement verwalten",  desc: "Plan ändern, Rechnungen" },
-        ].map((action) => (
-          <Link key={action.href} href={action.href} style={{ textDecoration: "none" }}>
-            <div className="card" style={{ padding: "20px", cursor: "pointer" }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>{action.icon}</div>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{action.label}</div>
-              <div style={{ color: "var(--muted)", fontSize: 12 }}>{action.desc}</div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <Link href="/company/audit" style={{ fontSize: 12, color: "var(--muted)" }}>🔒 Audit-Log — alle Änderungen im Firmenkonto</Link>
     </div>
   );
 }

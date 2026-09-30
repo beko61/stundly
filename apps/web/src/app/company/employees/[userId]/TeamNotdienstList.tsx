@@ -21,12 +21,16 @@ export interface TeamNotdienst {
   ergebnis:      string | null;
   note:          string | null;
   erledigt:      boolean;
+  /** Team-Ansicht (Notdienst-Zentrale): wem gehört der Einsatz */
+  user_id?:      string;
+  name?:         string;
 }
 
 interface Anhang { id: string; art: "foto" | "unterschrift"; data: string; unterzeichner: string | null; created_at: string }
 
 interface Props {
-  userId:  string;
+  /** Einzelansicht: Mitarbeiter-ID. Team-Ansicht: null (dann entry.user_id) */
+  userId:  string | null;
   entries: TeamNotdienst[];
 }
 
@@ -107,6 +111,7 @@ export function TeamNotdienstList({ userId, entries }: Props) {
                     flex: 1, minWidth: 0, textAlign: "left", background: "transparent", border: "none",
                     color: "var(--text)", cursor: "pointer", padding: 0, fontFamily: "inherit",
                   }}>
+                  {e.name && <div style={{ fontSize: 11, fontWeight: 800, color: "var(--accent2)", marginBottom: 1 }}>{e.name}</div>}
                   <div style={{ fontSize: 13, fontWeight: 700 }}>
                     {WD[dow]} {formatDateDE(e.date)} · {hhmm(e.start_time)}–{hhmm(e.end_time)}
                     <span style={{ color: "var(--orange)", marginLeft: 6, whiteSpace: "nowrap" }}>{durOf(e)}</span>
@@ -127,7 +132,7 @@ export function TeamNotdienstList({ userId, entries }: Props) {
                   {busy === e.id ? "…" : bezahlt ? "✅ Bezahlt" : "⏳ Offen"}
                 </button>
               </div>
-              {isOpen && <EinsatzDetails userId={userId} entry={e} />}
+              {isOpen && <EinsatzDetails userId={e.user_id ?? userId ?? ""} entry={e} />}
             </div>
           );
         })}

@@ -1,5 +1,27 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-02 (142) – v0.79.0: Zuschlagsrechner (SEO) + A4-Aushang mit QR
+
+Kullanıcı: "üye çekmemiz gerek, odağımız bu"; Facebook hesabı yok, kanal tercihi yok → kullanıcıdan hesap gerektirmeyen yollar:
+yüz yüze (el ilanı), WhatsApp, SEO. Migration 036 teyit edildi (yoklandı). QR kod kullanıcı tarafından denendi: çalışıyor.
+
+- NEU `marketing/stundly-aushang-a4.pdf` (+ önizleme PNG, üretici `marketing/aushang_erstellen.py`, reportlab):
+  "Notdienst um 3 Uhr nachts?…", 3 fayda, büyük QR → /register?ref=85044a3b (kullanıcının super_admin hesabı; jsQR ile çözüldü)
+- NEU public `/zuschlagsrechner` (SEO): § 3b EStG steuerfreie Zuschläge minutengenau —
+  Nacht 25 % / 0–4 Uhr 40 % (Beginn vor 0 Uhr), Sonntag 50 %, Feiertag + Silvester ab 14 Uhr 125 %,
+  24.12. ab 14 Uhr / 25.–26.12. / 1.5. 150 %, 0–4 Uhr nach Sonn-/Feiertag noch Sonn-/Feiertag, Nacht kumuliert,
+  Sonntag+Feiertag nur höherer Satz (R 3b LStR), Grundlohn max 50 € (Steuer) / 25 € (SV). Bundesland-Feiertage (getFeiertage).
+  Kurallar gesetze-im-internet.de §3b + R 3b LStR ile doğrulandı. FAQPage JSON-LD (6 soru), CTA → /register.
+- `lib/tools/zuschlaege.ts` (calcZuschlaege) + test (7). middleware PUBLIC, sitemap, çapraz linkler (Startseite-Footer,
+  Überstundenrechner, Notdienst-Verwaltung). Başlıkta soft hyphen (mobilde kelime ortası bölünüyordu).
+- 667/667, tsc + lint temiz. Görsel 375px.
+
+### SIRADAKİ
+Search Console'da /zuschlagsrechner için "URL denetimi → dizine eklenmesini iste" (kullanıcı). Sonraki SEO sayfaları:
+Rufbereitschaft-Vergütung, Stundenzettel-Excel-Vorlage. QR ile gelenlerin kaydını kısaltma (type adımını atla).
+
+---
+
 ## 2026-10-02 (141) – v0.78.0: Davet için QR kod (yerinde okut → kayıt)
 
 Durum: Kullanıcı uygulamayı çalışanlara ve patronlara gösterdi, kimse kaydolmadı (auth: 6 hesap, hepsi kendisi/test).

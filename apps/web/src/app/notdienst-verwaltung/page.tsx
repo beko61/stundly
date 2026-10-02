@@ -160,6 +160,8 @@ export default function NotdienstLandingPage() {
             {" · "}
             <Link href="/vergleich/clockodo" style={{ color: "var(--accent2)" }}>Vergleich Clockodo</Link>
             {" · "}
+            <Link href="/zuschlagsrechner" style={{ color: "var(--accent2)" }}>Zuschlagsrechner</Link>
+            {" · "}
             <Link href="/ueberstundenrechner" style={{ color: "var(--accent2)" }}>Überstundenrechner</Link>
           </div>
         </div>

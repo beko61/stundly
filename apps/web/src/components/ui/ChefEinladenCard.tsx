@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSessionUserId } from "@/hooks/useSessionUserId";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { chefInviteText, chefInviteUrl } from "@/lib/marketing/referral";
+import { QrCodeButton } from "./QrCodeButton";
 
 /**
  * "Chef einladen" — nur für Nutzer ohne Firma. Link auf /firma?ref=<code>
@@ -45,6 +46,12 @@ export function ChefEinladenCard() {
         <a className="btn btn-primary" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
           💬 Per WhatsApp senden
         </a>
+        <QrCodeButton
+          url={url}
+          title="Stundenzettel ohne Abtippen — für deinen Betrieb"
+          hint="Chef, scann mich mit der Handykamera"
+          fileName="Stundly-Chef-QR-Code.png"
+        />
         <button type="button" className="btn btn-secondary" onClick={() => void copy()}>
           {copied ? "✓ Kopiert" : "📋 Text kopieren"}
         </button>

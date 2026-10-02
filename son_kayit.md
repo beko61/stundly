@@ -1,5 +1,24 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-02 (141) – v0.78.0: Davet için QR kod (yerinde okut → kayıt)
+
+Durum: Kullanıcı uygulamayı çalışanlara ve patronlara gösterdi, kimse kaydolmadı (auth: 6 hesap, hepsi kendisi/test).
+Tepkiler: "güzel ama gerek yok", "sonra bakarım"; bugün kâğıt Stundenzettel + WhatsApp foto. Kullanıcı: link yerine QR kod.
+
+- NEU `components/ui/QrCodeButton.tsx` (npm `qrcode` 1.5.4, MIT): "📱 QR-Code zeigen" → beyaz tam ekran büyük QR (SVG),
+  başlık + "Mit der Handykamera scannen" + link; "⬇ Als Bild speichern" (1024px PNG önceden üretilir — iOS senkron tık);
+  ESC/tık ile kapanır, z-index 10000 (destek butonunun üstünde)
+- `InviteColleaguesCard` (Dashboard + Profil): QR artık ilk/ana buton → /register?ref=<kod>
+- `ChefEinladenCard`: QR → /firma?ref=<kod> ("Chef, scann mich mit der Handykamera")
+- Davet sistemi (firma çalışan daveti) DOKUNULMADI.
+- Doğrulama: QR Node'da jsQR ile çözüldü = doğru URL; 375px görsel kontrol (/demo silindi). Test QrCodeButton (1). 660/660, tsc + lint temiz.
+
+### SIRADAKİ (kullanıcı kazanma)
+Önerilen: 2–3 patrona "Zettel bleibt, du leitest nur WhatsApp-Fotos weiter → Lohnliste fertig" testi (Chef-Foto-Scan fikri);
+Arbeitszeiterfassung yasal durumunu araştır (doğrulanmadan iddia etme); kayıt akışını kısalt.
+
+---
+
 ## 2026-10-02 (140) – v0.77.0: Firmen-Briefkopf (Logo + Firmendaten) nur der Chef pflegt
 
 Kullanıcı: "firmalarda logo ve firma bilgilerini yönetici eklesin diğer çalışanlar müdahale etmesin". **Migration 036 gerekli.**

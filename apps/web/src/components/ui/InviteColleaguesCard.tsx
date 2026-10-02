@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSessionUserId } from "@/hooks/useSessionUserId";
 import { inviteText, inviteUrl } from "@/lib/marketing/referral";
+import { QrCodeButton } from "./QrCodeButton";
 
 /**
  * "Kollegen einladen" — persönlicher Empfehlungslink zum Teilen (WhatsApp, Mail, …).
@@ -38,8 +39,8 @@ export function InviteColleaguesCard() {
     <div className="card purple" style={{ padding: 20 }}>
       <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>👥 Kollegen einladen</h2>
       <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 12 }}>
-        Kennst du jemanden, der seine Stunden noch auf Zettel schreibt? Schick ihm deinen Link —
-        in der Beta ist Stundly für alle kostenlos.
+        Kennst du jemanden, der seine Stunden noch auf Zettel schreibt? Zeig ihm den QR-Code
+        oder schick deinen Link — in der Beta ist Stundly für alle kostenlos.
       </p>
       <div style={{
         fontFamily: "'DM Mono',monospace", fontSize: 13, padding: "10px 12px", borderRadius: 10,
@@ -49,8 +50,15 @@ export function InviteColleaguesCard() {
         {url}
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <QrCodeButton
+          primary
+          url={url}
+          title="Arbeitszeit & Notdienst am Handy — kostenlos"
+          hint="Mit der Handykamera scannen"
+          fileName="Stundly-QR-Code.png"
+        />
         {canShare && (
-          <button type="button" className="btn btn-primary" onClick={share}>📤 Teilen</button>
+          <button type="button" className="btn btn-secondary" onClick={share}>📤 Teilen</button>
         )}
         <a
           className="btn btn-secondary"

@@ -26,6 +26,7 @@ import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 import { useQueryClient } from "@tanstack/react-query";
 import { makePdfTextSafe } from "@/lib/pdf/pdfSafe";
+import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 
 // Direct time_entries upsert sonrası tüm time_entries query'lerini invalide et.
 // (month + range key'leri ayrı prefix'lerde olduğu için predicate kullanıyoruz.)
@@ -262,9 +263,14 @@ export default function VacationPage() {
     const user = session?.user;
     if (!user) { setProfileLoading(false); return; }
 
-    const { data: prof } = await supabase.from("profiles")
-      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon")
-      .eq("user_id", user.id).single();
+    const [{ data: profRaw }, briefkopf] = await Promise.all([
+      supabase.from("profiles")
+        .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon")
+        .eq("user_id", user.id).single(),
+      loadMyBriefkopf(supabase),
+    ]);
+    // Firmen-Mitarbeiter: Briefkopf kommt von der Firma (Chef pflegt ihn)
+    const prof = profRaw ? applyBriefkopf(profRaw, briefkopf) : profRaw;
 
     if (prof) {
       setProfile(prof as Profile);

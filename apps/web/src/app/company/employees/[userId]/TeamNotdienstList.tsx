@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDur } from "@/lib/utils/formatDur";
 import { dataUrlToFile, downloadFile } from "@/lib/share/shareFile";
 import { generateNotdienstReportPdf, reportFileName, fotoFileName, formatDateDE } from "@/lib/pdf/notdienstReportPdf";
+import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 
 export interface TeamNotdienst {
   id:            string;
@@ -182,9 +183,15 @@ function EinsatzDetails({ userId, entry }: { userId: string; entry: TeamNotdiens
   async function erstellen() {
     setGenerating(true); setPdfError(null);
     try {
-      const { data: p } = await createClient().from("profiles")
-        .select("vorname,nachname,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,signature_data")
-        .eq("user_id", userId).maybeSingle();
+      const supabase = createClient();
+      const [{ data: pRaw }, briefkopf] = await Promise.all([
+        supabase.from("profiles")
+          .select("vorname,nachname,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,signature_data")
+          .eq("user_id", userId).maybeSingle(),
+        loadMyBriefkopf(supabase),
+      ]);
+      // Briefkopf der Firma (Chef und Mitarbeiter gehören zur selben Firma)
+      const p = pRaw ? applyBriefkopf(pRaw, briefkopf) : pRaw;
       const blob = await generateNotdienstReportPdf({
         date: entry.date, start: hhmm(entry.start_time), end: hhmm(entry.end_time), duration: durOf(entry),
         kunde, telefon: entry.kunde_telefon ?? "", adresse: entry.adresse ?? "",

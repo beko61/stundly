@@ -9,6 +9,7 @@ const ITEMS = [
   { href: "/company/notdienst", label: "Notdienst",   short: "Notdienst", icon: "🚨", mobile: true },
   { href: "/company/lohn",      label: "Lohn",        short: "Lohn",     icon: "💶", mobile: true },
   { href: "/company/reports",   label: "Berichte",    short: "Berichte", icon: "📋", mobile: true },
+  { href: "/company/firmendaten", label: "Firmendaten", short: "Firma",  icon: "🏢", mobile: false },
   { href: "/company/billing",   label: "Abonnement",  short: "Abo",      icon: "💳", mobile: false },
   { href: "/company/audit",     label: "Audit-Log",   short: "Log",      icon: "🔒", mobile: false },
 ];

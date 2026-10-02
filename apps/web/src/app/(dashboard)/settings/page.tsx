@@ -13,6 +13,9 @@ import { AdminPanelLinks } from "@/components/ui/AdminPanelLinks";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { PrivacyAccountCard } from "@/components/settings/PrivacyAccountCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { resizeLogo } from "@/lib/image/resizeLogo";
+import { loadMyBriefkopf, type Briefkopf } from "@/lib/company/briefkopf";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 
 interface Profile {
   vorname:        string;
@@ -45,35 +48,6 @@ const EMPTY: Profile = {
   monthly_report_enabled: false,
 };
 
-/**
- * Logo'yu Canvas API ile küçültür + JPEG'e dönüştürür.
- * Max genişlik 400px, kalite 0.85 → genelde 30-80 KB base64.
- * SVG dosyalar Canvas'a çizilebilir ama vektör korunmaz; bu yeterli çünkü PDF/UI küçük gösterir.
- */
-async function resizeLogo(file: File, maxWidth: number, quality: number): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden."));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("Bild konnte nicht geladen werden."));
-      img.onload = () => {
-        const scale = Math.min(1, maxWidth / img.width);
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { reject(new Error("Canvas-Kontext nicht verfügbar.")); return; }
-        ctx.drawImage(img, 0, 0, w, h);
-        // PNG ile şeffaflık korunur ama JPEG çok daha küçük → JPEG kullan
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function SettingsPage() {
   const [profile,    setProfile]    = useState<Profile>(EMPTY);
@@ -83,6 +57,10 @@ export default function SettingsPage() {
   const [saveError,  setSaveError]  = useState<string | null>(null);
   const [sigSaved,   setSigSaved]   = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
+  // Firmen-Mitarbeiter: Briefkopf pflegt der Chef im Firmen-Panel (nur Anzeige hier)
+  const [firmaBk, setFirmaBk] = useState<Briefkopf | null>(null);
+  const membership = useCompanyMembership();
+  const isChef = !!membership.data?.hasCompany && !membership.data.isCompanyEmployee;
 
   // ── Import (von alter App / internettesiz HTML) ──
   const [importPreview, setImportPreview] = useState<ImportPayload | null>(null);
@@ -156,6 +134,7 @@ export default function SettingsPage() {
   }
 
   useEffect(() => { void load(); }, []);
+  useEffect(() => { void loadMyBriefkopf(createClient()).then(setFirmaBk); }, []);
 
   // Erinnerungs-Mails (Migration 031) — eigene Abfrage: fehlt die Spalte noch,
   // bleibt der Schalter ausgeblendet und der Rest der Seite funktioniert normal.
@@ -218,9 +197,12 @@ export default function SettingsPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) { setSaving(false); setSaveError("Nicht angemeldet."); return; }
 
+    // Briefkopf-Felder gehören bei Firmen-Mitarbeitern der Firma → nicht mitspeichern
+    const { company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, ...rest } = profile;
+    const own = firmaBk ? rest : { ...rest, company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data };
     const { error } = await supabase
       .from("profiles")
-      .upsert({ user_id: session.user.id, ...profile }, { onConflict: "user_id" });
+      .upsert({ user_id: session.user.id, ...own }, { onConflict: "user_id" });
     if (!error && reminders !== null) {
       await supabase.from("profiles").update({ reminder_emails_enabled: reminders }).eq("user_id", session.user.id);
     }
@@ -365,6 +347,26 @@ export default function SettingsPage() {
             Diese Angaben erscheinen im Briefkopf deiner Urlaubsanträge und Monatsberichte (PDF).
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {firmaBk ? (
+              <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                {firmaBk.logo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={firmaBk.logo} alt="Firmenlogo" style={{ maxHeight: 44, maxWidth: 90, objectFit: "contain", background: "white", padding: 4, borderRadius: 6, flexShrink: 0 }} />
+                )}
+                <div style={{ fontSize: 13, lineHeight: 1.5, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800 }}>{firmaBk.name}</div>
+                  {(firmaBk.strasse || firmaBk.plz || firmaBk.ort) && (
+                    <div style={{ color: "var(--muted)" }}>{[firmaBk.strasse, [firmaBk.plz, firmaBk.ort].filter(Boolean).join(" ")].filter(Boolean).join(", ")}</div>
+                  )}
+                  {firmaBk.telefon && <div style={{ color: "var(--muted)" }}>{firmaBk.telefon}</div>}
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+                    🔒 {isChef
+                      ? <>Gilt für das ganze Team. <a href="/company/firmendaten" style={{ color: "var(--accent2)", fontWeight: 700 }}>Im Firmen-Panel bearbeiten →</a></>
+                      : "Wird von deiner Firma verwaltet."}
+                  </div>
+                </div>
+              </div>
+            ) : (<>
             {field("Firmenname", "company_name", { placeholder: "z.B. Mustermann Sanitär GmbH" })}
 
             {/* Adresse — 3 Felder in einer Zeile (Straße, PLZ, Ort) */}
@@ -393,6 +395,7 @@ export default function SettingsPage() {
             </div>
 
             {field("Firma Telefon (optional)", "firma_telefon", { placeholder: "z.B. 030 12345678" })}
+            </>)}
 
             {/* Bundesland selector */}
             <div>
@@ -409,8 +412,8 @@ export default function SettingsPage() {
               </select>
             </div>
 
-            {/* Logo upload */}
-            <div>
+            {/* Logo upload (nur ohne Firma) */}
+            {!firmaBk && <div>
               <label className="label">Firmenlogo</label>
               {profile.logo_data ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -443,7 +446,7 @@ export default function SettingsPage() {
                   <input type="file" accept="image/png,image/jpeg,image/svg+xml" style={{ display: "none" }} onChange={handleLogoUpload} />
                 </label>
               )}
-            </div>
+            </div>}
           </div>
         </div>
 

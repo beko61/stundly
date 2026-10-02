@@ -1,5 +1,25 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-02 (140) – v0.77.0: Firmen-Briefkopf (Logo + Firmendaten) nur der Chef pflegt
+
+Kullanıcı: "firmalarda logo ve firma bilgilerini yönetici eklesin diğer çalışanlar müdahale etmesin". **Migration 036 gerekli.**
+
+- NEU `supabase/migrations/036_firma_briefkopf.sql`: companies.phone, companies.logo_data (data-URL, ≤600k) +
+  RPC `my_company_briefkopf()` (security definer; çalışan sadece briefkopf alanlarını görür, Steuerberater vb. değil)
+- NEU `lib/company/briefkopf.ts`: briefkopfFromCompany, applyBriefkopf (firma üyesi → profil firma alanlarının YERİNE firma verisi),
+  loadMyBriefkopf (RPC hata/firma yok → null → eski davranış: kendi profil alanları)
+- PDF'ler firma briefkopf'unu kullanıyor: Monatsbericht (reports), Urlaubsantrag (vacation), Notdienst-Bericht (çalışan + firma paneli),
+  firma raporları API'si (`/api/company/reports/data`, önceden "Stundly" yazıyordu)
+- NEU `/company/firmendaten` (yan menü "Firmendaten" + Übersicht altında link): ad, adres, telefon, logo, canlı önizleme.
+  Firma boşsa patronun kendi profil bilgileri önerilir (kaydetmeden önce). `PATCH /api/company/settings` genişletildi
+  (logo sadece PNG/JPEG data-URL; audit log'a logo yazılmaz)
+- Profil sayfası: firma üyesinde Firmendaten kartı salt okunur (🔒 "Wird von deiner Firma verwaltet"; patrona "Im Firmen-Panel bearbeiten →"),
+  Bundesland çalışanın kendisinde kalıyor; kaydederken firma alanları gönderilmiyor
+- `lib/image/resizeLogo.ts` (settings'ten taşındı): JPEG'e çevirirken beyaz zemin (şeffaf PNG siyah çıkıyordu)
+- Test: briefkopf (3), settings route Briefkopf (3). 659/659, tsc + lint temiz. Görsel: form + logo yükleme 375px /demo'da (silindi)
+
+---
+
 ## 2026-09-30 (139) – v0.76.0: Mobil menü firma paneli gibi (düz sekme çubuğu)
 
 Kullanıcı: telefonda Urlaub vb. açılır grup menüsünde; firma panelindeki alt menü gibi olsun istedi. Migration 035 teyit edildi (yoklandı).

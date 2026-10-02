@@ -652,6 +652,7 @@ export default async function CompanyDashboardPage() {
       </div>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12 }}>
+        <Link href="/company/firmendaten" style={{ color: "var(--muted)" }}>🏢 Firmendaten &amp; Logo</Link>
         <Link href="/company/billing" style={{ color: "var(--muted)" }}>💳 Abonnement</Link>
         <Link href="/company/audit" style={{ color: "var(--muted)" }}>🔒 Audit-Log — alle Änderungen im Firmenkonto</Link>
       </div>

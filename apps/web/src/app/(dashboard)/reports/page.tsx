@@ -22,6 +22,7 @@ import {
 } from "@/lib/utils/monthStats";
 import { notdienstMonthOf, notdienstBelongsToMonth, notdienstLoadRange, isoWeek } from "@/lib/utils/weekMonth";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -332,14 +333,17 @@ export default function ReportsPage() {
       // Notdienst: hafta-Pazar-ay-atfı için ±7 gün pay ile çek, sonra filter
       const ndRange = notdienstLoadRange(year, month);
 
-      const [{ data: ndRaw }, { data: prof }] = await Promise.all([
+      const [{ data: ndRaw }, { data: profRaw }, briefkopf] = await Promise.all([
         supabase.from("notdienst_entries")
           .select("date, start_time, end_time, erledigt, kunde, note")
           .eq("user_id", uid).gte("date", ndRange.start).lte("date", ndRange.end),
         supabase.from("profiles")
           .select("vorname, nachname, personal_nr, abteilung, vorgesetzter, email, company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, signature_data, bundesland")
           .eq("user_id", uid).maybeSingle(),
+        loadMyBriefkopf(supabase),
       ]);
+      // Firmen-Mitarbeiter: Briefkopf kommt von der Firma (Chef pflegt ihn)
+      const prof = profRaw ? applyBriefkopf(profRaw, briefkopf) : profRaw;
       const nd = (ndRaw ?? []).filter(n => notdienstBelongsToMonth(n.date, year, month));
 
       const notdienst: NotdienstEntry[] = (nd ?? []).map((n) => ({

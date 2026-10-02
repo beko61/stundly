@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
+import { applyBriefkopf, briefkopfFromCompany, COMPANY_BRIEFKOPF_SELECT } from "@/lib/company/briefkopf";
 
 /**
  * GET /api/company/reports/data?year=2026&month=6&userId=<optional>
@@ -36,12 +37,12 @@ export async function GET(req: NextRequest) {
   const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
   const lastDay  = `${year}-${String(month).padStart(2, "0")}-${String(daysIn).padStart(2, "0")}`;
 
-  // ── Şirket bilgisi ──────────────────────────────────────────────
-  const { data: company } = await admin
-    .from("companies")
-    .select("name")
-    .eq("id", companyId)
-    .single();
+  // ── Şirket bilgisi + Briefkopf (Migration 036; vorher nur Name/Adresse) ──
+  const full = await admin.from("companies").select(COMPANY_BRIEFKOPF_SELECT).eq("id", companyId).maybeSingle();
+  const company = (full.error
+    ? (await admin.from("companies").select("name, address_line1, postal_code, city").eq("id", companyId).maybeSingle()).data
+    : full.data) as Record<string, unknown> | null;
+  const briefkopf = briefkopfFromCompany(company);
 
   // ── Hedef Mitarbeiter listesi ──────────────────────────────────
   let employees: Array<Record<string, unknown>> = [];
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest) {
   const result = employees.map(emp => {
     const uid = emp.user_id as string;
     return {
-      profile: emp,
+      profile: applyBriefkopf(emp, briefkopf),
       entries:   (timeEntries ?? []).filter(t => t.user_id === uid),
       notdienst: (ndEntries  ?? []).filter(n => n.user_id === uid),
       salarySettings: salaryByUser.get(uid) ?? null,

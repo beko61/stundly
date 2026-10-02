@@ -69,6 +69,24 @@ describe("PATCH /api/company/settings (Phase D)", () => {
     await PATCH_SETTINGS(req({ steuerberater_email: "" }, "PATCH"));
     expect(calls[0]).toEqual({ steuerberater_email: null, steuerberater_auto: false });
   });
+  it("Briefkopf: leere Felder → null, Logo nicht ins Audit-Log", async () => {
+    const { admin, calls } = settingsAdmin();
+    mockGetContext.mockResolvedValue(ctx(admin));
+    const logo = "data:image/jpeg;base64,QUJD";
+    const res = await PATCH_SETTINGS(req({ name: " Wa GmbH ", address_line1: "Hauptstr. 1", postal_code: "", city: "Hannover", phone: "", logo_data: logo }, "PATCH"));
+    expect(res.status).toBe(200);
+    expect(calls[0]).toEqual({ name: "Wa GmbH", address_line1: "Hauptstr. 1", postal_code: null, city: "Hannover", phone: null, logo_data: logo });
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({ payload: expect.objectContaining({ logo_data: "[neues Logo]" }) }));
+  });
+  it("400 bei Logo, das kein PNG/JPEG-Bild ist, oder zu kurzem Namen", async () => {
+    mockGetContext.mockResolvedValue(ctx(settingsAdmin().admin));
+    expect((await PATCH_SETTINGS(req({ logo_data: "data:text/html;base64,PHNjcmlwdD4=" }, "PATCH"))).status).toBe(400);
+    expect((await PATCH_SETTINGS(req({ name: "x" }, "PATCH"))).status).toBe(400);
+  });
+  it("403 für Nicht-Chefs (Mitarbeiter)", async () => {
+    mockGetContext.mockResolvedValue(null);
+    expect((await PATCH_SETTINGS(req({ name: "Andere Firma" }, "PATCH"))).status).toBe(403);
+  });
   it("400 bei ungültiger Adresse oder leerem Body", async () => {
     mockGetContext.mockResolvedValue(ctx(settingsAdmin().admin));
     expect((await PATCH_SETTINGS(req({ steuerberater_email: "kein-mail" }, "PATCH"))).status).toBe(400);

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image/compressImage";
 import { dataUrlToFile, shareOrDownload } from "@/lib/share/shareFile";
 import { buildBerichtText } from "@/lib/notdienst/berichtText";
+import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 import {
   generateNotdienstReportPdf, reportFileName, fotoFileName, type NotdienstReportInput,
 } from "@/lib/pdf/notdienstReportPdf";
@@ -152,11 +153,16 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
     try {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      const { data: p } = session?.user
-        ? await supabase.from("profiles")
-            .select("vorname,nachname,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,signature_data")
-            .eq("user_id", session.user.id).maybeSingle()
-        : { data: null };
+      const [{ data: pRaw }, briefkopf] = session?.user
+        ? await Promise.all([
+            supabase.from("profiles")
+              .select("vorname,nachname,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,signature_data")
+              .eq("user_id", session.user.id).maybeSingle(),
+            loadMyBriefkopf(supabase),
+          ])
+        : [{ data: null }, null];
+      // Firmen-Mitarbeiter: Briefkopf kommt von der Firma (Chef pflegt ihn)
+      const p = pRaw ? applyBriefkopf(pRaw, briefkopf) : pRaw;
       const blob = await generateNotdienstReportPdf({
         ...bericht,
         fotoAnzahl: fotos.length,

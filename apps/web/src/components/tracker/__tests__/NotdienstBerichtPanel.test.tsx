@@ -185,7 +185,8 @@ describe("NotdienstBerichtPanel", () => {
     ]);
     expect(await files[1]!.text()).toBe("F1");
     // Betreff + kompletter Bericht als Mail-Text, zusätzlich zu den Anhängen
-    expect(opts.title).toBe("Notdienst-Bericht 27.09.2026 – Frau Kraft – Wiehbergstraße 3, 30519 Hannover");
+    expect(opts.title).toBe("ND - 27.09.26 - Frau Kraft - Wiehbergstraße 3, 30519 Hannover");
+    expect(opts.text.split("\n")[0]).toBe(opts.title);
     expect(opts.text).toContain("Telefon: 0511 987654");
     expect(opts.text).toContain("Problem:\nWC undicht");
     expect(opts.text).toContain("• Dichtung getauscht");

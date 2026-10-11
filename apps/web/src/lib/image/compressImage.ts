@@ -2,10 +2,13 @@
  * Handyfoto (oft 3–8 MB) → JPEG-Data-URL für notdienst_anhaenge.data.
  * Längste Seite max. `maxSide` px; Qualität wird gesenkt, bis das Ergebnis unter
  * `maxChars` liegt (DB-Check in Migration 029: 1 600 000 Zeichen).
+ *
+ * 1280 px / 0,7: am Handy und als Mail-Anhang weiter gut erkennbar, aber etwa halb so groß
+ * wie 1600 px / 0,8 (gemessen Ø 416 KB je Foto) — die Fotos liegen in der Datenbank.
  */
 export async function compressImage(
   file: Blob,
-  { maxSide = 1600, quality = 0.8, maxChars = 1_500_000 } = {},
+  { maxSide = 1280, quality = 0.7, maxChars = 1_500_000 } = {},
 ): Promise<string> {
   const img = await decode(file);
   const scale = Math.min(1, maxSide / Math.max(img.width, img.height));

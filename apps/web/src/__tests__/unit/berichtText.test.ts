@@ -8,12 +8,15 @@ const b: BerichtTextInput = {
 };
 
 describe("buildBerichtText", () => {
-  it("Betreff: Datum – Kunde – Adresse", () => {
-    expect(buildBerichtText(b).subject).toBe("Notdienst-Bericht 27.09.2026 – Frau Kraft – Hildesheimer Straße 5, 30519 Hannover");
+  it("Betreff: ND - TT.MM.JJ - Kunde - Adresse", () => {
+    expect(buildBerichtText(b).subject).toBe("ND - 27.09.26 - Frau Kraft - Hildesheimer Straße 5, 30519 Hannover");
   });
 
   it("Mail-Text mit allen Angaben, Ergebnis als Punkte, Anhänge genannt", () => {
     expect(buildBerichtText(b).body).toBe([
+      // Betreff als erste Zeile — Outlook (iPhone) nimmt ihn von dort
+      "ND - 27.09.26 - Frau Kraft - Hildesheimer Straße 5, 30519 Hannover",
+      "",
       "Datum: 27.09.2026",
       "Uhrzeit: 18:10 – 19:40 Uhr (1h 30m)",
       "Kunde: Frau Kraft",
@@ -38,8 +41,8 @@ describe("buildBerichtText", () => {
 
   it("leere Felder entfallen; ohne Fotos nur PDF-Anhang", () => {
     const r = buildBerichtText({ ...b, kunde: "", telefon: " ", adresse: "", problem: "", ergebnis: "", note: "", fotoAnzahl: 0 });
-    expect(r.subject).toBe("Notdienst-Bericht 27.09.2026");
-    expect(r.body).toBe("Datum: 27.09.2026\nUhrzeit: 18:10 – 19:40 Uhr (1h 30m)\n\nAnhang: Bericht (PDF)\n\n—\nErstellt mit Stundly · https://stundly.de");
+    expect(r.subject).toBe("ND - 27.09.26");
+    expect(r.body).toBe("ND - 27.09.26\n\nDatum: 27.09.2026\nUhrzeit: 18:10 – 19:40 Uhr (1h 30m)\n\nAnhang: Bericht (PDF)\n\n—\nErstellt mit Stundly · https://stundly.de");
   });
 
   it("ein Foto → Singular", () => {

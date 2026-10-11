@@ -1,5 +1,23 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-11 (143) – v0.79.1: Notdienst-Betreff "ND - TT.MM.JJ - Kunde - Adresse" + Fotos kleiner
+
+Kullanıcı: (1) "Notdienst mail atarken paylaştan Outlook seçtiğimde konuya ND - gg.aa.yy - kiracı adı - adresi yazılmalı";
+(2) "resimler çok yer kaplar mı, görünecek şekilde düşük kayıtla tutabilir miyiz".
+
+- `lib/notdienst/berichtText.ts`: konu artık `ND - 27.09.26 - Frau Kraft - Adresse` (eskisi "Notdienst-Bericht 27.09.2026 – …").
+  Konu ayrıca mail metninin İLK SATIRI: iPhone'da Outlook konuyu share `title`'dan değil paylaşılan `text`'ten alıyor
+  (kaynak: OutSystems forum raporu) → eskiden konu "Datum: …" ile başlıyordu. Android'de `title` = konu.
+  Outlook'ta gerçek cihaz testi YAPILAMADI (buradan mümkün değil) → kullanıcı deneyecek.
+- `lib/image/compressImage.ts`: varsayılan 1600 px / 0,8 → 1280 px / 0,7.
+  Ölçüm (canlı, salt okuma): 25 foto, ort. 416 KB (base64), toplam 10,2 MB; imza ort. 13 KB.
+  Aynı fotolar 1280/0,7 ile yeniden kodlanınca ~%48'i (Pillow ile tahmin) → foto başına ~200 KB bekleniyor.
+  Mevcut 25 fotoya DOKUNULMADI (canlı DB yazımı yok). Sadece yeni yüklenenler küçülür.
+- Fotolar DB'de text (data-URL) duruyor (migration 029). Kullanıcı çoğalırsa: Supabase Storage'a taşıma (ayrı iş).
+- Testler güncellendi (berichtText, NotdienstBerichtPanel). 667/667, tsc + lint temiz.
+
+---
+
 ## 2026-10-02 (142) – v0.79.0: Zuschlagsrechner (SEO) + A4-Aushang mit QR
 
 Kullanıcı: "üye çekmemiz gerek, odağımız bu"; Facebook hesabı yok, kanal tercihi yok → kullanıcıdan hesap gerektirmeyen yollar:

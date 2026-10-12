@@ -1,5 +1,28 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-12 (144) – v0.80.0: Kayıt kısaldı — QR/davet linkiyle gelen "Ne için kullanacaksın?" adımını atlıyor
+
+Kullanıcı Outlook testini yaptı: konu `ND - 12.10.26 - kiracı - adres` tek satır geliyor → #143 teyit edildi.
+LinkedIn'de kişisel profilinden ilk gönderiyi paylaştı (geri bildirim çağrısı, link ?utm_source=linkedin).
+OMR: profil yayında (omr.com/de/reviews/product/stundly) ama OMR Manager hesabı boş; info@omr.com'a mail önerildi.
+
+- NEU `lib/marketing/afterSignup.ts` → `afterSignupPath({referred, asCompany})`:
+  `as=company` → `/onboarding/setup?type=company`; `ref` → `/onboarding/setup?type=individual`; yoksa `/onboarding/type`.
+- `/register`: kayıttan sonra bu yola gider; `ref` varsa "Wie hast du von Stundly erfahren?" alanı gizli (kaynak zaten "kollege").
+- `/firma`: kayıt linkleri artık `&as=company` taşıyor → patron doğrudan firma kurulumuna.
+- `/onboarding/setup` (Einzelperson): altta "Du verwaltest ein Team? Als Unternehmen einrichten" linki
+  (tür seçimini görmeden gelen patron için; "Zurück" hâlâ /onboarding/type'a gider).
+- Eyalet (Bundesland) adımı KALDI — tatiller ve fazla mesai ona bağlı. Firma çalışan daveti (token) DOKUNULMADI.
+- Doğrulama: test afterSignup (3); tarayıcıda /register?ref= (kaynak alanı yok), /register (var),
+  /firma linkleri (as=company), setup linki (sadece Einzelperson). Gerçek kayıt DENENMEDİ
+  (lokal .env canlı Supabase'e bağlı → canlıya hesap açmak olurdu). 670/670, tsc + lint temiz.
+
+### SIRADAKİ
+SEO: Rufbereitschaft-Vergütung, Stundenzettel-Excel-Vorlage. LinkedIn 2. gönderi (Zuschlagsrechner, 72 € örneği).
+Süper admin: depolama kartı (DB boyutu / kalan foto) — migration gerekir, kullanıcı onayı bekliyor.
+
+---
+
 ## 2026-10-11 (143) – v0.79.1: Notdienst-Betreff "ND - TT.MM.JJ - Kunde - Adresse" + Fotos kleiner
 
 Kullanıcı: (1) "Notdienst mail atarken paylaştan Outlook seçtiğimde konuya ND - gg.aa.yy - kiracı adı - adresi yazılmalı";

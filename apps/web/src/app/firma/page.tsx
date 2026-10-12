@@ -33,7 +33,8 @@ const features = [
 
 export default async function FirmaPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   const { ref } = await searchParams;
-  const registerHref = isReferralCode(ref) ? `/register?ref=${ref}` : "/register";
+  // as=company: nach der Registrierung direkt zur Firmen-Einrichtung (Auswahl-Schritt entfällt)
+  const registerHref = isReferralCode(ref) ? `/register?ref=${ref}&as=company` : "/register?as=company";
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100dvh" }}>

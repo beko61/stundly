@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 
@@ -197,6 +198,16 @@ function SetupForm() {
             {loading ? "Bitte warten..." : "Weiter"}
           </button>
         </div>
+
+        {/* Wer per Empfehlungslink direkt hier landet, hat die Auswahl nicht gesehen */}
+        {!isCompany && (
+          <p style={{ fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
+            Du verwaltest ein Team?{" "}
+            <Link href="/onboarding/setup?type=company" style={{ color: "var(--accent2)", fontWeight: 700 }}>
+              Als Unternehmen einrichten
+            </Link>
+          </p>
+        )}
       </form>
     </div>
   );

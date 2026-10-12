@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 import { SIGNUP_SOURCES, isReferralCode } from "@/lib/marketing/referral";
+import { afterSignupPath } from "@/lib/marketing/afterSignup";
 
 function mapError(msg: string): string {
   if (msg.includes("already registered") || msg.includes("already been registered"))
@@ -29,6 +30,8 @@ function RegisterForm() {
   // Empfehlungslink eines Nutzers (/register?ref=abcd1234)
   const refParam     = params.get("ref");
   const referredBy   = isReferralCode(refParam) ? refParam : null;
+  // /firma schickt as=company mit → nach der Registrierung direkt zur Firmen-Einrichtung
+  const asCompany    = params.get("as") === "company";
 
   const [fullName, setFullName]   = useState("");
   const [email, setEmail]         = useState(inviteEmail ?? "");
@@ -153,7 +156,7 @@ function RegisterForm() {
       await supabase.auth.refreshSession();
       router.push(accept.redirectTo ?? "/tracker");
     } else {
-      router.push("/onboarding/type");
+      router.push(afterSignupPath({ referred: !!referredBy, asCompany }));
     }
     router.refresh();
   }
@@ -250,7 +253,8 @@ function RegisterForm() {
           </p>
         </div>
 
-        {!token && (
+        {/* Mit Empfehlungscode ist die Herkunft bekannt ("kollege") — Feld sparen */}
+        {!token && !referredBy && (
           <div>
             <label className="label" htmlFor="signup-source">Wie hast du von Stundly erfahren? (optional)</label>
             <select

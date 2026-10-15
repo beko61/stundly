@@ -321,13 +321,14 @@ describe("NotdienstModal — offline", () => {
 });
 
 describe("NotdienstModal — Validierung", () => {
-  it("Start = Ende → Hinweis, kein Speichern", async () => {
+  it("Start = Ende ist erlaubt → wird gespeichert (Dauer 0 Min)", async () => {
     renderModal({
       id: "nd-9", user_id: "u1", date: "2026-09-22", start_time: "19:00:00", end_time: "19:00:00",
       note: null, kunde: "Herr Malak", adresse: null, problem: null, ergebnis: null, erledigt: false,
     });
     fireEvent.click(screen.getByRole("button", { name: /Aktualisieren/ }));
-    expect(await screen.findByText(/Start und Ende sind gleich/)).toBeInTheDocument();
-    expect(mockUpdate).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0]![1]).toMatchObject({ start_time: "19:00", end_time: "19:00" });
+    expect(screen.queryByText(/Start und Ende sind gleich/)).toBeNull();
   });
 });

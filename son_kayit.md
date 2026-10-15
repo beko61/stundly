@@ -1,5 +1,18 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-15 (145) – v0.80.1: Notdienst — başlangıç ve bitiş aynı saat olabilir
+
+Kullanıcı: "Notdienst saatine başlama ve bitiş aynı saat olabilir, onu düzeltir misin."
+Önceden NotdienstModal kaydı engelliyordu ("Start und Ende sind gleich — bitte die Endzeit eintragen.", v0.57 civarı eklenen
+"Ende vergessen" koruması). Artık kaydediliyor; süre 0 dk (örn. kısa telefon).
+
+- `components/tracker/NotdienstModal.tsx`: eşitlik kontrolü kaldırıldı.
+- Süre hesapları zaten eşit saati 0 dk sayıyor (24 saat DEĞİL): shared `calculateWorkDuration` (endMinutes < start → gece),
+  `monthStats`, CSV ve DATEV `ndDurationMinutes` (m < 0 → +24h). Kontrol edildi, değişiklik gerekmedi.
+- Test: "Start = Ende → Hinweis" → "Start = Ende ist erlaubt → wird gespeichert". tsc + lint + vitest temiz.
+
+---
+
 ## 2026-10-12 (144) – v0.80.0: Kayıt kısaldı — QR/davet linkiyle gelen "Ne için kullanacaksın?" adımını atlıyor
 
 Kullanıcı Outlook testini yaptı: konu `ND - 12.10.26 - kiracı - adres` tek satır geliyor → #143 teyit edildi.

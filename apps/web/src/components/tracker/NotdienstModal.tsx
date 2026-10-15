@@ -136,11 +136,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
 
   async function handleSave() {
     setSaveError(null);
-    // Start = Ende ergibt 0h (Ende vergessen). Ende < Start ist erlaubt (über Mitternacht).
-    if (start.slice(0, 5) === end.slice(0, 5)) {
-      setSaveError("Start und Ende sind gleich — bitte die Endzeit eintragen.");
-      return;
-    }
+    // Start = Ende ist erlaubt (z.B. kurzer Anruf, Dauer 0 Min). Ende < Start = über Mitternacht.
     setSaving(true);
     let userId: string | null = null;
 

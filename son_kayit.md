@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-16 (147) – v0.80.3: Jahres-Befüllung sonrası ekranlar yenileniyor
+
+Kullanıcı: "2027 ausfüllen yaptım ama yıllık tabloda bir şey yok, aylar ausfüllen oldu, kontrol eder misin."
+Canlı DB (salt okuma): kullanıcının 2027 kaydı VAR — 256 "arbeiten" günü, her ay 19–23, bugün oluşturulmuş. Doldurma çalışmış.
+
+- Bulunan hata: `components/settings/AutoFillReports.tsx` upsert'ten sonra React Query önbelleğini yenilemiyordu.
+  Daha önce açılmış yıl görünümleri (time_entries_range; staleTime 60 s + localStorage'a kaydedilen offline önbellek)
+  yeni günler olmadan kalabiliyordu; ay görünümü ilk kez açılınca taze yüklendiği için dolu görünüyordu.
+  Düzeltme: doldurmadan sonra `["time_entries"]` ve `["time_entries_range"]` invalidate.
+- Kullanıcının gördüğü ekranın bu olduğu TEYİT EDİLMEDİ — hangi "yıllık tablo" olduğu soruldu.
+  Not: Berichte → Jahr → "Gesamt Überstunden" bilerek "bugüne kadar" sayıyor → gelecek yıl (2027) için 0 görünür; tablo ve
+  diğer kartlar tüm yılı gösterir.
+- tsc + lint + 670 test temiz.
+
+---
+
 ## 2026-10-16 (146) – v0.80.2: Yeni kullanıcı rehberi — önce "Heute eintragen"
 
 Durum (16.10): 12.10'dan beri yeni kayıt/giriş yok (7 hesap). LinkedIn ilk gönderi: 120 gösterim, 2 görüntüleme.

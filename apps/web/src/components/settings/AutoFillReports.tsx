@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import type { TimeEntry } from "@workly/shared";
@@ -23,6 +24,7 @@ import {
  * (PDF Monatsbericht artık /reports sayfasında.)
  */
 export function AutoFillReports() {
+  const qc = useQueryClient();
   const now = new Date();
   const [year, setYear]     = useState(now.getFullYear());
 
@@ -158,6 +160,10 @@ export function AutoFillReports() {
         if (err) throw new Error(err.message);
         inserted += batch.length;
       }
+      // Monats- und Jahresansichten (Dashboard, Berichte, Gehalt) sonst bis zu 60 s / aus dem
+      // gespeicherten Offline-Cache noch ohne die neuen Tage
+      void qc.invalidateQueries({ queryKey: ["time_entries"] });
+      void qc.invalidateQueries({ queryKey: ["time_entries_range"] });
       setYearFillResult(`✅ ${inserted} Tage in ${year} ausgefüllt.`);
       setTimeout(() => setYearFillResult(null), 4000);
     } catch (err) {

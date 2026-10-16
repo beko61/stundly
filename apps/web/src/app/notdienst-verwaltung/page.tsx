@@ -162,6 +162,8 @@ export default function NotdienstLandingPage() {
             {" · "}
             <Link href="/zuschlagsrechner" style={{ color: "var(--accent2)" }}>Zuschlagsrechner</Link>
             {" · "}
+            <Link href="/rufbereitschaft-verguetung" style={{ color: "var(--accent2)" }}>Rufbereitschaft-Vergütung</Link>
+            {" · "}
             <Link href="/ueberstundenrechner" style={{ color: "var(--accent2)" }}>Überstundenrechner</Link>
           </div>
         </div>

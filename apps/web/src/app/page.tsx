@@ -776,6 +776,7 @@ export default async function LandingPage() {
           <Link href="/notdienst-verwaltung" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Notdienst</Link>
           <Link href="/ueberstundenrechner" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Überstundenrechner</Link>
           <Link href="/zuschlagsrechner" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Zuschlagsrechner</Link>
+          <Link href="/rufbereitschaft-verguetung" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Rufbereitschaft</Link>
           <Link href="/stundenzettel-vorlage" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Stundenzettel-Vorlage</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
           <Link href="/avv" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AVV</Link>

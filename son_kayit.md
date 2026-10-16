@@ -1,5 +1,28 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-16 (149) – v0.81.0: SEO araç sayfası /rufbereitschaft-verguetung
+
+Kullanıcı sıradaki işlerden 1'i seçti (Rufbereitschaft ücreti sayfası).
+
+- NEU `lib/tools/rufbereitschaft.ts` → `calcRufbereitschaft`: Bereitschaft (model "stunden" = günlük X saat ücreti,
+  TVöD § 8 Abs. 3 ön ayarı 2 / 4; model "pauschale" = € / gün) + Einsätze (saat × ücret). Test 3.
+- NEU `components/tools/RufbereitschaftRechner.tsx`: varsayılan örnek 1 hafta (5 + 2 gün, 20 €/h, 6 h Einsatz) → 480 €;
+  sabit pauschale (30 / 60 €) → 390 €. Asgari ücretin altında uyarı (lib/mindestlohn).
+- NEU `app/rufbereitschaft-verguetung/page.tsx`: 6 soruluk FAQ + FAQPage JSON-LD, özet, uyarı metni, CTA → /register.
+  Doğrulanan kaynaklar: Bereitschaftsdienst = Arbeitszeit + Mindestlohn (BAG 29.06.2016, 5 AZR 716/15); Rufbereitschaft =
+  sadece Einsatz Arbeitszeit, istisna EuGH 09.03.2021; TVöD § 8 Abs. 3 (2× / 4× Stundenentgelt, < 12 h → 12,5 %/h;
+  BAG 6 AZR 114/08); pauschal ödeme § 3b'de vergisiz değil (BFH 29.11.2016, VI R 61/14 — Bereitschaftsdienst davası,
+  sayfada genel ifade edildi); Mindestlohn 13,90 € (2026) / 14,60 € (2027). Ruhezeit: "überwiegende Auffassung" diye yumuşatıldı.
+- middleware PUBLIC, sitemap (18 URL), çapraz linkler: ana sayfa alt bilgi, Notdienst-Verwaltung, Zuschlagsrechner.
+- Mobil kontrol 375px: başlık soft hyphen (Ruf-bereitschafts-vergütung, 22px), select etiketleri kısaltıldı, alanlar alta hizalı,
+  tutar tek satır; yatay taşma yok. 673/673, tsc + lint temiz.
+
+### SIRADAKİ
+Kullanıcı: Search Console'da /rufbereitschaft-verguetung için bir kez "dizine eklenmesini iste". Sonra: Excel çizelge şablonu
+sayfası; Notdienst PDF'lerinde "Erstellt mit Stundly" tıklanabilir/görünür.
+
+---
+
 ## 2026-10-16 (148) – v0.80.4: Berichte → Jahr: gelecek yılda "Gesamt Überstunden" tüm yılı gösteriyor
 
 Kullanıcının ekran görüntüsü (Berichte → Jahr → 2027): veriler doğru — 256/256 Arbeitstage, 2010h, Feiertag 5 T

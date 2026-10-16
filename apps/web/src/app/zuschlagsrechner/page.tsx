@@ -132,6 +132,8 @@ export default function ZuschlagsrechnerPage() {
             {" · "}
             <Link href="/ueberstundenrechner" style={{ color: "var(--accent2)" }}>Überstundenrechner</Link>
             {" · "}
+            <Link href="/rufbereitschaft-verguetung" style={{ color: "var(--accent2)" }}>Rufbereitschaft</Link>
+            {" · "}
             <Link href="/stundenzettel-vorlage" style={{ color: "var(--accent2)" }}>Stundenzettel-Vorlage</Link>
           </div>
         </div>

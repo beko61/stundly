@@ -490,11 +490,15 @@ export default function ReportsPage() {
           <>
             {/* Hero kartlar — sadece year mode */}
             {mode === "year" && (() => {
-              const gesamtUeber = overtimeToDate?.diffMin ?? 0;  // bis heute: (worked + nd) − soll
+              // Zukünftiges Jahr: "bis heute" wäre immer 0 → ganzes Jahr wie in "Differenz" (Planung)
+              const futureYear = year > Number(todayISO.slice(0, 4));
+              const gesamtUeber = futureYear
+                ? stats.diffMin
+                : overtimeToDate?.diffMin ?? 0;  // bis heute: (worked + nd) − soll
               const ueberTage = gesamtUeber / 60 / 8;
               const bisLabel = todayISO.startsWith(`${year}-`)
                 ? `bis heute (${todayISO.slice(8, 10)}.${todayISO.slice(5, 7)}.)`
-                : `Jahr ${year}`;
+                : futureYear ? `Jahr ${year} (geplant)` : `Jahr ${year}`;
               const ndStunden = stats.ndMin / 60;
               const ndTage = ndStunden / 8;
               return (

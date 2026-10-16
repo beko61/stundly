@@ -1,5 +1,18 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-16 (148) – v0.80.4: Berichte → Jahr: gelecek yılda "Gesamt Überstunden" tüm yılı gösteriyor
+
+Kullanıcının ekran görüntüsü (Berichte → Jahr → 2027): veriler doğru — 256/256 Arbeitstage, 2010h, Feiertag 5 T
+(NI 2027'de hafta içi tatil: 1.1, 26.3, 29.3, 6.5, 17.5 = 5 ✓), Soll 2088h, Differenz −38h.
+Sorun: üstteki "Gesamt Überstunden" kartı "+0h" — kart bilerek "bugüne kadar" (calcOvertimeToDate, todayISO) sayıyor,
+2027 gelecekte olduğu için hep 0 → "Differenz −38h" ile çelişiyordu.
+
+- `app/(dashboard)/reports/page.tsx`: seçili yıl > bugünkü yıl ise kart `stats.diffMin` (tüm yıl, Differenz ile aynı) gösterir,
+  alt yazı "Jahr 2027 (geplant)". Bu yıl: "bis heute" aynen; geçmiş yıllar: değişmedi.
+- Görsel test yapılmadı (giriş gerekiyor). tsc + lint + 670 test temiz.
+
+---
+
 ## 2026-10-16 (147) – v0.80.3: Jahres-Befüllung sonrası ekranlar yenileniyor
 
 Kullanıcı: "2027 ausfüllen yaptım ama yıllık tabloda bir şey yok, aylar ausfüllen oldu, kontrol eder misin."

@@ -1,5 +1,18 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-16 (146) – v0.80.2: Yeni kullanıcı rehberi — önce "Heute eintragen"
+
+Durum (16.10): 12.10'dan beri yeni kayıt/giriş yok (7 hesap). LinkedIn ilk gönderi: 120 gösterim, 2 görüntüleme.
+Kullanıcı: el ilanını asacak yer yok; iş arkadaşı/toptancı/WhatsApp önerileri "hepsi zor" → "şu an en iyisi devam etmek".
+Kaydolan 3 hesap hiç kayıt girmeden çıkmıştı → ilk adım sürtünmesi azaltıldı.
+
+- `app/(dashboard)/dashboard/page.tsx` (yeni kullanıcı = yıl içinde hiç kayıt yok): 3 adım yeniden sıralandı.
+  Eskiden 1) Standardzeiten (/settings) 2) Lohn (/salary) 3) erster Eintrag (/tracker).
+  Şimdi 1) "Heute eintragen" (/tracker, Notdienst da aynı şekilde) 2) Standardzeiten 3) Lohn.
+- Görsel test yapılmadı (rehber sadece kaydı olmayan hesapta görünüyor; canlı DB'de hesap açmak gerekirdi). tsc + lint + 670 test temiz.
+
+---
+
 ## 2026-10-15 (145) – v0.80.1: Notdienst — başlangıç ve bitiş aynı saat olabilir
 
 Kullanıcı: "Notdienst saatine başlama ve bitiş aynı saat olabilir, onu düzeltir misin."

@@ -378,9 +378,18 @@ export default function DashboardPage() {
             🚀 In 3 Schritten startklar
           </div>
 
+          {/* Erst eintragen, dann einstellen — neue Nutzer sollen sofort einen Eintrag haben */}
           {[
             {
               n: 1,
+              icon: "⏱",
+              title: "Heute eintragen",
+              desc: "Auf den heutigen Tag tippen, Zeiten prüfen, speichern. Einen Notdienst trägst du genauso ein.",
+              cta: "Zur Zeiterfassung",
+              href: "/tracker",
+            },
+            {
+              n: 2,
               icon: "🕐",
               title: "Standardzeiten festlegen",
               desc: "Beginn / Ende / Pause für Mo–Do und Fr — wird beim Auto-Befüllen und für neue Einträge verwendet.",
@@ -388,20 +397,12 @@ export default function DashboardPage() {
               href: "/settings",
             },
             {
-              n: 2,
+              n: 3,
               icon: "💰",
               title: "Stundenlohn & Steuer",
               desc: "Stundenlohn, Sollstunden, Steuerklasse — für die automatische Lohnberechnung.",
               cta: "Lohn einstellen",
               href: "/salary",
-            },
-            {
-              n: 3,
-              icon: "⏱",
-              title: "Ersten Arbeitstag erfassen",
-              desc: "Tipp: auf den heutigen Tag tippen — oder ein ganzes Jahr mit einem Klick befüllen.",
-              cta: "Zur Zeiterfassung",
-              href: "/tracker",
             },
           ].map(step => (
             <Link

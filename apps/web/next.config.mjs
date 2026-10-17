@@ -4,6 +4,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/config.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // E2E-Tests (Playwright) bauen in einen eigenen Ordner, damit ein laufender Dev-Server nicht gestört wird
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // NOT: @react-pdf/renderer optimizePackageImports kaldırıldı — React 19'da
   // ReactCurrentDispatcher yok, package React 18 için. Ayrıca proje jspdf
   // kullanıyor, @react-pdf/renderer runtime'da import edilmiyor.

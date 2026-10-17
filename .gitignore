@@ -10,6 +10,7 @@ test-results/
 
 # next.js
 .next/
+.next-e2e/
 out/
 build/
 dist/
@@ -57,3 +58,6 @@ supabase/.temp
 # generated audit / reports
 audit.json
 lighthouse-report.*
+
+# Datenbank-Backups (scripts/yedek.py) — enthalten personenbezogene Daten
+yedekler/

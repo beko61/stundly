@@ -1,5 +1,31 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (155) – v0.83.1: Yedek scripti + uçtan uca test altyapısı (ayrı test projesi)
+
+Kullanıcı: "Yedekleme" ve "Test ortamı" maddelerini de yapalım dedi.
+
+**Yedek**
+- `scripts/yedek.py`: canlı DB'yi SADECE okur (service key .env.local'dan, ekrana yazılmaz). REST şemasından tüm tabloları
+  otomatik bulur, sayfa sayfa indirir; auth kullanıcıları (id, e-posta, tarihler, metadata) ekler →
+  `workly/yedekler/stundly_yedek_YYYY-MM-DD_HHMM.zip` (+ ozet.json). `yedekler/` .gitignore'da.
+- İlk çalıştırma 17.10: 21 tablo + 7 hesap, 12,2 MB (time_entries 797, notdienst_entries 145, notdienst_anhaenge 51).
+- Storage bucket yok (fotolar/logolar DB'de) → zip tam yedek. Geri yükleme scripti henüz yok.
+- Supabase'in kendi yedek durumu (Database → Backups) kullanıcıdan bekleniyor.
+
+**E2E (Playwright 1.59, Chromium kurulu)**
+- `supabase/test_setup.sql`: 001–037 birleşik (009/010 hariç, 011 yerine geçer), sadece test projesi için.
+- `apps/web/.env.test.example` → kullanıcı `.env.test.local` (gitignore) oluşturup test projesinin URL/anon/service
+  anahtarlarını kendisi yazar (anahtarlar sohbete yapıştırılmaz).
+- `e2e/env.ts` kilidi: dosya yoksa veya URL .env.local'daki (CANLI) ile aynı host ise test başlamaz — denendi.
+- `playwright.config.ts`: port 3200, `NEXT_DIST_DIR=.next-e2e` (next.config `distDir` env'den; çalışan dev server
+  etkilenmez), test değerleri .env.local'ı ezer; RESEND/STRIPE/ANTHROPIC anahtarları boş → gerçek mail/ödeme yok.
+  Mobil (Pixel 7), tek worker. Dosyalar `*.e2e.ts` (vitest bunları almaz).
+- Testler: `public.e2e.ts` (5 sayfa, konsol hatası yok), `tracker.e2e.ts` (Admin API ile test hesabı → login → bugüne
+  07:00–15:30 → kaydet → reload'da duruyor → hesap silinir). Test projesi olmadığı için henüz çalıştırılmadı.
+- 691/691 unit, tsc + lint temiz.
+
+---
+
 ## 2026-10-17 (154) – v0.83.0: Kendi hata izleme sistemimiz (Migration 037)
 
 Kullanıcı: hata izleme "kendimiz kuralım" önerisini seçti (dış hesap yok, veri bizde).

@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (156) – v0.83.2: E2E test projesi kuruldu, testler yeşil
+
+- Kullanıcı Supabase'de `stundly-test` projesini açtı (ref lavdpffrtkqxjyfokkkl, canlıdan farklı — kontrol edildi) ve
+  `test_setup.sql`'i çalıştırdı; profiles/time_entries/error_events mevcut. `.env.test.local` oluşturuldu (gitignore).
+  Not: kullanıcı test projesinin service_role anahtarını sohbete yapıştırdı → test bitince anahtarı yenilemesi önerildi.
+- İlk koşu: 5/6. Bulgu: mobilde ilk girişte **çerez bandı (z-index 9999) TimeEntryModal'ın "Speichern" butonunu
+  kapatıyor** — yeni kullanıcı önce bandı kapatmak zorunda. Test, kullanıcı gibi önce "Nur notwendige"ye basıyor.
+  Bandın davranışı değiştirilmedi (onay akışı) — kullanıcıya öneri olarak sunuldu.
+- İkinci koşu: 6/6 yeşil (öffentliche Seiten 5 + Login → Tag eintragen → Reload). Test hesabı ve kayıtları sonunda
+  silindi (test projesinde 0 hesap, 0 time_entries).
+- `next dev` distDir `.next-e2e` ile next-env.d.ts ve tsconfig.json'u değiştiriyor → tsconfig'de `.next-e2e/types`
+  include kalıcı, `next-env.d.ts` Git takibinden çıkarıldı (.gitignore; Next.js üretir).
+- Çalıştırma: `apps/web` içinde `npm run test:e2e`.
+
+---
+
 ## 2026-10-17 (155) – v0.83.1: Yedek scripti + uçtan uca test altyapısı (ayrı test projesi)
 
 Kullanıcı: "Yedekleme" ve "Test ortamı" maddelerini de yapalım dedi.

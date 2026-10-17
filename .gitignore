@@ -61,3 +61,6 @@ lighthouse-report.*
 
 # Datenbank-Backups (scripts/yedek.py) — enthalten personenbezogene Daten
 yedekler/
+
+# von Next.js erzeugt (wechselt zwischen .next und .next-e2e)
+next-env.d.ts

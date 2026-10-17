@@ -28,6 +28,8 @@ test.afterAll(async () => {
 
 test("Login → Zeiterfassung → Tag eintragen → bleibt nach Neuladen", async ({ page }) => {
   await page.goto("/login");
+  // Cookie-Banner wie ein Nutzer schließen (datensparsame Wahl) — er überdeckt sonst unten den Speichern-Button
+  await page.getByRole("button", { name: "Nur notwendige" }).click();
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   await page.locator('button[type="submit"]').click();

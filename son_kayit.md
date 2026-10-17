@@ -1,5 +1,18 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (157) – v0.83.3: Haftalık otomatik yedek (Windows Görev Zamanlayıcı) + Migration 037 canlıda
+
+- Kullanıcı Migration 037'yi canlıda çalıştırdı — yoklandı: `error_events` var, 0 kayıt. Hata izleme aktif.
+- Kullanıcı: "otomatik yedek alamaz mı, aylık ya da haftalık" → seçim: **haftalık** (onay soruyla alındı).
+- `scripts/yedek.py`: en yeni 8 zip kalır, eskiler silinir (KEEP = 8); her çalışma `yedekler/yedek.log`'a
+  (OK/HATA, boyut, tablo sayısı, silinen) — görev penceresiz (pythonw) çalıştığı için.
+- Windows görevi **"Stundly Yedek"**: her pazar 20:00, `pythonw.exe scripts\yedek.py`, çalışma klasörü workly;
+  StartWhenAvailable (kaçarsa ilk açılışta), ağ varsa, en fazla 30 dk, sadece kullanıcı oturumu açıkken (şifre yok).
+- Elle tetiklendi: sonuç 0, `stundly_yedek_2026-10-17_2033.zip` 12,2 MB, 22 tablo (error_events dahil). Sonraki: 18.10 20:00.
+- Kaldırmak için: Görev Zamanlayıcı → "Stundly Yedek" → Sil.
+
+---
+
 ## 2026-10-17 (156) – v0.83.2: E2E test projesi kuruldu, testler yeşil
 
 - Kullanıcı Supabase'de `stundly-test` projesini açtı (ref lavdpffrtkqxjyfokkkl, canlıdan farklı — kontrol edildi) ve

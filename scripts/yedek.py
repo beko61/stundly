@@ -6,6 +6,9 @@ Ne yapar:
   • Tüm tabloları (Supabase REST şemasından otomatik bulur) sayfa sayfa indirir
   • Giriş hesaplarını (auth.users: id, e-posta, oluşturma/son giriş tarihi) indirir
   • Hepsini tek bir zip'e koyar:  workly/yedekler/stundly_yedek_YYYY-MM-DD_HHMM.zip
+  • En yeni 8 yedeği tutar, eskileri siler; her çalışmayı yedekler/yedek.log'a yazar
+
+Otomatik: Windows Görev Zamanlayıcı → "Stundly Yedek" (her pazar 20:00, kaçarsa ilk açılışta).
 
 Çalıştırma (workly klasöründe):
     python scripts/yedek.py
@@ -26,6 +29,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENV = os.path.join(ROOT, "apps", "web", ".env.local")
 OUT_DIR = os.path.join(ROOT, "yedekler")
 PAGE = 1000
+KEEP = 8  # en yeni 8 yedek kalır
+LOG = os.path.join(OUT_DIR, "yedek.log")
 
 
 def load_env():
@@ -102,10 +107,25 @@ def main():
     size = os.path.getsize(target) / 1024 / 1024
     print("\nYedek hazır: %s (%.1f MB)" % (target, size))
 
+    old = sorted(f for f in os.listdir(OUT_DIR) if f.startswith("stundly_yedek_") and f.endswith(".zip"))[:-KEEP]
+    for f in old:
+        os.remove(os.path.join(OUT_DIR, f))
+    errors = [k for k, v in summary.items() if isinstance(v, str)]
+    log("OK %s %.1f MB, %d tablo%s, %d eski silindi" % (
+        os.path.basename(target), size, len(summary) - 1,
+        (" (HATALI: %s)" % ", ".join(errors)) if errors else "", len(old)))
+
+
+def log(line):
+    os.makedirs(OUT_DIR, exist_ok=True)
+    with io.open(LOG, "a", encoding="utf-8") as f:
+        f.write("%s  %s\n" % (datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), line))
+
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
         print("Yedek alınamadı: %s" % e)
+        log("HATA %s" % e)
         sys.exit(1)

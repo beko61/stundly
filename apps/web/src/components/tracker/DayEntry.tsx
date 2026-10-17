@@ -297,6 +297,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                       ))}
                     </div>
                     {nd.kunde && <NoteLine icon="📋" text={nd.kunde} />}
+                    {nd.adresse && <NoteLine icon="📍" text={nd.adresse} />}
                   </div>
                   {paidByCompany ? (
                     <span

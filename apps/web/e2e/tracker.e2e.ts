@@ -53,3 +53,45 @@ test("Login → Zeiterfassung → Tag eintragen → bleibt nach Neuladen", async
   await page.reload();
   await expect(page.locator(".day-entry").nth(today - 1)).toContainText("15:30");
 });
+
+test("Notdienst mit Kunde und Adresse → beides steht in der Tagesliste", async ({ page }) => {
+  // React-Warnungen (z.B. ungültig verschachteltes HTML) und Laufzeitfehler sollen nicht auftreten
+  const consoleErrors: string[] = [];
+  page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text().slice(0, 200)); });
+  page.on("pageerror", (e) => consoleErrors.push(e.message.slice(0, 200)));
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Nur notwendige" }).click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+
+  await page.goto("/tracker");
+  const row = page.locator(".day-entry").nth(new Date().getDate() - 1);
+  await row.getByRole("button", { name: /Notdienst hinzufügen/ }).click();
+
+  const modal = page.locator('[aria-labelledby="notdienst-modal-title"]');
+  // Dev-Server kompiliert das Modal beim ersten Öffnen (lazy) — in der Produktion vorgebaut
+  await expect(modal).toBeVisible({ timeout: 30_000 });
+  await modal.getByPlaceholder(/Frau Ermakov/).fill("Frau Muster, 2. OG");
+  await modal.getByLabel("PLZ").fill("30159");
+  await modal.getByLabel("Ort").fill("Hannover");
+  await modal.getByLabel("Straße und Hausnummer").fill("Musterstraße 1");
+  await modal.getByLabel("Start").fill("18:00");
+  await modal.getByLabel("Ende").fill("19:00");
+  await modal.getByRole("button", { name: /Speichern/ }).click();
+  await expect(modal.getByRole("button", { name: /Aktualisieren/ })).toBeVisible();
+  await modal.getByRole("button", { name: "Schließen" }).first().click();
+
+  await expect(row).toContainText("Frau Muster, 2. OG");
+  await expect(row).toContainText("Musterstraße 1, 30159 Hannover");
+
+  // Notdienst-Karte oben: standardmäßig offen, zu- und wieder aufklappen
+  const card = page.getByRole("button", { name: /🚨 Notdienst/ });
+  await expect(page.getByText("Nd-Std")).toBeVisible();
+  await card.click();
+  await expect(page.getByText("Nd-Std")).toBeHidden();
+  await card.click();
+  await expect(page.getByText("Nd-Std")).toBeVisible();
+  expect(consoleErrors).toEqual([]);
+});

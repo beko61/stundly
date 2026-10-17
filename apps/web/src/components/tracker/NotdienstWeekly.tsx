@@ -106,9 +106,16 @@ export function NotdienstWeekly() {
       borderRadius: 14,
       overflow: "hidden",
     }}>
-      <button
-        type="button"
+      {/* div statt <button>: enthält den ℹ️-Button (Button in Button ist ungültiges HTML) */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
         onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return; // Enter auf dem ℹ️-Button nicht weiterreichen
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+        }}
         style={{
           width: "100%",
           padding: "12px 14px",
@@ -151,7 +158,7 @@ export function NotdienstWeekly() {
           <span style={{ color: "var(--muted)" }}>{paidLabel(totals.ndPaid, totals.ndCount)}</span>
           <span style={{ fontSize: 14, transition: "transform 0.2s", transform: collapsed ? "rotate(0deg)" : "rotate(180deg)" }}>▼</span>
         </span>
-      </button>
+      </div>
 
       {!collapsed && (
         <div style={{ padding: "0 14px 14px", borderTop: "1px solid var(--border)" }}>

@@ -1,5 +1,23 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (159) – v0.83.5: Tagesliste zeigt Notdienst-Adresse; Button-in-Button in der Notdienst-Karte behoben
+
+Kullanıcı: "Notdienst girdikten sonra sadece Mieter adı gözüküyor, adres de gözüksün."
+
+- `components/tracker/DayEntry.tsx`: Notdienst satırında 📋 Kunde'nin altına 📍 Adresse (`nd.adresse`, aynı NoteLine,
+  en fazla 2 satır). Veri zaten yükleniyordu (select *), sadece gösterilmiyordu.
+- E2E ile doğrulandı (test projesi, mobil): Notdienst "Frau Muster, 2. OG" + "Musterstraße 1, 30159 Hannover" →
+  satırda ikisi de görünüyor (ekran görüntüsü alındı).
+- E2E'nin yakaladığı ikinci hata (benim v0.81.3 regresyonum): `NotdienstWeekly` başlığı bir <button> idi ve içinde
+  InfoTooltip'in ℹ️ <button>'ı vardı → React "button cannot be a descendant of button" uyarısı (hydration riski,
+  bazı telefonlarda ℹ️'ye dokununca kart da açılıp kapanabilir). Başlık artık `div role="button" tabIndex=0
+  aria-expanded` + Enter/Space; ℹ️ üzerindeki Enter karta iletilmez.
+- `e2e/tracker.e2e.ts`: yeni test "Notdienst mit Kunde und Adresse" + Notdienst kartı aç/kapa + **konsol hatası yok**
+  kontrolü (kalıcı). Dev sunucusu ilk açılışta modalı derlediği için modal bekleme süresi 30 sn.
+- E2E 7/7 (iki tam koşu), unit 691/691, tsc + lint temiz.
+
+---
+
 ## 2026-10-17 (158) – v0.83.4: Geri yükleme scripti + yedek geri yükleme provası (TAM)
 
 - Kullanıcı Supabase Backups ekranını gönderdi: **Free plan, Supabase yedek almıyor** ("Free Plan does not include

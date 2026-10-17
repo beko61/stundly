@@ -47,7 +47,62 @@ function minsToTime(min: number): string {
   return formatDur(min);
 }
 
-export function NotdienstWeekly() {
+const BEZAHLT_FREI = new Set(["urlaub", "krank", "feiertag"]);
+
+interface WeekEntry { date: string; day_type: string; start_time: string | null; end_time: string | null; break_minutes: number }
+
+/**
+ * Wochen mit Notdienst: Soll = Mo–Fr × 8h; Ist = Arbeit + bezahlte Abwesenheit
+ * (Urlaub/Krank/Feiertag zählen wie in der Monatsübersicht mit 8h, sonst fehlte z.B. ein Urlaubstag als −8h).
+ */
+export function buildNdWeeks(entries: WeekEntry[], ndRows: NdRow[], feiertage: Record<string, string> = {}): WeekStat[] {
+  const byKw = new Map<number, WeekStat>();
+
+  // 1) Notdienst'ler haftaları belirler — her unique KW için ilk Pazartesi'yi hesapla
+  //    ve haftanın TÜM 5 işgünü için Sollstunden ekle (taşan günler dahil)
+  const kwToMonday = new Map<number, Date>();
+  for (const nd of ndRows) {
+    const kw = isoWeek(nd.date);
+    if (!kwToMonday.has(kw)) kwToMonday.set(kw, weekMondayOf(nd.date));
+    const cur = byKw.get(kw) ?? { kw, ndCount: 0, ndMins: 0, workedMins: 0, sollMins: 0 };
+    if (nd.start_time && nd.end_time) {
+      cur.ndCount++;
+      cur.ndMins += calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
+    }
+    byKw.set(kw, cur);
+  }
+
+  // 2) Her KW için 5 işgünü Sollstunden (Mo-Fr × 8h = 40h tam hafta)
+  const entryDates = new Set(entries.map(e => e.date));
+  for (const [kw, monday] of kwToMonday) {
+    const cur = byKw.get(kw)!;
+    for (let i = 0; i < 5; i++) {
+      const day = new Date(monday);
+      day.setDate(day.getDate() + i);
+      cur.sollMins += getDayStdMins(day.getDay());
+      // Gesetzlicher Feiertag ohne eigenen Eintrag → bezahlt wie in der Monatsübersicht
+      const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      if (feiertage[iso] && !entryDates.has(iso)) cur.workedMins += getDayStdMins(day.getDay());
+    }
+  }
+
+  // 3) Arbeiten time_entries'lerden gerçek çalışılan dakikalar + bezahlte Abwesenheit
+  //    Sadece bu ayın entries'leri var elimizde — taşan günlerin Arbeiten'i gerekirse ayrıca yüklenebilir.
+  for (const e of entries) {
+    const cur = byKw.get(isoWeek(e.date));
+    if (!cur) continue;
+    if (BEZAHLT_FREI.has(e.day_type)) {
+      cur.workedMins += getDayStdMins(new Date(`${e.date}T00:00:00`).getDay());
+      continue;
+    }
+    if (e.day_type !== "arbeiten" || !e.start_time || !e.end_time) continue;
+    cur.workedMins += calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes;
+  }
+
+  return Array.from(byKw.values()).sort((a, b) => a.kw - b.kw);
+}
+
+export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, string> } = {}) {
   const { year, month } = useTrackerStore();
   const { data: entries = [] } = useTimeEntriesQuery(year, month);
   // Gleiche Query wie Tracker/MonthlySummary (dedupliziert). Früher eigener Fetch nach dem
@@ -66,47 +121,10 @@ export function NotdienstWeekly() {
 
   // Group by Kalenderwoche — hafta-Pazartesi'si bu aya düşen tüm haftaları kapsa.
   // Notdienst tarihi başka ayda olsa bile, haftanın Pazartesi'si bu ayda ise hafta dahil.
-  const weeks = useMemo(() => {
-    const byKw = new Map<number, WeekStat>();
-
-    // 1) Notdienst'ler haftaları belirler — her unique KW için ilk Pazartesi'yi hesapla
-    //    ve haftanın TÜM 5 işgünü için Sollstunden ekle (taşan günler dahil)
-    const kwToMonday = new Map<number, Date>();
-    for (const nd of ndRows) {
-      const kw = isoWeek(nd.date);
-      if (!kwToMonday.has(kw)) kwToMonday.set(kw, weekMondayOf(nd.date));
-      const cur = byKw.get(kw) ?? { kw, ndCount: 0, ndMins: 0, workedMins: 0, sollMins: 0 };
-      if (nd.start_time && nd.end_time) {
-        cur.ndCount++;
-        cur.ndMins += calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
-      }
-      byKw.set(kw, cur);
-    }
-
-    // 2) Her KW için 5 işgünü Sollstunden (Mo-Fr × 8h = 40h tam hafta)
-    for (const [kw, monday] of kwToMonday) {
-      const cur = byKw.get(kw)!;
-      for (let i = 0; i < 5; i++) {
-        const day = new Date(monday);
-        day.setDate(day.getDate() + i);
-        cur.sollMins += getDayStdMins(day.getDay());
-      }
-    }
-
-    // 3) Arbeiten time_entries'lerden gerçek çalışılan dakikalar
-    //    Sadece bu ayın entries'leri var elimizde — taşan günlerin Arbeiten'i gerekirse ayrıca yüklenebilir.
-    //    Şimdilik elimizdeki entries'lerden bu KW'lara katkıyı ekle.
-    for (const e of entries) {
-      if (e.day_type !== "arbeiten" || !e.start_time || !e.end_time) continue;
-      const kw = isoWeek(e.date);
-      const cur = byKw.get(kw);
-      if (!cur) continue;
-      const { net_minutes } = calculateWorkDuration(e.start_time, e.end_time, e.break_minutes);
-      cur.workedMins += net_minutes;
-    }
-
-    return Array.from(byKw.values()).sort((a, b) => a.kw - b.kw);
-  }, [entries, ndRows]);
+  const weeks = useMemo(
+    () => buildNdWeeks(entries as unknown as WeekEntry[], ndRows, feiertage),
+    [entries, ndRows, feiertage],
+  );
 
   if (weeks.length === 0) return null;
 
@@ -170,8 +188,12 @@ export function NotdienstWeekly() {
             Notdienst-Stunden in dieser Woche.
             {"\n\n"}
             <strong>Überstd</strong>: Wochenüberstunden = (Geleistete Arbeit −
-            Sollstunden 40h) + Notdienst-Stunden. Positiv = Plus für dich,
-            negativ = Minus.
+            Sollstunden 40h) + Notdienst-Stunden. Urlaub, Krank und Feiertage
+            zählen wie gearbeitet (8h). Positiv = Plus für dich, negativ = Minus.
+            {"\n\n"}
+            <strong>Ges.</strong>: nur die Wochen mit Notdienst. Die Differenz
+            oben gilt für den ganzen Monat (Soll laut Lohneinstellungen) und
+            kann deshalb etwas abweichen.
           </InfoTooltip>
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>

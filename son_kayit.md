@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (150) – v0.81.1: Notdienst-Wochenübersicht — izin/hastalık/tatil 8 saat sayılıyor
+
+Kullanıcı ekran görüntüsü (Zeiterfassung, Ekim 2026): üstte "Differenz +16h", Notdienst-Wochenübersicht "Ges. +9h" — uyuşmazlık.
+Canlı veri (salt okuma): 15.10 (Do, KW 42) day_type=urlaub. Hafta tablosu sadece "arbeiten" sayıyordu → izin günü −8h
+(KW 42: +55m görünüyordu, doğrusu +8h 55m). Aylık özet (monthStats) izni 8h sayıyor.
+
+- `components/tracker/NotdienstWeekly.tsx`: hesap `buildNdWeeks(entries, ndRows, feiertage)` saf fonksiyona alındı;
+  urlaub/krank/feiertag kaydı = 8h, kaydı olmayan resmî tatil (Mo–Fr) = 8h (monthStats ile aynı mantık).
+  Tracker sayfası `feiertage` prop'unu geçiyor. Bilgi balonuna: izin/hasta/tatil 8h; "Ges." sadece Notdienst haftaları,
+  üstteki Differenz tüm ay (Soll = maaş ayarındaki aylık hedef) → biraz farklı olabilir.
+- Yeni değerler (kullanıcı verisiyle): KW 41 +8h 5m, KW 42 +8h 55m, Ges. +17h; aylık Differenz +16h kalır
+  (fark: diğer haftalar −1h; tablo yalnızca Notdienst haftalarını kapsıyor).
+- Test `components/tracker/__tests__/NotdienstWeekly.test.ts` (2): izin günü, kayıtsız resmî tatil.
+
+---
+
 ## 2026-10-16 (149) – v0.81.0: SEO araç sayfası /rufbereitschaft-verguetung
 
 Kullanıcı sıradaki işlerden 1'i seçti (Rufbereitschaft ücreti sayfası).

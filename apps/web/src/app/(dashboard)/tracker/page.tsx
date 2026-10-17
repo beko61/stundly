@@ -199,7 +199,7 @@ export default function TrackerPage() {
           </button>
         </div>
       )}
-      <NotdienstWeekly />
+      <NotdienstWeekly feiertage={feiertage} />
 
       <WelcomeBanner
         storageKey="stundly_tracker_welcome"

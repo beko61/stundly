@@ -1,5 +1,26 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (153) – v0.82.0: SEO sayfası /stundenzettel-excel-vorlage (formüllü Excel şablonu)
+
+Patron raporundaki "Yok" listesinden: "Excel çizelge şablonu sayfası". Kullanıcı: "bunlara odaklanalım".
+
+- `lib/excel/zipStore.ts` (yeni): bağımlılıksız ZIP yazıcı (stored + CRC32). Yeni npm paketi yok (lockfile/hoisting riski).
+- `lib/excel/stundenzettelXlsx.ts` (yeni): tarayıcıda .xlsx üretir. Blatt "Jahr" (Soll/Tag B4 = 8, 12 ay özet + toplam)
+  + 12 ay sayfası: tarih, gün, Beginn, Ende, Pause (dk), Stunden formülü
+  `IF(H="Urlaub"/"Krank" → Jahr!B4, MOD(Ende-Beginn,1)*24 - Pause/60)` (gece yarısını geçen vardiya doğru),
+  Tätigkeit, Bemerkung (Feiertag adı). Hafta sonu gri, Feiertag sarı; altta Summe, Arbeitstage (Mo–Fr – Feiertage),
+  Soll, Überstunden; imza satırları; A4 sığdır; başlık satırı dondurulmuş. Jahr sayfasında "Erstellt mit Stundly".
+- `components/tools/StundenzettelExcelForm.tsx`: Jahr, Bundesland, Name, Firma → Blob indirme (await yok, iOS).
+- `app/stundenzettel-excel-vorlage/page.tsx`: metadata, içerik listesi, "Excel oder App?" tablosu, 5 FAQ + FAQPage JSON-LD, CTA.
+- Kayıt: middleware PUBLIC_PATHS, sitemap (19 URL), ana sayfa footer "Excel-Vorlage", PDF şablon sayfasından çapraz link.
+- Doğrulama: gerçek Microsoft Excel'de (COM) açıldı, onarım uyarısı yok; 07:00–16:00/30 dk = 8,50; 22:00–02:00 = 4,00;
+  Urlaub/Krank = Soll/Tag; Mai 2027 NI 19 Arbeitstage, yıl 256. Telefon genişliğinde sayfa taşmıyor, indirme butonu çalışıyor.
+- 7 yeni test (CRC32, ZIP imzası, Arbeitstage, formüller, Jahr→ay satır referansları, XML kaçış, Bundesland'sız).
+  682/682, tsc + lint temiz.
+- Kullanıcıya: Search Console'da /stundenzettel-excel-vorlage için "Indexierung beantragen".
+
+---
+
 ## 2026-10-17 (152) – v0.81.3: Zeiterfassung'da tek Notdienst kartı (haftalık + ödendi)
 
 Kullanıcı: "Notdienst iki kart var, biri haftalık biri aylık; haftalıkta sadece ödenip ödenmediği eksik. Bunu düzenleyip teke

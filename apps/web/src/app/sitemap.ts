@@ -102,6 +102,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${APP_URL}/stundenzettel-excel-vorlage`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${APP_URL}/firma`,
       lastModified: now,
       changeFrequency: "monthly",

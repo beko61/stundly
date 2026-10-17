@@ -87,6 +87,9 @@ export default function StundenzettelVorlagePage() {
           <p>• Summenzeile, Felder für Soll-Stunden, Überstunden, Urlaub und Krankheit</p>
           <p>• Unterschriftsfelder für Mitarbeiter/in und Vorgesetzte/n</p>
         </div>
+        <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 10 }}>
+          Lieber am PC rechnen lassen? <Link href="/stundenzettel-excel-vorlage" style={{ color: "var(--accent2)" }}>Stundenzettel als Excel-Vorlage mit Formeln</Link>
+        </p>
       </section>
 
       <section style={{ padding: "24px 16px 32px", maxWidth: 760, margin: "0 auto" }}>

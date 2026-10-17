@@ -778,6 +778,7 @@ export default async function LandingPage() {
           <Link href="/zuschlagsrechner" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Zuschlagsrechner</Link>
           <Link href="/rufbereitschaft-verguetung" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Rufbereitschaft</Link>
           <Link href="/stundenzettel-vorlage" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Stundenzettel-Vorlage</Link>
+          <Link href="/stundenzettel-excel-vorlage" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Excel-Vorlage</Link>
           <Link href="/datenschutz" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>Datenschutz</Link>
           <Link href="/avv" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AVV</Link>
           <Link href="/agb" style={{ color: "var(--muted)", fontSize: 13, textDecoration: "none" }}>AGB</Link>

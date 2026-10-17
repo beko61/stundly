@@ -5,9 +5,8 @@ import { useMemo, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { calculateWorkDuration } from "@workly/shared";
-import { notdienstBelongsToMonth, notdienstLoadRange, weekMondayOf } from "@/lib/utils/weekMonth";
+import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
-import { useTimeEntriesQuery } from "@/hooks/queries/useTimeEntries";
 
 interface NdRow {
   date: string;
@@ -17,11 +16,9 @@ interface NdRow {
 }
 
 interface WeekStat {
-  kw:        number;     // ISO Kalenderwoche
-  ndCount:   number;
-  ndMins:    number;
-  workedMins: number;    // normal arbeit (entries)
-  sollMins:  number;     // hedef saatler
+  kw:      number;     // ISO Kalenderwoche
+  ndCount: number;
+  ndMins:  number;
 }
 
 const STORAGE_KEY = "stundly_nd_weekly_collapsed";
@@ -36,75 +33,31 @@ function isoWeek(dateStr: string): number {
   return Math.ceil(((t.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
-// Standart günlük saatler (07.06.2026'dan beri sabit): Mo-Fr 8h, Sa/So 0
-function getDayStdMins(dow: number): number {
-  if (dow === 0 || dow === 6) return 0;
-  return 8 * 60;
-}
-
 /** Dauer im einheitlichen Format ("8h 15m") — siehe lib/utils/formatDur. */
 function minsToTime(min: number): string {
   return formatDur(min);
 }
 
-const BEZAHLT_FREI = new Set(["urlaub", "krank", "feiertag"]);
-
-interface WeekEntry { date: string; day_type: string; start_time: string | null; end_time: string | null; break_minutes: number }
-
 /**
- * Wochen mit Notdienst: Soll = Mo–Fr × 8h; Ist = Arbeit + bezahlte Abwesenheit
- * (Urlaub/Krank/Feiertag zählen wie in der Monatsübersicht mit 8h, sonst fehlte z.B. ein Urlaubstag als −8h).
+ * Notdienste je Kalenderwoche (Anzahl + Stunden).
+ * Überstunden stehen bewusst nur in der Monatsübersicht (lib/utils/monthStats) — eine eigene
+ * Wochenrechnung wich davon ab (z.B. Urlaubstag als −8h) und doppelte die Zahl nur.
  */
-export function buildNdWeeks(entries: WeekEntry[], ndRows: NdRow[], feiertage: Record<string, string> = {}): WeekStat[] {
+export function buildNdWeeks(ndRows: NdRow[]): WeekStat[] {
   const byKw = new Map<number, WeekStat>();
-
-  // 1) Notdienst'ler haftaları belirler — her unique KW için ilk Pazartesi'yi hesapla
-  //    ve haftanın TÜM 5 işgünü için Sollstunden ekle (taşan günler dahil)
-  const kwToMonday = new Map<number, Date>();
   for (const nd of ndRows) {
+    if (!nd.start_time || !nd.end_time) continue;
     const kw = isoWeek(nd.date);
-    if (!kwToMonday.has(kw)) kwToMonday.set(kw, weekMondayOf(nd.date));
-    const cur = byKw.get(kw) ?? { kw, ndCount: 0, ndMins: 0, workedMins: 0, sollMins: 0 };
-    if (nd.start_time && nd.end_time) {
-      cur.ndCount++;
-      cur.ndMins += calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
-    }
+    const cur = byKw.get(kw) ?? { kw, ndCount: 0, ndMins: 0 };
+    cur.ndCount++;
+    cur.ndMins += calculateWorkDuration(nd.start_time, nd.end_time, 0).net_minutes;
     byKw.set(kw, cur);
   }
-
-  // 2) Her KW için 5 işgünü Sollstunden (Mo-Fr × 8h = 40h tam hafta)
-  const entryDates = new Set(entries.map(e => e.date));
-  for (const [kw, monday] of kwToMonday) {
-    const cur = byKw.get(kw)!;
-    for (let i = 0; i < 5; i++) {
-      const day = new Date(monday);
-      day.setDate(day.getDate() + i);
-      cur.sollMins += getDayStdMins(day.getDay());
-      // Gesetzlicher Feiertag ohne eigenen Eintrag → bezahlt wie in der Monatsübersicht
-      const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
-      if (feiertage[iso] && !entryDates.has(iso)) cur.workedMins += getDayStdMins(day.getDay());
-    }
-  }
-
-  // 3) Arbeiten time_entries'lerden gerçek çalışılan dakikalar + bezahlte Abwesenheit
-  //    Sadece bu ayın entries'leri var elimizde — taşan günlerin Arbeiten'i gerekirse ayrıca yüklenebilir.
-  for (const e of entries) {
-    const cur = byKw.get(isoWeek(e.date));
-    if (!cur) continue;
-    if (BEZAHLT_FREI.has(e.day_type)) {
-      cur.workedMins += getDayStdMins(new Date(`${e.date}T00:00:00`).getDay());
-      continue;
-    }
-    if (e.day_type !== "arbeiten" || !e.start_time || !e.end_time) continue;
-    cur.workedMins += calculateWorkDuration(e.start_time, e.end_time, e.break_minutes).net_minutes;
-  }
-
   return Array.from(byKw.values()).sort((a, b) => a.kw - b.kw);
 }
 
-export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, string> } = {}) {
+export function NotdienstWeekly() {
   const { year, month } = useTrackerStore();
-  const { data: entries = [] } = useTimeEntriesQuery(year, month);
   // Gleiche Query wie Tracker/MonthlySummary (dedupliziert). Früher eigener Fetch nach dem
   // Mount → die Karte erschien verspätet und schob die Tagesliste nach unten.
   const { start, end } = notdienstLoadRange(year, month);
@@ -118,26 +71,16 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
     return localStorage.getItem(STORAGE_KEY) === "1";
   });
 
-
-  // Group by Kalenderwoche — hafta-Pazartesi'si bu aya düşen tüm haftaları kapsa.
-  // Notdienst tarihi başka ayda olsa bile, haftanın Pazartesi'si bu ayda ise hafta dahil.
-  const weeks = useMemo(
-    () => buildNdWeeks(entries as unknown as WeekEntry[], ndRows, feiertage),
-    [entries, ndRows, feiertage],
-  );
+  // Group by Kalenderwoche — Woche zählt zum Monat ihres Sonntags (notdienstBelongsToMonth).
+  const weeks = useMemo(() => buildNdWeeks(ndRows), [ndRows]);
 
   if (weeks.length === 0) return null;
 
   const totals = weeks.reduce(
-    (acc, w) => ({
-      ndMins:  acc.ndMins  + w.ndMins,
-      ndCount: acc.ndCount + w.ndCount,
-      ue:      acc.ue      + (w.workedMins - w.sollMins + w.ndMins),
-    }),
-    { ndMins: 0, ndCount: 0, ue: 0 }
+    (acc, w) => ({ ndMins: acc.ndMins + w.ndMins, ndCount: acc.ndCount + w.ndCount }),
+    { ndMins: 0, ndCount: 0 }
   );
   const maxNdMins = Math.max(...weeks.map(w => w.ndMins), 1);
-  const uePos = totals.ue >= 0;
 
   function toggle() {
     setCollapsed(c => {
@@ -147,6 +90,7 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
     });
   }
 
+  const cols = "44px 1fr 110px";
   return (
     <div style={{
       margin: "12px 12px 0",
@@ -185,23 +129,13 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
             Wochenbeginn noch im Vormonat liegen.
             {"\n\n"}
             <strong>Nd-Std</strong>: Anzahl Einsätze · Summe der
-            Notdienst-Stunden in dieser Woche.
-            {"\n\n"}
-            <strong>Überstd</strong>: Wochenüberstunden = (Geleistete Arbeit −
-            Sollstunden 40h) + Notdienst-Stunden. Urlaub, Krank und Feiertage
-            zählen wie gearbeitet (8h). Positiv = Plus für dich, negativ = Minus.
-            {"\n\n"}
-            <strong>Ges.</strong>: nur die Wochen mit Notdienst. Die Differenz
-            oben gilt für den ganzen Monat (Soll laut Lohneinstellungen) und
-            kann deshalb etwas abweichen.
+            Notdienst-Stunden in dieser Woche. Deine Überstunden (inkl.
+            Notdienst) stehen oben unter „Differenz“.
           </InfoTooltip>
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
           <span style={{ color: "var(--orange)", fontWeight: 700 }}>{totals.ndCount}×</span>
           <span style={{ color: "var(--orange)" }}>{minsToTime(totals.ndMins)}</span>
-          <span style={{ color: uePos ? "var(--green)" : "var(--red)" }}>
-            {uePos ? "+" : ""}{minsToTime(totals.ue)}
-          </span>
           <span style={{ fontSize: 14, transition: "transform 0.2s", transform: collapsed ? "rotate(0deg)" : "rotate(180deg)" }}>▼</span>
         </span>
       </button>
@@ -211,7 +145,7 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
           {/* Header */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "44px 1fr 90px 70px",
+            gridTemplateColumns: cols,
             gap: 8,
             padding: "10px 0 8px",
             fontSize: 10,
@@ -224,19 +158,15 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
             <span>KW</span>
             <span></span>
             <span style={{ textAlign: "right" }}>Nd-Std</span>
-            <span style={{ textAlign: "right" }}>Überstd</span>
           </div>
 
           {/* Rows */}
           {weeks.map(w => {
-            const diff = w.workedMins - w.sollMins;
-            const ue = diff + w.ndMins;
-            const uePosRow = ue >= 0;
             const pct = Math.round((w.ndMins / maxNdMins) * 100);
             return (
               <div key={w.kw} style={{
                 display: "grid",
-                gridTemplateColumns: "44px 1fr 90px 70px",
+                gridTemplateColumns: cols,
                 gap: 8,
                 padding: "9px 0",
                 alignItems: "center",
@@ -252,9 +182,6 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
                 <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: "var(--orange)", fontWeight: 700 }}>
                   {w.ndCount}× · {minsToTime(w.ndMins)}
                 </span>
-                <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: uePosRow ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
-                  {uePosRow ? "+" : ""}{minsToTime(ue)}
-                </span>
               </div>
             );
           })}
@@ -262,7 +189,7 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
           {/* Foot */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "44px 1fr 90px 70px",
+            gridTemplateColumns: cols,
             gap: 8,
             padding: "10px 0 4px",
             alignItems: "center",
@@ -274,10 +201,7 @@ export function NotdienstWeekly({ feiertage }: { feiertage?: Record<string, stri
             <span style={{ color: "var(--text)" }}>Ges.</span>
             <span></span>
             <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: "var(--orange)" }}>
-              {minsToTime(totals.ndMins)}
-            </span>
-            <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: uePos ? "var(--green)" : "var(--red)" }}>
-              {uePos ? "+" : ""}{minsToTime(totals.ue)}
+              {totals.ndCount}× · {minsToTime(totals.ndMins)}
             </span>
           </div>
         </div>

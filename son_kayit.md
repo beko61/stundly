@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (151) – v0.81.2: Notdienst-Wochenübersicht'ten "Überstd" sütunu kaldırıldı
+
+Kullanıcı: "Bu tarz hataları sen neden bulamıyorsun, testlerin var. Orada Überstd ne işe yarıyor düşün, mantıksız olanları çıkar,
+kalabalık yapmasın."
+
+- Tarama: fazla mesaiyi tüm ekranlar (Dashboard, Berichte, Urlaub, MonthlySummary, Firma, Lohn) tek ortak fonksiyonla
+  (lib/utils/monthStats: calcMonthStats / calcOvertimeToDate) hesaplıyor; kendi ayrı hesabını yapan TEK yer
+  NotdienstWeekly'ydi (Soll 40h/hafta, izin = 0) → #150'deki uyuşmazlığın kökü.
+- Karar: haftalık Überstd üstteki "Differenz" kartının tekrarı + farklı kurallarla ikinci bir rakam → kaldırıldı.
+  Tablo artık sadece KW · Notdienst sayısı · saat (+ Ges.). Başlıktaki "+9h" de gitti. Bilgi balonu: fazla mesai yukarıda "Differenz".
+- #150'deki hafta-Soll/izin/tatil hesabı geri alındı (gereksiz kaldı): buildNdWeeks(ndRows) sadece gruplama;
+  time_entries sorgusu ve feiertage prop'u kaldırıldı. Test 2 (KW gruplama, gece yarısı, saatsiz kayıt).
+- 675/675, tsc + lint temiz.
+
+---
+
 ## 2026-10-17 (150) – v0.81.1: Notdienst-Wochenübersicht — izin/hastalık/tatil 8 saat sayılıyor
 
 Kullanıcı ekran görüntüsü (Zeiterfassung, Ekim 2026): üstte "Differenz +16h", Notdienst-Wochenübersicht "Ges. +9h" — uyuşmazlık.

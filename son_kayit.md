@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (158) – v0.83.4: Geri yükleme scripti + yedek geri yükleme provası (TAM)
+
+- Kullanıcı Supabase Backups ekranını gönderdi: **Free plan, Supabase yedek almıyor** ("Free Plan does not include
+  project backups", Pro = 7 gün). Karar önerisi: ilk gerçek firma/ödeyen müşteriye kadar Free + haftalık kendi yedeğimiz.
+- `scripts/geri_yukle.py` (yeni): yedek zip'ini `.env.test.local` (veya `--hedef`) projesine yükler. Hedef host canlı
+  ile aynıysa DURUR (denendi, çıkış 1). Sıra: hedefi boşalt (FK için çok turlu) → auth hesaplarını aynı UUID ile
+  oluştur (şifresiz; kullanıcı "Passwort vergessen") → trigger'ın açtığı satırları sil → tabloları çok turlu yükle
+  (bigserial id'ler yeniden üretilir, sequence bozulmasın; 4 MB'lık partiler) → satır sayısı karşılaştırması.
+  `--temizle`: hedefi tamamen boşaltır.
+- Prova (stundly-test): 22 tablo + 7 hesap, satır sayıları birebir; içerik hash'i AYNI (time_entries, notdienst_entries,
+  notdienst_anhaenge/fotolar, profiles, vacation_requests, companies). Ardından `--temizle`: 0 tablo dolu, 0 hesap
+  (gerçek veri test projesinde bırakılmadı).
+- Felaket yolu (script başında): yeni proje → test_setup.sql → hedef dosya → geri_yukle.py → uygulama env'i yeni projeye.
+
+---
+
 ## 2026-10-17 (157) – v0.83.3: Haftalık otomatik yedek (Windows Görev Zamanlayıcı) + Migration 037 canlıda
 
 - Kullanıcı Migration 037'yi canlıda çalıştırdı — yoklandı: `error_events` var, 0 kayıt. Hata izleme aktif.

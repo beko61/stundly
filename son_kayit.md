@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (152) – v0.81.3: Zeiterfassung'da tek Notdienst kartı (haftalık + ödendi)
+
+Kullanıcı: "Notdienst iki kart var, biri haftalık biri aylık; haftalıkta sadece ödenip ödenmediği eksik. Bunu düzenleyip teke
+düşürelim mi? Haftalık saatler gözüksün ama."
+
+- `components/tracker/MonthlySummary.tsx`: üst satırdaki "Notdienst" kartı (16× · 18h 45m · ✅0 ❌16) kaldırıldı.
+  Sadece o kartın kullandığı `info` prop'u, InfoTooltip importu ve ndCount/ndPaid/ndOffen/notdienstMin alanları da kalktı.
+  Notdienst Differenz'e girmeye devam ediyor (ndEntries → calcMonthStats).
+- `components/tracker/NotdienstWeekly.tsx` tek Notdienst kartı oldu: başlık "🚨 Notdienst", sağda toplam
+  "16× · 18h 45m · ⏳ 0/16"; tabloda yeni "Bezahlt" sütunu (her hafta ✅/⏳ ödenen/toplam, Ges. satırında da).
+  Bilgi balonu eski kartın metnini aldı (ne zaman, KW/ay kuralı, bezahlt, Lohn). buildNdWeeks → ndPaid (erledigt).
+- Not: Notdienst olmayan ayda kart hiç görünmüyor (eskiden üstte "0× —" vardı).
+- Test güncellendi (ndPaid). 675/675, tsc + lint temiz. Görsel test yok (giriş gerekiyor).
+
+---
+
 ## 2026-10-17 (151) – v0.81.2: Notdienst-Wochenübersicht'ten "Überstd" sütunu kaldırıldı
 
 Kullanıcı: "Bu tarz hataları sen neden bulamıyorsun, testlerin var. Orada Überstd ne işe yarıyor düşün, mantıksız olanları çıkar,

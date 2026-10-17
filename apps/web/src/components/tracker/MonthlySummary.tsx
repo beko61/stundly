@@ -5,7 +5,6 @@ import { useMemo, useEffect, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
 import { createClient } from "@/lib/supabase/client";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
-import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
 import { useTimeEntriesQuery } from "@/hooks/queries/useTimeEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
@@ -96,10 +95,6 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
     });
     return {
       workedMin:    r.workedMin,
-      notdienstMin: r.ndMin,
-      ndPaid:       r.ndPaid,
-      ndOffen:      r.ndCount - r.ndPaid,
-      ndCount:      r.ndCount,
       krankDays:    r.krankDays,
       urlaubDays:   r.urlaubDays,
       urlaubMin:    r.urlaubMin,
@@ -114,9 +109,8 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   const urlaubKonto = Math.max(0, urlaubAnspruch - yearUrlaub);
 
   // ── Kart bileşeni ──
-  function Card({ title, icon, color, big, mid, sub, info }: {
+  function Card({ title, icon, color, big, mid, sub }: {
     title: string; icon?: string; color: string; big: string; mid?: string; sub?: string;
-    info?: { title?: string; body: React.ReactNode };
   }) {
     return (
       <div style={{
@@ -135,11 +129,6 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
         }}>
           {icon && <span style={{ fontSize: 12 }}>{icon}</span>} {title}
-          {info && (
-            info.title
-              ? <InfoTooltip title={info.title} color={color}>{info.body}</InfoTooltip>
-              : <InfoTooltip color={color}>{info.body}</InfoTooltip>
-          )}
         </div>
         <div style={{
           fontFamily: "'DM Mono',monospace", fontSize: 17, fontWeight: 700, color,
@@ -271,43 +260,9 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           </div>
         </div>
 
-        {/* 4. Notdienst */}
-        <Card
-          title="Notdienst"
-          icon="🚨"
-          color="var(--orange)"
-          big={`${stats.ndCount}×`}
-          mid={`${minsToTime(stats.notdienstMin)}`}
-          info={{
-            title: "Notdienst — so wird gezählt",
-            body: (
-              <>
-                <strong>Wann?</strong> Außerhalb der regulären Arbeitszeit
-                (Abend / Nacht / Wochenende), eingetragen mit „+ Notdienst hinzufügen“
-                am jeweiligen Tag.
-                {"\n\n"}
-                <strong>Monatszuordnung:</strong> Eine Notdienst-Woche zählt
-                immer zu dem Monat, in dem ihr Sonntag liegt. Beispiel: KW vom
-                28. Apr (Mo) bis 4. Mai (So) → komplett Mai.
-                {"\n\n"}
-                <strong>Bezahlt-Status:</strong> ✅ erledigt / ⏳ offen — Tippe
-                im Tag auf das Symbol, um umzuschalten. Notdienst wird oft erst
-                im Folgemonat ausgezahlt.
-                {"\n\n"}
-                <strong>Lohn:</strong> Notdienst-Stunden fließen in die
-                Differenz und werden mit deinem Notdienst-Bonus (€/Tag)
-                aus den Lohn-Einstellungen vergütet.
-              </>
-            ),
-          }}
-          sub={
-            stats.ndCount === 0
-              ? "—"
-              : `✅${stats.ndPaid}  ❌${stats.ndOffen}`
-          }
-        />
+        {/* Notdienst: eigene Karte darunter (NotdienstWeekly — Wochen, Stunden, bezahlt) */}
 
-        {/* 5. Urlaubskonto */}
+        {/* 4. Urlaubskonto */}
         <Card
           title="Urlaubskonto"
           icon="🌴"

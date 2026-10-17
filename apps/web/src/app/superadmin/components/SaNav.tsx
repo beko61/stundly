@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/superadmin/users",     label: "Kullanıcılar",  short: "Kişiler",  icon: "👥" },
   { href: "/superadmin/companies", label: "Firmalar",      short: "Firmalar", icon: "🏢" },
   { href: "/superadmin/audit",     label: "İşlem geçmişi", short: "Geçmiş",   icon: "🧾" },
+  { href: "/superadmin/errors",    label: "Hatalar",       short: "Hatalar",  icon: "🐞" },
   { href: "/superadmin/create",    label: "Hesap oluştur", short: "Yeni",     icon: "➕" },
 ];
 

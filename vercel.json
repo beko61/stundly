@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/steuerberater",
       "schedule": "0 6 5 * *"
+    },
+    {
+      "path": "/api/cron/error-digest",
+      "schedule": "0 7 * * *"
     }
   ]
 }

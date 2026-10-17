@@ -9,6 +9,7 @@ import { SupportButton } from "@/components/ui/SupportButton";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { RegisterSW } from "@/components/ui/RegisterSW";
 import { InstallPrompt } from "@/components/ui/InstallPrompt";
+import { ErrorListener } from "@/components/ui/ErrorListener";
 import { QueryProvider } from "@/providers/QueryProvider";
 import "./globals.css";
 
@@ -104,6 +105,7 @@ export default async function RootLayout({
             <CookieBanner />
             <InstallPrompt />
             <RegisterSW />
+            <ErrorListener />
             <Analytics />
             <SpeedInsights />
           </QueryProvider>

@@ -1,5 +1,30 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-17 (154) – v0.83.0: Kendi hata izleme sistemimiz (Migration 037)
+
+Kullanıcı: hata izleme "kendimiz kuralım" önerisini seçti (dış hesap yok, veri bizde).
+
+- **Migration 037** `error_events` (source client/server, fingerprint, message, stack, location, path, digest, user_id,
+  user_agent, app_version; RLS açık, policy yok → sadece service_role). **Kullanıcı Supabase'de çalıştıracak.**
+- `lib/monitoring/errorEvents.ts`: sanitize (uzunluk sınırı, path'ten ?query/#hash atılır — token sızmasın), gürültü filtresi
+  (Failed to fetch, Load failed, ResizeObserver, Script error, Abort, NEXT_REDIRECT/NOT_FOUND), fingerprint (sayı/UUID
+  nötr, djb2), groupErrors, insertErrorEvent (REST, supabase-js'siz).
+- `lib/monitoring/reportError.ts`: tarayıcıda sendBeacon → `/api/errors` (fetch keepalive yedek); sayfa başına en fazla
+  10, aynı mesaj bir kez. 4 error boundary zaten bunu çağırıyordu.
+- `components/ui/ErrorListener.tsx` (root layout): window error + unhandledrejection; yabancı script (eklenti) yok sayılır.
+- `app/api/errors/route.ts` (public, middleware'e eklendi): 10 KB sınırı, IP başına 30/saat, kullanıcı varsa user_id;
+  her durumda 204 (raporlama yeni hata üretmesin).
+- `src/instrumentation.ts` `onRequestError`: sunucu hataları ("Fehler-ID" 500'ler) aynı tabloya, source=server.
+- `api/cron/error-digest` (vercel.json, her gün 07:00 UTC): 30 günden eski kayıtları siler; son 24 saatte hata varsa
+  aktif super_admin'lere Türkçe özet mail (`lib/email/errorDigest.ts`, en fazla 10 grup, "Hataları aç" butonu).
+- Süper admin: yeni sayfa `/superadmin/errors` ("🐞 Hatalar"; 24 saat / 7 gün; gruplu, kullanıcı sayısı, sürüm, stack).
+  Tablo yoksa "Migration 037'yi çalıştır" uyarısı.
+- Datenschutz §2: hata raporları maddesi (amaç, lit. f, 30 gün).
+- Yerel test (canlı DB'ye yazmadan): /api/errors 204 (yok sayılan mesaj + bozuk JSON), /superadmin/errors girişsiz → /login.
+- 9 yeni test; 691/691, tsc + lint temiz.
+
+---
+
 ## 2026-10-17 (153) – v0.82.0: SEO sayfası /stundenzettel-excel-vorlage (formüllü Excel şablonu)
 
 Patron raporundaki "Yok" listesinden: "Excel çizelge şablonu sayfası". Kullanıcı: "bunlara odaklanalım".

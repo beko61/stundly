@@ -4,16 +4,18 @@
  *
  * Blitzer.de übernimmt keine Adressen aus anderen Apps: kein öffentlicher Link (Stand 10/2026), und im
  * iOS-Teilen-Menü erscheint die App nicht (am iPhone getestet 18.10.2026). Empfehlung: mit Apple/Google
- * navigieren, Blitzer.de warnt im Hintergrund. Android: "Jedes Mal fragen" (geo:) zeigt installierte Navi-Apps.
+ * navigieren, Blitzer.de warnt im Hintergrund — oder "Blitzer.de (Adresse kopieren)": Adresse in die Zwischenablage,
+ * in Blitzer.de einfügen. Android: "Jedes Mal fragen" (geo:) zeigt installierte Navi-Apps.
  */
 
-export type NavAppId = "google" | "apple" | "waze" | "yandex" | "ask";
+export type NavAppId = "google" | "apple" | "waze" | "yandex" | "copy" | "ask";
 
 export const NAV_APPS: { id: NavAppId; label: string; hint?: string }[] = [
   { id: "google", label: "Google Maps" },
   { id: "apple",  label: "Apple Karten", hint: "iPhone / iPad" },
   { id: "waze",   label: "Waze" },
   { id: "yandex", label: "Yandex Karten" },
+  { id: "copy",   label: "Blitzer.de (Adresse kopieren)", hint: "kopiert die Adresse — in Blitzer.de einfügen" },
   { id: "ask",    label: "Jedes Mal fragen", hint: "nur Android — zeigt alle installierten Navi-Apps" },
 ];
 
@@ -45,6 +47,36 @@ export function setNavApp(app: NavAppId): void {
 
 export function navAppLabel(app: NavAppId = getNavApp()): string {
   return NAV_APPS.find((a) => a.id === app)?.label ?? "Google Maps";
+}
+
+/** Beschriftung des 📍-Knopfs im Notdienst-Fenster */
+export function navButtonLabel(app: NavAppId = getNavApp()): string {
+  return app === "copy" ? "Adresse kopieren (für Blitzer.de)" : `In ${navAppLabel(app)} öffnen`;
+}
+
+/** Adresse in die Zwischenablage — im Klick aufrufen. Ältere Browser: verstecktes Textfeld. */
+export async function copyAddress(address: string): Promise<boolean> {
+  const text = address.trim();
+  if (!text) return false;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
 }
 
 /**

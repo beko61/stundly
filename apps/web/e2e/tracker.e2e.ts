@@ -122,6 +122,20 @@ test("Notdienst mit Kunde und Adresse → beides steht in der Tagesliste", async
   await page.locator(".day-entry").nth(new Date().getDate() - 1).getByText("Frau Muster, 2. OG").click();
   await page.locator('[aria-labelledby="notdienst-modal-title"]').getByRole("button", { name: "In Waze öffnen" }).click();
   expect((await opened())[0]).toMatch(/^https:\/\/waze\.com\/ul\?q=Musterstra/);
+  await page.locator('[aria-labelledby="notdienst-modal-title"]').getByRole("button", { name: "Schließen" }).first().click();
+
+  // Profil → "Blitzer.de (Adresse kopieren)": 📋 kopiert die Adresse, öffnet nichts
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/settings");
+  await page.getByRole("radio", { name: /Blitzer\.de/ }).check();
+  await page.goto("/tracker");
+  await captureOpen();
+  await page.locator(".day-entry").nth(new Date().getDate() - 1).getByText("Frau Muster, 2. OG").click();
+  const ndModal = page.locator('[aria-labelledby="notdienst-modal-title"]');
+  await ndModal.getByRole("button", { name: "Adresse kopieren (für Blitzer.de)" }).click();
+  await expect(ndModal.getByText("Adresse kopiert — in Blitzer.de einfügen")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Musterstraße 1, 30159 Hannover");
+  expect(await opened()).toEqual([]);
 
   expect(consoleErrors).toEqual([]);
 });

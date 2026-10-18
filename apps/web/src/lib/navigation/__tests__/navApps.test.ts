@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getNavApp, iosAppUrl, navAppLabel, navUrl, openNavigation, setNavApp } from "../navApps";
+import { copyAddress, getNavApp, iosAppUrl, navAppLabel, navButtonLabel, navUrl, openNavigation, setNavApp } from "../navApps";
 
 const ADR = "Musterstraße 1, 30159 Hannover";
 const Q = encodeURIComponent(ADR);
@@ -73,5 +73,29 @@ describe("iPhone: App direkt per Schema (kein leeres Browserfenster)", () => {
       Object.defineProperty(navigator, "userAgent", { value: ua, configurable: true });
       open.mockRestore();
     }
+  });
+});
+
+describe("Blitzer.de: Adresse kopieren", () => {
+  it("Knopf-Beschriftung je nach Wahl", () => {
+    expect(navButtonLabel("copy")).toBe("Adresse kopieren (für Blitzer.de)");
+    expect(navButtonLabel("apple")).toBe("In Apple Karten öffnen");
+  });
+
+  it("schreibt die Adresse in die Zwischenablage", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    expect(await copyAddress("  " + ADR + " ")).toBe(true);
+    expect(writeText).toHaveBeenCalledWith(ADR);
+  });
+
+  it("Zwischenablage verweigert → verstecktes Textfeld + execCommand", async () => {
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: () => Promise.reject(new Error("nein")) }, configurable: true });
+    const exec = vi.fn(() => true);
+    Object.defineProperty(document, "execCommand", { value: exec, configurable: true });
+    expect(await copyAddress(ADR)).toBe(true);
+    expect(exec).toHaveBeenCalledWith("copy");
+    expect(document.querySelector("textarea")).toBeNull();
+    expect(await copyAddress("  ")).toBe(false);
   });
 });

@@ -11,7 +11,7 @@ import { NotdienstBerichtPanel } from "./NotdienstBerichtPanel";
 import { useOnline, useOutbox } from "@/hooks/useOffline";
 import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
 import { hasPending } from "@/lib/offline/outbox";
-import { navAppLabel, openNavigation } from "@/lib/navigation/navApps";
+import { copyAddress, getNavApp, navButtonLabel, openNavigation } from "@/lib/navigation/navApps";
 import { offlineDeleteNotdienst, offlineSaveNotdienst } from "@/lib/offline/notdienst";
 import {
   filterStreets, joinAdresse, splitAdresse, type StreetSuggestion,
@@ -89,6 +89,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
   const [erledigt, setErledigt] = useState<boolean>(entry?.erledigt ?? false);
   const [saving,   setSaving]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [mapsMsg,   setMapsMsg]   = useState<string | null>(null);
   const [savedId,  setSavedId]  = useState<string | null>(entry?.id ?? null);
   const [justSaved, setJustSaved] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
@@ -130,6 +131,13 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
     : "--";
 
   function openMaps() {
+    if (getNavApp() === "copy") {
+      void copyAddress(adresse).then((ok) => {
+        setMapsMsg(ok ? "📋 Adresse kopiert — in Blitzer.de einfügen" : "Kopieren nicht möglich — Adresse bitte markieren und kopieren");
+        setTimeout(() => setMapsMsg(null), 5000);
+      });
+      return;
+    }
     openNavigation(adresse);
   }
 
@@ -333,11 +341,12 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
                   </ul>
                 )}
               </div>
-              <button onClick={openMaps} title={`In ${navAppLabel()} öffnen`} aria-label={`In ${navAppLabel()} öffnen`} style={{
+              <button onClick={openMaps} title={navButtonLabel()} aria-label={navButtonLabel()} style={{
                 background:"var(--surface2)", border:"1px solid var(--green)", color:"var(--green)",
                 padding:"11px 13px", borderRadius:10, cursor:"pointer", fontSize:16, flexShrink:0,
-              }}>📍</button>
+              }}>{getNavApp() === "copy" ? "📋" : "📍"}</button>
             </div>
+            {mapsMsg && <div role="status" style={{ fontSize:12, color:"var(--green)", marginTop:6 }}>{mapsMsg}</div>}
           </div>
 
           {/* Problem */}

@@ -1,5 +1,23 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-18 (164) – v0.84.4: Navigation "Blitzer.de (Adresse kopieren)"
+
+Kullanıcı Blitzer.de PRO'yu doğrudan navigasyon olarak kullanmak istiyor (uyarı için zaten arkada açık; şarj
+sorunu var). iPhone Kestirmeler'de Blitzer eylemleri: yalnızca "Start warn logic", "Stop warn logic", "Uyku modu" —
+hedef/rota eylemi YOK → adresi otomatik vermek mümkün değil. Kestirme/otomasyon önerileri (CarPlay/Bluetooth ile
+start/stop) verildi; kullanıcı zaten öyle kullanıyor. Yarıda kesilen "Stundly Navi" kestirme kodu geri alındı
+(git checkout, commit'lenmemişti). Seçim: **A — sadece kopyala**, Blitzer.de'yi kullanıcı açıp yapıştırır.
+
+- `lib/navigation/navApps.ts`: yeni seçenek `copy` "Blitzer.de (Adresse kopieren)"; `copyAddress()` (Clipboard API,
+  reddedilirse gizli textarea + execCommand); `navButtonLabel()` → "Adresse kopieren (für Blitzer.de)" /
+  "In <App> öffnen".
+- `NotdienstModal`: copy seçiliyse buton 📋, basınca kopyalar ve 5 sn "📋 Adresse kopiert — in Blitzer.de
+  einfügen" (role=status); hiçbir uygulama/pencere açılmaz.
+- Testler: unit +3 (etiket, clipboard, yedek yol); E2E: Profil'de Blitzer.de → 📋 → pano içeriği adres,
+  window.open çağrılmadı. Unit 701/701, E2E 7/7, tsc + lint temiz.
+
+---
+
 ## 2026-10-18 (163) – v0.84.3: Navigasyon sadece Notdienst penceresinden; iPhone'da beyaz sayfa yok
 
 Kullanıcı: "Harita uygulamasını Zeiterfassung direkt başlatmasın, yanlışlıkla dokununca da başlar; içeri girip

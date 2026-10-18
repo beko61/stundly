@@ -1,5 +1,24 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-18 (163) – v0.84.3: Navigasyon sadece Notdienst penceresinden; iPhone'da beyaz sayfa yok
+
+Kullanıcı: "Harita uygulamasını Zeiterfassung direkt başlatmasın, yanlışlıkla dokununca da başlar; içeri girip
+başlasın. Haritaya tıklayınca beyaz sayfada kalıyor, neden?"
+
+- `DayEntry`: 📍 adres listede yine sadece gösteriliyor (NoteLine); dokununca satırın geri kalanı gibi Notdienst
+  penceresi açılır. Navigasyon yalnızca penceredeki 📍 "In <App> öffnen" butonundan.
+- Beyaz sayfa nedeni: iPhone'da (özellikle ana ekran uygulaması) `window.open(https://…)` önce boş bir tarayıcı
+  penceresi açıyor, harita uygulaması devralıyor, dönünce boş pencere kalıyor.
+- `lib/navigation/navApps.ts`: iOS/iPadOS'ta (UA veya MacIntel+touch) uygulama doğrudan URL şemasıyla:
+  Apple `maps://?q=`, Google `comgooglemaps://?q=`, Waze `waze://?q=&navigate=yes`, Yandex
+  `yandexmaps://maps.yandex.ru/?text=`; "Jedes Mal fragen" iOS'ta Apple Karten. `location.href = şema` → sayfa
+  yerinde kalır. Android/masaüstü değişmedi. Profil metni: iPhone'da uygulama kurulu olmalı.
+- Testler: iOS şemaları + iPhone'da window.open yok (unit); E2E: listede adrese dokununca navigasyon yok, modal
+  açılır; modal 📍 → Google Maps; Profil Waze → modal 📍 → waze.com. Unit 698/698, E2E 7/7, tsc + lint temiz.
+- iPhone'da gerçek cihaz testi kullanıcıda (Chromium testi iOS şemasını açamaz).
+
+---
+
 ## 2026-10-18 (162) – v0.84.2: "Teilen-Menü" kaldırıldı (Blitzer.de iPhone paylaş menüsünde yok)
 
 - Kullanıcı iPhone'da denedi: "paylaşta çıkmadı". Blitzer.de PRO başka uygulamadan adres almıyor (link yok, share

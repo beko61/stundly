@@ -86,16 +86,24 @@ test("Notdienst mit Kunde und Adresse → beides steht in der Tagesliste", async
   await expect(row).toContainText("Frau Muster, 2. OG");
   await expect(row).toContainText("Musterstraße 1, 30159 Hannover");
 
-  // 📍 Adresse antippen → Navigation (Standard Google Maps). window.open wird mitgeschnitten statt geöffnet.
-  await page.evaluate(() => {
+  // window.open mitschneiden statt öffnen
+  const captureOpen = () => page.evaluate(() => {
     const w = window as unknown as { __opened: string[] };
     w.__opened = [];
     window.open = ((u: string) => { w.__opened.push(u); return null; }) as typeof window.open;
   });
-  await row.getByRole("button", { name: /Navigation zu Musterstraße 1/ }).click();
-  await expect(page.locator('[aria-labelledby="notdienst-modal-title"]')).toHaveCount(0); // Zeile öffnet sich nicht
-  const opened1 = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
-  expect(opened1).toEqual(["https://www.google.com/maps/search/?api=1&query=Musterstra%C3%9Fe%201%2C%2030159%20Hannover"]);
+  const opened = () => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+  await captureOpen();
+
+  // 📍 in der Liste startet KEINE Navigation (versehentliches Tippen) — öffnet den Notdienst
+  await row.getByText("Musterstraße 1, 30159 Hannover").click();
+  await expect(modal).toBeVisible();
+  expect(await opened()).toEqual([]);
+
+  // 📍-Knopf im Notdienst-Fenster startet die Navigation (Standard Google Maps)
+  await modal.getByRole("button", { name: "In Google Maps öffnen" }).click();
+  expect(await opened()).toEqual(["https://www.google.com/maps/search/?api=1&query=Musterstra%C3%9Fe%201%2C%2030159%20Hannover"]);
+  await modal.getByRole("button", { name: "Schließen" }).first().click();
 
   // Notdienst-Karte oben: standardmäßig offen, zu- und wieder aufklappen
   const card = page.getByRole("button", { name: /🚨 Notdienst/ });
@@ -105,20 +113,15 @@ test("Notdienst mit Kunde und Adresse → beides steht in der Tagesliste", async
   await card.click();
   await expect(page.getByText("Nd-Std")).toBeVisible();
 
-  // Profil → Navigation → Waze; danach öffnet die Adresse Waze
+  // Profil → Navigation → Waze; danach startet der 📍-Knopf Waze
   await page.goto("/settings");
   await page.getByRole("radio", { name: /Waze/ }).check();
   await expect(page.getByRole("status").filter({ hasText: "Gespeichert" })).toBeVisible();
   await page.goto("/tracker");
-  await page.evaluate(() => {
-    const w = window as unknown as { __opened: string[] };
-    w.__opened = [];
-    window.open = ((u: string) => { w.__opened.push(u); return null; }) as typeof window.open;
-  });
-  await page.locator(".day-entry").nth(new Date().getDate() - 1)
-    .getByRole("button", { name: /Navigation zu Musterstraße 1.*Waze/ }).click();
-  const opened2 = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
-  expect(opened2[0]).toMatch(/^https:\/\/waze\.com\/ul\?q=Musterstra/);
+  await captureOpen();
+  await page.locator(".day-entry").nth(new Date().getDate() - 1).getByText("Frau Muster, 2. OG").click();
+  await page.locator('[aria-labelledby="notdienst-modal-title"]').getByRole("button", { name: "In Waze öffnen" }).click();
+  expect((await opened())[0]).toMatch(/^https:\/\/waze\.com\/ul\?q=Musterstra/);
 
   expect(consoleErrors).toEqual([]);
 });

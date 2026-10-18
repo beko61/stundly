@@ -10,7 +10,6 @@ import { NotdienstModal, type NotdienstEntry } from "./NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
 import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
 import { hasPending } from "@/lib/offline/outbox";
-import { navAppLabel, openNavigation } from "@/lib/navigation/navApps";
 import { offlineSaveNotdienst } from "@/lib/offline/notdienst";
 import { notdienstOtherMonthHint } from "@/lib/utils/weekMonth";
 
@@ -298,23 +297,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                       ))}
                     </div>
                     {nd.kunde && <NoteLine icon="📋" text={nd.kunde} />}
-                    {nd.adresse && (
-                      <button
-                        type="button"
-                        onClick={e => { e.stopPropagation(); openNavigation(nd.adresse!); }}
-                        aria-label={`Navigation zu ${nd.adresse} (${navAppLabel()})`}
-                        style={{
-                          display:"flex", gap:6, marginTop:6, width:"100%", textAlign:"left", background:"none", border:"none",
-                          padding:0, cursor:"pointer", font:"inherit", fontSize:12, lineHeight:1.4,
-                          color:"color-mix(in srgb, var(--text) 65%, transparent)",
-                        }}
-                      >
-                        <span aria-hidden="true" style={{ flexShrink:0 }}>📍</span>
-                        <span style={{ minWidth:0, overflowWrap:"anywhere", textDecoration:"underline", textDecorationStyle:"dotted", textUnderlineOffset:3 }}>
-                          {nd.adresse}
-                        </span>
-                      </button>
-                    )}
+                    {nd.adresse && <NoteLine icon="📍" text={nd.adresse} />}
                   </div>
                   {paidByCompany ? (
                     <span

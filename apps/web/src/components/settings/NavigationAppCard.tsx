@@ -20,7 +20,8 @@ export function NavigationAppCard() {
     <div className="card">
       <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>🧭 Navigation</h2>
       <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12, lineHeight: 1.5 }}>
-        Mit dieser App öffnen sich Notdienst-Adressen (📍). Gilt nur für dieses Gerät.
+        Mit dieser App startet der 📍-Knopf im Notdienst-Fenster die Navigation. Gilt nur für dieses Gerät;
+        auf dem iPhone öffnet sich die App direkt und muss installiert sein.
       </p>
       <div role="radiogroup" aria-label="Navigations-App" style={{ display: "grid", gap: 6 }}>
         {NAV_APPS.map((a) => {

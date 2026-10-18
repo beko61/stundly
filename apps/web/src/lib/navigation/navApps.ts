@@ -47,10 +47,36 @@ export function navAppLabel(app: NavAppId = getNavApp()): string {
   return NAV_APPS.find((a) => a.id === app)?.label ?? "Google Maps";
 }
 
+/**
+ * iPhone/iPad: App direkt über ihr URL-Schema starten. window.open öffnet in der Home-Bildschirm-App
+ * erst ein leeres Browserfenster, das nach der Rückkehr als weiße Seite stehen bleibt.
+ * Die gewählte App muss installiert sein (Apple Karten ist es immer).
+ */
+export function iosAppUrl(app: NavAppId, address: string): string {
+  const q = encodeURIComponent(address.trim());
+  switch (app) {
+    case "google": return `comgooglemaps://?q=${q}`;
+    case "waze":   return `waze://?q=${q}&navigate=yes`;
+    case "yandex": return `yandexmaps://maps.yandex.ru/?text=${q}`;
+    default:       return `maps://?q=${q}`; // Apple Karten; "Jedes Mal fragen" gibt es auf iOS nicht
+  }
+}
+
+export function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS meldet sich als Mac
+}
+
 /** Synchron im Klick aufrufen (mobile Browser blockieren Öffnen nach await). */
 export function openNavigation(address: string): void {
   if (!address.trim()) return;
-  const url = navUrl(getNavApp(), address);
+  const app = getNavApp();
+  if (isIOS()) {
+    window.location.href = iosAppUrl(app, address); // Schema: Seite bleibt, App öffnet sich
+    return;
+  }
+  const url = navUrl(app, address);
   if (url.startsWith("https://")) window.open(url, "_blank");
   else window.location.href = url; // geo: — Android zeigt die App-Auswahl
 }

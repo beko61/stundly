@@ -1,5 +1,15 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-18 (162) – v0.84.2: "Teilen-Menü" kaldırıldı (Blitzer.de iPhone paylaş menüsünde yok)
+
+- Kullanıcı iPhone'da denedi: "paylaşta çıkmadı". Blitzer.de PRO başka uygulamadan adres almıyor (link yok, share
+  extension yok). Deneme seçeneği geri alındı (kalabalık yapmasın); navApps yorumunda sonuç ve öneri not edildi.
+- Kayıtlı "share" değeri olan cihaz otomatik Google Maps'e düşer (getNavApp doğrulaması, mevcut test).
+- Öneri: Apple Karten ile navigasyon, Blitzer.de PRO arkada (uyarılar diğer uygulama/CarPlay üstünde de geliyor).
+- Unit (navigation/settings) 10/10, tsc + lint temiz.
+
+---
+
 ## 2026-10-18 (161) – v0.84.1: Navigation "Teilen-Menü" (Blitzer.de PRO denemesi)
 
 Kullanıcı: "Ben Blitzer.de PRO kullanıyorum, yüklü, ondan açabilirsem güzel olur." Telefon: **iPhone**.

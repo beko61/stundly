@@ -2,19 +2,18 @@
  * Navigations-App für Adressen (Notdienst) — pro Gerät gespeichert (localStorage), weil die
  * installierten Apps je Gerät verschieden sind. Einstellung: Profil → "Navigation".
  *
- * Blitzer.de bietet (Stand 10/2026) keinen öffentlichen Link, der eine Adresse übernimmt.
- * Deshalb "Teilen-Menü": iOS/Android-Teilen-Blatt mit Adresse + Karten-Link — dort erscheinen
- * Apps mit Teilen-Erweiterung (evtl. Blitzer.de). Android: "Jedes Mal fragen" (geo:).
+ * Blitzer.de übernimmt keine Adressen aus anderen Apps: kein öffentlicher Link (Stand 10/2026), und im
+ * iOS-Teilen-Menü erscheint die App nicht (am iPhone getestet 18.10.2026). Empfehlung: mit Apple/Google
+ * navigieren, Blitzer.de warnt im Hintergrund. Android: "Jedes Mal fragen" (geo:) zeigt installierte Navi-Apps.
  */
 
-export type NavAppId = "google" | "apple" | "waze" | "yandex" | "share" | "ask";
+export type NavAppId = "google" | "apple" | "waze" | "yandex" | "ask";
 
 export const NAV_APPS: { id: NavAppId; label: string; hint?: string }[] = [
   { id: "google", label: "Google Maps" },
   { id: "apple",  label: "Apple Karten", hint: "iPhone / iPad" },
   { id: "waze",   label: "Waze" },
   { id: "yandex", label: "Yandex Karten" },
-  { id: "share",  label: "Teilen-Menü", hint: "Adresse an eine App im Teilen-Menü geben, z. B. Blitzer.de" },
   { id: "ask",    label: "Jedes Mal fragen", hint: "nur Android — zeigt alle installierten Navi-Apps" },
 ];
 
@@ -51,17 +50,7 @@ export function navAppLabel(app: NavAppId = getNavApp()): string {
 /** Synchron im Klick aufrufen (mobile Browser blockieren Öffnen nach await). */
 export function openNavigation(address: string): void {
   if (!address.trim()) return;
-  const app = getNavApp();
-  if (app === "share") {
-    if (typeof navigator.share === "function") {
-      // Text + Apple-Karten-Link: Navi-Apps nehmen je nach Teilen-Erweiterung das eine oder andere
-      navigator.share({ text: address.trim(), url: navUrl("apple", address) }).catch(() => {});
-      return;
-    }
-    window.open(navUrl("google", address), "_blank"); // z. B. Desktop ohne Teilen-Menü
-    return;
-  }
-  const url = navUrl(app, address);
+  const url = navUrl(getNavApp(), address);
   if (url.startsWith("https://")) window.open(url, "_blank");
   else window.location.href = url; // geo: — Android zeigt die App-Auswahl
 }

@@ -11,7 +11,7 @@ import { NotdienstBerichtPanel } from "./NotdienstBerichtPanel";
 import { useOnline, useOutbox } from "@/hooks/useOffline";
 import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
 import { hasPending } from "@/lib/offline/outbox";
-import { copyAddress, getNavApp, navButtonLabel, openNavigation } from "@/lib/navigation/navApps";
+import { copyAddress, navAppLabel, openNavigation } from "@/lib/navigation/navApps";
 import { offlineDeleteNotdienst, offlineSaveNotdienst } from "@/lib/offline/notdienst";
 import {
   filterStreets, joinAdresse, splitAdresse, type StreetSuggestion,
@@ -131,14 +131,15 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
     : "--";
 
   function openMaps() {
-    if (getNavApp() === "copy") {
-      void copyAddress(adresse).then((ok) => {
-        setMapsMsg(ok ? "📋 Adresse kopiert — in Blitzer.de einfügen" : "Kopieren nicht möglich — Adresse bitte markieren und kopieren");
-        setTimeout(() => setMapsMsg(null), 5000);
-      });
-      return;
-    }
     openNavigation(adresse);
+  }
+
+  /** Adresse kopieren — z. B. zum Einfügen in Blitzer.de (übernimmt keine Ziele aus anderen Apps) */
+  function copyAdr() {
+    void copyAddress(adresse).then((ok) => {
+      setMapsMsg(ok ? "📋 Adresse kopiert — z. B. in Blitzer.de einfügen" : "Kopieren nicht möglich — Adresse bitte markieren und kopieren");
+      setTimeout(() => setMapsMsg(null), 5000);
+    });
   }
 
   async function handleSave() {
@@ -341,10 +342,14 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
                   </ul>
                 )}
               </div>
-              <button onClick={openMaps} title={navButtonLabel()} aria-label={navButtonLabel()} style={{
+              <button onClick={openMaps} title={`In ${navAppLabel()} öffnen`} aria-label={`In ${navAppLabel()} öffnen`} style={{
                 background:"var(--surface2)", border:"1px solid var(--green)", color:"var(--green)",
                 padding:"11px 13px", borderRadius:10, cursor:"pointer", fontSize:16, flexShrink:0,
-              }}>{getNavApp() === "copy" ? "📋" : "📍"}</button>
+              }}>📍</button>
+              <button onClick={copyAdr} title="Adresse kopieren" aria-label="Adresse kopieren" style={{
+                background:"var(--surface2)", border:"1px solid var(--border)", color:"var(--text)",
+                padding:"11px 13px", borderRadius:10, cursor:"pointer", fontSize:16, flexShrink:0,
+              }}>📋</button>
             </div>
             {mapsMsg && <div role="status" style={{ fontSize:12, color:"var(--green)", marginTop:6 }}>{mapsMsg}</div>}
           </div>

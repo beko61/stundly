@@ -5,7 +5,7 @@ import { NAV_APPS, getNavApp, setNavApp, type NavAppId } from "@/lib/navigation/
 
 /** Profil: Navigations-App für Notdienst-Adressen (wird sofort auf diesem Gerät gespeichert). */
 export function NavigationAppCard() {
-  const [app, setApp] = useState<NavAppId>("google");
+  const [app, setApp] = useState<NavAppId | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => { setApp(getNavApp()); }, []);
@@ -20,8 +20,8 @@ export function NavigationAppCard() {
     <div className="card">
       <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>🧭 Navigation</h2>
       <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12, lineHeight: 1.5 }}>
-        Mit dieser App startet der 📍-Knopf im Notdienst-Fenster die Navigation. Gilt nur für dieses Gerät;
-        auf dem iPhone öffnet sich die App direkt und muss installiert sein.
+        Mit dieser App startet der 📍-Knopf im Notdienst-Fenster die Navigation (📋 daneben kopiert die Adresse,
+        z. B. für Blitzer.de). Gilt nur für dieses Gerät; auf dem iPhone öffnet sich die App direkt und muss installiert sein.
       </p>
       <div role="radiogroup" aria-label="Navigations-App" style={{ display: "grid", gap: 6 }}>
         {NAV_APPS.map((a) => {

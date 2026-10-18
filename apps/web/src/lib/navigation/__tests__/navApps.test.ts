@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { copyAddress, getNavApp, iosAppUrl, navAppLabel, navButtonLabel, navUrl, openNavigation, setNavApp } from "../navApps";
+import { copyAddress, getNavApp, iosAppUrl, navAppLabel, navUrl, openNavigation, setNavApp } from "../navApps";
 
 const ADR = "Musterstraße 1, 30159 Hannover";
 const Q = encodeURIComponent(ADR);
@@ -57,6 +57,17 @@ describe("iPhone: App direkt per Schema (kein leeres Browserfenster)", () => {
     expect(iosAppUrl("ask", ADR)).toBe(`maps://?q=${Q}`);
   });
 
+  it("Standard auf dem iPhone ist Apple Karten (immer installiert); alte Wahl \"copy\" fällt darauf zurück", () => {
+    Object.defineProperty(navigator, "userAgent", { value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", configurable: true });
+    try {
+      expect(getNavApp()).toBe("apple");
+      localStorage.setItem("stundly_nav_app", "copy");
+      expect(getNavApp()).toBe("apple");
+    } finally {
+      Object.defineProperty(navigator, "userAgent", { value: ua, configurable: true });
+    }
+  });
+
   it("auf dem iPhone kein window.open, sondern location.href mit Schema", () => {
     Object.defineProperty(navigator, "userAgent", { value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", configurable: true });
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
@@ -76,12 +87,7 @@ describe("iPhone: App direkt per Schema (kein leeres Browserfenster)", () => {
   });
 });
 
-describe("Blitzer.de: Adresse kopieren", () => {
-  it("Knopf-Beschriftung je nach Wahl", () => {
-    expect(navButtonLabel("copy")).toBe("Adresse kopieren (für Blitzer.de)");
-    expect(navButtonLabel("apple")).toBe("In Apple Karten öffnen");
-  });
-
+describe("Adresse kopieren (📋, z. B. für Blitzer.de)", () => {
   it("schreibt die Adresse in die Zwischenablage", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });

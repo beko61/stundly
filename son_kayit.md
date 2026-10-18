@@ -1,5 +1,21 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-18 (165) – v0.84.5: Notdienst-Fenster: 📍 Navigation + 📋 Adresse kopieren nebeneinander
+
+Kullanıcı "kopyalama butonu nerede" diye sordu; ekran görüntüsü bilgisayardandı ve orada seçim yapılmamıştı
+(ayar cihaz başına). Öneri: 📍 ve 📋 her zaman yan yana → kullanıcı: "ikisi de olsa güzel olur".
+
+- `NotdienstModal`: sokak kutusunun yanında **📍** (seçili navigasyon uygulaması) ve **📋** (her zaman kopyalar,
+  ayarsız). Mesaj: "📋 Adresse kopiert — z. B. in Blitzer.de einfügen".
+- `navApps.ts`: Profil seçeneği "Blitzer.de (Adresse kopieren)" ve `navButtonLabel` kaldırıldı; `copyAddress` kaldı.
+  **Varsayılan iPhone'da Apple Karten** (her iPhone'da kurulu; Google Maps şeması kurulu değilse açılmazdı),
+  diğerlerinde Google Maps. Eski "copy" değeri → varsayılana düşer.
+- `NavigationAppCard`: açıklamaya 📋 notu; ilk render'da yanlış seçim yanıp sönmesin diye state null başlar.
+- Testler: unit (iPhone varsayılanı Apple + "copy" geri düşüş), E2E (📋 ayarsız kopyalar, hiçbir şey açmaz).
+  Unit 701/701, E2E 7/7, tsc + lint temiz. Mobil ekran görüntüsü kullanıcıya gönderildi.
+
+---
+
 ## 2026-10-18 (164) – v0.84.4: Navigation "Blitzer.de (Adresse kopieren)"
 
 Kullanıcı Blitzer.de PRO'yu doğrudan navigasyon olarak kullanmak istiyor (uyarı için zaten arkada açık; şarj

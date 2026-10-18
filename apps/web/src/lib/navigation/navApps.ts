@@ -4,23 +4,21 @@
  *
  * Blitzer.de übernimmt keine Adressen aus anderen Apps: kein öffentlicher Link (Stand 10/2026), und im
  * iOS-Teilen-Menü erscheint die App nicht (am iPhone getestet 18.10.2026). Empfehlung: mit Apple/Google
- * navigieren, Blitzer.de warnt im Hintergrund — oder "Blitzer.de (Adresse kopieren)": Adresse in die Zwischenablage,
- * in Blitzer.de einfügen. Android: "Jedes Mal fragen" (geo:) zeigt installierte Navi-Apps.
+ * navigieren — oder im Notdienst-Fenster 📋 (Adresse kopieren) und in Blitzer.de einfügen.
+ * Android: "Jedes Mal fragen" (geo:) zeigt installierte Navi-Apps.
  */
 
-export type NavAppId = "google" | "apple" | "waze" | "yandex" | "copy" | "ask";
+export type NavAppId = "google" | "apple" | "waze" | "yandex" | "ask";
 
 export const NAV_APPS: { id: NavAppId; label: string; hint?: string }[] = [
   { id: "google", label: "Google Maps" },
   { id: "apple",  label: "Apple Karten", hint: "iPhone / iPad" },
   { id: "waze",   label: "Waze" },
   { id: "yandex", label: "Yandex Karten" },
-  { id: "copy",   label: "Blitzer.de (Adresse kopieren)", hint: "kopiert die Adresse — in Blitzer.de einfügen" },
   { id: "ask",    label: "Jedes Mal fragen", hint: "nur Android — zeigt alle installierten Navi-Apps" },
 ];
 
 const STORAGE_KEY = "stundly_nav_app";
-const DEFAULT: NavAppId = "google";
 
 export function navUrl(app: NavAppId, address: string): string {
   const q = encodeURIComponent(address.trim());
@@ -38,7 +36,7 @@ export function getNavApp(): NavAppId {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v && NAV_APPS.some((a) => a.id === v)) return v as NavAppId;
   } catch {}
-  return DEFAULT;
+  return isIOS() ? "apple" : "google"; // Apple Karten ist auf jedem iPhone installiert
 }
 
 export function setNavApp(app: NavAppId): void {
@@ -47,11 +45,6 @@ export function setNavApp(app: NavAppId): void {
 
 export function navAppLabel(app: NavAppId = getNavApp()): string {
   return NAV_APPS.find((a) => a.id === app)?.label ?? "Google Maps";
-}
-
-/** Beschriftung des 📍-Knopfs im Notdienst-Fenster */
-export function navButtonLabel(app: NavAppId = getNavApp()): string {
-  return app === "copy" ? "Adresse kopieren (für Blitzer.de)" : `In ${navAppLabel(app)} öffnen`;
 }
 
 /** Adresse in die Zwischenablage — im Klick aufrufen. Ältere Browser: verstecktes Textfeld. */

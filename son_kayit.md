@@ -1,5 +1,20 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-18 (161) – v0.84.1: Navigation "Teilen-Menü" (Blitzer.de PRO denemesi)
+
+Kullanıcı: "Ben Blitzer.de PRO kullanıyorum, yüklü, ondan açabilirsem güzel olur." Telefon: **iPhone**.
+Üreticiye mail: istemedi.
+
+- İkinci, derin araştırma: Blitzer.de için yayınlanmış URL şeması / "Ziel übernehmen" yöntemi yok (blitzer.de yardım
+  sayfaları ve şema listeleri). Blitzer.de yardımına göre uyarılar başka uygulama açıkken / CarPlay'de de gelir →
+  bugün çalışan yol: navigasyonu Apple/Google ile başlat, Blitzer.de arkada.
+- `lib/navigation/navApps.ts`: yeni seçenek **"Teilen-Menü"** — `navigator.share({ text: adres, url: Apple Karten
+  linki })`; paylaş menüsünde Blitzer.de çıkarsa adres oraya gider. Paylaş yoksa (masaüstü) Google Maps.
+- Kullanıcı iPhone'da deneyecek: Profil → Navigation → Teilen-Menü → 📍 adres → menüde Blitzer.de var mı?
+- Test +1 (share + yedek yol). Unit 697/697, E2E 7/7, tsc + lint temiz.
+
+---
+
 ## 2026-10-18 (160) – v0.84.0: Navigations-App seçimi (Profil) + 📍 adrese dokununca yol tarifi
 
 Kullanıcı: "Adresi Google Maps'te açabiliyoruz, bunu çeşitlendirelim: Yandex, iOS harita, Blitzer Pro gibi; ayar

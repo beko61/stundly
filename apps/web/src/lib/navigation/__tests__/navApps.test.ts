@@ -43,4 +43,18 @@ describe("openNavigation", () => {
     expect(open).not.toHaveBeenCalled();
     open.mockRestore();
   });
+
+  it("Teilen-Menü: navigator.share mit Adresse und Apple-Karten-Link; ohne Teilen → Google Maps", () => {
+    setNavApp("share");
+    const share = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    openNavigation(ADR);
+    expect(share).toHaveBeenCalledWith({ text: ADR, url: `https://maps.apple.com/?q=${Q}` });
+
+    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    openNavigation(ADR);
+    expect(open).toHaveBeenCalledWith(`https://www.google.com/maps/search/?api=1&query=${Q}`, "_blank");
+    open.mockRestore();
+  });
 });

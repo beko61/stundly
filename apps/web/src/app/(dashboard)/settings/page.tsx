@@ -12,6 +12,7 @@ import { AutoFillReports } from "@/components/settings/AutoFillReports";
 import { AdminPanelLinks } from "@/components/ui/AdminPanelLinks";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { PrivacyAccountCard } from "@/components/settings/PrivacyAccountCard";
+import { NavigationAppCard } from "@/components/settings/NavigationAppCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { resizeLogo } from "@/lib/image/resizeLogo";
 import { loadMyBriefkopf, type Briefkopf } from "@/lib/company/briefkopf";
@@ -633,6 +634,9 @@ export default function SettingsPage() {
             )}
           </div>
         )}
+
+        {/* ── Navigation (Notdienst-Adressen) ── */}
+        <NavigationAppCard />
 
         {/* ── Monatsbefüllung & Berichte ── */}
         <AutoFillReports />

@@ -86,6 +86,17 @@ test("Notdienst mit Kunde und Adresse → beides steht in der Tagesliste", async
   await expect(row).toContainText("Frau Muster, 2. OG");
   await expect(row).toContainText("Musterstraße 1, 30159 Hannover");
 
+  // 📍 Adresse antippen → Navigation (Standard Google Maps). window.open wird mitgeschnitten statt geöffnet.
+  await page.evaluate(() => {
+    const w = window as unknown as { __opened: string[] };
+    w.__opened = [];
+    window.open = ((u: string) => { w.__opened.push(u); return null; }) as typeof window.open;
+  });
+  await row.getByRole("button", { name: /Navigation zu Musterstraße 1/ }).click();
+  await expect(page.locator('[aria-labelledby="notdienst-modal-title"]')).toHaveCount(0); // Zeile öffnet sich nicht
+  const opened1 = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+  expect(opened1).toEqual(["https://www.google.com/maps/search/?api=1&query=Musterstra%C3%9Fe%201%2C%2030159%20Hannover"]);
+
   // Notdienst-Karte oben: standardmäßig offen, zu- und wieder aufklappen
   const card = page.getByRole("button", { name: /🚨 Notdienst/ });
   await expect(page.getByText("Nd-Std")).toBeVisible();
@@ -93,5 +104,21 @@ test("Notdienst mit Kunde und Adresse → beides steht in der Tagesliste", async
   await expect(page.getByText("Nd-Std")).toBeHidden();
   await card.click();
   await expect(page.getByText("Nd-Std")).toBeVisible();
+
+  // Profil → Navigation → Waze; danach öffnet die Adresse Waze
+  await page.goto("/settings");
+  await page.getByRole("radio", { name: /Waze/ }).check();
+  await expect(page.getByRole("status").filter({ hasText: "Gespeichert" })).toBeVisible();
+  await page.goto("/tracker");
+  await page.evaluate(() => {
+    const w = window as unknown as { __opened: string[] };
+    w.__opened = [];
+    window.open = ((u: string) => { w.__opened.push(u); return null; }) as typeof window.open;
+  });
+  await page.locator(".day-entry").nth(new Date().getDate() - 1)
+    .getByRole("button", { name: /Navigation zu Musterstraße 1.*Waze/ }).click();
+  const opened2 = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+  expect(opened2[0]).toMatch(/^https:\/\/waze\.com\/ul\?q=Musterstra/);
+
   expect(consoleErrors).toEqual([]);
 });

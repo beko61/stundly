@@ -1,5 +1,28 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-18 (160) – v0.84.0: Navigations-App seçimi (Profil) + 📍 adrese dokununca yol tarifi
+
+Kullanıcı: "Adresi Google Maps'te açabiliyoruz, bunu çeşitlendirelim: Yandex, iOS harita, Blitzer Pro gibi; ayar
+profilden yapılsın." Kararlar (soruyla): ayar **cihaz başına** (localStorage, migration yok); listede 📍 adrese
+dokununca navigasyon **açılsın**.
+
+- `lib/navigation/navApps.ts` (yeni): Google Maps (varsayılan), Apple Karten (`maps.apple.com/?q=`), Waze
+  (`waze.com/ul?q=&navigate=yes`), Yandex (`yandex.com/maps/?text=`), "Jedes Mal fragen" (Android `geo:0,0?q=` →
+  sistem uygulama seçici). https → window.open, geo: → location.href; tıklama içinde senkron.
+- **Blitzer.de PRO**: adres alan resmî bir deeplink bulunamadı (araştırıldı, belge yok) → seçenek eklenmedi;
+  Android'de "Jedes Mal fragen" ile listede çıkabilir (doğrulanmadı). Kullanıcıya üreticiye sorma önerildi.
+- `components/settings/NavigationAppCard.tsx`: Profil'de "🧭 Navigation" radyo listesi, seçim anında kaydedilir.
+- `NotdienstModal`: 📍 butonu seçili uygulamayı açar, etiket "In <App> öffnen".
+- `DayEntry`: 📍 adres satırı buton (span'larla — button içinde div yok), stopPropagation → satır modalı açılmaz;
+  aria-label "Navigation zu <adres> (<App>)", noktalı alt çizgi.
+- **E2E'nin bulduğu gerçek hata** (`tracker/page.tsx`): skeleton `isLoading` ile gösteriliyordu; oturum yüklenirken
+  sorgu devre dışı → isLoading=false → liste bir an görünüp sonra skeleton'a dönüyor ve yeniden kuruluyordu →
+  o anda açılan Notdienst penceresi kayboluyordu (test 3 koşuda 2 kez kırmızı). Artık `isPending`; 3/3 yeşil.
+- Testler: navApps (4), NavigationAppCard (1); E2E: adrese dokun → Google Maps linki, satır modalı açılmıyor;
+  Profil'de Waze → link waze.com. E2E 7/7 (3 koşu), unit 696/696, tsc + lint temiz.
+
+---
+
 ## 2026-10-17 (159) – v0.83.5: Tagesliste zeigt Notdienst-Adresse; Button-in-Button in der Notdienst-Karte behoben
 
 Kullanıcı: "Notdienst girdikten sonra sadece Mieter adı gözüküyor, adres de gözüksün."

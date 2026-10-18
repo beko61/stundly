@@ -11,6 +11,7 @@ import { NotdienstBerichtPanel } from "./NotdienstBerichtPanel";
 import { useOnline, useOutbox } from "@/hooks/useOffline";
 import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
 import { hasPending } from "@/lib/offline/outbox";
+import { navAppLabel, openNavigation } from "@/lib/navigation/navApps";
 import { offlineDeleteNotdienst, offlineSaveNotdienst } from "@/lib/offline/notdienst";
 import {
   filterStreets, joinAdresse, splitAdresse, type StreetSuggestion,
@@ -129,9 +130,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
     : "--";
 
   function openMaps() {
-    if (!adresse.trim()) return;
-    const q = encodeURIComponent(adresse.trim());
-    window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, "_blank");
+    openNavigation(adresse);
   }
 
   async function handleSave() {
@@ -334,7 +333,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
                   </ul>
                 )}
               </div>
-              <button onClick={openMaps} title="In Google Maps öffnen" aria-label="In Google Maps öffnen" style={{
+              <button onClick={openMaps} title={`In ${navAppLabel()} öffnen`} aria-label={`In ${navAppLabel()} öffnen`} style={{
                 background:"var(--surface2)", border:"1px solid var(--green)", color:"var(--green)",
                 padding:"11px 13px", borderRadius:10, cursor:"pointer", fontSize:16, flexShrink:0,
               }}>📍</button>

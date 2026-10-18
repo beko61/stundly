@@ -30,7 +30,11 @@ const EMPTY_ND: NotdienstEntry[] = [];
 export default function TrackerPage() {
   const { year, month } = useTrackerStore();
   const entriesQ = useTimeEntriesQuery(year, month);
-  const { data: entries = [], isLoading: loading, refetch } = entriesQ;
+  const { data: entries = [], refetch } = entriesQ;
+  // isPending statt isLoading: solange die Session lädt, ist die Query deaktiviert (isLoading=false) —
+  // die Liste blitzte kurz auf, wurde dann vom Skeleton ersetzt und neu aufgebaut; ein schon
+  // geöffnetes Notdienst-Fenster ging dabei verloren (E2E gefunden).
+  const loading = entriesQ.isPending;
   // Notdienst des Monats (±1 Woche) — eine Query für alle Tageszeilen; gleicher Key wie
   // MonthlySummary/NotdienstWeekly → dedupliziert, kein Extra-Request.
   const ndRange = useMemo(() => notdienstLoadRange(year, month), [year, month]);

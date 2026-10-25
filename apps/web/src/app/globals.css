@@ -873,6 +873,10 @@ body:has(.floating-scan) .support-fab {
 /* ═══════════════════════════════════════════════
    COOKIE BANNER — responsive (text inline desktop, stack mobile)
    ═══════════════════════════════════════════════ */
+/* Offenes Fenster (Zeit, Notdienst …): Banner ausblenden, sonst verdeckt er unten "Speichern".
+   Nach dem Schließen erscheint er wieder — die Einwilligung wird weiterhin abgefragt. */
+body:has([aria-modal="true"]) .cookie-banner { display: none; }
+
 .cookie-banner-inner {
   max-width: 1200px;
   margin: 0 auto;

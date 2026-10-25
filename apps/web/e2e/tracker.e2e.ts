@@ -27,9 +27,10 @@ test.afterAll(async () => {
 });
 
 test("Login → Zeiterfassung → Tag eintragen → bleibt nach Neuladen", async ({ page }) => {
+  // Cookie-Banner bewusst NICHT schließen: bei offenem Fenster darf er "Speichern" nicht verdecken
   await page.goto("/login");
-  // Cookie-Banner wie ein Nutzer schließen (datensparsame Wahl) — er überdeckt sonst unten den Speichern-Button
-  await page.getByRole("button", { name: "Nur notwendige" }).click();
+  const banner = page.getByRole("dialog", { name: "Cookie-Einwilligung" });
+  await expect(banner).toBeVisible();
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   await page.locator('button[type="submit"]').click();
@@ -43,12 +44,14 @@ test("Login → Zeiterfassung → Tag eintragen → bleibt nach Neuladen", async
 
   const modal = page.locator('[aria-labelledby="time-entry-modal-title"]');
   await expect(modal).toBeVisible();
+  await expect(banner).toBeHidden(); // Fenster offen → Banner weg
   const times = modal.locator('input[type="time"]');
   await times.nth(0).fill("07:00");
   await times.nth(1).fill("15:30");
   await modal.getByRole("button", { name: "Speichern" }).click();
   await expect(modal).toBeHidden();
   await expect(row).toContainText("07:00");
+  await expect(banner).toBeVisible(); // nach dem Schließen wieder da — Einwilligung steht noch aus
 
   await page.reload();
   await expect(page.locator(".day-entry").nth(today - 1)).toContainText("15:30");

@@ -1,5 +1,19 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (166) – v0.84.6: Çerez bandı açık pencerenin "Speichern" butonunu kapatmıyor
+
+Kullanıcı "devam" dedi → listedeki sıradaki iş (17.10 E2E bulgusu): mobilde ilk girişte çerez bandı (fixed, z-index
+9999) TimeEntryModal'ın altındaki "Speichern"i kapatıyordu; yeni kullanıcı ilk kaydında takılıyordu.
+
+- `CookieBanner.tsx`: kök elemana `className="cookie-banner"`.
+- `globals.css`: `body:has([aria-modal="true"]) .cookie-banner { display: none; }` — tüm pencereler (Zeit, Notdienst,
+  Foto-Scan, QR, Korrektur …) aria-modal taşıyor. Pencere kapanınca band geri gelir; onay istenmeye devam eder
+  (seçim varsayılmaz). :has → iOS Safari 15.4+, Chrome 105+.
+- E2E `tracker.e2e.ts`: ilk test artık bandı KAPATMADAN giriş + kayıt yapıyor; pencere açıkken band gizli, kapanınca
+  tekrar görünür kontrolü. E2E 7/7, unit 701/701, tsc + lint temiz.
+
+---
+
 ## 2026-10-18 (165) – v0.84.5: Notdienst-Fenster: 📍 Navigation + 📋 Adresse kopieren nebeneinander
 
 Kullanıcı "kopyalama butonu nerede" diye sordu; ekran görüntüsü bilgisayardandı ve orada seçim yapılmamıştı

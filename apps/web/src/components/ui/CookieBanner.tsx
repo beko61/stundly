@@ -26,6 +26,7 @@ export function CookieBanner() {
 
   return (
     <div
+      className="cookie-banner"
       role="dialog"
       aria-live="polite"
       aria-label="Cookie-Einwilligung"

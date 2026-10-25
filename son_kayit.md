@@ -1,5 +1,22 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (170) – v0.85.1: Notdienst metin kutularında iPhone adres önerisi yerine kelime önerisi
+
+Kullanıcı: "Notdienst'te Problem'in altındaki kutuda nedense yazım çıkmıyor, adres kısayolları çıkıyor; text değil mi
+orası?" Neden (büyük ihtimal): hemen üstteki PLZ/Ort alanları autocomplete=postal-code/address-level2 → iOS formu
+adres formu sayıp metin kutularında da AutoFill adres önerisi gösteriyor, QuickType kelime önerisi yok.
+
+- `NotdienstModal.tsx`: Problem, Ergebnis, Notiz textarea'larına `name="nd-…" autoComplete="off" autoCorrect="on"
+  autoCapitalize="sentences" spellCheck`. iPhone'da kullanıcı doğrulayacak (Chromium testi iOS klavyesini göremez).
+- Aynı mesajda: "Neden kopyalıyorum, kime göndereceksem sistem otomatik yazsın (Notdienst + Urlaub)". Teknik sınır:
+  Web Share API'de alıcı alanı yok (sadece files/title/text); ms-outlook://compose alıcı alır ama ek alamaz.
+  Seçenekler sunuldu: (1) Stundly sunucudan gönderir (Resend, ek + alıcı otomatik, Reply-To kullanıcı, CC kullanıcı),
+  (2) şimdiki paylaş menüsü, (3) Outlook doğrudan + PDF linki. Öneri 1; kullanıcı kararı + Notdienst alıcısı sabit mi
+  müşteriye göre mi bekleniyor.
+- E2E 4 koşuda 1 kez rastgele `toContainText` hatası (diğer 3 koşu 9/9) — izlenecek. Unit 704/704, tsc + lint temiz.
+
+---
+
 ## 2026-10-25 (169) – v0.85.0: Urlaubsantrag PDF'i Outlook'a otomatik ek; yukarı ok sağda; yüzen butonlar pencere üstünde değil
 
 Kullanıcı: (1) "Soldaki yukarı butonunu sağa alalım." (2) "Notdienst kendi PDF'ini oluşturup Outlook'a otomatik

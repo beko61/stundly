@@ -358,7 +358,8 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
           {/* Problem */}
           <div>
             <label className="label">Problem</label>
-            <textarea style={{ ...taStyle, minHeight:70 }} rows={3} value={problem}
+            {/* Freitext: autoComplete="off" — sonst bietet iOS wegen der Adressfelder darüber Adressen statt Wortvorschlägen an */}
+            <textarea name="nd-problem" autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck style={{ ...taStyle, minHeight:70 }} rows={3} value={problem}
               onChange={e => setProblem(e.target.value)}
               placeholder="z.B. Die WC-Spülung ist undicht..." />
           </div>
@@ -366,7 +367,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
           {/* Ergebnis */}
           <div>
             <label className="label">Ergebnis / Feststellungen (jede Zeile = ein Punkt)</label>
-            <textarea style={{ ...taStyle, minHeight:90 }} rows={4} value={ergebnis}
+            <textarea name="nd-ergebnis" autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck style={{ ...taStyle, minHeight:90 }} rows={4} value={ergebnis}
               onChange={e => setErgebnis(e.target.value)}
               placeholder={"Laut telefonischer Auskunft wurde...\nNach der Reparatur trat erneut...\nVor Ort wurde festgestellt..."} />
           </div>
@@ -407,6 +408,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
           <div>
             <label className="label">Notiz (optional)</label>
             <textarea
+              name="nd-notiz" autoComplete="off" autoCorrect="on" autoCapitalize="sentences" spellCheck
               className="input"
               value={note}
               onChange={e => setNote(e.target.value)}

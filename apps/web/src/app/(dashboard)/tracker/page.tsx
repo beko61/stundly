@@ -24,6 +24,7 @@ import { monthKey, useEntryCorrections, useMonthClosings } from "@/hooks/queries
 import { CompanyMonthBar } from "@/components/tracker/CompanyMonthBar";
 import type { NotdienstEntry } from "@/components/tracker/NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
+import { byEntryOrder } from "@/lib/notdienst/order";
 
 const EMPTY_ND: NotdienstEntry[] = [];
 
@@ -46,7 +47,7 @@ export default function TrackerPage() {
       list.push(nd);
       m.set(nd.date, list);
     }
-    for (const list of m.values()) list.sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+    for (const list of m.values()) list.sort(byEntryOrder); // Eingabe-Reihenfolge, nicht Uhrzeit
     return m;
   }, [ndQ.data]);
   // isPending (nicht isLoading): in RQ v5 ist eine noch deaktivierte Query (Session lädt)

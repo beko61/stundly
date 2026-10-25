@@ -139,3 +139,48 @@ test("Notdienst mit Kunde und Adresse → beides steht in der Tagesliste", async
 
   expect(consoleErrors).toEqual([]);
 });
+
+test("Notdienste in Eingabe-Reihenfolge; Installieren-Symbol klein, verdeckt keine Fenster", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Nur notwendige" }).click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+  await page.goto("/tracker");
+
+  // Installieren: kleines Symbol (Android-Emulation, nicht installiert), Tippen öffnet die Karte
+  const fab = page.getByRole("button", { name: "Stundly auf dem Home-Bildschirm installieren" });
+  await expect(fab).toBeVisible({ timeout: 10_000 });
+  const box = await fab.boundingBox();
+  expect(box!.width).toBeLessThanOrEqual(48);
+  await fab.click();
+  const card = page.getByRole("dialog", { name: "Stundly App installieren" });
+  await expect(card.getByRole("button", { name: "Installieren" })).toBeVisible();
+  await card.getByRole("button", { name: "Verkleinern" }).click();
+  await expect(fab).toBeVisible();
+
+  const day = new Date().getDate() - 1;
+  const row = page.locator(".day-entry").nth(day);
+  const modal = page.locator('[aria-labelledby="notdienst-modal-title"]');
+  for (const [kunde, start, end] of [["Ahmet", "20:00", "21:00"], ["Mehmet", "08:00", "09:00"]] as const) {
+    await row.getByRole("button", { name: /Notdienst hinzufügen/ }).click();
+    await expect(modal).toBeVisible({ timeout: 30_000 });
+    await expect(fab).toBeHidden(); // Fenster offen → Symbol weg
+    await modal.getByPlaceholder(/Frau Ermakov/).fill(kunde);
+    await modal.getByLabel("Start").fill(start);
+    await modal.getByLabel("Ende").fill(end);
+    await modal.getByRole("button", { name: /Speichern/ }).click();
+    await expect(modal.getByRole("button", { name: /Aktualisieren/ })).toBeVisible();
+    await modal.getByRole("button", { name: "Schließen" }).first().click();
+  }
+
+  // Ahmet zuerst eingetragen → bleibt vor Mehmet, obwohl Mehmet früher beginnt (auch nach Neuladen)
+  for (let i = 0; i < 2; i++) {
+    const text = await row.innerText();
+    expect(text.indexOf("Ahmet")).toBeGreaterThan(-1);
+    expect(text.indexOf("Ahmet")).toBeLessThan(text.indexOf("Mehmet"));
+    await page.reload();
+    await expect(row).toContainText("Mehmet");
+  }
+});

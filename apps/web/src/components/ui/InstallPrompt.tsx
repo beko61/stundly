@@ -25,27 +25,20 @@ function detectPlatform(): Platform {
 }
 
 /**
- * Custom install prompt — always shows a tappable banner on mobile.
+ * Custom install prompt — auf dem Handy ein kleines 📲-Symbol (links über der Navigation); Tippen klappt
+ * eine kleine Karte auf. Früher ein breites Banner, das unten Knöpfe (z. B. Speichern) verdeckte.
  *  • Android Chrome → if `beforeinstallprompt` fires, button calls prompt().
  *    Otherwise the button opens an instruction modal ("3-Punkt-Menü → App installieren").
  *  • iOS Safari → button opens an instruction modal (Safari has no programmatic
  *    install API; user must use the Share menu).
  *  • Desktop / standalone (already installed) → nothing shown.
  */
-/** Pfade mit BottomNav → Banner muss höher sitzen, sonst überlappt es die Nav. */
-const HAS_BOTTOM_NAV = /^\/(dashboard|tracker|reports|salary|vacation|settings|team)/;
-
 export function InstallPrompt() {
   const [platform, setPlatform] = useState<Platform>("other");
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [howto, setHowto] = useState<"ios" | "android" | null>(null);
-  const [hasBottomNav, setHasBottomNav] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setHasBottomNav(HAS_BOTTOM_NAV.test(window.location.pathname));
-  }, []);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -141,76 +134,70 @@ export function InstallPrompt() {
 
   return (
     <>
-      {show && !howto && (
+      {show && !howto && !expanded && (
+        // Klein: Symbol links über der Navigation (gegenüber dem Support-Button) — verdeckt keine Knöpfe
+        <button
+          type="button"
+          className="install-fab"
+          onClick={() => setExpanded(true)}
+          aria-label="Stundly auf dem Home-Bildschirm installieren"
+          title="App installieren"
+          style={{
+            width: 44, height: 44, borderRadius: "50%", border: "none", cursor: "pointer",
+            background: "linear-gradient(135deg, #7c6af7, #5b4ad6)", color: "white", fontSize: 20,
+            boxShadow: "0 4px 16px rgba(124, 106, 247, 0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <span aria-hidden="true">📲</span>
+        </button>
+      )}
+
+      {show && !howto && expanded && (
         <div
           role="dialog"
           aria-label="Stundly App installieren"
+          className="install-fab"
           style={{
-            position: "fixed",
-            // BottomNav var → üstüne yerleştir; landing/auth → düşük bırak
-            bottom: hasBottomNav
-              ? "calc(96px + env(safe-area-inset-bottom))"
-              : "calc(12px + env(safe-area-inset-bottom))",
-            left: 12,
-            right: 12,
-            zIndex: 200,
+            width: "min(300px, calc(100vw - 32px))",
             background: "linear-gradient(135deg, #7c6af7, #5b4ad6)",
             borderRadius: 14,
-            padding: "14px 16px",
+            padding: "12px 14px",
             boxShadow: "0 8px 32px rgba(124, 106, 247, 0.4)",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
             color: "white",
-            maxWidth: 480,
-            margin: "0 auto",
           }}
         >
-          <div style={{ fontSize: 28, flexShrink: 0 }} aria-hidden="true">📲</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 2 }}>
-              Stundly auf dem Home-Bildschirm
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <div style={{ fontSize: 22, flexShrink: 0 }} aria-hidden="true">📲</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>Stundly auf dem Home-Bildschirm</div>
+              <div style={{ fontSize: 12, opacity: 0.9, lineHeight: 1.4 }}>Schneller Zugriff, kein App Store nötig.</div>
             </div>
-            <div style={{ fontSize: 12, opacity: 0.9, lineHeight: 1.4 }}>
-              Schneller Zugriff, kein App Store nötig.
-            </div>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              aria-label="Verkleinern"
+              style={{ background: "transparent", border: "none", color: "white", fontSize: 20, cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.85, flexShrink: 0 }}
+            >
+              ×
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleClick}
-            style={{
-              background: "white",
-              color: "#5b4ad6",
-              border: "none",
-              padding: "9px 14px",
-              borderRadius: 8,
-              fontWeight: 800,
-              fontSize: 13,
-              cursor: "pointer",
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Installieren
-          </button>
-          <button
-            type="button"
-            onClick={dismiss}
-            aria-label="Schließen"
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "white",
-              fontSize: 22,
-              cursor: "pointer",
-              padding: 4,
-              lineHeight: 1,
-              opacity: 0.8,
-              flexShrink: 0,
-            }}
-          >
-            ×
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={handleClick}
+              style={{ background: "white", color: "#5b4ad6", border: "none", padding: "8px 14px", borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: "pointer" }}
+            >
+              Installieren
+            </button>
+            <button
+              type="button"
+              onClick={dismiss}
+              style={{ background: "transparent", border: "none", color: "white", fontSize: 12, opacity: 0.85, cursor: "pointer", textDecoration: "underline", padding: 0 }}
+            >
+              Nicht mehr anzeigen
+            </button>
+          </div>
         </div>
       )}
 

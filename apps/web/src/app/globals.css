@@ -591,6 +591,20 @@ body:has(.floating-scan) .support-fab {
   }
 }
 
+/* Installieren-Symbol (📲) — links, auf Höhe des Support-Buttons, über dem Nach-oben-Button */
+.install-fab {
+  position: fixed;
+  bottom: 90px;
+  left: 24px;
+  z-index: 9997;
+}
+@media (max-width: 767px) {
+  .install-fab {
+    bottom: calc(160px + env(safe-area-inset-bottom));
+    left: 16px;
+  }
+}
+
 /* Nach-oben-Button — links-unten, spiegelbildlich zu support-fab.
    Desktop: rechts neben der Sidebar (240px), sonst liegt er über "Abmelden". */
 .scroll-top-fab {
@@ -875,7 +889,8 @@ body:has(.floating-scan) .support-fab {
    ═══════════════════════════════════════════════ */
 /* Offenes Fenster (Zeit, Notdienst …): Banner ausblenden, sonst verdeckt er unten "Speichern".
    Nach dem Schließen erscheint er wieder — die Einwilligung wird weiterhin abgefragt. */
-body:has([aria-modal="true"]) .cookie-banner { display: none; }
+body:has([aria-modal="true"]) .cookie-banner,
+body:has([aria-modal="true"]) .install-fab { display: none !important; } /* !important: Symbol hat inline display:flex */
 
 .cookie-banner-inner {
   max-width: 1200px;

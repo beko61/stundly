@@ -1,5 +1,25 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (168) – v0.84.8: Notdienst'ler girilme sırasında; "Installieren" balonu küçük simge
+
+Kullanıcı: (1) "Notdienst'e örnek 6 kayıt girdim, saate göre diziliyor; öyle olmasın, girilen kayda göre ilerlesin:
+1. Ahmet 2. Mehmet — Mehmet'i önce yapsam da ikinci kayıtta dursun." (2) "Telefonda ana ekrana indir balonu kayıt
+butonuna geliyor; küçük simge olsun, tıklayınca uygun ölçüde büyüsün."
+
+- `lib/notdienst/order.ts` (yeni) `byEntryOrder`: created_at artan; created_at'siz (offline, henüz gönderilmemiş) sona.
+  `tracker/page.tsx` gün listesi start_time yerine bununla sıralıyor → "Nd 1, Nd 2" girilme sırası.
+  `NotdienstEntry.created_at?` eklendi. `lib/offline/notdienst.ts`: yeni offline satıra created_at=şimdi; mevcut
+  satır düzenlenince önceki created_at korunur (yerinden oynamaz). Raporlar/PDF'ler değişmedi (kronolojik).
+- `components/ui/InstallPrompt.tsx`: tam genişlik banner yerine 44 px yuvarlak 📲 (`.install-fab`: mobil sol,
+  bottom 160px+safe-area — support-fab'ın karşısı, scroll-top'ın üstü; masaüstü sol-alt). Dokununca 300 px kart:
+  başlık, "Installieren", "Nicht mehr anzeigen" (14 gün), × = tekrar simgeye küçült. BottomNav'a göre konum hesabı
+  (HAS_BOTTOM_NAV) kaldırıldı.
+- `globals.css`: açık pencerede `.install-fab` de gizli (`display:none !important` — butonda inline display:flex var).
+- Testler: unit `order.test.ts`; E2E yeni test: simge ≤48 px, açılır/küçülür, Notdienst penceresi açıkken gizli;
+  Ahmet 20:00 sonra Mehmet 08:00 → listede Ahmet önce (reload sonrası da). Unit 704/704, E2E 8/8, tsc + lint temiz.
+
+---
+
 ## 2026-10-25 (167) – v0.84.7: Yeni sürüm sonrası "Loading chunk failed" → sayfa kendini bir kez yeniler; yedek sağlamlaştırıldı
 
 Bir hafta sonra kontrol (salt okuma):

@@ -19,6 +19,7 @@ import {
 
 export interface NotdienstEntry {
   id: string;
+  created_at?: string | null; // Reihenfolge in der Tagesliste (lib/notdienst/order)
   user_id: string;
   date: string;
   start_time: string;

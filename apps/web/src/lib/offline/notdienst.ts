@@ -14,7 +14,8 @@ function patchNdCache(userId: string, id: string, row: CachedNd | null) {
     const [, , start, end] = key as [string, string, string, string];
     const prev = data.find((e) => e.id === id);
     const rest = data.filter((e) => e.id !== id);
-    const merged = row && { ...prev, ...row }; // Teiländerung (z. B. nur "erledigt") behält die übrigen Felder
+    // Teiländerung (z. B. nur "erledigt") behält die übrigen Felder; neu → created_at jetzt (Reihenfolge in der Tagesliste)
+    const merged = row && { created_at: new Date().toISOString(), ...prev, ...row };
     const fits = merged && (!start || merged.date >= start) && (!end || merged.date <= end);
     const next = fits ? [...rest, merged].sort((a, b) => a.date.localeCompare(b.date)) : rest;
     qc.setQueryData(key, next);

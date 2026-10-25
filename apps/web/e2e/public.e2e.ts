@@ -18,3 +18,12 @@ for (const [path, heading] of PAGES) {
     expect(errors).toEqual([]);
   });
 }
+
+test("Startseite ohne Preis-Countdown und ohne Beta-Preis (Besucher schreckten Beträge ab)", async ({ page }) => {
+  await page.goto("/");
+  const body = page.locator("body");
+  await expect(body).toContainText("keine Kreditkarte");
+  await expect(body).not.toContainText(/noch \d+ Tage/);
+  await expect(body).not.toContainText("Für Beta-Tester danach ab");
+  await expect(body).not.toContainText("dauerhaft 50 %");
+});

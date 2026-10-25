@@ -1,5 +1,28 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (171) – v0.85.2: İlk sayfada para korkusu kalktı + freemium (3 katman) kararı
+
+Kullanıcı: "Önerdiğim kişiler ilk sayfada ücretle ilgili bir şey görünce korkuyor." Beyin fırtınası → kararlar
+(memory: stundly-freemium-plan):
+- **Basic (ücretsiz):** saat, fazla mesai, tatil, Urlaub; Notdienst **ayda 5**; rapor gönderme/mail/paylaşım/indirme
+  🔒; maaş/vergi basit; internetsiz 🔒; OCR 🔒; PDF'ler filigranlı önizleme. **Plus** 5,99 (beta 2,99): hepsi.
+  **Firma** 19,99/49,99: panel + çalışanlara Plus. Yeni kullanıcı 30 gün Plus ücretsiz (kart yok). Beta: Plus
+  31.03.2027'ye kadar ücretsiz, sonra kalıcı %50. Kilitler görünür ("🔒 Plus" + kısa açıklama). DSGVO veri kopyası
+  ücretsizde açık kalır (Art. 15/20). Kilit altyapısı Stripe hazır olana / beta bitene kadar bayrakla kapalı.
+- Ücretsiz katmanı bilerek bağlayıcı yazmadık: "Grundfunktionen bleiben kostenlos" (für immer değil).
+
+İlk sayfa (`app/page.tsx`, BETA_MODE dalı):
+- Üst şerit "🎁 BETA … bis 31.03.2027 (noch N Tage)" → "✓ Kostenlos starten · keine Kreditkarte · kein Abo".
+- Hero altı "danach für Beta-Tester dauerhaft 50 % günstiger" → "Kostenlos starten · keine Kreditkarte · kein Abo · die
+  Grundfunktionen bleiben kostenlos".
+- Fiyat kutusu ("Für Beta-Tester danach ab 2,99 € · regulär 5,99 €") kaldırıldı → "Kostenlos starten" kartı:
+  Zeiterfassung/Überstunden/Urlaub kostenlos; mehr (Berichte senden, Firmenkonto) "später freiwillig upgraden".
+- FAQ Kreditkarte + son CTA metni güncellendi; kullanılmayan importlar (betaDaysRemaining, BETA_DISCOUNT_PCT, euro).
+- E2E `public.e2e.ts`: ilk sayfada "noch N Tage", "Für Beta-Tester danach ab", "dauerhaft 50 %" yok kontrolü.
+  Public 6/6, unit 704/704, tsc + lint temiz. /pricing sayfası değişmedi (fiyatlar orada).
+
+---
+
 ## 2026-10-25 (170) – v0.85.1: Notdienst metin kutularında iPhone adres önerisi yerine kelime önerisi
 
 Kullanıcı: "Notdienst'te Problem'in altındaki kutuda nedense yazım çıkmıyor, adres kısayolları çıkıyor; text değil mi

@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { homePathForRole } from "@/lib/auth/homePath";
-import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
-import { BETA_DISCOUNT_PCT, PLAN_PRICES, euro } from "@/lib/pricing";
+import { BETA_MODE } from "@/lib/beta";
+import { PLAN_PRICES } from "@/lib/pricing";
 
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
 
@@ -197,7 +197,7 @@ const plans = [
 
 const faqs = [
   { q: "Ist Stundly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
-  { q: "Muss ich eine Kreditkarte angeben?", a: `Nein. Die kostenlose Testphase ist vollständig ohne Zahlungsdaten – während der Beta-Phase sogar bis ${BETA_END_DATE_LABEL} komplett gratis.` },
+  { q: "Muss ich eine Kreditkarte angeben?", a: "Nein. Du startest kostenlos, ohne Zahlungsdaten und ohne Abo. Die Grundfunktionen – Zeiterfassung, Überstunden und Urlaub – bleiben kostenlos." },
   { q: "Kann ich Stundly in Deutschland nutzen?", a: "Ja. Stundly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
   { q: "Gibt es eine mobile App?", a: "Ja. Stundly lässt sich auf iOS und Android wie eine App auf den Startbildschirm installieren (PWA). Zum Speichern von Einträgen wird eine Internetverbindung benötigt." },
 ];
@@ -236,7 +236,7 @@ export default async function LandingPage() {
           fontWeight: 700,
           letterSpacing: "0.04em",
         }}>
-          🎁 BETA: komplett kostenlos — alle Funktionen freigeschaltet bis {BETA_END_DATE_LABEL} (noch {betaDaysRemaining()} Tage)
+          ✓ Kostenlos starten · keine Kreditkarte · kein Abo
         </div>
       )}
 
@@ -303,8 +303,8 @@ export default async function LandingPage() {
 
           {BETA_MODE ? (
             <p style={{ marginTop: 18, fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
-              <strong style={{ color: "var(--accent2)" }}>Bis {BETA_END_DATE_LABEL} kostenlos</strong>
-              <span style={{ color: "var(--muted)" }}> · danach für Beta-Tester dauerhaft {BETA_DISCOUNT_PCT} % günstiger · Keine Kreditkarte</span>
+              <strong style={{ color: "var(--accent2)" }}>Kostenlos starten</strong>
+              <span style={{ color: "var(--muted)" }}> · keine Kreditkarte · kein Abo · die Grundfunktionen bleiben kostenlos</span>
             </p>
           ) : (
             <p style={{ marginTop: 16, fontSize: 12, color: "var(--muted)" }}>
@@ -612,30 +612,19 @@ export default async function LandingPage() {
             borderRadius: 18,
             padding: "44px 36px",
           }}>
-            <div style={{ fontSize: 44, marginBottom: 16 }}>🎁</div>
+            {/* Kein Preis auf der Startseite — Preise nur unter /pricing (Besucher schreckten Beträge ab) */}
+            <div style={{ fontSize: 44, marginBottom: 16 }}>✓</div>
             <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>
-              Beta-Phase: komplett kostenlos
+              Kostenlos starten
             </h2>
-            <p style={{ color: "var(--text)", fontSize: 15, lineHeight: 1.7, marginBottom: 22 }}>
-              Stundly ist gerade neu gestartet. Bis zum <strong>{BETA_END_DATE_LABEL}</strong> bekommst
-              du <strong>alle Funktionen</strong> ohne Einschränkung — keine Kreditkarte, keine
-              versteckten Kosten.
+            <p style={{ color: "var(--text)", fontSize: 15, lineHeight: 1.7, marginBottom: 14 }}>
+              Zeiterfassung, Überstunden und Urlaub kosten nichts — <strong>keine Kreditkarte, kein Abo,
+              keine Kündigung</strong>. Einfach anmelden und loslegen.
             </p>
-            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>
-              Beta-Tester zahlen danach <strong style={{ color: "var(--accent2)" }}>dauerhaft {BETA_DISCOUNT_PCT} % weniger</strong> — als Dankeschön.
+            <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 24 }}>
+              Wer mehr braucht — z. B. Berichte direkt senden oder ein Firmenkonto fürs Team —
+              kann später freiwillig upgraden.
             </p>
-            {/* Beta anchor pricing */}
-            <div style={{
-              display: "inline-flex", alignItems: "baseline", gap: 10,
-              padding: "10px 18px",
-              background: "color-mix(in srgb, var(--accent2) 12%, transparent)",
-              border: "1px dashed color-mix(in srgb, var(--accent2) 40%, transparent)",
-              borderRadius: 12, marginBottom: 24,
-            }}>
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>Für Beta-Tester danach ab</span>
-              <span style={{ fontSize: 22, fontWeight: 800, color: "var(--accent2)" }}>{euro(PLAN_PRICES.individual.beta)}</span>
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>/Monat · regulär {euro(PLAN_PRICES.individual.monthly)}</span>
-            </div>
             <div style={{ marginTop: 4 }}>
               <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 32px", display: "inline-block" }}>
                 Jetzt kostenlos starten →
@@ -727,7 +716,7 @@ export default async function LandingPage() {
         </h2>
         <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 32 }}>
           {BETA_MODE
-            ? `Beta-Zugang kostenlos bis ${BETA_END_DATE_LABEL} – keine Kreditkarte – sofort loslegen`
+            ? "Kostenlos – keine Kreditkarte – kein Abo – sofort loslegen"
             : "14 Tage kostenlos – keine Kreditkarte – sofort loslegen"}
         </p>
         <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>

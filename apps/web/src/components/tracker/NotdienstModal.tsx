@@ -13,6 +13,9 @@ import { cachedUserId, isNetworkError, isOffline } from "@/lib/offline/network";
 import { hasPending } from "@/lib/offline/outbox";
 import { copyAddress, navAppLabel, openNavigation } from "@/lib/navigation/navApps";
 import { offlineDeleteNotdienst, offlineSaveNotdienst } from "@/lib/offline/notdienst";
+import { usePlan } from "@/hooks/usePlan";
+import { PlusSheet } from "@/components/plan/PlusSheet";
+import type { Feature } from "@/lib/plan/entitlements";
 import {
   filterStreets, joinAdresse, splitAdresse, type StreetSuggestion,
 } from "@/lib/address/streets";
@@ -92,6 +95,8 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mapsMsg,   setMapsMsg]   = useState<string | null>(null);
   const [savedId,  setSavedId]  = useState<string | null>(entry?.id ?? null);
+  const plan = usePlan();
+  const [plusFor, setPlusFor] = useState<Feature | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
   const online = useOnline();
@@ -188,6 +193,20 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
         // Bei Firmen-Mitarbeitern setzt die Firma den Bezahlt-Status — nicht mitschicken
         ...(paidByCompany ? {} : { erledigt }),
       };
+
+      // Basic: höchstens plan.ndLimit neue Notdienste pro Kalendermonat (bestehende bleiben bearbeitbar)
+      if (!savedId && Number.isFinite(plan.ndLimit) && !isOffline()) {
+        const [y, m] = date.split("-").map(Number) as [number, number];
+        const last = new Date(y, m, 0).getDate();
+        const { count } = await createClient().from("notdienst_entries")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .gte("date", `${date.slice(0, 7)}-01`).lte("date", `${date.slice(0, 7)}-${last}`);
+        if ((count ?? 0) >= plan.ndLimit) {
+          setPlusFor("nd_unlimited");
+          return;
+        }
+      }
 
       if (isOffline() || (savedId && hasPending(`nd:${savedId}`))) {
         saveOffline(payload);
@@ -498,6 +517,8 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
                 : "✅ Gespeichert — Fotos, Unterschrift und Bericht kannst du jetzt direkt hinzufügen."}
             </div>
           )}
+
+          {plusFor && <PlusSheet feature={plusFor} onClose={() => setPlusFor(null)} preview={plan.preview} />}
 
           {/* Speichern */}
           <button onClick={handleSave} disabled={saving} style={{

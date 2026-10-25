@@ -13,6 +13,7 @@ import { AdminPanelLinks } from "@/components/ui/AdminPanelLinks";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { PrivacyAccountCard } from "@/components/settings/PrivacyAccountCard";
 import { NavigationAppCard } from "@/components/settings/NavigationAppCard";
+import { PaywallPreviewCard } from "@/components/settings/PaywallPreviewCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { resizeLogo } from "@/lib/image/resizeLogo";
 import { loadMyBriefkopf, type Briefkopf } from "@/lib/company/briefkopf";
@@ -634,6 +635,9 @@ export default function SettingsPage() {
             )}
           </div>
         )}
+
+        {/* ── Super-Admin: Basic-Ansicht vorab ansehen ── */}
+        <PaywallPreviewCard />
 
         {/* ── Navigation (Notdienst-Adressen) ── */}
         <NavigationAppCard />

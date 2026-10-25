@@ -13,5 +13,5 @@
  * Kullanıldığı yerler: Sidebar footer, Settings (Abmelden altı), PDF dosyaları.
  */
 
-export const STUNDLY_VERSION = "0.85.2";
+export const STUNDLY_VERSION = "0.86.0";
 export const STUNDLY_VERSION_LABEL = `Stundly v${STUNDLY_VERSION}`;

@@ -177,6 +177,7 @@ test("Notdienste in Eingabe-Reihenfolge; Installieren-Symbol klein, verdeckt kei
 
   // Ahmet zuerst eingetragen → bleibt vor Mehmet, obwohl Mehmet früher beginnt (auch nach Neuladen)
   for (let i = 0; i < 2; i++) {
+    await expect(row).toContainText("Mehmet"); // Liste aktualisiert (nach Speichern bzw. Neuladen)
     const text = await row.innerText();
     expect(text.indexOf("Ahmet")).toBeGreaterThan(-1);
     expect(text.indexOf("Ahmet")).toBeLessThan(text.indexOf("Mehmet"));
@@ -247,4 +248,37 @@ test("Nach-oben-Button rechts ohne Überlappung; Urlaubsantrag: PDF geht ans Tei
   expect(shared.sizes[0]).toBeGreaterThan(1000);
   expect(shared.title).toMatch(/^Urlaubsantrag/);
   expect(shared.text.split("\n")[0]).toBe(shared.title); // iOS-Outlook: Betreff = erste Textzeile
+});
+
+test("Basic-Vorschau: Senden und Herunterladen zeigen 🔒 Plus und die Erklärung", async ({ page }) => {
+  page.on("dialog", (d) => void d.accept());
+  await page.addInitScript(() => localStorage.setItem("stundly_paywall_preview", "basic"));
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Nur notwendige" }).click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+
+  // Notdienst: Bericht erstellen geht, Teilen ist gesperrt
+  await page.goto("/tracker");
+  const row = page.locator(".day-entry").nth(new Date().getDate() - 1);
+  await row.getByText("Frau Muster, 2. OG").click();
+  const modal = page.locator('[aria-labelledby="notdienst-modal-title"]');
+  await expect(modal).toBeVisible({ timeout: 30_000 });
+  await modal.getByRole("button", { name: /PDF-Bericht erstellen/ }).click();
+  await modal.getByRole("button", { name: /Bericht teilen.*Plus/ }).click();
+  await expect(page.getByRole("dialog", { name: /Berichte senden — mit Stundly Plus/ })).toBeVisible();
+  await page.getByRole("button", { name: "Später" }).click();
+  await modal.getByRole("button", { name: "Schließen" }).first().click();
+
+  // Urlaub: Vorschau-Download gesperrt
+  await page.goto("/vacation");
+  await page.getByRole("button", { name: /Neuer Antrag/ }).first().click();
+  const d = new Date(); d.setDate(d.getDate() + 35);
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  await page.locator('input[type="date"]').nth(0).fill(iso);
+  await page.locator('input[type="date"]').nth(1).fill(iso);
+  await page.getByRole("button", { name: /Nur PDF-Vorschau.*Plus/ }).click();
+  await expect(page.getByRole("dialog", { name: /PDF & Excel herunterladen — mit Stundly Plus/ })).toBeVisible();
 });

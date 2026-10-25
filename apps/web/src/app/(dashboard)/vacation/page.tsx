@@ -29,6 +29,9 @@ import { makePdfTextSafe } from "@/lib/pdf/pdfSafe";
 import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 import { downloadFile, shareOrDownload } from "@/lib/share/shareFile";
 import { copyAddress } from "@/lib/navigation/navApps";
+import { usePlan } from "@/hooks/usePlan";
+import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
+import type { Feature } from "@/lib/plan/entitlements";
 
 // Direct time_entries upsert sonrası tüm time_entries query'lerini invalide et.
 // (month + range key'leri ayrı prefix'lerde olduğu için predicate kullanıyoruz.)
@@ -218,6 +221,8 @@ export default function VacationPage() {
   // Fertiges Antrags-PDF → Fenster "Per Mail senden" (Teilen-Menü hängt das PDF an, wie beim Notdienst)
   const [shareReady, setShareReady] = useState<{ file: File; subject: string; body: string; mailTo: string } | null>(null);
   const [toCopied,   setToCopied]   = useState(false);
+  const plan = usePlan();
+  const [plusFor, setPlusFor] = useState<Feature | null>(null);
   const [saving,     setSaving]     = useState(false);
 
   const [sigData, setSigData] = useState<string | null>(null);
@@ -280,7 +285,8 @@ export default function VacationPage() {
     if (prof) {
       setProfile(prof as Profile);
       if (prof.signature_data) setSigData(prof.signature_data);
-      if (prof.email) setMailTo(prof.email);
+      // Nur vorbelegen, wenn noch nichts eingetragen ist (Profil kann nach dem Tippen ankommen)
+      if (prof.email) setMailTo((cur) => cur || prof.email);
     }
     setProfileLoading(false);
   }, []);
@@ -1289,7 +1295,7 @@ export default function VacationPage() {
                 {/* Actions */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
                   <button
-                    type="button" onClick={() => void generatePDF().then((r) => downloadFile(r.file))}
+                    type="button" onClick={() => plan.can("download") ? void generatePDF().then((r) => downloadFile(r.file)) : setPlusFor("download")}
                     disabled={!startDate || !endDate}
                     style={{
                       width: "100%", padding: 12, background: "var(--surface)",
@@ -1298,7 +1304,7 @@ export default function VacationPage() {
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     }}
                   >
-                    <Icon name="send" size={14} /> Nur PDF-Vorschau (ohne Speichern)
+                    <Icon name="send" size={14} /> Nur PDF-Vorschau (ohne Speichern){!plan.can("download") && <PlusBadge />}
                   </button>
                   <button
                     type="submit" disabled={saving || !startDate || !endDate}
@@ -1360,17 +1366,17 @@ export default function VacationPage() {
                 </button>
               </div>
             )}
-            <button type="button" onClick={sendShareReady} style={{
+            <button type="button" onClick={() => plan.can("share") ? sendShareReady() : setPlusFor("share")} style={{
               width: "100%", padding: 14, background: "var(--accent2)", border: "none", borderRadius: 12, color: "#1a1a2e",
               fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
             }}>
-              📧 Per Mail senden
+              📧 Per Mail senden{!plan.can("share") && <PlusBadge />}
             </button>
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="button" onClick={() => downloadFile(shareReady.file)} style={{
+              <button type="button" onClick={() => plan.can("download") ? downloadFile(shareReady.file) : setPlusFor("download")} style={{
                 flex: 1, padding: 10, background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10,
                 color: "var(--text)", fontSize: 13, fontWeight: 700, cursor: "pointer",
-              }}>⬇️ PDF speichern</button>
+              }}>⬇️ PDF speichern{!plan.can("download") && <PlusBadge />}</button>
               <button type="button" onClick={() => setShareReady(null)} style={{
                 flex: 1, padding: 10, background: "transparent", border: "1px solid var(--border)", borderRadius: 10,
                 color: "var(--muted)", fontSize: 13, fontWeight: 700, cursor: "pointer",
@@ -1379,6 +1385,8 @@ export default function VacationPage() {
           </div>
         </div>
       )}
+
+      {plusFor && <PlusSheet feature={plusFor} onClose={() => setPlusFor(null)} preview={plan.preview} />}
     </>
   );
 }

@@ -1,5 +1,30 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (172) – v0.86.0: Freemium altyapısı (1. aşama) — kapalı bekliyor
+
+Kullanıcı "evet" (kilit altyapısına başla). Bayrak kapalı → canlıda hiçbir kullanıcı için değişiklik yok.
+
+- `lib/plan/entitlements.ts`: Tier basic/plus/firma; `resolveTier` (profiles.plan + created_at + firma üyeliği):
+  firma üyesi / team / business → Firma; individual → Plus; beta'da kaydolan → Plus (31.03.2027'ye kadar);
+  yeni kullanıcı → 30 gün Plus; sonra Basic. `canTier`, `ndLimitFor` (Basic 5/ay), `FEATURE_INFO` (Almanca metinler),
+  `PAYWALL_ACTIVE = NEXT_PUBLIC_PAYWALL === "1"` (Stripe hazır olunca Vercel env), önizleme anahtarı localStorage.
+- `hooks/usePlan.ts`: profil (plan, created_at, company_id, role) → `{ tier, reason, until, active, preview,
+  isSuperAdmin, can(), ndLimit }`; veri gelene kadar hiçbir şey kilitlenmez.
+- `components/plan/PlusSheet.tsx`: sakin açıklama penceresi (özellik, Plus faydaları, 5,99 € / beta 2,99 €, "Plus
+  ansehen" → /pricing, "Später") + `PlusBadge` "🔒 Plus".
+- Kilitler (sadece aktifken): Notdienst "Bericht teilen" (rapor oluşturma açık); Notdienst **yeni kayıt ayda 5**
+  (takvim ayı, sunucuda sayım; mevcut kayıt düzenlenebilir; internetsizken sayılmaz); Urlaub "Per Mail senden",
+  "PDF speichern", "Nur PDF-Vorschau".
+- Profil: `PaywallPreviewCard` (sadece super_admin, Türkçe): katman + sebep + bitiş, "Basic görünümünü önizle"
+  (bu cihaz, sayfa yenilenir).
+- Yan düzeltme (E2E buldu): Urlaub formunda alıcı yazıldıktan sonra geç gelen profil e-postası alıcıyı eziyordu →
+  sadece boşsa doldurulur. PlusBadge artık erişilebilir adın parçası.
+- Testler: entitlements 6, NotdienstModal ayda-5 testi (+ plan mock), E2E Basic önizleme (Bericht teilen + Urlaub
+  Vorschau → Plus penceresi); sıralama testi listenin güncellenmesini bekliyor. Unit 711/711, E2E 11/11 (3 koşu).
+- 2. aşama (sırada): Raporlar sayfası indirmeleri, maaş ayrıntıları, internetsiz, OCR, filigranlı önizleme.
+
+---
+
 ## 2026-10-25 (171) – v0.85.2: İlk sayfada para korkusu kalktı + freemium (3 katman) kararı
 
 Kullanıcı: "Önerdiğim kişiler ilk sayfada ücretle ilgili bir şey görünce korkuyor." Beyin fırtınası → kararlar

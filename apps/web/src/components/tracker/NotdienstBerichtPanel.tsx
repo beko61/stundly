@@ -6,6 +6,8 @@ import SignatureCanvas from "react-signature-canvas";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image/compressImage";
 import { dataUrlToFile, shareOrDownload } from "@/lib/share/shareFile";
+import { usePlan } from "@/hooks/usePlan";
+import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 import { buildBerichtText } from "@/lib/notdienst/berichtText";
 import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 import {
@@ -79,6 +81,8 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
   const unterschrift = (anhaenge.data ?? []).find(a => a.art === "unterschrift") ?? null;
 
   const [error, setError] = useState<string | null>(null);
+  const plan = usePlan();
+  const [plusOpen, setPlusOpen] = useState(false);
   const [uploading, setUploading] = useState(0);
 
   // ── Unterschrift ──
@@ -300,9 +304,16 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
       {/* Bericht */}
       {report ? (
         <>
-          <button type="button" onClick={handleShare} style={{ ...bigBtn, background: "var(--green)" }}>
-            📤 Bericht teilen
-          </button>
+          {plan.can("share") ? (
+            <button type="button" onClick={handleShare} style={{ ...bigBtn, background: "var(--green)" }}>
+              📤 Bericht teilen
+            </button>
+          ) : (
+            <button type="button" onClick={() => setPlusOpen(true)} style={{ ...bigBtn, background: "var(--surface2)", color: "var(--text)" }}>
+              📤 Bericht teilen <PlusBadge />
+            </button>
+          )}
+          {plusOpen && <PlusSheet feature="share" onClose={() => setPlusOpen(false)} preview={plan.preview} />}
           <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
             {shareInfo ?? `PDF${report.length > 1 ? ` + ${report.length - 1} Foto${report.length > 2 ? "s" : ""} als einzelne Dateien` : ""} · per Mail, WhatsApp … senden`}
           </div>

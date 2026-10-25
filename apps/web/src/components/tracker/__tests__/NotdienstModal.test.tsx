@@ -9,6 +9,16 @@ const mockInsert     = vi.fn();
 const mockUpdate     = vi.fn();
 const mockDelete     = vi.fn();
 const mockProfile    = vi.fn();
+const mockCount      = vi.fn();
+
+// Tarif: standardmäßig alles frei (Bezahlschranke aus); einzelne Tests setzen Basic mit Limit
+const planMock = { ndLimit: Infinity, preview: false };
+vi.mock("@/hooks/usePlan", () => ({
+  usePlan: () => ({
+    tier: "plus", reason: "beta", active: planMock.ndLimit !== Infinity, preview: planMock.preview,
+    isSuperAdmin: false, can: () => true, ndLimit: planMock.ndLimit,
+  }),
+}));
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -18,6 +28,8 @@ vi.mock("@/lib/supabase/client", () => ({
         return { select: () => ({ eq: () => ({ maybeSingle: mockProfile }) }) };
       }
       return {
+        // Monatszählung (Basic-Limit): select("id", { count, head }).eq().gte().lte()
+        select: () => ({ eq: () => ({ gte: () => ({ lte: () => mockCount() }) }) }),
         insert: (payload: unknown) => ({ select: () => ({ single: () => mockInsert(payload) }) }),
         update: (payload: unknown) => ({
           eq: (_col: string, id: string) => ({ select: () => ({ single: () => mockUpdate(id, payload) }) }),
@@ -47,6 +59,8 @@ function renderModal(entry: NotdienstEntry | null = null) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  planMock.ndLimit = Infinity;
+  mockCount.mockResolvedValue({ count: 0, error: null });
   mockGetSession.mockResolvedValue(SESSION);
   mockProfile.mockResolvedValue({ data: { email: "firma@test.de" }, error: null });
   mockInsert.mockImplementation(async (p: Record<string, unknown>) => ({ data: savedRow("nd-1", p), error: null }));
@@ -330,5 +344,20 @@ describe("NotdienstModal — Validierung", () => {
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
     expect(mockUpdate.mock.calls[0]![1]).toMatchObject({ start_time: "19:00", end_time: "19:00" });
     expect(screen.queryByText(/Start und Ende sind gleich/)).toBeNull();
+  });
+
+  it("Basic: 5 Notdienste im Monat erreicht → Plus-Hinweis statt Speichern; darunter wird gespeichert", async () => {
+    planMock.ndLimit = 5;
+    mockCount.mockResolvedValue({ count: 5, error: null });
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    expect(await screen.findByText(/Unbegrenzt Notdienste — mit Stundly Plus/)).toBeInTheDocument();
+    expect(mockInsert).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Später" }));
+    mockCount.mockResolvedValue({ count: 4, error: null });
+    fireEvent.click(screen.getByRole("button", { name: /Speichern/ }));
+    await screen.findByText(/Gespeichert/);
+    expect(mockInsert).toHaveBeenCalledTimes(1);
   });
 });

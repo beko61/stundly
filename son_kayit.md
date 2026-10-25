@@ -1,5 +1,14 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (173) – v0.86.1: Katman önizleme kartı süper admin Kokpit'te
+
+Kullanıcı: "Süper adminde kilit nerede?" — kart uygulamanın Profil sayfasındaydı. Tek yerde olsun diye Profil'den
+kaldırıldı, `/superadmin` Kokpit'in en üstüne taşındı ("🔒 Ücretli katmanlar (Basic / Plus / Firma)": kilit durumu,
+kendi katmanı + sebep + bitiş, "Basic görünümünü önizle", önizleme açıkken "Uygulamada dene →" /tracker linki).
+Başlık h2 yerine div (global h2 !important boyutu). Unit 711/711, tsc + lint temiz.
+
+---
+
 ## 2026-10-25 (172) – v0.86.0: Freemium altyapısı (1. aşama) — kapalı bekliyor
 
 Kullanıcı "evet" (kilit altyapısına başla). Bayrak kapalı → canlıda hiçbir kullanıcı için değişiklik yok.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePlan, setPaywallPreview } from "@/hooks/usePlan";
 import { PAYWALL_ACTIVE } from "@/lib/plan/entitlements";
 
@@ -18,7 +19,7 @@ export function PaywallPreviewCard() {
 
   return (
     <div className="card" style={{ borderColor: "color-mix(in srgb, var(--orange) 40%, transparent)" }}>
-      <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>🔒 Ücretli katman önizlemesi (süper admin)</h2>
+      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>🔒 Ücretli katmanlar (Basic / Plus / Firma)</div>
       <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10, lineHeight: 1.5 }}>
         Kilitler şu an {PAYWALL_ACTIVE ? "AÇIK (herkes için)" : "kapalı — herkes her şeyi kullanıyor"}.
         Aşağıdaki anahtar sadece bu cihazda uygulamayı Basic kullanıcısı gibi gösterir.
@@ -31,6 +32,11 @@ export function PaywallPreviewCard() {
         <input type="checkbox" checked={plan.preview} onChange={(e) => toggle(e.target.checked)} />
         Basic görünümünü önizle
       </label>
+      {plan.preview && (
+        <Link href="/tracker" style={{ display: "inline-block", marginTop: 10, fontSize: 13, color: "var(--accent2)" }}>
+          Uygulamada dene → (Notdienst raporu, Urlaub)
+        </Link>
+      )}
     </div>
   );
 }

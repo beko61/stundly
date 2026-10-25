@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PaywallPreviewCard } from "@/components/settings/PaywallPreviewCard";
 import { adminClient } from "@/lib/superadmin/auth";
 import { loadSuperadminUsers } from "@/lib/superadmin/data";
 import { computeCockpit } from "@/lib/superadmin/metrics";
@@ -45,6 +46,9 @@ export default async function SuperAdminKokpit() {
           ? <>Beta aktif · {BETA_END_TR} tarihine <strong style={{ color: "var(--text)" }}>{betaDaysRemaining()} gün</strong> kaldı</>
           : "Genel bakış"}
       </p>
+
+      {/* Ücretli katmanlar: kilit durumu + Basic önizlemesi (bu cihaz) */}
+      <div style={{ marginBottom: 20 }}><PaywallPreviewCard /></div>
 
       <div className="sa-grid">
         {kpis.map((k) => {

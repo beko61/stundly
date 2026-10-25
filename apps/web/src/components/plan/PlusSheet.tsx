@@ -5,7 +5,7 @@ import { FEATURE_INFO, PLUS_BENEFITS, type Feature } from "@/lib/plan/entitlemen
 import { PLAN_PRICES, euro } from "@/lib/pricing";
 
 /** Kurze, ruhige Erklärung: was Plus freischaltet und was es kostet. Kein Druck, kein Popup-Spam. */
-export function PlusSheet({ feature, onClose, preview }: { feature: Feature; onClose: () => void; preview?: boolean }) {
+export function PlusSheet({ feature, onClose, preview }: { feature: Feature; onClose: () => void; preview?: boolean | undefined }) {
   const info = FEATURE_INFO[feature];
   return (
     <div onClick={onClose} style={{

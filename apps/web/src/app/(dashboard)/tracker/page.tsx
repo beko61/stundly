@@ -25,6 +25,8 @@ import { CompanyMonthBar } from "@/components/tracker/CompanyMonthBar";
 import type { NotdienstEntry } from "@/components/tracker/NotdienstModal";
 import { createClient } from "@/lib/supabase/client";
 import { byEntryOrder } from "@/lib/notdienst/order";
+import { usePlan } from "@/hooks/usePlan";
+import { PlusSheet } from "@/components/plan/PlusSheet";
 
 const EMPTY_ND: NotdienstEntry[] = [];
 
@@ -68,6 +70,8 @@ export default function TrackerPage() {
   const deleteMut = useDeleteTimeEntry();
 
   const [scanOpen,      setScanOpen]      = useState(false);
+  const plan = usePlan();
+  const [plusOcr, setPlusOcr] = useState(false);
   const [bundesland,    setBundesland]    = useState("NI");
   const [bundeslandReady, setBundeslandReady] = useState(false);
   const [clearingSample, setClearingSample] = useState(false);
@@ -255,13 +259,14 @@ export default function TrackerPage() {
 
       {/* Floating Scan Button — above BottomNav on mobile */}
       <button
-        onClick={() => setScanOpen(true)}
+        onClick={() => plan.can("ocr") ? setScanOpen(true) : setPlusOcr(true)}
         className="floating-scan"
-        title="Stundenzettel scannen"
-        aria-label="Stundenzettel scannen"
+        title={plan.can("ocr") ? "Stundenzettel scannen" : "Stundenzettel scannen (Plus)"}
+        aria-label={plan.can("ocr") ? "Stundenzettel scannen" : "Stundenzettel scannen (Plus)"}
       >
         📷
       </button>
+      {plusOcr && <PlusSheet feature="ocr" onClose={() => setPlusOcr(false)} preview={plan.preview} />}
 
       {scanOpen && (
         <PhotoScanModal

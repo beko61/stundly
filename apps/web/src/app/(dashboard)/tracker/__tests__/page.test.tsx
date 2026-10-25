@@ -27,6 +27,8 @@ vi.mock("@/hooks/queries/useCompanyWorkflow", () => ({
   useEntryCorrections: () => ({ data: undefined }),
 }));
 vi.mock("@/components/tracker/CompanyMonthBar", () => ({ CompanyMonthBar: () => null }));
+// Tarif: alles frei (Bezahlschranke aus)
+vi.mock("@/hooks/usePlan", () => ({ usePlan: () => ({ tier: "plus", active: false, preview: false, can: () => true, ndLimit: Infinity }) }));
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     auth: { getSession: async () => ({ data: { session: { user: { id: "u1" } } } }) },

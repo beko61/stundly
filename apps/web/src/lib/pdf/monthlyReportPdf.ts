@@ -13,6 +13,7 @@
 
 import type { TimeEntry } from "@workly/shared";
 import { makePdfTextSafe } from "./pdfSafe";
+import { addVorschauWatermark } from "./watermark";
 
 /** Link in der Fußzeile ("Erstellt mit Stundly") */
 const STUNDLY_URL = "https://stundly.de";
@@ -196,7 +197,8 @@ function calcMonthStats(input: MonthlyReportInput): MonthStats {
 // Ana fonksiyon — PDF üret + indir
 // ───────────────────────────────────────────────────────────────
 
-export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promise<void> {
+/** Normal: speichert die Datei. vorschau: Wasserzeichen + Blob zurück (Basic, nur ansehen). */
+export async function generateMonthlyReportPDF(input: MonthlyReportInput, opts: { vorschau?: boolean } = {}): Promise<Blob | void> {
   const { default: jsPDF } = await import("jspdf");
 
   const std = input.standardTimes ?? DEFAULT_STD;
@@ -440,5 +442,9 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput): Promi
   const fw = doc.getTextWidth(footer);
   doc.link(W/2 - fw/2, y - 2.5, fw, 3.5, { url: STUNDLY_URL });
 
+  if (opts.vorschau) {
+    addVorschauWatermark(doc);
+    return doc.output("blob");
+  }
   doc.save(`Monatsbericht_${MONTHS_DE[input.month - 1]}_${input.year}.pdf`);
 }

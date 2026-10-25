@@ -23,6 +23,9 @@ import {
 import { notdienstMonthOf, notdienstBelongsToMonth, notdienstLoadRange, isoWeek } from "@/lib/utils/weekMonth";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
+import { usePlan } from "@/hooks/usePlan";
+import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
+import { PdfPreview } from "@/components/plan/PdfPreview";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -315,6 +318,9 @@ export default function ReportsPage() {
 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError]     = useState<string | null>(null);
+  const plan = usePlan();
+  const [previewPdf, setPreviewPdf] = useState<Blob | null>(null);
+  const [plusCsv, setPlusCsv] = useState(false);
 
   /** Aylık Monatsbericht PDF — seçili year+month için. */
   async function exportPDF() {
@@ -375,7 +381,10 @@ export default function ReportsPage() {
       const feiertage = getFeiertage(year, (prof?.bundesland as string | null) ?? "NI");
       // Lazy load PDF module (~200KB) — sadece butona basınca
       const { generateMonthlyReportPDF } = await import("@/lib/pdf/monthlyReportPdf");
-      await generateMonthlyReportPDF({ year, month, entries, notdienst, feiertage, profile });
+      // Basic: nur Vorschau mit Wasserzeichen auf dem Bildschirm
+      const vorschau = !plan.can("download");
+      const out = await generateMonthlyReportPDF({ year, month, entries, notdienst, feiertage, profile }, { vorschau });
+      if (vorschau && out) setPreviewPdf(out);
     } catch (err) {
       console.error("PDF Error:", err);
       setPdfError("PDF konnte nicht erstellt werden: " + (err instanceof Error ? err.message : String(err)));
@@ -418,8 +427,8 @@ export default function ReportsPage() {
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, gap:10, flexWrap:"wrap" }}>
           <h1>Berichte & Export</h1>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            <button onClick={exportCSV} className="btn btn-secondary">
-              ⬇ CSV
+            <button onClick={() => plan.can("download") ? exportCSV() : setPlusCsv(true)} className="btn btn-secondary">
+              ⬇ CSV{!plan.can("download") && <PlusBadge />}
             </button>
             {mode==="month" && (
               <button
@@ -431,11 +440,13 @@ export default function ReportsPage() {
                   opacity: (pdfLoading || entries.length===0) ? 0.6 : 1,
                 }}
               >
-                {pdfLoading ? "📄 Wird erstellt…" : "📄 Monatsbericht PDF"}
+                {pdfLoading ? "📄 Wird erstellt…" : plan.can("download") ? "📄 Monatsbericht PDF" : "👁 Monatsbericht ansehen"}
               </button>
             )}
           </div>
         </div>
+        {previewPdf && <PdfPreview file={previewPdf} onClose={() => setPreviewPdf(null)} preview={plan.preview} />}
+        {plusCsv && <PlusSheet feature="download" onClose={() => setPlusCsv(false)} preview={plan.preview} />}
         {pdfError && (
           <div style={{
             marginBottom:10, padding:"8px 12px",

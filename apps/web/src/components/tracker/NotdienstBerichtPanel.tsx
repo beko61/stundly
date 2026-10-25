@@ -8,6 +8,7 @@ import { compressImage } from "@/lib/image/compressImage";
 import { dataUrlToFile, shareOrDownload } from "@/lib/share/shareFile";
 import { usePlan } from "@/hooks/usePlan";
 import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
+import { PdfPreview } from "@/components/plan/PdfPreview";
 import { buildBerichtText } from "@/lib/notdienst/berichtText";
 import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 import {
@@ -83,6 +84,7 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
   const [error, setError] = useState<string | null>(null);
   const plan = usePlan();
   const [plusOpen, setPlusOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [uploading, setUploading] = useState(0);
 
   // ── Unterschrift ──
@@ -169,6 +171,7 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
       const p = pRaw ? applyBriefkopf(pRaw, briefkopf) : pRaw;
       const blob = await generateNotdienstReportPdf({
         ...bericht,
+        vorschau: !plan.can("share"), // Basic: Wasserzeichen, nur ansehen
         fotoAnzahl: fotos.length,
         signature: unterschrift
           ? { data: unterschrift.data, name: unterschrift.unterzeichner ?? "", signedAt: unterschrift.created_at }
@@ -309,10 +312,16 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
               📤 Bericht teilen
             </button>
           ) : (
-            <button type="button" onClick={() => setPlusOpen(true)} style={{ ...bigBtn, background: "var(--surface2)", color: "var(--text)" }}>
-              📤 Bericht teilen <PlusBadge />
-            </button>
+            <>
+              <button type="button" onClick={() => setPreviewOpen(true)} style={{ ...bigBtn, background: "var(--accent)" }}>
+                👁 Vorschau ansehen
+              </button>
+              <button type="button" onClick={() => setPlusOpen(true)} style={{ ...bigBtn, background: "var(--surface2)", color: "var(--text)" }}>
+                📤 Bericht teilen <PlusBadge />
+              </button>
+            </>
           )}
+          {previewOpen && report[0] && <PdfPreview file={report[0]} onClose={() => setPreviewOpen(false)} preview={plan.preview} />}
           {plusOpen && <PlusSheet feature="share" onClose={() => setPlusOpen(false)} preview={plan.preview} />}
           <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
             {shareInfo ?? `PDF${report.length > 1 ? ` + ${report.length - 1} Foto${report.length > 2 ? "s" : ""} als einzelne Dateien` : ""} · per Mail, WhatsApp … senden`}

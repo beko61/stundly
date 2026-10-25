@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { checkRateLimit } from "@/lib/rateLimit/check";
+import { PAYWALL_ACTIVE, canTier, resolveTier } from "@/lib/plan/entitlements";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -36,6 +37,15 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Nicht authentifiziert." }, { status: 401 });
+  }
+
+  // Tarif: Foto-Scan ist Plus (KI-Kosten) — serverseitig prüfen, sobald die Bezahlschranke aktiv ist
+  if (PAYWALL_ACTIVE) {
+    const { data: p } = await supabase.from("profiles").select("plan, created_at, company_id").eq("user_id", user.id).maybeSingle();
+    const { tier } = resolveTier({ plan: p?.plan, createdAt: p?.created_at, hasCompany: !!p?.company_id });
+    if (!canTier(tier, "ocr")) {
+      return NextResponse.json({ error: "Foto-Scan ist in Stundly Plus enthalten." }, { status: 402 });
+    }
   }
 
   // 2. Rate limit check — persistent (R4)

@@ -28,6 +28,8 @@ import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery, useUpsertSalarySettings } from "@/hooks/queries/useSalarySettings";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { applyContract } from "@/lib/company/contract";
+import { usePlan } from "@/hooks/usePlan";
+import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_S   = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -81,6 +83,9 @@ export default function SalaryPage() {
   const upsertSalarySettings = useUpsertSalarySettings();
 
   const [records,  setRecords]  = useState<MonthRecord[]>([]);
+  const plan = usePlan();
+  const detail = plan.can("salary_details"); // Basic: nur Brutto
+  const [plusOpen, setPlusOpen] = useState(false);
   const [settings, setSettings] = useState<SalarySettings>(DEFAULT_SETTINGS);
   const [settingsSaved,  setSettingsSaved]  = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -439,6 +444,7 @@ export default function SalaryPage() {
           netto={nettoCalc.netto}
           fmtEur={fmtEur}
           whatIfNettoDelta={whatIfPlusOne.nettoDelta}
+          simple={!detail}
           locked={{
             monthly_target_hours:  contract?.weekly_hours  != null,
             urlaub_anspruch:       contract?.vacation_days != null,
@@ -446,10 +452,20 @@ export default function SalaryPage() {
           }}
         />
 
-        <TaxSettingsCard settings={settings} onChange={setSettings} />
+        {detail ? <TaxSettingsCard settings={settings} onChange={setSettings} /> : (
+          <button type="button" className="card" onClick={() => setPlusOpen(true)} style={{
+            textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: 6, color: "var(--text)",
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>💶 Lohn im Detail <PlusBadge /></span>
+            <span style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+              Netto, Steuerklasse, Zuschläge, Monats- und Jahresübersicht — mit Stundly Plus.
+            </span>
+          </button>
+        )}
+        {plusOpen && <PlusSheet feature="salary_details" onClose={() => setPlusOpen(false)} preview={plan.preview} />}
 
         {/* ── Year-to-Date Übersicht ── */}
-        {!loading && ytd.brutto > 0 && (
+        {detail && !loading && ytd.brutto > 0 && (
           <div style={{
             background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--surface)) 0%, color-mix(in srgb, var(--accent2) 8%, var(--surface)) 100%)",
             border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
@@ -575,7 +591,7 @@ export default function SalaryPage() {
               </Link>
             </div>
           </div>
-        ) : (
+        ) : !detail ? null : (
           <>
             <MonthBreakdown
               year={year}

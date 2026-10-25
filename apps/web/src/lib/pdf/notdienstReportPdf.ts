@@ -7,6 +7,7 @@
  */
 
 import { makePdfTextSafe } from "./pdfSafe";
+import { addVorschauWatermark } from "./watermark";
 
 /** Link in der Fußzeile ("Erstellt mit Stundly") */
 const STUNDLY_URL = "https://stundly.de";
@@ -29,6 +30,8 @@ export interface NotdienstReportInput {
     telefon?: string; email?: string; logo?: string | null;
   };
   techniker: { name: string; signature?: string | null };
+  /** Basic-Tarif: Wasserzeichen "VORSCHAU" */
+  vorschau?: boolean;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -189,5 +192,6 @@ export async function generateNotdienstReportPdf(input: NotdienstReportInput): P
     doc.link(W / 2 - fw / 2, 289.5, fw, 3.5, { url: STUNDLY_URL });
   }
 
+  if (input.vorschau) addVorschauWatermark(doc);
   return doc.output("blob");
 }

@@ -267,6 +267,11 @@ test("Basic-Vorschau: Senden und Herunterladen zeigen 🔒 Plus und die Erkläru
   const modal = page.locator('[aria-labelledby="notdienst-modal-title"]');
   await expect(modal).toBeVisible({ timeout: 30_000 });
   await modal.getByRole("button", { name: /PDF-Bericht erstellen/ }).click();
+  // Vorschau mit Wasserzeichen ansehen
+  await modal.getByRole("button", { name: /Vorschau ansehen/ }).click();
+  const prev = page.getByRole("dialog", { name: "👁 Vorschau" });
+  await expect(prev.locator("iframe")).toBeVisible();
+  await prev.getByRole("button", { name: "Schließen" }).click();
   await modal.getByRole("button", { name: /Bericht teilen.*Plus/ }).click();
   await expect(page.getByRole("dialog", { name: /Berichte senden — mit Stundly Plus/ })).toBeVisible();
   await page.getByRole("button", { name: "Später" }).click();
@@ -279,6 +284,37 @@ test("Basic-Vorschau: Senden und Herunterladen zeigen 🔒 Plus und die Erkläru
   const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   await page.locator('input[type="date"]').nth(0).fill(iso);
   await page.locator('input[type="date"]').nth(1).fill(iso);
-  await page.getByRole("button", { name: /Nur PDF-Vorschau.*Plus/ }).click();
+  // Basic: Vorschau öffnet sich auf dem Bildschirm (Wasserzeichen), Speichern/Senden darin = Plus
+  await page.getByRole("button", { name: /Nur PDF-Vorschau/ }).click();
+  const prev2 = page.getByRole("dialog", { name: "👁 Vorschau" });
+  await expect(prev2.locator("iframe")).toBeVisible({ timeout: 20_000 });
+  await prev2.getByRole("button", { name: /Senden & Speichern.*Plus/ }).click();
+  await expect(page.getByRole("dialog", { name: /Berichte senden — mit Stundly Plus/ })).toBeVisible();
+
+  // Lohn: nur Brutto, Details gesperrt
+  await page.goto("/salary");
+  await page.getByRole("button", { name: /Lohn im Detail.*Plus/ }).click();
+  await expect(page.getByRole("dialog", { name: /Lohn im Detail — mit Stundly Plus/ })).toBeVisible();
+
+  // Berichte: CSV gesperrt, Monatsbericht nur ansehen
+  await page.goto("/reports");
+  await expect(page.getByRole("button", { name: /Monatsbericht ansehen/ })).toBeVisible();
+  await page.getByRole("button", { name: /CSV.*Plus/ }).click();
   await expect(page.getByRole("dialog", { name: /PDF & Excel herunterladen — mit Stundly Plus/ })).toBeVisible();
+
+  // Foto-Scan gesperrt
+  await page.goto("/tracker");
+  await page.getByRole("button", { name: "Stundenzettel scannen (Plus)" }).click();
+  await expect(page.getByRole("dialog", { name: /Foto-Scan — mit Stundly Plus/ })).toBeVisible();
+  await page.getByRole("button", { name: "Später" }).click();
+
+  // Ohne Internet: Basic speichert nicht in die Offline-Warteschlange
+  const tomorrow = Math.min(new Date().getDate(), new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - 1);
+  await page.context().setOffline(true);
+  await page.locator(".day-entry").nth(tomorrow).click();
+  const tmodal = page.locator('[aria-labelledby="time-entry-modal-title"]');
+  await expect(tmodal).toBeVisible();
+  await tmodal.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByRole("dialog", { name: /Ohne Internet arbeiten — mit Stundly Plus/ })).toBeVisible();
+  await page.context().setOffline(false);
 });

@@ -1,5 +1,30 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (174) – v0.87.0: Freemium 2. aşama — tüm Basic kilitleri hazır (hâlâ kapalı)
+
+Kullanıcı önizlemeyi denedi: "çalışıyor" → 2. aşama. Bayrak kapalı, canlıda kimse etkilenmiyor.
+
+- **Filigranlı önizleme:** `lib/pdf/watermark.ts` `addVorschauWatermark` (her sayfa çapraz "VORSCHAU" + alt not
+  "Vorschau - Senden & Speichern mit Stundly Plus"); `components/plan/PdfPreview.tsx` (aria-modal, iframe, "Senden &
+  Speichern 🔒 Plus"). Notdienst raporu (`vorschau` alanı) → Basic'te "👁 Vorschau ansehen"; Monatsbericht
+  (`generateMonthlyReportPDF(input, { vorschau })` Blob döner) → "👁 Monatsbericht ansehen"; Urlaub "Nur
+  PDF-Vorschau" → `generatePDF(input, vorschau)` filigranlı önizleme (1. aşamadaki kilit kaldırıldı).
+- **Berichte:** CSV 🔒 Plus.
+- **Lohn:** Basic'te sadece Brutto (`SettingsCard simple`: Netto + "+1 €/h" ipucu gizli); TaxSettingsCard, YTD,
+  MonthBreakdown, YearlyCharts yerine "💶 Lohn im Detail 🔒 Plus" kartı.
+- **Foto-Scan:** buton "Stundenzettel scannen (Plus)" → Plus penceresi; **sunucu** `/api/scan` PAYWALL_ACTIVE iken
+  Basic'e 402 (KI maliyeti).
+- **Offline:** TimeEntryModal Basic + internet yok → kaydetmez, "Keine Internetverbindung …" + Plus penceresi;
+  NotdienstModal `saveOffline` Basic'te kuyruğa almaz (Plus penceresi).
+- Testler: watermark birim testi; tracker sayfa testi usePlan mock; E2E Basic testi genişletildi (ND önizleme
+  iframe, Urlaub önizleme → Senden&Speichern Plus, Lohn kartı, Berichte CSV + "ansehen", Scan, offline kayıt).
+  Unit 712/712, E2E 11/11 (2 koşu), tsc + lint temiz.
+- DSGVO veri kopyası (PrivacyAccountCard) bilerek kilitsiz. Firma paneli indirmeleri (company/*) kilitsiz (Firma).
+- Açık: Stripe + Plus satın alma akışı, `NEXT_PUBLIC_PAYWALL=1` (beta sonu / Stripe sonrası), /pricing sayfasını
+  3 katmana göre yeniden yazmak, ND/Lohn ekranında "x/5" sayaç (opsiyonel).
+
+---
+
 ## 2026-10-25 (173) – v0.86.1: Katman önizleme kartı süper admin Kokpit'te
 
 Kullanıcı: "Süper adminde kilit nerede?" — kart uygulamanın Profil sayfasındaydı. Tek yerde olsun diye Profil'den

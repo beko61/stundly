@@ -12,6 +12,9 @@ import {
 import type { TimeEntry, DayType } from "@workly/shared";
 import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
 import { useModalA11y } from "@/hooks/useModalA11y";
+import { usePlan } from "@/hooks/usePlan";
+import { PlusSheet } from "@/components/plan/PlusSheet";
+import { isOffline } from "@/lib/offline/network";
 
 /**
  * §4 ArbZG — Pausenregelung. Brutto Arbeitszeit bazlı (konservatif):
@@ -100,6 +103,8 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
   const [note,         setNote]         = useState(defaults.note);
   const [saving,       setSaving]       = useState(false);
   const [error,        setError]        = useState<string | null>(null);
+  const plan = usePlan();
+  const [plusOffline, setPlusOffline] = useState(false);
 
   const needsTime  = dayType === DAY_TYPES.ARBEITEN || dayType === DAY_TYPES.NOTDIENST;
 
@@ -138,8 +143,14 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
   }, [needsTime, previousEntry, startTime]);
 
   async function handleSave() {
-    setSaving(true);
     setError(null);
+    // Basic: ohne Internet nicht speichern (Offline-Modus ist Plus)
+    if (isOffline() && !plan.can("offline")) {
+      setError("Keine Internetverbindung — bitte mit Netz erneut speichern.");
+      setPlusOffline(true);
+      return;
+    }
+    setSaving(true);
 
     // Urlaub/Krank/Feiertag: keine Zeiten in DB (Sollstunden = 8h flat Mo-Fr)
     const payload = {
@@ -167,6 +178,8 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
   }
 
   return (
+    <>
+    {plusOffline && <PlusSheet feature="offline" onClose={() => setPlusOffline(false)} preview={plan.preview} />}
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={modalRef}
@@ -352,5 +365,6 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
         </div>
       </div>
     </div>
+    </>
   );
 }

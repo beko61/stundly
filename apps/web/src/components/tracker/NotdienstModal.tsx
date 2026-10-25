@@ -157,6 +157,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
     // Ohne Netz: in die Offline-Outbox, wird automatisch übertragen (OfflineSync)
     const saveOffline = (payload: Record<string, unknown>) => {
       if (!userId) return false;
+      if (!plan.can("offline")) { setPlusFor("offline"); return false; } // Basic: Offline-Modus ist Plus
       const row = offlineSaveNotdienst(userId, savedId, { ...payload, date } as { date: string });
       if (!savedId) setSavedId(row.id);
       onSave(row as unknown as NotdienstEntry);

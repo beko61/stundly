@@ -53,6 +53,8 @@ type Props = {
   netto:           number;
   fmtEur:          (n: number) => string;
   whatIfNettoDelta: number;
+  /** Basic-Tarif: nur Brutto, keine Netto-Angaben (Lohn im Detail = Plus) */
+  simple?:         boolean;
   /** Von der Firma im Vertrag festgelegte Felder — nur Anzeige (Migration 033) */
   locked?:         Partial<Record<"monthly_target_hours" | "urlaub_anspruch" | "employment_start_date", boolean>>;
 };
@@ -65,7 +67,7 @@ function LockNote() {
 
 export function SettingsCard({
   settings, onChange, loading, settingsSaved, month,
-  entriesCount, totalGross, netto, fmtEur, whatIfNettoDelta, locked = {},
+  entriesCount, totalGross, netto, fmtEur, whatIfNettoDelta, locked = {}, simple = false,
 }: Props) {
   return (
     <>
@@ -92,8 +94,10 @@ export function SettingsCard({
               ⚡ Live {MONTHS[month-1]}
             </span>
             <span style={{ color: "var(--green)" }}>{fmtEur(totalGross)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Brutto</span></span>
-            <span style={{ color: "var(--muted)" }}>→</span>
-            <span style={{ color: "var(--accent2)" }}>{fmtEur(netto)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Netto</span></span>
+            {!simple && <>
+              <span style={{ color: "var(--muted)" }}>→</span>
+              <span style={{ color: "var(--accent2)" }}>{fmtEur(netto)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Netto</span></span>
+            </>}
           </div>
         )}
         <div className="settings-grid-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -126,7 +130,7 @@ export function SettingsCard({
                         <>💶 Gesetzlicher Mindestlohn {new Date().getFullYear()}: <strong style={{ color: "var(--text)" }}>{formatMindestlohn()}/h</strong></>
                       )}
                     </div>
-                    {entriesCount > 0 && whatIfNettoDelta > 0 && (
+                    {!simple && entriesCount > 0 && whatIfNettoDelta > 0 && (
                       <div style={{ color: "var(--green)", marginTop: 2 }}>
                         💡 <strong>+1 €/h</strong> ≈ +{fmtEur(whatIfNettoDelta)} / Monat Netto
                       </div>

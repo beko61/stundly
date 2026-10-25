@@ -31,6 +31,8 @@ import { downloadFile, shareOrDownload } from "@/lib/share/shareFile";
 import { copyAddress } from "@/lib/navigation/navApps";
 import { usePlan } from "@/hooks/usePlan";
 import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
+import { PdfPreview } from "@/components/plan/PdfPreview";
+import { addVorschauWatermark } from "@/lib/pdf/watermark";
 import type { Feature } from "@/lib/plan/entitlements";
 
 // Direct time_entries upsert sonrası tüm time_entries query'lerini invalide et.
@@ -223,6 +225,7 @@ export default function VacationPage() {
   const [toCopied,   setToCopied]   = useState(false);
   const plan = usePlan();
   const [plusFor, setPlusFor] = useState<Feature | null>(null);
+  const [previewPdf, setPreviewPdf] = useState<Blob | null>(null);
   const [saving,     setSaving]     = useState(false);
 
   const [sigData, setSigData] = useState<string | null>(null);
@@ -553,7 +556,7 @@ export default function VacationPage() {
     days:        number;
     mailTo:      string;
     sigData?:    string | null;
-  }) {
+  }, vorschau = false) {
     // Parametre yoksa form state'inden oku (mevcut submit akışı)
     const src = input ?? {
       startDate, endDate, urlaubArt, vertretung, bemerkung, days, mailTo,
@@ -707,6 +710,7 @@ export default function VacationPage() {
 
     // ── Datei (Senden/Teilen übernimmt sendShareReady, Vorschau downloadFile) ──
     const fname = `${p?.nachname ?? "Urlaub"}_${src.startDate}_${src.endDate}`.replace(/\s/g, "_");
+    if (vorschau) addVorschauWatermark(doc); // Basic: nur ansehen
     const file = new File([doc.output("blob")], `Urlaubsantrag_${fname}.pdf`, { type: "application/pdf" });
     return { file, subject, body, mailTo: src.mailTo };
   }
@@ -1295,7 +1299,9 @@ export default function VacationPage() {
                 {/* Actions */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
                   <button
-                    type="button" onClick={() => plan.can("download") ? void generatePDF().then((r) => downloadFile(r.file)) : setPlusFor("download")}
+                    type="button" onClick={() => plan.can("download")
+                      ? void generatePDF().then((r) => downloadFile(r.file))
+                      : void generatePDF(undefined, true).then((r) => setPreviewPdf(r.file))}
                     disabled={!startDate || !endDate}
                     style={{
                       width: "100%", padding: 12, background: "var(--surface)",
@@ -1304,7 +1310,7 @@ export default function VacationPage() {
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     }}
                   >
-                    <Icon name="send" size={14} /> Nur PDF-Vorschau (ohne Speichern){!plan.can("download") && <PlusBadge />}
+                    <Icon name="send" size={14} /> Nur PDF-Vorschau (ohne Speichern)
                   </button>
                   <button
                     type="submit" disabled={saving || !startDate || !endDate}
@@ -1387,6 +1393,7 @@ export default function VacationPage() {
       )}
 
       {plusFor && <PlusSheet feature={plusFor} onClose={() => setPlusFor(null)} preview={plan.preview} />}
+      {previewPdf && <PdfPreview file={previewPdf} onClose={() => setPreviewPdf(null)} preview={plan.preview} />}
     </>
   );
 }

@@ -1,5 +1,34 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (169) – v0.85.0: Urlaubsantrag PDF'i Outlook'a otomatik ek; yukarı ok sağda; yüzen butonlar pencere üstünde değil
+
+Kullanıcı: (1) "Soldaki yukarı butonunu sağa alalım." (2) "Notdienst kendi PDF'ini oluşturup Outlook'a otomatik
+ekliyor, Urlaub'da yapmıyor, telefona indirmem gerekiyor; bunu da otomatik eklesin."
+
+**Urlaub (`app/(dashboard)/vacation/page.tsx`)**
+- `generatePDF` artık indirmiyor / mailto açmıyor: `{ file (application/pdf), subject, body, mailTo }` döner.
+- Kaydet (+mailTo) veya listede "PDF/Mail" → yeni pencere **"📄 Urlaubsantrag ist fertig"** (aria-modal):
+  "📧 Per Mail senden" → `navigator.share({ files: [PDF], title: Betreff, text: Betreff + "
+
+" + Text })`
+  (iOS Outlook konuyu ilk satırdan alır — Notdienst'teki gibi); paylaşım yoksa (masaüstü) eski davranış: mailto +
+  PDF indirme. "⬇️ PDF speichern", "Schließen"; alıcı "An: …" + 📋 kopyala (paylaş menüsü alıcıyı dolduramaz).
+- "Nur PDF-Vorschau" sadece indirir (önceden mailto da açıyordu).
+
+**Yüzen butonlar (`globals.css`)**
+- `.scroll-top-fab` sağa: masaüstü right 28 / bottom 92 (scan varsa 158); mobil right 20 / bottom 164+safe (scan
+  varsa 228+safe) — sohbet (56 px) butonunun üstü. `.install-fab` sola-alta (eski yukarı ok yeri: mobil 96+safe).
+- Açık pencere (`[aria-modal="true"]`) varken `.support-fab`, `.scroll-top-fab`, `.floating-scan`, `.install-fab`,
+  `.cookie-banner` gizli (`!important`, inline display yüzünden). Ekran görüntüsünde sohbet balonu Urlaub
+  penceresinin "Per Mail senden" butonunu kapatıyordu → bulundu ve düzeltildi.
+- Urlaub penceresi başlığı `div` (global `h2 { … !important }` başlığı dev yapıyordu), buton metni kısaltıldı.
+
+**Testler**: E2E yeni test — yukarı ok sağ yarıda, sohbet/kamera ile çakışmıyor; Urlaub kaydet → pencere, sohbet
+gizli, "Per Mail senden" paylaş menüsüne `Urlaubsantrag_*.pdf` (application/pdf, >1 KB) + konu = metnin ilk
+satırı. E2E 9/9, unit 704/704, tsc + lint temiz.
+
+---
+
 ## 2026-10-25 (168) – v0.84.8: Notdienst'ler girilme sırasında; "Installieren" balonu küçük simge
 
 Kullanıcı: (1) "Notdienst'e örnek 6 kayıt girdim, saate göre diziliyor; öyle olmasın, girilen kayda göre ilerlesin:

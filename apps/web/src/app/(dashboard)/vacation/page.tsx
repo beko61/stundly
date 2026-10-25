@@ -27,6 +27,8 @@ import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 import { useQueryClient } from "@tanstack/react-query";
 import { makePdfTextSafe } from "@/lib/pdf/pdfSafe";
 import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
+import { downloadFile, shareOrDownload } from "@/lib/share/shareFile";
+import { copyAddress } from "@/lib/navigation/navApps";
 
 // Direct time_entries upsert sonrası tüm time_entries query'lerini invalide et.
 // (month + range key'leri ayrı prefix'lerde olduğu için predicate kullanıyoruz.)
@@ -213,6 +215,9 @@ export default function VacationPage() {
   const [vertretung, setVertretung] = useState("");
   const [bemerkung,  setBemerkung]  = useState("");
   const [mailTo,     setMailTo]     = useState("");
+  // Fertiges Antrags-PDF → Fenster "Per Mail senden" (Teilen-Menü hängt das PDF an, wie beim Notdienst)
+  const [shareReady, setShareReady] = useState<{ file: File; subject: string; body: string; mailTo: string } | null>(null);
+  const [toCopied,   setToCopied]   = useState(false);
   const [saving,     setSaving]     = useState(false);
 
   const [sigData, setSigData] = useState<string | null>(null);
@@ -433,7 +438,8 @@ export default function VacationPage() {
     // aç. mailTo boşsa sadece kayıt (mail göndermek istemeyen kullanıcı için
     // escape hatch: MAIL-EMPFÄNGER alanını boşalt).
     if (mailTo) {
-      await generatePDF();
+      setShareReady(await generatePDF());
+      setToCopied(false);
     }
 
     setSaving(false); setShowForm(false);
@@ -442,10 +448,11 @@ export default function VacationPage() {
   }
 
   /**
-   * Kaydedilmiş bir antrag için PDF'i yeniden üret + mailto aç.
+   * Kaydedilmiş bir antrag için PDF'i yeniden üret → "Per Mail senden" penceresi.
    * "Ben mailimi gönderemedim, tekrar denemek istiyorum" senaryosu.
    */
   function handleResendPDF(r: VacationRequest) {
+    setToCopied(false);
     void generatePDF({
       startDate:  r.start_date,
       endDate:    r.end_date,
@@ -455,7 +462,25 @@ export default function VacationPage() {
       days:       r.days_count,
       mailTo,
       sigData,
-    });
+    }).then(setShareReady);
+  }
+
+  /**
+   * Handy: Teilen-Menü mit dem PDF als Anhang (Outlook übernimmt es automatisch, wie beim Notdienst).
+   * iOS-Outlook nimmt den Betreff aus der ersten Textzeile → Betreff steht auch oben im Text.
+   * Desktop (kein Teilen mit Dateien): wie bisher Mailprogramm öffnen + PDF herunterladen.
+   * Synchron im Klick — navigator.share braucht die Nutzer-Geste.
+   */
+  function sendShareReady() {
+    if (!shareReady) return;
+    const { file, subject, body, mailTo: to } = shareReady;
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (typeof nav.share === "function" && nav.canShare?.({ files: [file] })) {
+      void shareOrDownload(file, { title: subject, text: `${subject}\n\n${body}` });
+      return;
+    }
+    if (to) window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    downloadFile(file);
   }
 
   async function handleDelete(id: string) {
@@ -509,16 +534,9 @@ export default function VacationPage() {
   }
 
   /**
-   * PDF üretimi + isteğe bağlı mailto: açma.
-   *
-   * State'ten bağımsız olsun diye tüm veriler input object'ten okunur —
-   * hem form submit hem de kaydedilmiş antrag'dan yeniden PDF için tek
-   * fonksiyon.
-   *
-   * Mail sırası: mailto ÖNCE açılır (kullanıcı gesture context'inde,
-   * setTimeout yok — browser popup bloklayıp mailto'yu kaybetmesin),
-   * sonra PDF download tetiklenir. Böylece kullanıcı PDF'i kapadıktan
-   * sonra mail açık kalır.
+   * PDF üretimi: dosya + mail konusu/metni döner (indirme/mail yok).
+   * Gönderme: sendShareReady (telefon: paylaş menüsü, PDF ekli; masaüstü: mailto + indirme).
+   * Vorschau: downloadFile. Tüm veriler input'tan — hem form hem kayıtlı antrag için tek fonksiyon.
    */
   async function generatePDF(input?: {
     startDate:   string;
@@ -536,23 +554,13 @@ export default function VacationPage() {
       sigData,
     };
 
-    // ── MAIL ÖNCE ─────────────────────────────────────────────────────────
-    // Popup blocker + PDF download gesture context çakışmasını önlemek için
-    // mailto'yu ilk açıyoruz (kullanıcı butonuna bastığı andaki gesture
-    // hâlâ geçerli). PDF download bundan sonra da tetiklenir.
-    if (src.mailTo) {
-      const p0 = profile;
-      const subject = encodeURIComponent(
-        `Urlaubsantrag ${p0?.vorname ?? ""} ${p0?.nachname ?? ""} — ${fmtDate(src.startDate)} bis ${fmtDate(src.endDate)}`
-      );
-      const body = encodeURIComponent(
-        `Sehr geehrte Damen und Herren,\n\n` +
-        `hiermit beantrage ich Urlaub vom ${fmtDate(src.startDate)} bis ${fmtDate(src.endDate)} (${src.days} Arbeitstage).\n` +
-        `Den unterschriebenen Urlaubsantrag finden Sie im Anhang als PDF.\n\n` +
-        `Mit freundlichen Grüßen\n${p0?.vorname ?? ""} ${p0?.nachname ?? ""}`
-      );
-      window.location.href = `mailto:${src.mailTo}?subject=${subject}&body=${body}`;
-    }
+    const p0 = profile;
+    const subject = `Urlaubsantrag ${p0?.vorname ?? ""} ${p0?.nachname ?? ""} — ${fmtDate(src.startDate)} bis ${fmtDate(src.endDate)}`.replace(/\s+/g, " ");
+    const body =
+      `Sehr geehrte Damen und Herren,\n\n` +
+      `hiermit beantrage ich Urlaub vom ${fmtDate(src.startDate)} bis ${fmtDate(src.endDate)} (${src.days} Arbeitstage).\n` +
+      `Den unterschriebenen Urlaubsantrag finden Sie im Anhang als PDF.\n\n` +
+      `Mit freundlichen Grüßen\n${p0?.vorname ?? ""} ${p0?.nachname ?? ""}`;
 
     const { default: jsPDF } = await import("jspdf");
     const doc = makePdfTextSafe(new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" }));
@@ -691,9 +699,10 @@ export default function VacationPage() {
     doc.setFontSize(6); doc.setTextColor(150);
     doc.text(STUNDLY_VERSION_LABEL, W / 2, 290, { align: "center" });
 
-    // ── SAVE (mail zaten en başta location.href ile açıldı) ──────────────
+    // ── Datei (Senden/Teilen übernimmt sendShareReady, Vorschau downloadFile) ──
     const fname = `${p?.nachname ?? "Urlaub"}_${src.startDate}_${src.endDate}`.replace(/\s/g, "_");
-    doc.save(`Urlaubsantrag_${fname}.pdf`);
+    const file = new File([doc.output("blob")], `Urlaubsantrag_${fname}.pdf`, { type: "application/pdf" });
+    return { file, subject, body, mailTo: src.mailTo };
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -1280,7 +1289,7 @@ export default function VacationPage() {
                 {/* Actions */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
                   <button
-                    type="button" onClick={() => void generatePDF()}
+                    type="button" onClick={() => void generatePDF().then((r) => downloadFile(r.file))}
                     disabled={!startDate || !endDate}
                     style={{
                       width: "100%", padding: 12, background: "var(--surface)",
@@ -1319,6 +1328,56 @@ export default function VacationPage() {
             }
           `}</style>
         </>
+      )}
+
+      {shareReady && (
+        <div onClick={() => setShareReady(null)} style={{
+          position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)",
+          display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 12,
+        }}>
+          <div
+            role="dialog" aria-modal="true" aria-labelledby="urlaub-share-title"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%", maxWidth: 440, background: "var(--surface)", border: "1px solid var(--border)",
+              borderRadius: 16, padding: "18px 16px calc(16px + env(safe-area-inset-bottom))",
+              display: "flex", flexDirection: "column", gap: 10,
+            }}
+          >
+            <div id="urlaub-share-title" style={{ fontSize: 16, fontWeight: 800 }}>📄 Urlaubsantrag ist fertig</div>
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+              „Per Mail senden“ öffnet das Teilen-Menü — Outlook (oder eine andere Mail-App) wählen,
+              das PDF ist schon angehängt.
+            </p>
+            {shareReady.mailTo && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <span style={{ color: "var(--muted)" }}>An:</span>
+                <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere", fontWeight: 600 }}>{shareReady.mailTo}</span>
+                <button type="button" onClick={() => void copyAddress(shareReady.mailTo).then(setToCopied)}
+                  aria-label="Empfänger kopieren" title="Empfänger kopieren"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 9px", cursor: "pointer", fontSize: 13 }}>
+                  {toCopied ? "✓" : "📋"}
+                </button>
+              </div>
+            )}
+            <button type="button" onClick={sendShareReady} style={{
+              width: "100%", padding: 14, background: "var(--accent2)", border: "none", borderRadius: 12, color: "#1a1a2e",
+              fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
+            }}>
+              📧 Per Mail senden
+            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" onClick={() => downloadFile(shareReady.file)} style={{
+                flex: 1, padding: 10, background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10,
+                color: "var(--text)", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              }}>⬇️ PDF speichern</button>
+              <button type="button" onClick={() => setShareReady(null)} style={{
+                flex: 1, padding: 10, background: "transparent", border: "1px solid var(--border)", borderRadius: 10,
+                color: "var(--muted)", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              }}>Schließen</button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

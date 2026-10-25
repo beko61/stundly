@@ -184,3 +184,67 @@ test("Notdienste in Eingabe-Reihenfolge; Installieren-Symbol klein, verdeckt kei
     await expect(row).toContainText("Mehmet");
   }
 });
+
+test("Nach-oben-Button rechts ohne Überlappung; Urlaubsantrag: PDF geht ans Teilen-Menü", async ({ page }) => {
+  // Teilen-Menü mitschneiden (headless Chromium hat keins)
+  await page.addInitScript(() => {
+    const w = window as unknown as { __shared: unknown };
+    w.__shared = null;
+    Object.defineProperty(navigator, "canShare", { value: () => true, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async (d: ShareData) => {
+        const files = d.files ?? [];
+        w.__shared = { names: files.map((f) => f.name), types: files.map((f) => f.type), sizes: files.map((f) => f.size), title: d.title, text: d.text };
+      },
+    });
+  });
+  page.on("dialog", (d) => void d.accept());
+
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Nur notwendige" }).click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+
+  // Nach oben: rechts, überlappt weder Support- noch Kamera-Button
+  await page.goto("/tracker");
+  await page.mouse.wheel(0, 1500);
+  const up = page.getByRole("button", { name: "Nach oben scrollen" });
+  await expect(up).toBeVisible();
+  const vw = page.viewportSize()!.width;
+  const b = (await up.boundingBox())!;
+  expect(b.x).toBeGreaterThan(vw / 2);
+  for (const sel of [".support-fab", ".floating-scan"]) {
+    const o = await page.locator(sel).first().boundingBox();
+    if (!o) continue;
+    const overlap = b.x < o.x + o.width && o.x < b.x + b.width && b.y < o.y + o.height && o.y < b.y + b.height;
+    expect(overlap, `Nach-oben überlappt ${sel}`).toBe(false);
+  }
+
+  // Urlaubsantrag in 3 Wochen (Mo–Di) → Fenster → "Per Mail senden" gibt das PDF ans Teilen-Menü
+  const d = new Date();
+  d.setDate(d.getDate() + 21 + ((8 - d.getDay()) % 7));
+  const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const end = new Date(d); end.setDate(d.getDate() + 1);
+  await page.goto("/vacation");
+  await page.getByRole("button", { name: /Neuer Antrag/ }).first().click();
+  const dates = page.locator('input[type="date"]');
+  await dates.nth(0).fill(iso(d));
+  await dates.nth(1).fill(iso(end));
+  await page.locator('form input[type="email"]').fill("chef@example.com");
+  await page.getByRole("button", { name: /Speichern \+ PDF & Mail senden/ }).click();
+
+  const sheet = page.getByRole("dialog", { name: /Urlaubsantrag ist fertig/ });
+  await expect(sheet).toBeVisible({ timeout: 30_000 });
+  await expect(sheet).toContainText("chef@example.com");
+  await expect(page.locator(".support-fab").first()).toBeHidden(); // schwebender Chat-Knopf nicht über dem Fenster
+  await sheet.getByRole("button", { name: /Per Mail senden/ }).click();
+  const shared = await page.evaluate(() => (window as unknown as { __shared: { names: string[]; types: string[]; sizes: number[]; title: string; text: string } }).__shared);
+  expect(shared.names[0]).toMatch(/^Urlaubsantrag_.*\.pdf$/);
+  expect(shared.types[0]).toBe("application/pdf");
+  expect(shared.sizes[0]).toBeGreaterThan(1000);
+  expect(shared.title).toMatch(/^Urlaubsantrag/);
+  expect(shared.text.split("\n")[0]).toBe(shared.title); // iOS-Outlook: Betreff = erste Textzeile
+});

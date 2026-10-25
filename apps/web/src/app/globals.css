@@ -591,32 +591,37 @@ body:has(.floating-scan) .support-fab {
   }
 }
 
-/* Installieren-Symbol (📲) — links, auf Höhe des Support-Buttons, über dem Nach-oben-Button */
+/* Installieren-Symbol (📲) — links unten (Desktop neben der Sidebar), mobil über der BottomNav */
 .install-fab {
   position: fixed;
-  bottom: 90px;
-  left: 24px;
+  bottom: 24px;
+  left: calc(240px + 24px);
   z-index: 9997;
 }
 @media (max-width: 767px) {
   .install-fab {
-    bottom: calc(160px + env(safe-area-inset-bottom));
+    bottom: calc(96px + env(safe-area-inset-bottom));
     left: 16px;
   }
 }
 
-/* Nach-oben-Button — links-unten, spiegelbildlich zu support-fab.
-   Desktop: rechts neben der Sidebar (240px), sonst liegt er über "Abmelden". */
+/* Nach-oben-Button — rechts, über dem Support-Button (Support 56px, darunter ggf. .floating-scan) */
 .scroll-top-fab {
   position: fixed;
-  bottom: 24px;
-  left: calc(240px + 24px);
+  bottom: 92px;
+  right: 28px;
   z-index: 9998;
+}
+body:has(.floating-scan) .scroll-top-fab {
+  bottom: 158px;
 }
 @media (max-width: 767px) {
   .scroll-top-fab {
-    bottom: calc(96px + env(safe-area-inset-bottom));
-    left: 16px;
+    bottom: calc(164px + env(safe-area-inset-bottom));
+    right: 20px;
+  }
+  body:has(.floating-scan) .scroll-top-fab {
+    bottom: calc(228px + env(safe-area-inset-bottom));
   }
 }
 
@@ -887,10 +892,13 @@ body:has(.floating-scan) .support-fab {
 /* ═══════════════════════════════════════════════
    COOKIE BANNER — responsive (text inline desktop, stack mobile)
    ═══════════════════════════════════════════════ */
-/* Offenes Fenster (Zeit, Notdienst …): Banner ausblenden, sonst verdeckt er unten "Speichern".
+/* Offenes Fenster (Zeit, Notdienst, Urlaub …): Banner + schwebende Knöpfe ausblenden, sonst verdecken sie Knöpfe.
    Nach dem Schließen erscheint er wieder — die Einwilligung wird weiterhin abgefragt. */
 body:has([aria-modal="true"]) .cookie-banner,
-body:has([aria-modal="true"]) .install-fab { display: none !important; } /* !important: Symbol hat inline display:flex */
+body:has([aria-modal="true"]) .install-fab,
+body:has([aria-modal="true"]) .support-fab,
+body:has([aria-modal="true"]) .scroll-top-fab,
+body:has([aria-modal="true"]) .floating-scan { display: none !important; } /* schwebende Knöpfe nie über einem Fenster; !important wegen inline display */
 
 .cookie-banner-inner {
   max-width: 1200px;

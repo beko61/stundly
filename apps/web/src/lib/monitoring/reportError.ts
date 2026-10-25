@@ -30,7 +30,36 @@ function send(body: Record<string, unknown>) {
     .catch(() => {});
 }
 
+/**
+ * Nach einem neuen Deployment sucht eine offene ältere Seite nicht mehr vorhandene JS-Dateien
+ * ("Loading chunk … failed" / ChunkLoadError). Dann einmal neu laden (holt die neue Version) —
+ * höchstens einmal pro Minute, damit bei echtem Netzproblem keine Schleife entsteht.
+ */
+const CHUNK_RE = /Loading (CSS )?chunk [\w-]+ failed|ChunkLoadError|Failed to fetch dynamically imported module/i;
+const RELOAD_KEY = "stundly_chunk_reload_at";
+
+export function isChunkLoadError(err: unknown): boolean {
+  const msg = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  return CHUNK_RE.test(msg);
+}
+
+/** true = Seite wird neu geladen (Fehler nicht melden) */
+export function reloadOnceForChunkError(err: unknown): boolean {
+  if (typeof window === "undefined" || !isChunkLoadError(err)) return false;
+  try {
+    const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+    if (Date.now() - last < 60_000) return false;
+    sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+  } catch {
+    return false;
+  }
+  window.location.reload();
+  return true;
+}
+
 export function reportError(err: unknown, context: ErrorContext = {}): void {
+  if (reloadOnceForChunkError(err)) return;
+
   const message = err instanceof Error ? err.message : String(err);
   const stack   = err instanceof Error ? err.stack   : undefined;
 

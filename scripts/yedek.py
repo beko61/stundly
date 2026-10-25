@@ -8,7 +8,8 @@ Ne yapar:
   • Hepsini tek bir zip'e koyar:  workly/yedekler/stundly_yedek_YYYY-MM-DD_HHMM.zip
   • En yeni 8 yedeği tutar, eskileri siler; her çalışmayı yedekler/yedek.log'a yazar
 
-Otomatik: Windows Görev Zamanlayıcı → "Stundly Yedek" (her pazar 20:00, kaçarsa ilk açılışta).
+Otomatik: Windows Görev Zamanlayıcı → "Stundly Yedek": her pazar 20:00 + her Windows girişinde
+`--gerekirse` ile (son yedek 6 günden yeniyse hiçbir şey yapmaz) — pazar kaçarsa sonraki açılışta alınır.
 
 Çalıştırma (workly klasöründe):
     python scripts/yedek.py
@@ -30,6 +31,7 @@ ENV = os.path.join(ROOT, "apps", "web", ".env.local")
 OUT_DIR = os.path.join(ROOT, "yedekler")
 PAGE = 1000
 KEEP = 8  # en yeni 8 yedek kalır
+DUE_DAYS = 6  # --gerekirse: son yedek bundan yeniyse atla
 LOG = os.path.join(OUT_DIR, "yedek.log")
 
 
@@ -80,7 +82,21 @@ def dump_users(url, key):
         page += 1
 
 
+def last_backup_age_days():
+    import glob
+    zips = glob.glob(os.path.join(OUT_DIR, "stundly_yedek_*.zip"))
+    if not zips:
+        return None
+    newest = max(os.path.getmtime(z) for z in zips)
+    return (datetime.datetime.now().timestamp() - newest) / 86400
+
+
 def main():
+    if "--gerekirse" in sys.argv:
+        age = last_backup_age_days()
+        if age is not None and age < DUE_DAYS:
+            print("Son yedek %.1f gün önce — gerek yok." % age)
+            return
     url, key = load_env()
     os.makedirs(OUT_DIR, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")

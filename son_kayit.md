@@ -1,5 +1,26 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-10-25 (167) – v0.84.7: Yeni sürüm sonrası "Loading chunk failed" → sayfa kendini bir kez yeniler; yedek sağlamlaştırıldı
+
+Bir hafta sonra kontrol (salt okuma):
+- **Hata izleme ilk kaydı:** 18.10 16:24, `global-error`, iPhone, sürüm 0.84.2, "Loading chunk 9305 failed" (layout
+  chunk'ı). Açık kalan eski sürüm, yeni deploy sonrası silinmiş JS dosyasını istedi → kullanıcı "Etwas ist schief
+  gelaufen" gördü (büyük ihtimalle uygulama sahibi).
+- **Yedek:** 18.10 pazar görevi kaçmış (NumberOfMissedRuns 1; StartWhenAvailable'a rağmen telafi edilmedi).
+- **Yeni hesap:** 23.10 (bef78867, gmail), signup_source **"kollege"**, referral kodu yok, 0 kayıt, tek giriş.
+
+Düzeltmeler:
+- `lib/monitoring/reportError.ts`: `isChunkLoadError` (Loading [CSS] chunk … failed / ChunkLoadError / dynamically
+  imported module) → `reloadOnceForChunkError`: sessionStorage ile dakikada en fazla 1 kez `location.reload()`, o
+  durumda raporlanmaz; ikinci kez olursa normal raporlanır (döngü yok). sw.js sayfalar network-first → yenileme yeni
+  HTML'i alır. 4 error boundary + ErrorListener zaten reportError'dan geçiyor.
+- `scripts/yedek.py`: `--gerekirse` (son zip 6 günden yeniyse atla). Görev "Stundly Yedek": eylem `--gerekirse`,
+  tetikleyiciler: pazar 20:00 + **Windows girişi (5 dk gecikme)**. Elle çalıştırıldı: 25.10 06:32 yedek alındı
+  (20,9 MB; notdienst_anhaenge 51→104, notdienst_entries 145→164), ikinci çalıştırma "gerek yok" dedi.
+- Testler +2 (chunk tanıma; tek yenileme + ikinci kez raporlama). Unit 703/703, E2E 7/7, tsc + lint temiz.
+
+---
+
 ## 2026-10-25 (166) – v0.84.6: Çerez bandı açık pencerenin "Speichern" butonunu kapatmıyor
 
 Kullanıcı "devam" dedi → listedeki sıradaki iş (17.10 E2E bulgusu): mobilde ilk girişte çerez bandı (fixed, z-index

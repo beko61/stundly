@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { reportError, __resetReportedForTests } from "../reportError";
+import { reportError, __resetReportedForTests, isChunkLoadError, reloadOnceForChunkError } from "../reportError";
 
 describe("reportError (Browser)", () => {
   beforeEach(() => {
@@ -27,5 +27,40 @@ describe("reportError (Browser)", () => {
     Object.defineProperty(navigator, "sendBeacon", { value: beacon, configurable: true });
     for (let i = 0; i < 15; i++) reportError(new Error(`Fehler ${i}`));
     expect(beacon).toHaveBeenCalledTimes(10);
+  });
+});
+
+describe("Chunk-Fehler nach neuem Deployment", () => {
+  beforeEach(() => {
+    __resetReportedForTests();
+    sessionStorage.clear();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("erkennt typische Meldungen", () => {
+    expect(isChunkLoadError(new Error("Loading chunk 9305 failed.\n(error: https://stundly.de/_next/static/chunks/x.js)"))).toBe(true);
+    expect(isChunkLoadError(Object.assign(new Error("x"), { name: "ChunkLoadError" }))).toBe(true);
+    expect(isChunkLoadError(new Error("Loading CSS chunk 12 failed"))).toBe(true);
+    expect(isChunkLoadError(new Error("Cannot read properties of undefined"))).toBe(false);
+  });
+
+  it("lädt einmal neu und meldet dann nicht; zweiter Fehler innerhalb einer Minute wird gemeldet", () => {
+    const reload = vi.fn();
+    const loc = window.location;
+    Object.defineProperty(window, "location", { value: { ...loc, reload, pathname: "/reports" }, configurable: true });
+    const beacon = vi.fn(() => true);
+    Object.defineProperty(navigator, "sendBeacon", { value: beacon, configurable: true });
+    try {
+      reportError(new Error("Loading chunk 9305 failed."), { where: "global-error" });
+      expect(reload).toHaveBeenCalledTimes(1);
+      expect(beacon).not.toHaveBeenCalled();
+
+      expect(reloadOnceForChunkError(new Error("Loading chunk 9305 failed."))).toBe(false);
+      reportError(new Error("Loading chunk 9305 failed."), { where: "global-error" });
+      expect(reload).toHaveBeenCalledTimes(1);
+      expect(beacon).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, "location", { value: loc, configurable: true });
+    }
   });
 });

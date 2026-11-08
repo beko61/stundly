@@ -9,10 +9,8 @@ import {
   calcNettoFromBrutto,
   calcKrankheitEpisodes,
   ENTGFG_KRANKHEIT_LIMIT_DAYS,
-  calcAnnualEntitlement,
-  calcUrlaubskonto,
 } from "@workly/shared";
-import type { TimeEntry, SalarySettings, Steuerklasse, KirchensteuerRate, TaxMode, KrankheitEpisode } from "@workly/shared";
+import type { TimeEntry, SalarySettings, KrankheitEpisode } from "@workly/shared";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTrackerStore } from "@/store/trackerStore";
 import { usePrivacyMode, maskMoney } from "@/lib/privacy";
@@ -28,6 +26,8 @@ import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery, useUpsertSalarySettings } from "@/hooks/queries/useSalarySettings";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { applyContract } from "@/lib/company/contract";
+import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
+import { salarySettingsFromRow, notdienstDaysForBilling as ndBilling } from "@/lib/salary/settings";
 import { usePlan } from "@/hooks/usePlan";
 import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 
@@ -103,26 +103,7 @@ export default function SalaryPage() {
     if (settingsLoaded) return;
     if (lSalarySettings) return; // hâlâ fetching
     if (salaryData) {
-      const loaded: SalarySettings = {
-        id:                       salaryData.id,
-        user_id:                  salaryData.user_id,
-        valid_from:               salaryData.valid_from,
-        hourly_rate:              Number(salaryData.hourly_rate),
-        overtime_rate_multiplier: Number(salaryData.overtime_rate_multiplier),
-        night_shift_bonus:        Number(salaryData.night_shift_bonus),
-        notdienst_bonus:          Number(salaryData.notdienst_bonus),
-        monthly_target_hours:     Number(salaryData.monthly_target_hours),
-        steuerklasse:             (salaryData.steuerklasse as Steuerklasse | null) ?? "I",
-        kirchensteuer:            (Number(salaryData.kirchensteuer ?? 0) as KirchensteuerRate),
-        hat_kinder:               Boolean(salaryData.hat_kinder ?? false),
-        tax_mode:                 (salaryData.tax_mode as TaxMode | null) ?? "auto",
-        manuell_abzug:            Number(salaryData.manuell_abzug ?? 0),
-        urlaub_anspruch:          Number(salaryData.urlaub_anspruch ?? 30),
-        sfn_enabled:              Boolean(salaryData.sfn_enabled ?? false),
-        employment_start_date:    salaryData.employment_start_date ?? null,
-        employment_end_date:      salaryData.employment_end_date   ?? null,
-        urlaub_carry_over:        Number(salaryData.urlaub_carry_over ?? 0),
-      };
+      const loaded = salarySettingsFromRow(salaryData);
       setSettings(loaded);
       localStorage.setItem(LS_KEY, JSON.stringify(loaded));
     } else {
@@ -236,10 +217,7 @@ export default function SalaryPage() {
   /** Bu ayın brutto'suna giren Notdienst sayısı = ÖNCEKI ay'ın Notdienst'leri.
    *  Ocak için: önceki yılın Aralık ayı. */
   function notdienstDaysForBilling(billingYear: number, billingMonth: number): number {
-    const prevMonth = billingMonth === 1 ? 12 : billingMonth - 1;
-    const prevYear  = billingMonth === 1 ? billingYear - 1 : billingYear;
-    const prefix    = `${prevYear}-${String(prevMonth).padStart(2, "0")}-`;
-    return yearNotdienstDates.filter(d => d.startsWith(prefix)).length;
+    return ndBilling(yearNotdienstDates, billingYear, billingMonth);
   }
 
   // Auto-calc: 12 ay brutto + netto serisi (time_entries'ten)
@@ -342,24 +320,9 @@ export default function SalaryPage() {
   const krankheitOverLimit = krankheitEpisodes.filter(e => e.days > ENTGFG_KRANKHEIT_LIMIT_DAYS);
 
   // §5 + §7 BUrlG — Urlaubskonto (Zwölftelung + Übertrag/Verfall 31.03)
-  const urlaubskonto = useMemo(() => {
-    const entitlement = calcAnnualEntitlement({
-      annualAnspruch:  settings.urlaub_anspruch ?? 30,
-      employmentStart: settings.employment_start_date ?? null,
-      employmentEnd:   settings.employment_end_date ?? null,
-      year,
-    });
-    const usedThisYear = yearEntries.filter(e => e.day_type === "urlaub").length;
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const konto = calcUrlaubskonto({
-      thisYearEntitlement:   entitlement.anspruch,
-      thisYearUsed:          usedThisYear,
-      previousYearRemaining: settings.urlaub_carry_over ?? 0,
-      refDate:               todayISO,
-      year,
-    });
-    return { entitlement, usedThisYear, konto };
-  }, [settings.urlaub_anspruch, settings.employment_start_date, settings.employment_end_date,
+  const urlaubskonto = useMemo(() => urlaubskontoFor({ settings, yearEntries, year }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [settings.urlaub_anspruch, settings.employment_start_date, settings.employment_end_date,
       settings.urlaub_carry_over, yearEntries, year]);
 
   const [moneyHidden, togglePrivacy] = usePrivacyMode();

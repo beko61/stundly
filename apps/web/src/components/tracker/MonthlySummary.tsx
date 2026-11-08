@@ -3,16 +3,16 @@
 import { formatDur } from "@/lib/utils/formatDur";
 import { useMemo, useEffect, useState } from "react";
 import { useTrackerStore } from "@/store/trackerStore";
-import { createClient } from "@/lib/supabase/client";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
-import { useTimeEntriesQuery } from "@/hooks/queries/useTimeEntries";
+import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { findWeeklyCapViolations } from "@workly/shared";
+import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 
 const TARGET_HOURS_DEFAULT = 174;
-const URLAUB_DEFAULT       = 30; // Fallback: salary_settings.urlaub_anspruch okunamazsa
 
 interface NdEntry { date: string; start_time: string; end_time: string; erledigt?: boolean; }
 
@@ -31,9 +31,11 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   const { year, month } = useTrackerStore();
   const { data: entries = [] } = useTimeEntriesQuery(year, month);
   const { data: salarySettings } = useSalarySettingsQuery();
+  const { data: membership } = useCompanyMembership();
   const ndRange = notdienstLoadRange(year, month);
   const { data: ndRaw = [] } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
-  const [yearUrlaub, setYearUrlaub] = useState(0);
+  // Ganzes Jahr fürs Urlaubskonto (gleiche Rechnung wie Urlaub/Dashboard/Gehalt)
+  const { data: yearEntries = [] } = useTimeEntriesRangeQuery(`${year}-01-01`, `${year}-12-31`);
 
   // localStorage'daki live salary_settings güncellemesi — user salary sayfasında
   // slider oynattığında MonthlySummary anında güncellensin (cross-component).
@@ -58,32 +60,12 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   // Priority: localStorage override > RQ salary_settings > default
   const targetHours = localOverride.monthly_target_hours
     ?? (salarySettings?.monthly_target_hours ? Number(salarySettings.monthly_target_hours) : TARGET_HOURS_DEFAULT);
-  const urlaubAnspruch = localOverride.urlaub_anspruch
-    ?? (salarySettings?.urlaub_anspruch ? Number(salarySettings.urlaub_anspruch) : URLAUB_DEFAULT);
 
   // Hafta'nın Pazartesi'si bu aya düşen Notdienst entry'lerini filtrele
   const ndEntries = useMemo(
     () => ndRaw.filter(nd => notdienstBelongsToMonth(nd.date, year, month)) as NdEntry[],
     [ndRaw, year, month],
   );
-
-  // Tüm yılın Urlaub günlerini say (Urlaubskonto için)
-  useEffect(() => {
-    async function loadYearUrlaub() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      const { data } = await supabase
-        .from("time_entries")
-        .select("date")
-        .eq("user_id", session.user.id)
-        .eq("day_type", "urlaub")
-        .gte("date", `${year}-01-01`)
-        .lte("date", `${year}-12-31`);
-      setYearUrlaub(data?.length ?? 0);
-    }
-    void loadYearUrlaub();
-  }, [year, entries]);
 
   const stats = useMemo(() => {
     const r = calcMonthStats({
@@ -106,7 +88,10 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
     };
   }, [entries, ndEntries, targetHours, feiertage, year, month]);
 
-  const urlaubKonto = Math.max(0, urlaubAnspruch - yearUrlaub);
+  const { konto, usedThisYear } = useMemo(
+    () => urlaubskontoFor({ settings: salarySettings, yearEntries, year, contract: membership?.contract }),
+    [salarySettings, yearEntries, year, membership?.contract],
+  );
 
   // ── Kart bileşeni ──
   function Card({ title, icon, color, big, mid, sub }: {
@@ -267,9 +252,9 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           title="Urlaubskonto"
           icon="🌴"
           color="var(--accent2)"
-          big={`${urlaubKonto} Tage`}
-          mid={`von ${urlaubAnspruch} verfügbar`}
-          sub={`${yearUrlaub} verbraucht ${year}`}
+          big={`${konto.remaining} Tage`}
+          mid={`von ${konto.totalEntitlement} verfügbar`}
+          sub={`${usedThisYear} verbraucht ${year}`}
         />
       </div>
     </div>

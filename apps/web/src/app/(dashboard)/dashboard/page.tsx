@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { calculateWorkDuration } from "@workly/shared";
+import { calculateWorkDuration, calculateMonthlySalary } from "@workly/shared";
+import type { TimeEntry as SharedTimeEntry, SalarySettings as SharedSalarySettings } from "@workly/shared";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
@@ -13,12 +14,13 @@ import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { applyContract } from "@/lib/company/contract";
+import { salarySettingsFromRow, hasHourlyRate, notdienstDaysForBilling } from "@/lib/salary/settings";
+import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { InviteColleaguesCard } from "@/components/ui/InviteColleaguesCard";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const TARGET_HOURS_DEFAULT = 174;
-const URLAUB_DEFAULT = 30;
 const SALARY_LS_KEY = "workly_salary_settings_v2";
 
 // Mo-Fr = 8h, Sa/So = 0. Urlaub/Krank/Feiertag immer 8h auf Werktagen.
@@ -105,16 +107,6 @@ function mergeSettings(base: SalarySettings, patch: Partial<SalarySettings> | nu
   };
 }
 
-function calcBrutto(workedMin: number, ndMin: number, ndCount: number, s: SalarySettings): number {
-  const targetHours = s.monthly_target_hours;
-  const workedHours = (workedMin + ndMin) / 60;
-  const overtimeHours = Math.max(0, workedHours - targetHours);
-  const basePay     = targetHours * s.hourly_rate;
-  const overtimePay = overtimeHours * s.hourly_rate * (s.overtime_rate_multiplier - 1);
-  const ndBonus     = ndCount * s.notdienst_bonus;
-  return basePay + overtimePay + ndBonus;
-}
-
 export default function DashboardPage() {
   // Today değeri render-stable (mount edildiği tarih). Gün değişince re-mount
   // yeter — RQ key stabilize et
@@ -145,7 +137,7 @@ export default function DashboardPage() {
   const { data: entriesRaw     = [], isLoading: lMonth     } = useTimeEntriesQuery(selectedYear, selectedMonth);
   const { data: ndRaw          = [], isLoading: lNd        } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
   const { data: yearEntriesRaw = [], isLoading: lYearEntry, status: yearStatus } = useTimeEntriesRangeQuery(yearStart, yearEnd);
-  const { data: yearNdRaw      = [], isLoading: lYearNd    } = useNotdienstEntriesQuery(yearStart, yearNdEnd);
+  const { data: yearNdRaw      = [], isLoading: lYearNd    } = useNotdienstEntriesQuery(`${selectedYear - 1}-12-01`, yearNdEnd);
   const { data: last7Raw       = [], isLoading: lLast7     } = useTimeEntriesRangeQuery(last7Start, todayStr);
   const { data: salaryData }                                  = useSalarySettingsQuery();
   const { data: membership }                                  = useCompanyMembership();
@@ -182,6 +174,14 @@ export default function DashboardPage() {
     // Vertrag der Firma schlägt einen veralteten localStorage-Stand
     return applyContract(mergeSettings(base, localPatch), membership?.contract);
   }, [salaryData, localPatch, membership?.contract]);
+
+  // Brutto: dieselbe Rechnung wie die Gehaltsseite (calculateMonthlySalary, Notdienst des Vormonats).
+  // Ohne eingetragenen Stundenlohn kein Betrag — früher stand hier ein geschätzter Lohn mit 15 €/h.
+  const hasWage = hasHourlyRate(salaryData);
+  const salarySettings = useMemo<SharedSalarySettings | null>(() => salaryData
+    ? applyContract({ ...salarySettingsFromRow(salaryData), ...(localPatch as Partial<SharedSalarySettings> | null) }, membership?.contract)
+    : null, [salaryData, localPatch, membership?.contract]);
+  const ndDates = useMemo(() => (yearNdRaw as unknown as NdEntry[]).map(n => n.date), [yearNdRaw]);
 
   // Profile (isim + bundesland) — direkt supabase, single fetch on mount
   useEffect(() => {
@@ -235,14 +235,18 @@ export default function DashboardPage() {
       month:      selectedMonth,
       targetHoursPerMonth: settings.monthly_target_hours,
     });
-    const brutto = calcBrutto(r.workedMin, r.ndMin, r.ndCount, settings);
+    const brutto = hasWage && salarySettings
+      ? calculateMonthlySalary(entries as unknown as SharedTimeEntry[], salarySettings, {
+          notdienstDaysOverride: notdienstDaysForBilling(ndDates, selectedYear, selectedMonth), feiertage: yearFeiertage,
+        }).total_gross
+      : 0;
     return {
       workedMin: r.workedMin, ndMin: r.ndMin, ndCount: r.ndCount, ndPaid: r.ndPaid,
       urlaubDays: r.urlaubDays, krankDays: r.krankDays, feiertagDays: r.feiertagDays,
       arbeitstageCount: r.arbeitenEntries,
       diffMin: r.diffMin, targetMin: r.targetMin, brutto,
     };
-  }, [entries, ndEntries, settings, yearFeiertage, selectedYear, selectedMonth]);
+  }, [entries, ndEntries, settings, yearFeiertage, selectedYear, selectedMonth, hasWage, salarySettings, ndDates]);
 
   // ── Last 7 days bars (always relative to today) ──
   const days7 = useMemo(() => {
@@ -294,7 +298,11 @@ export default function DashboardPage() {
         month:      m,
         targetHoursPerMonth: settings.monthly_target_hours,
       });
-      const brutto = calcBrutto(r.workedMin, r.ndMin, r.ndCount, settings);
+      const brutto = hasWage && salarySettings
+        ? calculateMonthlySalary(monthEntries as unknown as SharedTimeEntry[], salarySettings, {
+            notdienstDaysOverride: notdienstDaysForBilling(ndDates, selectedYear, m), feiertage: yearFeiertage,
+          }).total_gross
+        : 0;
       return {
         month: m, label: MONTHS_SHORT[i]!,
         workedMin: r.workedMin, ndMin: r.ndMin, ndCount: r.ndCount, ndPaid: r.ndPaid,
@@ -303,7 +311,7 @@ export default function DashboardPage() {
         brutto,
       };
     });
-  }, [yearEntries, yearNd, selectedYear, settings, yearFeiertage]);
+  }, [yearEntries, yearNd, selectedYear, settings, yearFeiertage, hasWage, salarySettings, ndDates]);
 
   const yearlyMaxBrutto = Math.max(...monthlyBreakdown.map(m => m.brutto), 1);
 
@@ -337,8 +345,13 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayYear, bundesland]);
 
-  const urlaubAnspruch = settings.urlaub_anspruch || URLAUB_DEFAULT;
-  const urlaubKonto    = Math.max(0, urlaubAnspruch - yearly.urlaub);
+  // Urlaubskonto: gleiche Rechnung wie Tracker, Urlaub und Gehalt
+  const { konto: urlaubKontoRes, usedThisYear: urlaubUsed } = useMemo(
+    () => urlaubskontoFor({ settings: salaryData, yearEntries, year: selectedYear, contract: membership?.contract }),
+    [salaryData, yearEntries, selectedYear, membership?.contract],
+  );
+  const urlaubAnspruch = urlaubKontoRes.totalEntitlement;
+  const urlaubKonto    = urlaubKontoRes.remaining;
   const greeting = today.getHours() < 11 ? "Guten Morgen" : today.getHours() < 18 ? "Hallo" : "Guten Abend";
   const diffColor = stats.diffMin >= 0 ? "var(--green)" : "var(--red)";
 
@@ -504,8 +517,13 @@ export default function DashboardPage() {
         </div>
         <div className="dash-hero-card">
           <span className="label" style={{ color: "var(--accent2)" }}>💰 Brutto-Lohn (geschätzt)</span>
-          <span className="value" style={{ color: "var(--accent2)" }}>{eur(stats.brutto, moneyHidden)}</span>
-          <span className="sub">{settings.hourly_rate} €/Std · {settings.monthly_target_hours}h Soll</span>
+          {hasWage ? (<>
+            <span className="value" style={{ color: "var(--accent2)" }}>{eur(stats.brutto, moneyHidden)}</span>
+            <span className="sub">{salarySettings?.hourly_rate} €/Std · {settings.monthly_target_hours}h Soll</span>
+          </>) : (<>
+            <span className="value" style={{ color: "var(--muted)" }}>—</span>
+            <Link href="/salary" className="sub" style={{ color: "var(--accent2)" }}>Stundenlohn eintragen →</Link>
+          </>)}
         </div>
       </div>
 
@@ -556,13 +574,13 @@ export default function DashboardPage() {
           </div>
           <div className="dash-year-stat">
             <span className="kpi-label">Brutto-Lohn Jahr</span>
-            <span className="kpi-value" style={{ color: "var(--accent2)" }}>{eur(yearly.bruttoTotal, moneyHidden)}</span>
-            <span className="kpi-sub">Ø {eur(yearly.bruttoTotal / 12, moneyHidden)} / Monat</span>
+            <span className="kpi-value" style={{ color: hasWage ? "var(--accent2)" : "var(--muted)" }}>{hasWage ? eur(yearly.bruttoTotal, moneyHidden) : "—"}</span>
+            <span className="kpi-sub">{hasWage ? `Ø ${eur(yearly.bruttoTotal / 12, moneyHidden)} / Monat` : "kein Stundenlohn eingetragen"}</span>
           </div>
           <div className="dash-year-stat">
             <span className="kpi-label">Urlaub genommen</span>
             <span className="kpi-value" style={{ color: "var(--blue)" }}>
-              {yearly.urlaub} / {urlaubAnspruch}
+              {urlaubUsed} / {urlaubAnspruch}
             </span>
             <span className="kpi-sub">{urlaubKonto} Tage frei</span>
           </div>
@@ -575,7 +593,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 12-month trend chart */}
-      <div className="dash-panel">
+      {hasWage && <div className="dash-panel">
         <div className="dash-panel-title">📈 Monatliche Brutto-Entwicklung {selectedYear}</div>
         <div className="dash-bars dash-bars-12">
           {monthlyBreakdown.map((m) => {
@@ -611,7 +629,7 @@ export default function DashboardPage() {
           <span>Klick auf einen Monat zum Wechseln</span>
           <span>Gesamt {eur(yearly.bruttoTotal, moneyHidden)}</span>
         </div>
-      </div>
+      </div>}
 
       {/* Body: 7-day chart + quick actions */}
       <div className="dash-body">

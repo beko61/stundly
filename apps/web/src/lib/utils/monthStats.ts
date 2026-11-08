@@ -21,6 +21,7 @@ import {
 } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 import { notdienstMonthOf } from "./weekMonth";
+import { entfaelltSoll, zaehltZumUrlaubskonto } from "@/lib/vacation/urlaubArt";
 
 export interface NdEntry {
   date: string;
@@ -61,8 +62,12 @@ export interface MonthStatsResult {
   ndCount: number;
   /** Bezahlt (erledigt=true) sayısı */
   ndPaid: number;
-  /** Urlaub gün sayısı (entry day_type=urlaub) */
+  /** Urlaub gün sayısı (entry day_type=urlaub, Sonder-/Bildungsurlaub dahil — Anzeige) */
   urlaubDays: number;
+  /** Vom Urlaubsanspruch abgezogene Tage (nur Erholungsurlaub, lib/vacation/urlaubArt) */
+  urlaubKontoDays: number;
+  /** Soll, das durch Unbezahlten Urlaub / Elternzeit entfällt (Minuten) */
+  sollEntfallenMin: number;
   /** Urlaub dakikası (Sollstunden toplamı — UI breakdown için ayrı tutulur) */
   urlaubMin: number;
   /** Krank gün sayısı */
@@ -132,6 +137,7 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   let paidAbsenceMin = 0;
   let urlaubMin = 0, krankMin = 0;
   let urlaubDays = 0, krankDays = 0, feiertagDays = 0, arbeitenEntries = 0;
+  let urlaubKontoDays = 0, sollEntfallenMin = 0;
   const dailyCapViolations: string[] = [];
 
   const entryDates = new Set(entries.map(e => e.date));
@@ -140,7 +146,7 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
     if (!inWindow(e.date)) continue;
 
     switch (e.day_type) {
-      case DAY_TYPES.URLAUB:    urlaubDays++; break;
+      case DAY_TYPES.URLAUB:    urlaubDays++; if (zaehltZumUrlaubskonto(e)) urlaubKontoDays++; break;
       case DAY_TYPES.KRANK:     krankDays++;  break;
       case DAY_TYPES.FEIERTAG:  feiertagDays++; break;
       case DAY_TYPES.ARBEITEN:  arbeitenEntries++; break;
@@ -165,6 +171,13 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
     }
 
     if (e.day_type === DAY_TYPES.NOTDIENST) continue;
+    // Unbezahlter Urlaub / Elternzeit: keine Gutschrift, aber das Soll des Tages entfällt (kein Minus)
+    if (entfaelltSoll(e)) {
+      const [yS, mS, dS] = e.date.split("-");
+      const y = Number(yS), m = Number(mS), d = Number(dS);
+      if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) sollEntfallenMin += getDayStdMins(y, m - 1, d);
+      continue;
+    }
     if (e.day_type === DAY_TYPES.FREI)      continue;
     if (!e.start_time || !e.end_time)       continue;
 
@@ -220,6 +233,7 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
     const monthsInPeriod = month != null ? 1 : 12;
     targetMin = targetHoursPerMonth * monthsInPeriod * 60;
   }
+  targetMin = Math.max(0, targetMin - sollEntfallenMin);
   const diffMin = workedMin + ndMin - targetMin;
 
   dailyCapViolations.sort();
@@ -227,7 +241,7 @@ export function calcMonthStats(input: MonthStatsInput): MonthStatsResult {
   return {
     workedMin, workedMinPure, paidAbsenceMin,
     ndMin, ndCount, ndPaid,
-    urlaubDays, urlaubMin, krankDays, krankMin,
+    urlaubDays, urlaubKontoDays, sollEntfallenMin, urlaubMin, krankDays, krankMin,
     feiertagDays, arbeitenEntries,
     workDaysInPeriod,
     diffMin, targetMin,

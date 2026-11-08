@@ -2,8 +2,6 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
 import {
-  calcAnnualEntitlement,
-  calcUrlaubskonto,
   calcKrankheitEpisodes,
   ENTGFG_KRANKHEIT_LIMIT_DAYS,
 } from "@workly/shared";
@@ -12,6 +10,7 @@ import { VacationDecisionButtons } from "./VacationDecisionButtons";
 import { TeamNotdienstList, type TeamNotdienst } from "./TeamNotdienstList";
 import { ContractCard } from "./ContractCard";
 import { contractFromProfile, monthlyTargetFromWeekly } from "@/lib/company/contract";
+import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { calcMonthStats, DEFAULT_TARGET_HOURS_PER_MONTH } from "@/lib/utils/monthStats";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { getFeiertage } from "@/lib/utils/feiertage";
@@ -207,7 +206,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   const [{ data: yearEntries }, { data: salarySettingsList }] = await Promise.all([
     admin
       .from("time_entries")
-      .select("id, date, day_type, start_time, end_time, break_minutes, is_night_shift")
+      .select("id, date, day_type, start_time, end_time, break_minutes, is_night_shift, tags")
       .eq("user_id", userId)
       .gte("date", yearStartISO)
       .lte("date", yearEndISO),
@@ -236,21 +235,10 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   const targetMin = Math.round(stats.targetMin);
   const diffMin   = Math.round(stats.diffMin);
 
-  const anspruch = Number(contract?.vacation_days ?? settings?.urlaub_anspruch ?? 30);
-  const entitlement = calcAnnualEntitlement({
-    annualAnspruch:  anspruch,
-    employmentStart: contract?.start_date ?? (settings?.employment_start_date as string | null) ?? null,
-    employmentEnd:   (settings?.employment_end_date   as string | null) ?? null,
-    year:            now.getFullYear(),
-  });
-  const usedThisYear = (yearEntries ?? []).filter((e) => e.day_type === "urlaub").length;
+  // Gleiche Rechnung wie beim Mitarbeiter selbst (lib/vacation/urlaubskonto)
   const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const konto = calcUrlaubskonto({
-    thisYearEntitlement:   entitlement.anspruch,
-    thisYearUsed:          usedThisYear,
-    previousYearRemaining: Number(settings?.urlaub_carry_over ?? 0),
-    refDate:               todayISO,
-    year:                  now.getFullYear(),
+  const { entitlement, usedThisYear, konto } = urlaubskontoFor({
+    settings, yearEntries: yearEntries ?? [], year: now.getFullYear(), todayISO, contract,
   });
   const krankheitEpisodes = calcKrankheitEpisodes(yearEntries ?? []);
   const krankheitOverLimit = krankheitEpisodes.filter((ep) => ep.days > ENTGFG_KRANKHEIT_LIMIT_DAYS);

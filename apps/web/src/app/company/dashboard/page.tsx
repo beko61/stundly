@@ -6,11 +6,11 @@ import {
   findDailyCapViolations,
   calcKrankheitEpisodes,
   ENTGFG_KRANKHEIT_LIMIT_DAYS,
-  calcAnnualEntitlement,
-  calcUrlaubskonto,
 } from "@workly/shared";
 import type { TimeEntry } from "@workly/shared";
 import { getFeiertage } from "@/lib/utils/feiertage";
+import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
+import { contractFromProfile, type Contract } from "@/lib/company/contract";
 import { checkMonth, type CheckEntry } from "@/lib/company/monthCheck";
 import { addDays, berlinNowLocal, restUntil } from "@/lib/company/notdienstZentrale";
 
@@ -89,7 +89,7 @@ export default async function CompanyDashboardPage() {
   const { data: yearEntries } = userIds.length > 0
     ? await admin
         .from("time_entries")
-        .select("id, user_id, date, start_time, end_time, break_minutes, day_type, is_night_shift")
+        .select("id, user_id, date, start_time, end_time, break_minutes, day_type, is_night_shift, tags")
         .in("user_id", userIds)
         .gte("date", yearStart)
         .lte("date", yearEnd)
@@ -116,6 +116,18 @@ export default async function CompanyDashboardPage() {
         .select("user_id, urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over")
         .in("user_id", userIds)
     : { data: [] };
+
+  // Firmenvertrag (Urlaubstage, Beschäftigt seit) — wie beim Mitarbeiter; fehlt die Spalte (Migration 033), ohne
+  const { data: contractRows, error: contractErr } = userIds.length > 0
+    ? await admin
+        .from("profiles")
+        .select("user_id, contract_weekly_hours, contract_vacation_days, contract_start")
+        .in("user_id", userIds)
+    : { data: [], error: null };
+  const contractMap = new Map<string, Contract | null>();
+  if (!contractErr) {
+    for (const r of contractRows ?? []) contractMap.set(r.user_id as string, contractFromProfile(r as Record<string, unknown>));
+  }
 
   // Her user için en son salary_settings (multi-satır → user_id başına ilk)
   const salaryMap = new Map<string, {
@@ -255,25 +267,10 @@ export default async function CompanyDashboardPage() {
       .reduce((s, ep) => s + ep.excessDates.length, 0);
 
     // Urlaubskonto (Zwölftelung + Verfall)
-    const settings = salaryMap.get(uid) ?? {
-      urlaub_anspruch: 30,
-      employment_start_date: null,
-      employment_end_date: null,
-      urlaub_carry_over: 0,
-    };
-    const entitlement = calcAnnualEntitlement({
-      annualAnspruch:  settings.urlaub_anspruch,
-      employmentStart: settings.employment_start_date,
-      employmentEnd:   settings.employment_end_date,
-      year:            now.getFullYear(),
-    });
-    const usedThisYear = yearE.filter((e) => e.day_type === "urlaub").length;
-    const konto = calcUrlaubskonto({
-      thisYearEntitlement:   entitlement.anspruch,
-      thisYearUsed:          usedThisYear,
-      previousYearRemaining: settings.urlaub_carry_over,
-      refDate:               todayISO,
-      year:                  now.getFullYear(),
+    // Gleiche Rechnung wie beim Mitarbeiter selbst (lib/vacation/urlaubskonto)
+    const { konto } = urlaubskontoFor({
+      settings: salaryMap.get(uid), yearEntries: yearE, year: now.getFullYear(), todayISO,
+      contract: contractMap.get(uid),
     });
 
     return {

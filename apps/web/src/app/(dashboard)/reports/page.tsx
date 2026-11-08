@@ -27,6 +27,8 @@ import { usePlan } from "@/hooks/usePlan";
 import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 import { PdfPreview } from "@/components/plan/PdfPreview";
 import { nameParts } from "@/lib/utils/personName";
+import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -174,7 +176,12 @@ export default function ReportsPage() {
   );
 
   const targetHours = salaryData?.monthly_target_hours ? Number(salaryData.monthly_target_hours) : DEFAULT_TARGET_HOURS_PER_MONTH;
-  const vacTotal    = salaryData?.urlaub_anspruch     ? Number(salaryData.urlaub_anspruch)     : 30;
+  // Urlaubskonto (Jahresansicht): gleiche Rechnung wie Tracker, Urlaub, Dashboard und Gehalt
+  const { data: membership } = useCompanyMembership();
+  const urlaubskonto = useMemo(
+    () => urlaubskontoFor({ settings: salaryData, yearEntries: entries, year, contract: membership?.contract }),
+    [salaryData, entries, year, membership?.contract],
+  );
 
   // Profile bundesland — direct supabase (single fetch, no hook)
   useEffect(() => {
@@ -569,7 +576,7 @@ export default function ReportsPage() {
                 { label:"DIFFERENZ",   val:formatDur(stats.diffMin, true), color:stats.diffMin>=0?"blue":"red",
                   hint:`${fmt(stats.workedMinPure)} + ${fmt(stats.paidAbsenceMin)} Urlaub/Krank/Feiertag + ${fmt(stats.ndMin)} Notdienst − ${fmt(stats.targetMin)} Soll${mode === "year" ? " (ganzes Jahr)" : ""}` },
                 { label:"ARBEITSTAGE", val:`${stats.arbeitenDays} / ${stats.workDaysInPeriod}`, color:"purple", hint:"Erfasst / Werktage" },
-                { label:"URLAUB",      val:`${stats.urlaub} T`, color:"blue", hint:mode === "year" ? `Rest ${Math.max(0, vacTotal - stats.urlaub)}/${vacTotal}` : "Tage" },
+                { label:"URLAUB",      val:`${stats.urlaub} T`, color:"blue", hint:mode === "year" ? `Rest ${urlaubskonto.konto.remaining}/${urlaubskonto.konto.totalEntitlement}` : "Tage" },
               ].map(c=>(
                 <div key={c.label} className={`card ${c.color}`}>
                   <div className="label">{c.label}</div>

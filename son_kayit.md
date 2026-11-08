@@ -1,5 +1,30 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (176) – v0.87.2: Faz 1.2–1.5 — Urlaub türleri, tek Urlaubskonto, Dashboard brütü
+
+Kullanıcı Faz 1 + Faz 2 tablosunu yapıştırdı: "bunların hepsini yap bana soru sorma … kaç saat sürerse sürsün".
+
+- **1.2** Urlaub talebi artık türe göre kaydediliyor (`lib/vacation/urlaubArt.ts`): Erholungsurlaub → urlaub;
+  Sonder-/Bildungsurlaub → urlaub + etiket (izin hakkından düşmez); Unbezahlt/Elternzeit → frei + etiket (Soll düşer,
+  eksi saat yok); Überstundenabbau → frei + etiket (Soll kalır → fazla mesai azalır). `monthStats`: yeni
+  `urlaubKontoDays`, `sollEntfallenMin`. Resmî tatiller (Bundesland, yıl aşan aralık dahil) atlanıyor. Aralıkta
+  saatli iş kaydı varsa `confirm` ile soruluyor (iptal → hiçbir şey kaydedilmez).
+- **1.3** Talep silinince sadece o talebin kayıtları (`gehoertZuAntrag`, eski etiketsiz urlaub dahil) siliniyor;
+  eskiden o günlere standart çalışma saatleri yazılıyordu (gelecek günler dahil).
+- **1.4** Tek Urlaubskonto: `lib/vacation/urlaubskonto.ts` `urlaubskontoFor` (Zwölftelung §5, Übertrag 31.03 §7,
+  Firmenvertrag önceliği, sadece Mo–Fr Erholungsurlaub). Kullanıldı: Tracker MonthlySummary, Urlaub sayfası,
+  Dashboard, Gehalt, Berichte (yıl), Firma Dashboard (+ sözleşme sorgusu), Firma çalışan detayı.
+- **1.5** Dashboard brütü Gehalt sayfasıyla aynı `calculateMonthlySalary` (+ önceki ayın Notdienst'i, Ocak için
+  önceki Aralık; Notdienst sorgusu 1 Aralık'tan). Stundenlohn girilmemişse brüt yok: "— · Stundenlohn eintragen →",
+  yıl kartı "kein Stundenlohn eingetragen", aylık brüt grafiği gizli. `lib/salary/settings.ts`
+  (`salarySettingsFromRow`, `hasHourlyRate`, `notdienstDaysForBilling`) Gehalt sayfasında da kullanılıyor.
+- Not: Gehalt sayfası ayar satırı yokken varsayılan 15 €/h'yi DB'ye otomatik kaydediyor → o kullanıcılarda Dashboard
+  brütü yine görünür (Gehalt'ı bir kez açmış olmak "girilmiş" sayılıyor). Ayrı iş olarak bırakıldı.
+- Test: yeni `urlaubArt.test.ts` (12). Unit 728/728, tsc + lint temiz. E2E: 6 public geçti; login testi
+  çalışamadı — test projesi (stundly-test) Supabase'te uyumaya alınmış (DNS yok) → Dashboard'dan "Restore" gerek.
+
+---
+
 ## 2026-11-08 (175) – v0.87.1: 5 ajanlı inceleme + Faz 1.1 / 1.6 (yanlış veri düzeltmeleri)
 
 Kullanıcı `/ecc:plan` ile "Stundly'yi incele, ne eksik, ne gereksiz, kaç ajan istersen" dedi. 5 salt-okur ajan:

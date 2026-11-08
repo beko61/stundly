@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import type { VacationRequest, UrlaubArt, TimeEntry } from "@workly/shared";
 import { URLAUB_ARTEN } from "@workly/shared";
-import { isWeekday } from "@/lib/vacation/overtime";
 import {
   calcOvertimeToDate,
   notdienstYearLoadRange,
@@ -15,7 +14,9 @@ import {
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { STUNDLY_VERSION_LABEL } from "@/lib/version";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { getStandardTimes, getDefaultForDow } from "@/lib/utils/standardTimes";
+import { urlaubEntryFor, gehoertZuAntrag } from "@/lib/vacation/urlaubArt";
+import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
+import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import {
   useVacationRequestsQuery,
   useCreateVacationRequest,
@@ -240,12 +241,18 @@ export default function VacationPage() {
   // ── Computed from RQ data ──
   // vacTotal, yearUsedDays, overtimeMin, allUrlaubDates artık RQ verilerinden
   // türetiliyor (useMemo). Öncesinde useState + loadAux useEffect setliyordu.
-  const vacTotal = salarySettings?.urlaub_anspruch ? Number(salarySettings.urlaub_anspruch) : 30;
-  const VAC_TOTAL = vacTotal;
+  // Urlaubskonto: gleiche Rechnung wie Tracker, Dashboard und Gehalt (lib/vacation/urlaubskonto)
+  const { data: membership } = useCompanyMembership();
+  const urlaubskonto = useMemo(
+    () => urlaubskontoFor({ settings: salarySettings, yearEntries: yearTimeData, year, contract: membership?.contract }),
+    [salarySettings, yearTimeData, year, membership?.contract],
+  );
+  const VAC_TOTAL    = urlaubskonto.konto.totalEntitlement;
+  const yearUsedDays = urlaubskonto.usedThisYear;
 
-  const { yearUsedDays, overtimeMin, allUrlaubDates } = useMemo(() => {
+  const { overtimeMin, allUrlaubDates } = useMemo(() => {
     if (yearTimeData.length === 0) {
-      return { yearUsedDays: 0, overtimeMin: 0, allUrlaubDates: new Set<string>() };
+      return { overtimeMin: 0, allUrlaubDates: new Set<string>() };
     }
     // Aynı hesap Berichte "Gesamt Überstunden" kartında — iki sayfa hep aynı rakamı gösterir.
     const { diffMin } = calcOvertimeToDate({
@@ -258,15 +265,12 @@ export default function VacationPage() {
         : DEFAULT_TARGET_HOURS_PER_MONTH,
       todayISO,
     });
-    // Urlaub-Kontingent: das ganze Jahr, auch geplante Tage (Mo-Fr).
+    // Urlaubstage im Jahr (Monatsbalken)
     const s = new Set<string>();
-    let urlaubDays = 0;
     for (const e of yearTimeData) {
-      if (e.day_type !== "urlaub") continue;
-      s.add(e.date);
-      if (isWeekday(e.date)) urlaubDays++;
+      if (e.day_type === "urlaub") s.add(e.date);
     }
-    return { yearUsedDays: urlaubDays, overtimeMin: Math.max(0, diffMin), allUrlaubDates: s };
+    return { overtimeMin: Math.max(0, diffMin), allUrlaubDates: s };
   }, [salarySettings, yearTimeData, yearNdData, holidays, year, todayISO]);
 
   // Profile — direct supabase (single fetch, no hook), auto-loads on mount
@@ -309,7 +313,7 @@ export default function VacationPage() {
   }, [showForm]);
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  const remainingDays = VAC_TOTAL - yearUsedDays;
+  const remainingDays = urlaubskonto.konto.remaining;
   const overtimeDays  = Math.floor(overtimeMin / 60 / 8);
   const overtimeHours = Math.round(overtimeMin / 60 * 10) / 10;
   const totalAvailable = remainingDays + overtimeDays;
@@ -416,6 +420,26 @@ export default function VacationPage() {
     if (!session?.user) { setSaving(false); return; }
     const userId = session.user.id;
 
+    // Tageseinträge: nur Mo–Fr ohne Feiertage (Bundesland), Art → day_type + Tag
+    const bl = profile?.bundesland ?? "NI";
+    const ftRange: Record<string, string> = {};
+    for (let y = Number(startDate.slice(0, 4)); y <= Number(endDate.slice(0, 4)); y++) {
+      Object.assign(ftRange, getFeiertage(y, bl));
+    }
+    const dates = workdayDates(startDate, endDate).filter((d) => !ftRange[d]);
+
+    // Schon eingetragene Arbeitszeiten nicht stillschweigend überschreiben
+    if (dates.length > 0) {
+      const { data: existing } = await supabase.from("time_entries")
+        .select("date,day_type,start_time")
+        .eq("user_id", userId).in("date", dates);
+      const work = (existing ?? []).filter((x) => x.day_type === "arbeiten" && x.start_time);
+      if (work.length > 0 && !confirm(
+        `An ${work.length} Tag${work.length === 1 ? "" : "en"} sind schon Arbeitszeiten eingetragen ` +
+        `(${work.map((x) => fmtDate(x.date)).join(", ")}). Mit dem Antrag überschreiben?`,
+      )) { setSaving(false); return; }
+    }
+
     // vacation_requests → React Query mutation (list cache otomatik invalide olur)
     try {
       await createReqMut.mutateAsync({
@@ -435,12 +459,12 @@ export default function VacationPage() {
 
     // time_entries urlaub günleri (RQ hook range=month, burada year-wide yazıyoruz —
     // supabase direct upsert kaldı, RQ cache'i aux load ile refresh olur)
-    const dates = workdayDates(startDate, endDate);
     if (dates.length > 0) {
+      const { day_type, tags } = urlaubEntryFor(urlaubArt);
       const rows = dates.map(date => ({
-        user_id: userId, date, day_type: "urlaub" as const,
+        user_id: userId, date, day_type,
         start_time: null, end_time: null, break_minutes: 0,
-        is_night_shift: false, note: bemerkung || null, tags: [] as string[],
+        is_night_shift: false, note: bemerkung || null, tags,
       }));
       await supabase.from("time_entries").upsert(rows, { onConflict: "user_id,date" });
     }
@@ -504,36 +528,16 @@ export default function VacationPage() {
     try { await deleteReqMut.mutateAsync({ id }); }
     catch (err) { console.error("[vacation] delete failed:", err); return; }
     if (toDelete && userId) {
-      const dates = workdayDates(toDelete.start_date, toDelete.end_date);
-      if (dates.length > 0) {
-        // Urlaub silindi → o günleri sadece silmiyoruz, standard çalışma
-        // saatleriyle geri dolduruyoruz. Kullanıcı beklentisi: "urlaub kaldırılınca
-        // o gün normal iş günü gibi görünsün" (offline versiyondaki davranış).
-        // upsert onConflict=user_id,date urlaub row'unu overwrite eder.
-        // NOT: workdayDates() zaten Sa/So filtreler → sadece Mo-Fr geliyor.
-        const std = getStandardTimes();
-        const rows = dates
-          .map(date => {
-            const dow      = new Date(date).getDay();
-            const defaults = getDefaultForDow(dow, std);
-            if (!defaults) return null; // güvenlik — Sa/So olmamalı ama emin ol
-            return {
-              user_id:        userId,
-              date,
-              day_type:       "arbeiten" as const,
-              start_time:     defaults.start,
-              end_time:       defaults.end,
-              break_minutes:  defaults.pause,
-              is_night_shift: false,
-              note:           null,
-              tags:           [] as string[],
-            };
-          })
-          .filter((r): r is NonNullable<typeof r> => r !== null);
-        if (rows.length > 0) {
-          await supabase.from("time_entries").upsert(rows, { onConflict: "user_id,date" });
-        }
-      }
+      // Nur die Einträge dieses Antrags entfernen — keine erfundenen Arbeitszeiten eintragen
+      // (früher: Standardzeiten, auch für zukünftige Tage).
+      const art = (toDelete.urlaub_art as UrlaubArt) ?? "Erholungsurlaub";
+      const { data: inRange } = await supabase.from("time_entries")
+        .select("id,day_type,tags")
+        .eq("user_id", userId)
+        .gte("date", toDelete.start_date).lte("date", toDelete.end_date)
+        .in("day_type", ["urlaub", "frei"]);
+      const ids = (inRange ?? []).filter((x) => gehoertZuAntrag(x, art)).map((x) => x.id);
+      if (ids.length > 0) await supabase.from("time_entries").delete().in("id", ids);
     }
     void invalidateAllTimeEntries(qc); // time_entries değişti → derived state (allUrlaubDates, yearUsedDays) refresh
   }

@@ -17,6 +17,7 @@ import {
 import {
   MAX_FOTOS, useAddFoto, useDeleteAnhang, useNotdienstAnhaenge, useSaveUnterschrift,
 } from "@/hooks/queries/useNotdienstAnhaenge";
+import { nameParts } from "@/lib/utils/personName";
 
 /** Formularwerte des Einsatzes, die in den Bericht gehen. */
 export type BerichtDaten = Pick<NotdienstReportInput,
@@ -162,7 +163,7 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
       const [{ data: pRaw }, briefkopf] = session?.user
         ? await Promise.all([
             supabase.from("profiles")
-              .select("vorname,nachname,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,signature_data")
+              .select("vorname,nachname,full_name,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,signature_data")
               .eq("user_id", session.user.id).maybeSingle(),
             loadMyBriefkopf(supabase),
           ])
@@ -181,7 +182,7 @@ export function NotdienstBerichtPanel({ notdienstId: id, bericht, offline = fals
           ort: p?.firma_ort ?? "", telefon: p?.firma_telefon ?? "", email: p?.email ?? "", logo: p?.logo_data ?? null,
         },
         techniker: {
-          name: [p?.vorname, p?.nachname].filter(Boolean).join(" ") || session?.user?.email || "",
+          name: Object.values(nameParts(p)).filter(Boolean).join(" ") || session?.user?.email || "",
           signature: p?.signature_data ?? null,
         },
       });

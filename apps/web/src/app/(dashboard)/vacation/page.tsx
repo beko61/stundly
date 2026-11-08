@@ -34,6 +34,7 @@ import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 import { PdfPreview } from "@/components/plan/PdfPreview";
 import { addVorschauWatermark } from "@/lib/pdf/watermark";
 import type { Feature } from "@/lib/plan/entitlements";
+import { nameParts } from "@/lib/utils/personName";
 
 // Direct time_entries upsert sonrası tüm time_entries query'lerini invalide et.
 // (month + range key'leri ayrı prefix'lerde olduğu için predicate kullanıyoruz.)
@@ -278,7 +279,7 @@ export default function VacationPage() {
 
     const [{ data: profRaw }, briefkopf] = await Promise.all([
       supabase.from("profiles")
-        .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon")
+        .select("vorname,nachname,full_name,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,logo_data,signature_data,bundesland,firma_strasse,firma_plz,firma_ort,firma_telefon")
         .eq("user_id", user.id).single(),
       loadMyBriefkopf(supabase),
     ]);
@@ -286,7 +287,8 @@ export default function VacationPage() {
     const prof = profRaw ? applyBriefkopf(profRaw, briefkopf) : profRaw;
 
     if (prof) {
-      setProfile(prof as Profile);
+      // Vor-/Nachname leer → aus full_name (PDF, Mail-Betreff, Gruß)
+      setProfile({ ...(prof as Profile), ...nameParts(prof as { vorname?: string | null; nachname?: string | null; full_name?: string | null }) });
       if (prof.signature_data) setSigData(prof.signature_data);
       // Nur vorbelegen, wenn noch nichts eingetragen ist (Profil kann nach dem Tippen ankommen)
       if (prof.email) setMailTo((cur) => cur || prof.email);

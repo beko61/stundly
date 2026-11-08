@@ -384,7 +384,7 @@ export default function DashboardPage() {
               n: 1,
               icon: "⏱",
               title: "Heute eintragen",
-              desc: "Auf den heutigen Tag tippen, Zeiten prüfen, speichern. Einen Notdienst trägst du genauso ein.",
+              desc: "Auf den heutigen Tag tippen, Zeiten prüfen, speichern. Notdienste trägst du am Tag über „+ Notdienst hinzufügen“ ein.",
               cta: "Zur Zeiterfassung",
               href: "/tracker",
             },

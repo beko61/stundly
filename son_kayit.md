@@ -1,5 +1,25 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (175) – v0.87.1: 5 ajanlı inceleme + Faz 1.1 / 1.6 (yanlış veri düzeltmeleri)
+
+Kullanıcı `/ecc:plan` ile "Stundly'yi incele, ne eksik, ne gereksiz, kaç ajan istersen" dedi. 5 salt-okur ajan:
+kullanıcı yolculuğu, kod sağlığı, güvenlik, pazar/rakip, SEO+ilk sayfa. Birleşik plan (Faz 1 doğru rakamlar, Faz 2
+güvenlik — Stripe öncesi şart, Faz 3 ilk kullanım, Faz 4 Google, Faz 5 temizlik) sunuldu; kullanıcı: "1.1'den başla
+1.6 yap sonra mola". Açık kararlar: davet listeleme açığı (davet sistemi "dokunma" kuralı → izin gerek), Differenz
+"bugüne kadar" mı, apps/mobile sil/arşiv, Basic'te indirme kilidi kalsın mı.
+
+- **1.1** `TimeEntryModal`: "Notdienst" gün tipi seçilemez (monthStats bu tipi hiç saymıyordu → saatler kayboluyordu).
+  Canlıda bu tipte kayıt yok (yoklandı, 0). Dashboard rehber metni düzeltildi ("+ Notdienst hinzufügen").
+  Yeni test `TimeEntryModal.test.tsx`.
+- **1.6** `lib/utils/personName.ts` `nameParts`: Vorname/Nachname boşsa `full_name`'den (son kelime = Nachname).
+  Kayıt sadece full_name yazıyor → 9 hesaptan 8'inde Vorname/Nachname boştu (yoklandı) → Monatsbericht
+  "Mitarbeiter" basıyordu. Kullanıldı: Berichte PDF, Urlaub (PDF/konu/selam), Notdienst raporu teknisyen adı,
+  Profil formu ön doldurma (kaydedince kalıcı). Test `personName.test.ts`.
+- Not: 08.11 itibarıyla 9 hesap (yeni: 14429b5d).
+- Unit 716/716, tsc + lint temiz.
+
+---
+
 ## 2026-10-25 (174) – v0.87.0: Freemium 2. aşama — tüm Basic kilitleri hazır (hâlâ kapalı)
 
 Kullanıcı önizlemeyi denedi: "çalışıyor" → 2. aşama. Bayrak kapalı, canlıda kimse etkilenmiyor.

@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { resizeLogo } from "@/lib/image/resizeLogo";
 import { loadMyBriefkopf, type Briefkopf } from "@/lib/company/briefkopf";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
+import { nameParts } from "@/lib/utils/personName";
 
 interface Profile {
   vorname:        string;
@@ -157,13 +158,15 @@ export default function SettingsPage() {
     if (!session?.user) return;
     const { data } = await supabase
       .from("profiles")
-      .select("vorname,nachname,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,bundesland,signature_data,weekly_digest_enabled,monthly_report_enabled")
+      .select("vorname,nachname,full_name,personal_nr,eintrittsdatum,abteilung,vorgesetzter,email,company_name,firma_strasse,firma_plz,firma_ort,firma_telefon,logo_data,bundesland,signature_data,weekly_digest_enabled,monthly_report_enabled")
       .eq("user_id", session.user.id)
       .single();
     if (data) {
+      // Leere Namensfelder mit dem Namen aus der Registrierung vorbelegen (wird beim Speichern übernommen)
+      const nm = nameParts(data);
       setProfile({
-        vorname:        data.vorname        ?? "",
-        nachname:       data.nachname       ?? "",
+        vorname:        nm.vorname,
+        nachname:       nm.nachname,
         personal_nr:    data.personal_nr    ?? "",
         eintrittsdatum: data.eintrittsdatum ?? "",
         abteilung:      data.abteilung      ?? "",

@@ -26,6 +26,7 @@ import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
 import { usePlan } from "@/hooks/usePlan";
 import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 import { PdfPreview } from "@/components/plan/PdfPreview";
+import { nameParts } from "@/lib/utils/personName";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -344,7 +345,7 @@ export default function ReportsPage() {
           .select("date, start_time, end_time, erledigt, kunde, note")
           .eq("user_id", uid).gte("date", ndRange.start).lte("date", ndRange.end),
         supabase.from("profiles")
-          .select("vorname, nachname, personal_nr, abteilung, vorgesetzter, email, company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, signature_data, bundesland")
+          .select("vorname, nachname, full_name, personal_nr, abteilung, vorgesetzter, email, company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, signature_data, bundesland")
           .eq("user_id", uid).maybeSingle(),
         loadMyBriefkopf(supabase),
       ]);
@@ -366,8 +367,10 @@ export default function ReportsPage() {
         signature_data: (prof?.signature_data as string | null) ?? null,
       };
       // Mitarbeiter alanları
-      if (prof?.vorname)      profile.vorname      = prof.vorname as string;
-      if (prof?.nachname)     profile.nachname     = prof.nachname as string;
+      // Vor-/Nachname leer → aus full_name (Registrierung speichert nur den vollen Namen)
+      const nm = nameParts(prof as { vorname?: string | null; nachname?: string | null; full_name?: string | null } | null);
+      if (nm.vorname)  profile.vorname  = nm.vorname;
+      if (nm.nachname) profile.nachname = nm.nachname;
       if (prof?.personal_nr)  profile.personal_nr  = prof.personal_nr as string;
       if (prof?.abteilung)    profile.abteilung    = prof.abteilung as string;
       if (prof?.vorgesetzter) profile.vorgesetzter = prof.vorgesetzter as string;

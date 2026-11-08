@@ -49,11 +49,13 @@ interface Props {
   onClose: () => void;
 }
 
-// Wählbare Tagestypen: Arbeiten / Urlaub / Krank / Notdienst / Feiertag
+// Wählbare Tagestypen: Arbeiten / Urlaub / Krank / Feiertag
 // 'Frei' ist absichtlich ausgeblendet — leere Tage sind automatisch frei,
 // daraus muss kein DB-Eintrag erstellt werden.
+// 'Notdienst' ebenfalls nicht: als Tagestyp wurden die Stunden nirgends gezählt (monthStats
+// überspringt ihn). Notdienste kommen über "+ Notdienst hinzufügen" (notdienst_entries).
 const DAY_TYPE_OPTIONS = (Object.entries(DAY_TYPE_LABELS) as [DayType, string][])
-  .filter(([value]) => value !== DAY_TYPES.FREI);
+  .filter(([value]) => value !== DAY_TYPES.FREI && value !== DAY_TYPES.NOTDIENST);
 
 /**
  * Default Zeitwerte für ein neues Eintrag.

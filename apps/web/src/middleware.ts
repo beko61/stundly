@@ -5,7 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 // /api/stripe/webhook: Stripe sendet keine Session-Cookies — ohne diesen Eintrag leitete die
 // Middleware jeden Webhook per 307 auf /login um und Stripe verwarf ihn (seit dem Initial Commit).
 // Die Route prüft selbst die Stripe-Signatur (STRIPE_WEBHOOK_SECRET).
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/onboarding", "/", "/pricing", "/impressum", "/datenschutz", "/agb", "/avv", "/demo", "/kontakt", "/handwerker", "/notdienst-verwaltung", "/vergleich", "/ueberstundenrechner", "/zuschlagsrechner", "/rufbereitschaft-verguetung", "/stundenzettel-vorlage", "/stundenzettel-excel-vorlage", "/firma", "/api/contact", "/api/errors", "/api/cron", "/api/stripe/webhook", "/api/email/unsubscribe"];
+const PUBLIC_PATHS = ["/login", "/register", "/join", "/forgot-password", "/reset-password", "/onboarding", "/", "/pricing", "/impressum", "/datenschutz", "/agb", "/avv", "/demo", "/kontakt", "/handwerker", "/notdienst-verwaltung", "/vergleich", "/ueberstundenrechner", "/zuschlagsrechner", "/rufbereitschaft-verguetung", "/stundenzettel-vorlage", "/stundenzettel-excel-vorlage", "/firma", "/api/contact", "/api/errors", "/api/cron", "/api/stripe/webhook", "/api/email/unsubscribe"];
 
 // Sadece company_admin erişebilir
 const COMPANY_ADMIN_PATHS = ["/company", "/team"];
@@ -64,7 +64,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Giriş yapmış → login/register'a gitmeye çalışırsa yönlendir
-  if (user && (pathname === "/login" || pathname === "/register")) {
+  // Ausnahme: Einladungslink (/login?token=…) — sonst ging der Token verloren und der Beitritt passierte nie
+  const hasInviteToken = request.nextUrl.searchParams.has("token");
+  if (user && !hasInviteToken && (pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

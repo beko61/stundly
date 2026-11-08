@@ -1,4 +1,23 @@
-﻿## 2026-11-08 (183) – v0.92.1: Gehalt überschrieb die Einrichtung mit 15 €/h / 174 h
+﻿## 2026-11-08 (184) – v0.92.2: Einladungslink funktioniert für bestehende Konten
+
+Kullanıcı: "davet linkini kopyalıyorum yapıştırıp giriş yapıyorum olmuyor".
+
+- Sebep 1: `/join` middleware'de public değildi → çıkış yapmış kullanıcı /join/<token> açınca token'sız /login'e
+  atılıyordu; giriş normal, katılım hiç olmuyordu (e-postadaki link de aynı).
+- Sebep 2: giriş yapmış kullanıcı /join → "Anmelden" → /login?token=… middleware tarafından direkt /dashboard'a
+  yönlendiriliyordu → token kayboluyordu.
+- Sebep 3: kabul hata verince (başka e-posta, süresi dolmuş) login sayfası hatayı yazıp hemen yönlendiriyordu →
+  mesaj hiç görünmüyordu.
+- Düzeltme: `/join` public; `?token` varken giriş yapmış kullanıcı /login'de kalabiliyor; kabul hatasında sayfada
+  kalıp sebebi gösteriyor. Kabul kodu (/api/invitations/accept) değişmedi.
+- Test: yeni e2e/invite.e2e.ts — çıkışlı: link → Anmelden → profil company_id + employee, davet accepted;
+  başka hesapla: "andere E-Mail-Adresse" görünüyor, profil değişmiyor. Düzeltmeden önce ikisi de kırmızıydı.
+  Unit 747/747, E2E 17/17, tsc + lint temiz. Migration yok.
+- Not: telefonda çerez bandı "Anmelden & beitreten" düğmesini örtüyor (seçim yapılana kadar).
+
+---
+
+## 2026-11-08 (183) – v0.92.1: Gehalt überschrieb die Einrichtung mit 15 €/h / 174 h
 
 Kullanıcı (canlı test hesabı): "Gehalt'ta 15 da la"; Zeiterfassung "von 174h".
 

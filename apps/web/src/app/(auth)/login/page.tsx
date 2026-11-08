@@ -75,9 +75,12 @@ function LoginForm() {
         router.refresh();
         return;
       }
-      // Davet hatalı/expired ise normal akışa düş — hatayı göster ama login'i kabul et
+      // Davet hatalı/expired: auf der Seite bleiben und den Grund zeigen (vorher sofort weitergeleitet →
+      // Meldung nie sichtbar, "es passiert nichts"). Angemeldet ist man trotzdem.
       if (!acceptRes.ok) {
         setError(accept.error ?? "Einladung konnte nicht angewendet werden.");
+        setLoading(false);
+        return;
       }
     }
 

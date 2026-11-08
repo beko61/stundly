@@ -72,6 +72,18 @@ test("Einrichtung: Arbeitszeiten → Standardzeiten + Soll gespeichert, Stundenl
   await expect(page.getByLabel("Schritt 2 erledigt")).toBeVisible();
   await expect(page.getByText("Lohn einstellen →")).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("3-dashboard.png"), fullPage: true });
+
+  // Gehalt-Seite: zeigt 0 €/h + Soll aus der Einrichtung und überschreibt sie nicht per Auto-Save
+  // (früher: Standardwerte 15 €/h / 174 h geladen, bevor die User-ID da war, und gespeichert)
+  await page.goto("/salary");
+  await expect(page.locator('div:has(> label:has-text("Stundenlohn (€)")) > input')).toHaveValue("0");
+  await expect(page.locator('div:has(> label:has-text("Sollstunden/Monat")) > input')).toHaveValue("174.42");
+  await page.waitForTimeout(1500); // Auto-Save-Debounce 600 ms
+  const { data: after } = await admin.from("salary_settings")
+    .select("monthly_target_hours, hourly_rate").eq("user_id", userId)
+    .order("created_at", { ascending: false }).limit(1).single();
+  expect(Number(after!.hourly_rate)).toBe(0);
+  expect(Number(after!.monthly_target_hours)).toBe(174.42);
 });
 
 test("Anderes Gerät (leerer Speicher): Standardzeiten kommen aus dem Profil", async ({ browser }) => {

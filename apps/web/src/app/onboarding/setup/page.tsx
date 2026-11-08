@@ -12,6 +12,7 @@ import {
 import { saveStandardTimes } from "@/lib/utils/standardTimesSync";
 import { saveSollFromOnboarding } from "@/lib/onboarding/saveSoll";
 import { formatDur } from "@/lib/utils/formatDur";
+import { getBrowserQueryClient } from "@/providers/QueryProvider";
 
 const BUNDESLAENDER = [
   { code: "BB", name: "Brandenburg" },
@@ -116,6 +117,8 @@ function SetupForm() {
         setLoading(false);
         return;
       }
+      // Gecachtes "noch keine Lohn-Einstellungen" (vor der Einrichtung geladen) verwerfen
+      getBrowserQueryClient()?.removeQueries({ queryKey: ["salary_settings"] });
       router.push("/onboarding/done?type=individual");
     }
   }

@@ -1,4 +1,18 @@
-﻿# Stundly – Son Kayıt
+﻿## 2026-11-08 (183) – v0.92.1: Gehalt überschrieb die Einrichtung mit 15 €/h / 174 h
+
+Kullanıcı (canlı test hesabı): "Gehalt'ta 15 da la"; Zeiterfassung "von 174h".
+
+- Sebep: React-Query önbelleği localStorage'a yazılıyor (offline). Girişten hemen sonra salary_settings = null
+  önbelleğe girdi; kurulum satırı ekledikten sonra önbellek yenilenmedi. Gehalt sayfası null'u görüp varsayılanları
+  (15 €/h, 174 h) yükledi ve otomatik kaydetme bunları veritabanına yazdı → kurulumdaki Soll ve 0 €/h kayboldu.
+- Düzeltme: Gehalt sayfası ayarları ancak sorgu bitince alıyor (isPending || isFetching; isLoading devre dışı
+  sorguda false idi). Kurulum kaydettikten sonra salary_settings önbelleğini siliyor.
+- Test: E2E onboarding → /salary'de Stundenlohn 0 ve Soll 174.42 görünüyor, 1,5 sn sonra veritabanında hâlâ aynı
+  (düzeltmeden önce 15 ile kırmızıydı). Unit 747/747, E2E 15/15, tsc + lint temiz. Migration yok.
+
+---
+
+# Stundly – Son Kayıt
 
 ## 2026-11-08 (182) – v0.92.0: Faz 3.3 + 3.5 — Angestellte ansprechen, Dashboard-Guide hakt ab; Einrichtung am Handy
 

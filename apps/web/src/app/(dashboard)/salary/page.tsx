@@ -79,7 +79,12 @@ export default function SalaryPage() {
   const router = useRouter();
   const setTrackerMonth = useTrackerStore(s => s.setMonth);
   // ── RQ hooks ─────────────────────────────────────────────────────────────
-  const { data: salaryData, isLoading: lSalarySettings } = useSalarySettingsQuery();
+  // Erst übernehmen, wenn die Query wirklich fertig ist: isPending deckt die noch unbekannte User-ID
+  // (Query deaktiviert → isLoading wäre false), isFetching einen veralteten Cache-Stand (z. B. "noch keine
+  // Einstellungen" aus localStorage vor der Einrichtung). Sonst wurden Standardwerte (15 €/h, 174 h)
+  // geladen und per Auto-Save gespeichert.
+  const { data: salaryData, isPending: lSalaryPending, isFetching: lSalaryFetching } = useSalarySettingsQuery();
+  const lSalarySettings = lSalaryPending || lSalaryFetching;
   const upsertSalarySettings = useUpsertSalarySettings();
 
   const [records,  setRecords]  = useState<MonthRecord[]>([]);

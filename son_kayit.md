@@ -1,4 +1,21 @@
-﻿## 2026-11-08 (184) – v0.92.2: Einladungslink funktioniert für bestehende Konten
+﻿## 2026-11-08 (185) – v0.93.0: Firmen-Panel lädt bestehende Konten per Link ein
+
+Kullanıcı: kopyaladığı link firma daveti değil tavsiye linkiydi (/register?ref=…); panelde mevcut hesabı davet
+etmenin yolu yoktu (v0.22.0'da kaldırılmış, sadece "Mitarbeiter direkt erstellen" kalmıştı). "Evet, ekle".
+
+- Yeni `POST /api/company/invitations {email}` (company_admin): zaten ekipteyse 409 (yönetici kendini çalışana
+  düşüremez); açık ve geçerli davet varsa aynı token; süresi dolmuş/geri alınmış/kabul edilmişse yeni token + 7 gün.
+  E-posta gönderilmez; audit `invitation.created`.
+- Mitarbeiter sayfası: "Bestehendes Stundly-Konto einladen" kartı → link + "Link kopieren"; "Offene Einladungen"
+  satırlarında da "Link kopieren". "Direkt erstellen" e-posta kayıtlıysa artık link yoluna yönlendiriyor.
+- Kabul kodu (/api/invitations/accept) değişmedi.
+- Test: unit 6 (403/400/409/yeni/aynı token/yeniden), E2E: admin panelde link oluşturuyor, kendini davet edemiyor,
+  başka tarayıcıda link → Anmelden → employee; admin rolü değişmiyor. Unit 753/753, E2E 18/18, tsc + lint temiz.
+  Migration yok.
+
+---
+
+## 2026-11-08 (184) – v0.92.2: Einladungslink funktioniert für bestehende Konten
 
 Kullanıcı: "davet linkini kopyalıyorum yapıştırıp giriş yapıyorum olmuyor".
 

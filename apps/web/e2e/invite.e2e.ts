@@ -13,9 +13,11 @@ const admin = createClient(env.url, env.service, { auth: { persistSession: false
 
 const stamp = Date.now();
 const password = randomBytes(12).toString("base64url") + "A1!";
-const users: Record<"invited" | "other", { email: string; id: string }> = {
+const users: Record<"invited" | "other" | "boss" | "joiner", { email: string; id: string }> = {
   invited: { email: `e2e-inv-${stamp}@example.com`, id: "" },
   other:   { email: `e2e-inv-other-${stamp}@example.com`, id: "" },
+  boss:    { email: `e2e-inv-boss-${stamp}@example.com`, id: "" },
+  joiner:  { email: `e2e-inv-joiner-${stamp}@example.com`, id: "" },
 };
 let companyId = "";
 
@@ -45,6 +47,9 @@ test.beforeAll(async () => {
     .insert({ name: "E2E Einladung", slug: `e2e-inv-${stamp}` }).select("id").single();
   if (error) throw error;
   companyId = co.id as string;
+  const { error: pErr } = await admin.from("profiles")
+    .update({ company_id: companyId, role: "company_admin" }).eq("user_id", users.boss.id);
+  if (pErr) throw pErr;
 });
 
 test.afterAll(async () => {
@@ -82,4 +87,36 @@ test("Angemeldet mit anderem Konto: Grund wird angezeigt statt stiller Weiterlei
 
   const { data: prof } = await admin.from("profiles").select("company_id").eq("user_id", users.other.id).single();
   expect(prof?.company_id).toBeNull();
+});
+
+test("Firmen-Panel: Admin erstellt Link für bestehendes Konto → Konto tritt bei; sich selbst einladen geht nicht", async ({ page, browser }) => {
+  await page.goto("/login");
+  await login(page, users.boss.email);
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+  await page.goto("/company/employees");
+
+  const field = page.getByLabel("E-Mail des bestehenden Kontos");
+  await field.fill(users.boss.email);
+  await page.getByRole("button", { name: "Einladungslink erstellen" }).click();
+  await expect(page.getByText("Diese Person ist bereits in deinem Team.")).toBeVisible();
+
+  await field.fill(users.joiner.email);
+  await page.getByRole("button", { name: "Einladungslink erstellen" }).click();
+  const url = (await page.getByTestId("invite-link").textContent())!;
+  expect(url).toMatch(/\/join\/[0-9a-f]{64}$/);
+  await expect(page.getByText("Offene Einladungen")).toBeVisible();
+
+  // Mitarbeiter: eigener Browser, Link einfügen → Anmelden
+  const ctx = await browser.newContext();
+  const p2 = await ctx.newPage();
+  await p2.goto(new URL(url).pathname);
+  await p2.getByRole("link", { name: /Bereits registriert/ }).click();
+  await login(p2, users.joiner.email);
+  await p2.waitForURL((u) => !u.pathname.startsWith("/login"));
+  await ctx.close();
+
+  const { data: prof } = await admin.from("profiles").select("company_id, role").eq("user_id", users.joiner.id).single();
+  expect(prof).toMatchObject({ company_id: companyId, role: "employee" });
+  const { data: bossProf } = await admin.from("profiles").select("role").eq("user_id", users.boss.id).single();
+  expect(bossProf?.role).toBe("company_admin");
 });

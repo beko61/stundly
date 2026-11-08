@@ -27,6 +27,12 @@ interface Invitation {
   status:     string;
   expires_at: string;
   created_at: string;
+  token:      string;
+}
+
+/** Einladungslink für ein bestehendes Konto (Öffnen → "Anmelden" → Beitritt) */
+function joinLink(token: string): string {
+  return `${window.location.origin}/join/${token}`;
 }
 
 function fmtMinutes(mins: number): string {
@@ -51,6 +57,18 @@ export default function EmployeesPage() {
   const [error, setError]             = useState<string | null>(null);
   const [success, setSuccess]         = useState<string | null>(null);
   const [created, setCreated]         = useState<{ email: string; password: string; name: string } | null>(null);
+  // Bestehendes Konto per Link einladen
+  const [linkEmail, setLinkEmail]     = useState("");
+  const [linkBusy, setLinkBusy]       = useState(false);
+  const [linkError, setLinkError]     = useState<string | null>(null);
+  const [newLink, setNewLink]         = useState<{ email: string; url: string } | null>(null);
+  const [copied, setCopied]           = useState<string | null>(null);
+
+  function copyLink(url: string) {
+    void navigator.clipboard.writeText(url);
+    setCopied(url);
+    setTimeout(() => setCopied((c) => (c === url ? null : c)), 2000);
+  }
 
   function genPassword(): string {
     // 12 char: A-Z + a-z + 0-9 + special — easy to type
@@ -117,7 +135,9 @@ export default function EmployeesPage() {
     const json = await res.json();
 
     if (!res.ok) {
-      setError(json.error ?? "Mitarbeiter konnte nicht erstellt werden");
+      setError(res.status === 409
+        ? "Diese E-Mail hat schon ein Stundly-Konto — lade sie unten per Einladungslink ein."
+        : json.error ?? "Mitarbeiter konnte nicht erstellt werden");
       setInviting(false);
       return;
     }
@@ -130,6 +150,27 @@ export default function EmployeesPage() {
     setInviteRole("employee");
     load();
     setInviting(false);
+  }
+
+  async function handleInviteLink(e: React.FormEvent) {
+    e.preventDefault();
+    setLinkBusy(true);
+    setLinkError(null);
+    setNewLink(null);
+    const res = await fetch("/api/company/invitations", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ email: linkEmail }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setLinkBusy(false);
+    if (!res.ok) {
+      setLinkError(json.error ?? "Einladung konnte nicht erstellt werden.");
+      return;
+    }
+    setNewLink({ email: json.email, url: joinLink(json.token) });
+    setLinkEmail("");
+    load();
   }
 
   async function revokeInvitation(id: string) {
@@ -254,6 +295,39 @@ export default function EmployeesPage() {
         </form>
         {error && <p style={{ color: "var(--red)", fontSize: 12, marginTop: 8 }}>{error}</p>}
         {success && <p style={{ color: "var(--green)", fontSize: 12, marginTop: 8 }}>{success}</p>}
+      </div>
+
+      {/* Bestehendes Konto per Link einladen */}
+      <div className="card" style={{ padding: "24px", marginBottom: 32 }}>
+        <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Bestehendes Stundly-Konto einladen</h2>
+        <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
+          Für Personen, die schon ein Konto haben. Du bekommst einen Link zum Weitergeben (z. B. per WhatsApp).
+          Die Person öffnet ihn, tippt „Anmelden“ und meldet sich mit genau dieser E-Mail an.
+          Ist sie in einer anderen Firma, wechselt sie damit in deine. Der Link gilt 7 Tage, einmalig.
+        </p>
+        <form onSubmit={handleInviteLink} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input
+            className="input" type="email" value={linkEmail}
+            onChange={(e) => setLinkEmail(e.target.value)}
+            placeholder="email@beispiel.de" aria-label="E-Mail des bestehenden Kontos"
+            required style={{ flex: 1, minWidth: 200 }}
+          />
+          <button className="btn btn-primary" type="submit" disabled={linkBusy} style={{ whiteSpace: "nowrap" }}>
+            {linkBusy ? "Bitte warten..." : "Einladungslink erstellen"}
+          </button>
+        </form>
+        {linkError && <p style={{ color: "var(--red)", fontSize: 12, marginTop: 8 }}>{linkError}</p>}
+        {newLink && (
+          <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "var(--surface2)", border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 12, marginBottom: 6 }}>Link für <strong>{newLink.email}</strong>:</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <code data-testid="invite-link" style={{ flex: 1, minWidth: 0, fontSize: 11, overflowWrap: "anywhere" }}>{newLink.url}</code>
+              <button type="button" className="btn" style={{ fontSize: 12, whiteSpace: "nowrap" }} onClick={() => copyLink(newLink.url)}>
+                {copied === newLink.url ? "✓ Kopiert" : "Link kopieren"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Erfolgs-Modal: Passwort anzeigen + kopieren */}
@@ -509,6 +583,14 @@ export default function EmployeesPage() {
                     Läuft ab: {new Date(inv.expires_at).toLocaleDateString("de-DE")}
                   </div>
                 </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={() => copyLink(joinLink(inv.token))}
+                  className="btn"
+                  style={{ fontSize: 11, padding: "6px 12px" }}
+                >
+                  {copied === joinLink(inv.token) ? "✓ Kopiert" : "Link kopieren"}
+                </button>
                 <button
                   onClick={() => revokeInvitation(inv.id)}
                   className="btn"
@@ -516,6 +598,7 @@ export default function EmployeesPage() {
                 >
                   Widerrufen
                 </button>
+                </div>
               </div>
             ))}
           </div>

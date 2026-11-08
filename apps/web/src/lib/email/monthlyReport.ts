@@ -18,6 +18,7 @@ import {
 } from "@workly/shared";
 import { netMinutesForEntry } from "@/lib/company/admin";
 import { notdienstBelongsToMonth } from "@/lib/utils/weekMonth";
+import { escapeHtml } from "./companyMails";
 
 const FROM = "Stundly <noreply@stundly.de>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -154,7 +155,7 @@ export async function sendMonthlyReportEmail({ to, name, stats }: SendMonthlyRep
         <div style="color: #c084fc; font-weight: 800; font-size: 18px; letter-spacing: 3px; margin-bottom: 28px;">STUNDLY</div>
 
         <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">
-          Hallo ${name.split(" ")[0] ?? name} 👋
+          Hallo ${escapeHtml(name.split(" ")[0] ?? name)} 👋
         </h1>
         <p style="color: #a8a8b8; font-size: 14px; line-height: 1.7; margin-bottom: 28px;">
           Hier ist deine Zusammenfassung für <strong style="color:#e8e8f0">${stats.monthLabel}</strong>.

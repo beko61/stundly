@@ -61,6 +61,17 @@ export async function POST(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // Firmen-Mitarbeiter: Zeiten sind Unterlagen des Arbeitgebers (Aufbewahrung, freigegebene Monate)
+  // → nicht selbst löschbar. Nur Einzelnutzer ohne Firma.
+  const { data: prof } = await admin
+    .from("profiles").select("company_id").eq("user_id", user.id).maybeSingle();
+  if (prof?.company_id) {
+    return NextResponse.json(
+      { error: "In einer Firma kannst du deine Zeiten nicht selbst zurücksetzen. Bitte wende dich an deinen Arbeitgeber." },
+      { status: 403 },
+    );
+  }
+
   const tables = [
     "time_entries",
     "notdienst_entries",

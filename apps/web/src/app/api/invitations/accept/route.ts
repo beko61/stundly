@@ -32,6 +32,12 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   }
+  if (!user.email_confirmed_at) {
+    return NextResponse.json(
+      { error: "Bitte bestätige zuerst deine E-Mail-Adresse (Link in deinem Postfach)." },
+      { status: 403 },
+    );
+  }
 
   // Rate limit — auth'lu user başına saatte 20 attempt
   const rl = await checkRateLimit({

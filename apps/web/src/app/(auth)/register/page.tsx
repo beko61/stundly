@@ -8,6 +8,31 @@ import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 import { SIGNUP_SOURCES, isReferralCode } from "@/lib/marketing/referral";
 import { afterSignupPath } from "@/lib/marketing/afterSignup";
 
+/**
+ * Einladung per Token (E-Mail + Firmenname). Seit Migration 038 nur noch über die RPC —
+ * die offene Tabellen-Policy (jeder sah alle offenen Einladungen) ist weg. Fehlt die RPC
+ * noch (Migration nicht eingespielt), alter Weg, damit Eingeladene sich weiter registrieren können.
+ */
+async function loadInvitationPreview(
+  supabase: ReturnType<typeof createClient>, token: string,
+): Promise<{ email: string; company_name: string | null } | null> {
+  const { data, error } = await supabase.rpc("invitation_preview", { p_token: token });
+  if (!error) {
+    const row = (Array.isArray(data) ? data[0] : data) as { email: string; company_name: string | null } | undefined;
+    return row ?? null;
+  }
+  const { data: old } = await supabase
+    .from("invitations")
+    .select("email, companies(name)")
+    .eq("token", token)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (!old) return null;
+  const c = old.companies as unknown as { name: string } | { name: string }[] | null;
+  return { email: old.email as string, company_name: (Array.isArray(c) ? c[0]?.name : c?.name) ?? null };
+}
+
 function mapError(msg: string): string {
   if (msg.includes("already registered") || msg.includes("already been registered"))
     return "Diese E-Mail-Adresse ist bereits registriert.";
@@ -57,18 +82,9 @@ function RegisterForm() {
   useEffect(() => {
     if (!token) return;
     const supabase = createClient();
-    supabase
-      .from("invitations")
-      .select("companies(name)")
-      .eq("token", token)
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle()
-      .then(({ data }) => {
-        const companies = data?.companies as unknown as { name: string } | { name: string }[] | null;
-        const name = Array.isArray(companies) ? companies[0]?.name : companies?.name;
-        if (name) setCompanyName(name);
-      });
+    void loadInvitationPreview(supabase, token).then((inv) => {
+      if (inv?.company_name) setCompanyName(inv.company_name);
+    });
   }, [token]);
 
   async function handleRegister(e: React.FormEvent) {
@@ -98,13 +114,7 @@ function RegisterForm() {
     // güvenmez (migration 021). Invitation apply'ı /api/invitations/accept
     // server-side'da service_role ile yapılır.
     if (token) {
-      const { data: inv } = await supabase
-        .from("invitations")
-        .select("email")
-        .eq("token", token)
-        .eq("status", "pending")
-        .gt("expires_at", new Date().toISOString())
-        .maybeSingle();
+      const inv = await loadInvitationPreview(supabase, token);
 
       if (!inv) {
         setError("Einladung ist abgelaufen oder ungültig.");

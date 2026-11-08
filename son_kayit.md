@@ -1,5 +1,45 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (177) – v0.88.0: Faz 2 güvenlik (Stripe öncesi) + Migration 038
+
+Kullanıcı: "bunların hepsini yap bana soru sorma" (Faz 1 + Faz 2 tablosu; 2.2 davet maddesi dahil → davet
+sistemine bu düzeltme için dokunuldu, minimal).
+
+**Migration 038 (`supabase/migrations/038_sicherheit.sql`) — kullanıcı SQL Editor'da çalıştıracak:**
+- **2.1** `vacation_requests_lock_decision` trigger: tarayıcıdan (authenticated/anon) status ve onay/ret alanları
+  değiştirilemez, INSERT hep `pending`; kararlı talebin tarihi değişirse yeniden `pending`. Karar sadece
+  `/api/vacation/[id]/decision` (service_role).
+- **2.2** "Anyone can view pending invitation by token" policy silindi (girişsiz herkes tüm bekleyen davetleri
+  e-posta + firma ile listeleyebiliyordu). Yerine RPC `invitation_preview(token)`.
+- **2.4** `companies_lock_billing_fields` trigger (max_employees, owner_id sadece sunucu) + RPC
+  `my_subscription_status()` (çalışan firma aboneliğini RLS yüzünden göremiyordu).
+- **2.7** `public` şemasında search_path'i olmayan tüm fonksiyonlara `search_path = public` (DO bloğu, idempotent).
+- `test_setup.sql` 038'i içeriyor (001–038).
+
+**Kod:**
+- **2.2** Kayıt sayfası daveti RPC ile okuyor; RPC yoksa (migration henüz yok) eski yol → davetliler kayıt olabilmeye
+  devam eder. `/api/invitations/accept`: e-posta onaylı değilse 403. `/api/email/invite`: sadece kendi firmasının
+  admini, bekleyen davet, 30/saat limit.
+- **2.3** Stripe portal: firma aboneliğini sadece company_admin/super_admin açar; `returnUrl` artık istemciden
+  alınmıyor (sadece güvenli göreli `returnPath`, varsayılan /settings). Checkout: team/business sadece firma admini;
+  bireysel planda companyId gönderilmiyor.
+- **2.4** `resolveTier(subs)`: abonelik durumu biliniyorsa Firma = firma üyesi + çalışan firma aboneliği
+  (active veya trial_end > şimdi); Plus "paid" = kendi aboneliği. Bilinmiyorsa (RPC yok) eski davranış.
+  `usePlan` + `/api/scan` RPC'yi kullanıyor (`lib/plan/subscriptionStatus.ts`). Paywall hâlâ kapalı → şu an etkisi yok.
+- **2.5** Mail HTML: `esc()` + `subj()` (`lib/email/resend.ts`): davet, hoş geldin, izin kararı (ret gerekçesi dahil),
+  abonelik maili; companyMails konuları CR/LF temiz; aylık/haftalık özet selamındaki ad escape. Davet linkinde
+  token `encodeURIComponent`.
+- **2.6** `reset-data`: firma üyesi (company_id dolu) → 403 (zamanlar işverenin kaydı).
+- **2.7** Zorunlu şifre değişikliği: şifre artık sunucuda (`updateUserById`) değişiyor, sadece başarılıysa bayrak
+  temizleniyor (eskiden POST ile şifre değişmeden atlanabiliyordu). 8–72 karakter, 10/saat. CSP eklendi
+  (`next.config.mjs`): self + Supabase (https/wss) + Vercel Analytics + Google Fonts; frame-ancestors none,
+  form-action/base-uri self, blob: PDF önizleme için. 'unsafe-inline'/'unsafe-eval' şimdilik açık (nonce sonra).
+  Prod build + tarayıcıda /, /login, /register, /stundenzettel-vorlage: CSP ihlali yok.
+- Not: Google Fonts dışarıdan yükleniyor (Almanya'da DSGVO açısından bilinen risk, LG München 2022) — ayrı iş.
+- Test: `escape.test.ts` (2), entitlements +1. Unit 731/731, tsc + lint temiz.
+
+---
+
 ## 2026-11-08 (176) – v0.87.2: Faz 1.2–1.5 — Urlaub türleri, tek Urlaubskonto, Dashboard brütü
 
 Kullanıcı Faz 1 + Faz 2 tablosunu yapıştırdı: "bunların hepsini yap bana soru sorma … kaç saat sürerse sürsün".

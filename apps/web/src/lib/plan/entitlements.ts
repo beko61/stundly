@@ -33,6 +33,12 @@ export interface TierInput {
   createdAt: string | null | undefined;
   /** Mitglied einer Firma (Mitarbeiter oder Chef) */
   hasCompany: boolean;
+  /**
+   * Laufende Abos (RPC my_subscription_status, Migration 038): Firma nur mit bezahltem/laufendem
+   * Firmen-Abo, Plus "bezahlt" nur mit eigenem Abo. Fehlt die Angabe (Migration noch nicht da),
+   * gilt das alte Verhalten (Firmenmitglied = Firma, profiles.plan).
+   */
+  subs?: { company: boolean; personal: boolean } | undefined;
   now?: Date;
   betaMode?: boolean;
   betaEnd?: string;
@@ -51,8 +57,14 @@ export function resolveTier(i: TierInput): TierInfo {
   const betaMode = i.betaMode ?? BETA_MODE;
   const betaEnd = i.betaEnd ?? BETA_END_DATE;
 
-  if (i.hasCompany || i.plan === "team" || i.plan === "business") return { tier: "firma", reason: "company" };
-  if (i.plan === "individual") return { tier: "plus", reason: "paid" };
+  if (i.subs) {
+    // Kostenlos eine Firma anlegen reicht nicht mehr für den Firma-Tarif
+    if (i.hasCompany && i.subs.company) return { tier: "firma", reason: "company" };
+    if (i.subs.personal) return { tier: "plus", reason: "paid" };
+  } else {
+    if (i.hasCompany || i.plan === "team" || i.plan === "business") return { tier: "firma", reason: "company" };
+    if (i.plan === "individual") return { tier: "plus", reason: "paid" };
+  }
 
   const created = i.createdAt ? new Date(i.createdAt) : null;
   // Beta-Versprechen: wer in der Beta kommt, hat Plus bis Beta-Ende

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { fetchSubscriptionStatus } from "@/lib/plan/subscriptionStatus";
 import { useSessionUserId } from "@/hooks/useSessionUserId";
 import {
   PAYWALL_ACTIVE, PAYWALL_PREVIEW_KEY, canTier, ndLimitFor, resolveTier,
@@ -37,13 +38,17 @@ export function usePlan(): PlanState {
     enabled:   typeof userId === "string",
     staleTime: 5 * 60_000,
     queryFn:   async () => {
-      const { data, error } = await createClient()
-        .from("profiles")
-        .select("plan, created_at, company_id, role")
-        .eq("user_id", userId!)
-        .maybeSingle();
+      const supabase = createClient();
+      const [{ data, error }, subs] = await Promise.all([
+        supabase.from("profiles")
+          .select("plan, created_at, company_id, role")
+          .eq("user_id", userId!)
+          .maybeSingle(),
+        fetchSubscriptionStatus(supabase),
+      ]);
       if (error) throw new Error(error.message);
-      return data as { plan: string | null; created_at: string | null; company_id: string | null; role: string | null } | null;
+      if (!data) return null;
+      return { ...(data as { plan: string | null; created_at: string | null; company_id: string | null; role: string | null }), subs };
     },
   });
 
@@ -51,6 +56,7 @@ export function usePlan(): PlanState {
     plan: q.data?.plan,
     createdAt: q.data?.created_at,
     hasCompany: !!q.data?.company_id,
+    subs: q.data?.subs,
   });
   const tier: Tier = preview ? "basic" : info.tier;
   // Bis die Daten da sind, nichts sperren (kein Aufblitzen von Schlössern)

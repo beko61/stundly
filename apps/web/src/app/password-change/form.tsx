@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { homePathForRole } from "@/lib/auth/homePath";
 
 interface Props {
@@ -32,26 +31,21 @@ export function PasswordChangeForm({ email, fullName, role }: Props) {
     }
 
     setLoading(true);
-    const supabase = createClient();
 
-    // 1) Auth password update
-    const { error: pwdErr } = await supabase.auth.updateUser({ password: pwd });
-    if (pwdErr) {
-      setError(pwdErr.message ?? "Passwort konnte nicht geändert werden.");
-      setLoading(false);
-      return;
-    }
-
-    // 2) Clear must_change_password flag (server-side, service role)
-    const res = await fetch("/api/account/change-password", { method: "POST" });
+    // 1) Passwort ändern + Pflicht-Flag löschen — beides serverseitig in einem Schritt
+    const res = await fetch("/api/account/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd }),
+    });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      setError(json.error ?? "Flag konnte nicht zurückgesetzt werden.");
+      setError(json.error ?? "Passwort konnte nicht geändert werden.");
       setLoading(false);
       return;
     }
 
-    // 3) Role-basiert weiterleiten
+    // 2) Role-basiert weiterleiten
     router.push(homePathForRole(role));
     router.refresh();
   }

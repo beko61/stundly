@@ -62,7 +62,7 @@ export async function sendLohnToSteuerberater(p: {
     from: FROM,
     to: p.to,
     ...(p.replyTo ? { replyTo: p.replyTo } : {}),
-    subject: `Lohn-Vorbereitung ${p.monthLabel} · ${p.firma}`,
+    subject: `Lohn-Vorbereitung ${p.monthLabel} · ${p.firma}`.replace(/[\r\n]+/g, " "),
     html: buildLohnMailHtml(p),
     attachments: [{ filename: lohnFileName(p.firma, p.year, p.month), content: Buffer.from(csv, "utf-8").toString("base64") }],
   });
@@ -110,7 +110,7 @@ export function buildTeamDigestHtml(name: string, d: TeamDigest): string {
 export async function sendTeamDigest(to: string, name: string, d: TeamDigest) {
   return resend.emails.send({
     from: FROM, to,
-    subject: `Wochenüberblick ${d.firma} · ${d.weekLabel}`,
+    subject: `Wochenüberblick ${d.firma} · ${d.weekLabel}`.replace(/[\r\n]+/g, " "),
     html: buildTeamDigestHtml(name, d),
   });
 }

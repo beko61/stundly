@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { checkRateLimit } from "@/lib/rateLimit/check";
 import { PAYWALL_ACTIVE, canTier, resolveTier } from "@/lib/plan/entitlements";
+import { fetchSubscriptionStatus } from "@/lib/plan/subscriptionStatus";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -42,7 +43,8 @@ export async function POST(req: NextRequest) {
   // Tarif: Foto-Scan ist Plus (KI-Kosten) — serverseitig prüfen, sobald die Bezahlschranke aktiv ist
   if (PAYWALL_ACTIVE) {
     const { data: p } = await supabase.from("profiles").select("plan, created_at, company_id").eq("user_id", user.id).maybeSingle();
-    const { tier } = resolveTier({ plan: p?.plan, createdAt: p?.created_at, hasCompany: !!p?.company_id });
+    const subs = await fetchSubscriptionStatus(supabase);
+    const { tier } = resolveTier({ plan: p?.plan, createdAt: p?.created_at, hasCompany: !!p?.company_id, subs });
     if (!canTier(tier, "ocr")) {
       return NextResponse.json({ error: "Foto-Scan ist in Stundly Plus enthalten." }, { status: 402 });
     }

@@ -9,6 +9,18 @@ describe("resolveTier — Basic / Plus / Firma", () => {
     expect(resolveTier({ ...base, plan: "business", createdAt: "2020-01-01", hasCompany: false }).tier).toBe("firma");
   });
 
+  it("mit Abo-Status (Migration 038): Firma nur mit laufendem Firmen-Abo", () => {
+    const after = new Date("2027-06-01"); // nach Beta, nach Testzeit
+    const old = "2020-01-01";
+    expect(resolveTier({ ...base, plan: "trial", createdAt: old, hasCompany: true, now: after,
+      subs: { company: true, personal: false } }).tier).toBe("firma");
+    // Firma kostenlos angelegt, kein Abo → kein Firma-Tarif
+    expect(resolveTier({ ...base, plan: "team", createdAt: old, hasCompany: true, now: after,
+      subs: { company: false, personal: false } }).tier).toBe("basic");
+    expect(resolveTier({ ...base, plan: "trial", createdAt: old, hasCompany: false, now: after,
+      subs: { company: false, personal: true } })).toEqual({ tier: "plus", reason: "paid" });
+  });
+
   it("Plus bezahlt (individual)", () => {
     expect(resolveTier({ ...base, plan: "individual", createdAt: "2020-01-01", hasCompany: false, now: new Date("2028-01-01") }))
       .toEqual({ tier: "plus", reason: "paid" });

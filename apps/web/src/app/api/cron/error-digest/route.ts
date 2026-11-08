@@ -4,7 +4,7 @@ import { groupErrors, type ErrorRow } from "@/lib/monitoring/errorEvents";
 import { sendErrorDigest } from "@/lib/email/errorDigest";
 
 /**
- * Täglich 07:00 UTC (vercel.json): Fehler der letzten 24 h an alle aktiven super_admin
+ * Täglich 07:00 UTC (vercel.json): Fehler der letzten 24 h an alle Super-Admins (is_super_admin; auch wenn eine Firma sie entfernt hat)
  * mailen (nur wenn es welche gab) und Ereignisse älter als 30 Tage löschen.
  * Authorization: Bearer $CRON_SECRET.
  */
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 
   const groups = groupErrors(rows);
   const { data: admins } = await admin.from("profiles")
-    .select("email").eq("role", "super_admin").eq("is_active", true).is("deleted_at", null);
+    .select("email").eq("is_super_admin", true);
   let sent = 0;
   for (const a of (admins ?? []) as { email: string | null }[]) {
     if (!a.email) continue;

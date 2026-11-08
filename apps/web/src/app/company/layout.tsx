@@ -27,7 +27,7 @@ export default async function CompanyLayout({ children }: { children: React.Reac
     redirect("/password-change");
   }
 
-  if (profile?.role !== "company_admin" && profile?.role !== "super_admin") {
+  if (profile?.role !== "company_admin") {
     redirect("/tracker");
   }
 

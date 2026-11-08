@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   // Nur Admins der Firma, zu der die Einladung gehört
   const { data: me } = await supabase
     .from("profiles").select("company_id, role").eq("user_id", user.id).single();
-  if (!me?.company_id || (me.role !== "company_admin" && me.role !== "super_admin")) {
+  if (!me?.company_id || me.role !== "company_admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

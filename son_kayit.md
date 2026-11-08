@@ -1,5 +1,40 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (179) – v0.89.0: Süper admin ayrı işaret (is_super_admin) — firmaya çalışan olarak katılabilir + Migration 039
+
+Kullanıcı: "firmaya kayıt olmam lazım … çıktığımda bilgilerim silinmesin, süper adminin firma çalışanı olarak kayıt
+olması gerek", "hesap değiştirmek istemiyorum" → Yol B ("b yi yap"). Çıkış kilidi sorusu cevapsız → varsayılan: sadece
+süper admin için (tüm çalışanlara genişletmek ayrı karar).
+
+**Sorun:** `profiles.role` hem platform rolünü (super_admin) hem firma rolünü tutuyordu. Davet kabulü role = employee
+yazınca süper admin yetkisi gidiyordu; rol super_admin kalsa firmada patron yetkisi alıyordu (tüm ekibi görme/silme).
+Firma çalışanı silince (deleted_at) hesap tamamen kilitleniyordu.
+
+**Migration 039 (`supabase/migrations/039_super_admin_flag.sql`) — test projesinde uygulandı; CANLIDA deploy'dan hemen sonra:**
+- `profiles.is_super_admin boolean default false`; mevcut super_admin → işaret true, role → firmaya bağlıysa
+  company_admin (önceki firma yetkileri aynı), değilse individual. Rol değişimi için 021 trigger'ı kısa süre kapalı.
+- Trigger `profiles_enforce_super_admin` (+ insert): işareti sadece service_role / SQL Editor değiştirir.
+- Eski policy'lerdeki 'super_admin' rol karşılaştırmalarına dokunulmadı (artık kimsede yok → etkisiz). Kokpit service_role
+  ile okuyor. `test_setup.sql` 001–039.
+
+**Kod:**
+- Kokpit erişimi `is_super_admin`: `lib/superadmin/auth.ts`, `superadmin/layout`, `create-account`, middleware
+  (`/superadmin` için profilden okur; JWT'de sadece role var), usePlan `isSuperAdmin`, Sidebar, AdminPanelLinks.
+- Firma yetkisi sadece `company_admin`: `getCompanyAdminContext`, `company/layout`, middleware, `email/invite`,
+  Stripe checkout/portal, team-digest alıcıları. create-company artık hep company_admin yazar (işarete dokunmaz).
+- Hesap kilidi: firma silse/pasif yapsa da süper admin girebilir (`(dashboard)/layout`, login) → kendi saatleri ve
+  Kokpit açık; firma kendi dönemini görmeye devam eder (company_id kalır). error-digest alıcıları = is_super_admin.
+- Kokpit: kullanıcı listesinde "Süper admin" ayrı rozet + filtre; rol menüsünde artık super_admin yok (sadece firma
+  rolleri); metrics süper adminleri işaretle hariç tutar; firma silmede süper admin işaretle korunur.
+- Davet kabulüne (`invitations/accept`) dokunulmadı.
+- Not: Hesap aynı anda tek firmaya bağlı — ana hesap Zuzz'a bağlıysa yeni davet kabulü onu Zuzz'dan çıkarır.
+- Test: `superAdminFlag.test.ts` (6), createCompany + companies route testleri yeni modele; E2E `superadmin.e2e.ts`
+  (firmadan silinmiş süper admin: giriş + tracker + Kokpit açık, firma paneli kapalı; normal hesap işareti kendine
+  veremez). Unit 737/737, E2E 13/13 (yeni test projesi `ietbprersdujtydzrppv`), tsc + lint temiz.
+- Yan iş: eski test projesi stundly-test 3+ saat "Coming up" takıldı → yeni test projesi + `test_setup.sql`.
+
+---
+
 ## 2026-11-08 (178) – v0.88.1: Google Fonts artık kendi sunucumuzdan (DSGVO)
 
 - Syne (400/600/700/800) ve DM Mono (400/500) artık `next/font/google` ile build sırasında indiriliyor ve

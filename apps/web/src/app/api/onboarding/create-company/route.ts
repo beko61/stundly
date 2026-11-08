@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   // Idempotent: kullanıcı zaten company_admin ise geri dön
   const { data: existing } = await supabase
     .from("profiles")
-    .select("role, company_id, bundesland")
+    .select("company_id, bundesland")
     .eq("user_id", user.id)
     .single();
 
@@ -101,13 +101,12 @@ export async function POST(req: NextRequest) {
   }
 
   // 2. Profile — role + company_id (+ bundesland nur, wenn noch keins gesetzt)
-  //    super_admin bleibt super_admin (sonst verliert der Inhaber das Admin-Panel —
-  //    super_admin hat im Firmen-Panel ohnehin alle Rechte).
+  //    Super-Admin bleibt Super-Admin: eigenes Merkmal is_super_admin, wird hier nicht angefasst.
   //    Ein vorhandenes persönliches Bundesland nicht überschreiben (Feiertage in den eigenen Zeiten).
   const { error: profileErr } = await admin
     .from("profiles")
     .update({
-      role: existing?.role === "super_admin" ? "super_admin" : "company_admin",
+      role: "company_admin",
       company_id: company.id,
       ...(existing?.bundesland ? {} : { bundesland }),
     })

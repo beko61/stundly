@@ -16,16 +16,18 @@ export default async function DashboardLayout({
 
   // Soft-delete / deaktiviert / must_change_password gate
   // — fail-open: profile fetch fail olursa engelleme.
+  // Super-Admin: löschen/deaktivieren durch eine Firma sperrt das Konto nicht (Daten bleiben sichtbar).
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_active, deleted_at, must_change_password")
+    .select("is_active, deleted_at, must_change_password, is_super_admin")
     .eq("user_id", user.id)
     .single();
-  if (profile?.deleted_at) {
+  const firmaSperrt = profile?.is_super_admin !== true;
+  if (firmaSperrt && profile?.deleted_at) {
     await supabase.auth.signOut();
     redirect("/login?blocked=deleted");
   }
-  if (profile?.is_active === false) {
+  if (firmaSperrt && profile?.is_active === false) {
     await supabase.auth.signOut();
     redirect("/login?blocked=inactive");
   }

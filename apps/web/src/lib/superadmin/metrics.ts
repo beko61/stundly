@@ -8,6 +8,7 @@ export interface SaUser {
   email:           string | null;
   name:            string | null;
   role:            string;
+  isSuperAdmin:    boolean;   // profiles.is_super_admin (Migration 039) — unabhängig von role
   isActive:        boolean;
   companyId:       string | null;
   companyName:     string | null;
@@ -81,7 +82,7 @@ const isoDay = (t: number) => {
 /** Super-Admins zählen nicht als Kunden. */
 export function computeCockpit(all: SaUser[], now: Date): Cockpit {
   const n = now.getTime();
-  const users = all.filter((u) => u.role !== "super_admin");
+  const users = all.filter((u) => !u.isSuperAdmin);
   const created = (u: SaUser) => ts(u.createdAt);
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 

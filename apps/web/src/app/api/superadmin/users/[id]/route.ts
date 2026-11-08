@@ -22,7 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Kendi hesabını pasif yapamazsın" }, { status: 400 });
   }
 
-  const allowedRoles = ["super_admin", "company_admin", "employee", "individual"];
+  // Firmen-Rolle; Super-Admin ist ein eigenes Merkmal (is_super_admin) und wird hier nicht vergeben
+  const allowedRoles = ["company_admin", "employee", "individual"];
   if (body.role && !allowedRoles.includes(body.role)) {
     return NextResponse.json({ error: "Geçersiz rol" }, { status: 400 });
   }

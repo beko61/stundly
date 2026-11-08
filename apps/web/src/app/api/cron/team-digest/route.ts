@@ -6,7 +6,7 @@ import { sendTeamDigest } from "@/lib/email/companyMails";
 
 /**
  * Montags-Überblick für den Chef — montags 05:30 UTC (vercel.json).
- * Nur Firmen mit `team_digest_enabled = true`; Empfänger: aktive company_admin/super_admin der Firma.
+ * Nur Firmen mit `team_digest_enabled = true`; Empfänger: aktive company_admin der Firma.
  * Authorization: Bearer $CRON_SECRET.
  */
 export const runtime = "nodejs";
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
         .select("user_id, full_name, email, role, is_active").eq("company_id", c.id).is("deleted_at", null);
       const all = (people ?? []) as { user_id: string; full_name: string | null; email: string | null; role: string; is_active: boolean }[];
       const ids = all.filter((p) => p.is_active).map((p) => p.user_id);
-      const recipients = all.filter((p) => p.is_active && p.email && (p.role === "company_admin" || p.role === "super_admin"));
+      const recipients = all.filter((p) => p.is_active && p.email && p.role === "company_admin");
       if (recipients.length === 0 || ids.length === 0) { results.push({ company: c.id, sent: 0 }); continue; }
 
       const [{ data: te }, { count: ndCount }, { data: rota }, { data: closings }, { count: vac }, { count: unpaid }] = await Promise.all([

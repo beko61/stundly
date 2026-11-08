@@ -7,10 +7,10 @@ import { createServerClient } from "@supabase/ssr";
 // Die Route prüft selbst die Stripe-Signatur (STRIPE_WEBHOOK_SECRET).
 const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/onboarding", "/", "/pricing", "/impressum", "/datenschutz", "/agb", "/avv", "/demo", "/kontakt", "/handwerker", "/notdienst-verwaltung", "/vergleich", "/ueberstundenrechner", "/zuschlagsrechner", "/rufbereitschaft-verguetung", "/stundenzettel-vorlage", "/stundenzettel-excel-vorlage", "/firma", "/api/contact", "/api/errors", "/api/cron", "/api/stripe/webhook", "/api/email/unsubscribe"];
 
-// Sadece company_admin veya super_admin erişebilir
+// Sadece company_admin erişebilir
 const COMPANY_ADMIN_PATHS = ["/company", "/team"];
 
-// Sadece super_admin erişebilir
+// Sadece Super-Admin (profiles.is_super_admin) erişebilir
 const SUPER_ADMIN_PATHS = ["/superadmin"];
 
 // Migration 028 custom_access_token_hook JWT'ye `user_role` claim ekler.
@@ -93,10 +93,18 @@ export async function middleware(request: NextRequest) {
         role = profile?.role ?? "individual";
       }
 
-      if (isSuperAdminPath && role !== "super_admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+      if (isSuperAdminPath) {
+        // Super-Admin ist ein eigenes Merkmal (profiles.is_super_admin, Migration 039), nicht die Rolle
+        const { data: sa } = await supabase
+          .from("profiles")
+          .select("is_super_admin")
+          .eq("user_id", user.id)
+          .single();
+        if (sa?.is_super_admin !== true) {
+          return NextResponse.redirect(new URL("/dashboard", request.url));
+        }
       }
-      if (isCompanyPath && role !== "company_admin" && role !== "super_admin") {
+      if (isCompanyPath && role !== "company_admin") {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }

@@ -3,7 +3,7 @@ import { getCompanyAdminContext, netMinutesForEntry } from "@/lib/company/admin"
 
 /**
  * GET /api/company/team-summary?month=YYYY-MM
- * Sadece company_admin (veya super_admin) çağırabilir.
+ * Sadece company_admin çağırabilir.
  *
  * Döner:
  *   employees:    [{ user_id, full_name, email, role, is_active, last_seen_at,

@@ -44,10 +44,10 @@ describe("POST /api/onboarding/create-company", () => {
     expect(profileUpdates[0]).toEqual({ role: "company_admin", company_id: "co-new", bundesland: "BY" });
   });
 
-  it("super_admin bleibt super_admin, eigenes Bundesland bleibt", async () => {
-    mockExisting.mockResolvedValue({ data: { role: "super_admin", company_id: null, bundesland: "NI" } });
+  it("Super-Admin (is_super_admin) wird nicht angefasst, wird company_admin; eigenes Bundesland bleibt", async () => {
+    mockExisting.mockResolvedValue({ data: { company_id: null, bundesland: "NI" } });
     expect((await POST(req())).status).toBe(200);
-    expect(profileUpdates[0]).toEqual({ role: "super_admin", company_id: "co-new" });
+    expect(profileUpdates[0]).toEqual({ role: "company_admin", company_id: "co-new" });
   });
 
   it("409, wenn schon eine Firma da ist", async () => {

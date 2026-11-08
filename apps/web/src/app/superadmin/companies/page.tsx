@@ -11,7 +11,7 @@ export default async function SuperAdminCompaniesPage() {
       .select("id, name, country_code, city, vat_id, max_employees, created_at, owner_id")
       .order("created_at", { ascending: false }),
     admin.from("subscriptions").select("company_id, plan, status, stripe_subscription_id"),
-    admin.from("profiles").select("user_id, email, full_name, role, company_id").not("company_id", "is", null),
+    admin.from("profiles").select("user_id, email, full_name, role, company_id, is_super_admin").not("company_id", "is", null),
   ]);
 
   // profiles.email ist oft leer → Login-E-Mail aus auth.users
@@ -46,7 +46,7 @@ export default async function SuperAdminCompaniesPage() {
       paidStripe:    !!sub?.stripe_subscription_id && ["active", "past_due", "trialing"].includes(String(sub?.status)),
       ownerEmail:    owner ? authEmail.get(owner.user_id as string) ?? (owner.email as string | null) ?? null : null,
       memberCount:   list.length,
-      superAdminMembers: list.filter((m) => m.role === "super_admin").length,
+      superAdminMembers: list.filter((m) => m.is_super_admin === true).length,
     };
   });
 

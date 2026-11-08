@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import type React from "react";
 import { inSegment, lastActivity, SOURCE_LABELS, type SaUser, type Segment } from "@/lib/superadmin/metrics";
 
-const ROLES = ["individual", "employee", "company_admin", "super_admin"];
+// Firmen-Rollen; Süper admin = eigenes Merkmal u.isSuperAdmin (Migration 039)
+const ROLES = ["individual", "employee", "company_admin"];
 const ROLE_LABELS: Record<string, string> = {
   individual: "Bireysel", employee: "Çalışan", company_admin: "Firma yöneticisi", super_admin: "Süper admin",
 };
@@ -58,7 +59,7 @@ export default function UsersTable({ initialUsers, initialSegment = "all" }: { i
     const q = search.trim().toLowerCase();
     const list = users.filter((u) =>
       inSegment(u, segment, now) &&
-      (role === "all" || u.role === role) &&
+      (role === "all" || (role === "super_admin" ? u.isSuperAdmin : u.role === role)) &&
       (!q || [u.name, u.email, u.companyName].some((v) => (v ?? "").toLowerCase().includes(q))));
     return sort === "activity"
       ? [...list].sort((a, b) => lastActivity(b) - lastActivity(a))
@@ -96,6 +97,7 @@ export default function UsersTable({ initialUsers, initialSegment = "all" }: { i
         <select className="input" value={role} onChange={(e) => setRole(e.target.value)} style={{ width: "auto" }} aria-label="Rol">
           <option value="all">Tüm roller</option>
           {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          <option value="super_admin">{ROLE_LABELS.super_admin}</option>
         </select>
         <select className="input" value={sort} onChange={(e) => setSort(e.target.value as "created" | "activity")} style={{ width: "auto" }} aria-label="Sıralama">
           <option value="created">Yeni kayıt önce</option>
@@ -117,7 +119,7 @@ export default function UsersTable({ initialUsers, initialSegment = "all" }: { i
                 </strong>
                 <span className="sa-muted" style={{ fontSize: 12, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email ?? "—"}</span>
               </span>
-              <span><span className="sa-cell-label">Rol</span><span className="sa-chip" style={{ color: ROLE_COLORS[u.role] }}>{ROLE_LABELS[u.role] ?? u.role}</span></span>
+              <span><span className="sa-cell-label">Rol</span><span className="sa-chip" style={{ color: ROLE_COLORS[u.role] }}>{ROLE_LABELS[u.role] ?? u.role}</span>{u.isSuperAdmin && <> <span className="sa-chip" style={{ color: ROLE_COLORS.super_admin }}>{ROLE_LABELS.super_admin}</span></>}</span>
               <span className="sa-muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span className="sa-cell-label">Firma</span>{u.companyName ?? "—"}</span>
               <span className="sa-muted"><span className="sa-cell-label">Kayıt</span>{dateTR(u.createdAt)}</span>
               <span><span className="sa-cell-label">Son aktivite</span>{ago(lastActivity(u) || null, now)}</span>

@@ -38,9 +38,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const { data: members } = await admin
-    .from("profiles").select("user_id, email, role").eq("company_id", id);
+    .from("profiles").select("user_id, email, role, is_super_admin").eq("company_id", id);
   const protectedIds = new Set(
-    (members ?? []).filter((m) => m.role === "super_admin" || m.user_id === caller.id).map((m) => m.user_id as string),
+    (members ?? []).filter((m) => m.is_super_admin === true || m.user_id === caller.id).map((m) => m.user_id as string),
   );
   const toDelete = deleteUsers ? (members ?? []).filter((m) => !protectedIds.has(m.user_id as string)) : [];
 

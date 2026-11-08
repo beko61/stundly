@@ -7,10 +7,11 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Zugang zu Firmen-Panel / Süper-Admin-Panel auf dem Handy — die Sidebar (mit diesen
  * Links) ist mobil ausgeblendet und die BottomNav hat keinen Platz dafür.
- * Wird oben auf der Profil-Seite gezeigt, nur für company_admin / super_admin.
+ * Wird oben auf der Profil-Seite gezeigt, nur für company_admin / Super-Admin.
  */
 export function AdminPanelLinks() {
   const [role, setRole] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,13 +19,16 @@ export function AdminPanelLinks() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-      const { data } = await supabase.from("profiles").select("role").eq("user_id", session.user.id).maybeSingle();
-      if (!cancelled) setRole((data?.role as string | null) ?? null);
+      const { data } = await supabase.from("profiles").select("role, is_super_admin").eq("user_id", session.user.id).maybeSingle();
+      if (cancelled) return;
+      setRole((data?.role as string | null) ?? null);
+      setIsSuperAdmin(data?.is_super_admin === true);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  if (role !== "company_admin" && role !== "super_admin") return null;
+  const isCompanyAdmin = role === "company_admin";
+  if (!isCompanyAdmin && !isSuperAdmin) return null;
 
   const base = {
     flex: 1, minWidth: 150, display: "flex", alignItems: "center", gap: 8,
@@ -33,14 +37,16 @@ export function AdminPanelLinks() {
 
   return (
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      <Link href="/company/dashboard" style={{
-        ...base, color: "var(--accent2)",
-        background: "color-mix(in srgb, var(--accent2) 14%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--accent2) 35%, transparent)",
-      }}>
-        <span aria-hidden="true">🏢</span> Firma-Panel <span style={{ marginLeft: "auto" }} aria-hidden="true">→</span>
-      </Link>
-      {role === "super_admin" && (
+      {isCompanyAdmin && (
+        <Link href="/company/dashboard" style={{
+          ...base, color: "var(--accent2)",
+          background: "color-mix(in srgb, var(--accent2) 14%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--accent2) 35%, transparent)",
+        }}>
+          <span aria-hidden="true">🏢</span> Firma-Panel <span style={{ marginLeft: "auto" }} aria-hidden="true">→</span>
+        </Link>
+      )}
+      {isSuperAdmin && (
         <Link href="/superadmin" style={{
           ...base, color: "var(--red)",
           background: "color-mix(in srgb, var(--red) 12%, transparent)",

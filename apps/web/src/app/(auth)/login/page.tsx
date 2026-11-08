@@ -38,19 +38,20 @@ function LoginForm() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    // Soft-delete / deaktiviert gate
+    // Soft-delete / deaktiviert gate (nicht für Super-Admin — siehe Dashboard-Layout)
     const { data: gateProfile } = await supabase
       .from("profiles")
-      .select("is_active, deleted_at")
+      .select("is_active, deleted_at, is_super_admin")
       .eq("user_id", user.id)
       .single();
-    if (gateProfile?.deleted_at) {
+    const firmaSperrt = gateProfile?.is_super_admin !== true;
+    if (firmaSperrt && gateProfile?.deleted_at) {
       await supabase.auth.signOut();
       setError("Dein Konto wurde gelöscht. Bitte wende dich an deinen Administrator.");
       setLoading(false);
       return;
     }
-    if (gateProfile?.is_active === false) {
+    if (firmaSperrt && gateProfile?.is_active === false) {
       await supabase.auth.signOut();
       setError("Dein Konto ist deaktiviert. Bitte wende dich an deinen Administrator.");
       setLoading(false);

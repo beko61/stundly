@@ -93,6 +93,7 @@ export async function loadSuperadminUsers(admin: SupabaseClient): Promise<SaUser
       email:          (a.email as string | null) ?? (p.email as string | null) ?? null,
       name:           [p.vorname, p.nachname].filter(Boolean).join(" ") || (p.full_name as string | null) || (meta.full_name as string | null) || null,
       role:           (p.role as string) ?? "individual",
+      isSuperAdmin:   p.is_super_admin === true,
       isActive:       p.is_active !== false,
       companyId,
       companyName:    companyId ? companyName.get(companyId) ?? null : null,

@@ -41,14 +41,14 @@ export function usePlan(): PlanState {
       const supabase = createClient();
       const [{ data, error }, subs] = await Promise.all([
         supabase.from("profiles")
-          .select("plan, created_at, company_id, role")
+          .select("plan, created_at, company_id, is_super_admin")
           .eq("user_id", userId!)
           .maybeSingle(),
         fetchSubscriptionStatus(supabase),
       ]);
       if (error) throw new Error(error.message);
       if (!data) return null;
-      return { ...(data as { plan: string | null; created_at: string | null; company_id: string | null; role: string | null }), subs };
+      return { ...(data as { plan: string | null; created_at: string | null; company_id: string | null; is_super_admin: boolean | null }), subs };
     },
   });
 
@@ -68,7 +68,7 @@ export function usePlan(): PlanState {
     ...(info.until && !preview ? { until: info.until } : {}),
     active,
     preview,
-    isSuperAdmin: q.data?.role === "super_admin",
+    isSuperAdmin: q.data?.is_super_admin === true,
     can: (f) => !active || canTier(tier, f),
     ndLimit: active ? ndLimitFor(tier) : Infinity,
   };

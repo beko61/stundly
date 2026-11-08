@@ -39,13 +39,14 @@ const BASE_GROUPS: NavGroup[] = [
   },
 ];
 
-type Role = "individual" | "employee" | "company_admin" | "super_admin" | null;
+type Role = "individual" | "employee" | "company_admin" | null;
 
 export function Sidebar() {
   const pathname = usePathname();
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [role, setRole] = useState<Role>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -58,8 +59,9 @@ export function Sidebar() {
       setUserEmail(session.user.email ?? "");
 
       const { data: profile } = await supabase
-        .from("profiles").select("role, vorname").eq("user_id", session.user.id).single();
+        .from("profiles").select("role, vorname, is_super_admin").eq("user_id", session.user.id).single();
       setRole((profile?.role as Role) ?? "individual");
+      setIsSuperAdmin(profile?.is_super_admin === true);
       if (profile?.vorname) setUserName(profile.vorname as string);
     }
     void load();
@@ -70,7 +72,7 @@ export function Sidebar() {
     window.location.href = "/login";
   }
 
-  // Kişisel modda company_admin/super_admin için Firma-Panel CTA en üstte
+  // Kişisel modda company_admin için Firma-Panel CTA en üstte
   // gösterilir (Super Admin badge de kalır). Nav gruplarına dokunulmaz —
   // patron kendisi de çalışıyorsa kişisel /tracker/salary yine erişilebilir.
   const groups: NavGroup[] = BASE_GROUPS;
@@ -83,8 +85,8 @@ export function Sidebar() {
         <span className="sidebar-title">STUNDLY</span>
       </div>
 
-      {/* Firma-Panel CTA — company_admin/super_admin için */}
-      {(role === "company_admin" || role === "super_admin") && (
+      {/* Firma-Panel CTA — company_admin için */}
+      {role === "company_admin" && (
         <div style={{ padding: "10px 12px 0" }}>
           <Link
             href="/company/dashboard"
@@ -101,8 +103,8 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Super admin badge (nur super_admin — Firma-Panel altında) */}
-      {role === "super_admin" && (
+      {/* Super admin badge (nur Super-Admin — Firma-Panel altında) */}
+      {isSuperAdmin && (
         <div style={{ padding: "8px 12px 0" }}>
           <Link
             href="/superadmin"
@@ -156,14 +158,14 @@ export function Sidebar() {
             </div>
           </div>
         )}
-        {role && role !== "individual" && role !== "employee" && (
+        {(isSuperAdmin || role === "company_admin") && (
           <div style={{ padding: "0 2px" }}>
             <span style={{
               fontSize: 9, fontWeight: 700, letterSpacing: 1,
-              color: role === "super_admin" ? "var(--red)" : "var(--accent2)",
+              color: isSuperAdmin ? "var(--red)" : "var(--accent2)",
               textTransform: "uppercase",
             }}>
-              {role === "super_admin" ? "Super Admin" : "Firma Admin"}
+              {isSuperAdmin ? "Super Admin" : "Firma Admin"}
             </span>
           </div>
         )}

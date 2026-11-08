@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   // Firmen-Tarife bucht nur der Chef seiner Firma
-  const isCompanyAdmin = profile?.role === "company_admin" || profile?.role === "super_admin";
+  const isCompanyAdmin = profile?.role === "company_admin";
   const forCompany = plan === "team" || plan === "business";
   if (forCompany && !(isCompanyAdmin && profile?.company_id)) {
     return NextResponse.json({ error: "Firmen-Tarife kann nur der Firmen-Admin buchen." }, { status: 403 });

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
  * 1. Mevcut user'ın oturumu ve role'ü doğrulanır.
  * 2. company_id çekilir.
  * 3. company_admin değilse null döner.
- * 4. Hat hâlâ admin değil ama super_admin de olabilir — ikisini de geçer.
+ * (Super-Admin ist ein eigenes Merkmal — is_super_admin — und gibt keine Firmenrechte.)
  *
  * Sonrasında dönen `admin` client service-role ile RLS bypass eder —
  * yani team time_entries, vacation_requests vs. tablolarına erişebilir.
@@ -25,7 +25,7 @@ export async function getCompanyAdminContext() {
     .eq("user_id", user.id)
     .single();
 
-  if (!profile || (profile.role !== "company_admin" && profile.role !== "super_admin")) {
+  if (!profile || profile.role !== "company_admin") {
     return null;
   }
   if (!profile.company_id) return null;

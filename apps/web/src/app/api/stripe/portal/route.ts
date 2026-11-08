@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   // Firmen-Abo verwalten (kündigen, Zahlungsart) darf nur der Chef — nicht jeder Mitarbeiter
-  const isCompanyAdmin = profile?.role === "company_admin" || profile?.role === "super_admin";
+  const isCompanyAdmin = profile?.role === "company_admin";
   const owners = [`user_id.eq.${user.id}`];
   if (profile?.company_id && isCompanyAdmin) owners.push(`company_id.eq.${profile.company_id}`);
 

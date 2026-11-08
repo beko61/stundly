@@ -8,7 +8,7 @@ import { vacationDecisionSchema } from "@/lib/validation/schemas";
  * POST /api/vacation/[id]/decision
  * Body: { decision: "approved" | "rejected", reason?: string }
  *
- * Company admin (oder super_admin) — aynı şirketteki çalışanın Urlaubsantrag
+ * Company admin — aynı şirketteki çalışanın Urlaubsantrag
  * kararını verir. Karar kaydedilir, mitarbeitere bildirim maili gider.
  *
  * Güvenlik:

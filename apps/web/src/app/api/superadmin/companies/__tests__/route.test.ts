@@ -55,7 +55,7 @@ beforeEach(() => {
   h.members = [
     { user_id: "a", email: "chef@x.de", role: "company_admin" },
     { user_id: "b", email: "ma@x.de", role: "employee" },
-    { user_id: "sa", email: "boss@stundly.de", role: "super_admin" },
+    { user_id: "sa", email: "boss@stundly.de", role: "company_admin", is_super_admin: true },
   ];
   h.calls = [];
   h.deleted = [];

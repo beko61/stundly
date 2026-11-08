@@ -6,7 +6,7 @@ const NOW = new Date(2026, 8, 28, 12, 0, 0);
 const ago = (d: number) => new Date(NOW.getTime() - d * 86_400_000).toISOString();
 
 const u = (over: Partial<SaUser>): SaUser => ({
-  id: "00000000-0000-0000-0000-000000000000", email: "x@x.de", name: null, role: "individual", isActive: true,
+  id: "00000000-0000-0000-0000-000000000000", email: "x@x.de", name: null, role: "individual", isSuperAdmin: false, isActive: true,
   companyId: null, companyName: null, createdAt: ago(40), lastSignInAt: null, emailConfirmed: true,
   lastDataAt: null, entryDays: 0, ndCount: 0, source: null, referredBy: null,
   reminderLastType: null, reminderLastSentAt: null, pendingDeletion: false, ...over,
@@ -18,7 +18,7 @@ const users: SaUser[] = [
   u({ id: "cccccccc-3333-0000-0000-000000000000", createdAt: ago(60), lastDataAt: ago(20), entryDays: 40, ndCount: 2,
       reminderLastType: "comeback", reminderLastSentAt: ago(3), referredBy: "aaaaaaaa" }),                                  // inaktiv
   u({ id: "dddddddd-4444-0000-0000-000000000000", createdAt: ago(1), emailConfirmed: false }),                               // neu, unbestätigt
-  u({ id: "eeeeeeee-5555-0000-0000-000000000000", role: "super_admin", createdAt: ago(0.2), lastDataAt: ago(0.1), entryDays: 99 }),
+  u({ id: "eeeeeeee-5555-0000-0000-000000000000", isSuperAdmin: true, createdAt: ago(0.2), lastDataAt: ago(0.1), entryDays: 99 }),
 ];
 
 describe("computeCockpit", () => {

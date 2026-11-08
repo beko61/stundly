@@ -17,6 +17,7 @@ import { applyContract } from "@/lib/company/contract";
 import { salarySettingsFromRow, hasHourlyRate, notdienstDaysForBilling } from "@/lib/salary/settings";
 import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { InviteColleaguesCard } from "@/components/ui/InviteColleaguesCard";
+import { STANDARD_TIMES_LS_KEY } from "@/lib/utils/standardTimes";
 
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -178,6 +179,15 @@ export default function DashboardPage() {
   // Brutto: dieselbe Rechnung wie die Gehaltsseite (calculateMonthlySalary, Notdienst des Vormonats).
   // Ohne eingetragenen Stundenlohn kein Betrag — früher stand hier ein geschätzter Lohn mit 15 €/h.
   const hasWage = hasHourlyRate(salaryData);
+  // Standardzeiten schon gespeichert (Einrichtung / Profil / anderes Gerät via StandardTimesSync)?
+  const [hasStdTimes, setHasStdTimes] = useState(false);
+  useEffect(() => {
+    const check = () => { try { setHasStdTimes(localStorage.getItem(STANDARD_TIMES_LS_KEY) !== null); } catch { /* privat */ } };
+    check();
+    const onStorage = (e: StorageEvent) => { if (e.key === STANDARD_TIMES_LS_KEY) check(); };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   const salarySettings = useMemo<SharedSalarySettings | null>(() => salaryData
     ? applyContract({ ...salarySettingsFromRow(salaryData), ...(localPatch as Partial<SharedSalarySettings> | null) }, membership?.contract)
     : null, [salaryData, localPatch, membership?.contract]);
@@ -400,6 +410,7 @@ export default function DashboardPage() {
               desc: "Auf den heutigen Tag tippen, Zeiten prüfen, speichern. Notdienste trägst du am Tag über „+ Notdienst hinzufügen“ ein.",
               cta: "Zur Zeiterfassung",
               href: "/tracker",
+              done: false, // Guide verschwindet mit dem ersten Eintrag
             },
             {
               n: 2,
@@ -408,6 +419,7 @@ export default function DashboardPage() {
               desc: "Beginn / Ende / Pause für Mo–Do und Fr — wird beim Auto-Befüllen und für neue Einträge verwendet.",
               cta: "Standardzeiten einstellen",
               href: "/settings",
+              done: hasStdTimes,
             },
             {
               n: 3,
@@ -416,6 +428,7 @@ export default function DashboardPage() {
               desc: "Stundenlohn, Sollstunden, Steuerklasse — für die automatische Lohnberechnung.",
               cta: "Lohn einstellen",
               href: "/salary",
+              done: hasWage,
             },
           ].map(step => (
             <Link
@@ -438,8 +451,9 @@ export default function DashboardPage() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: 800, color: "var(--accent2)",
                 flexShrink: 0,
-              }}>
-                {step.n}
+                ...(step.done ? { background: "color-mix(in srgb, var(--green) 18%, transparent)", color: "var(--green)" } : {}),
+              }} aria-label={step.done ? `Schritt ${step.n} erledigt` : undefined}>
+                {step.done ? "✓" : step.n}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
@@ -449,8 +463,8 @@ export default function DashboardPage() {
                   {step.desc}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: "var(--accent2)", fontWeight: 700, flexShrink: 0 }}>
-                {step.cta} →
+              <div style={{ fontSize: 11, color: step.done ? "var(--green)" : "var(--accent2)", fontWeight: 700, flexShrink: 0 }}>
+                {step.done ? "Erledigt ✓" : `${step.cta} →`}
               </div>
             </Link>
           ))}

@@ -1,5 +1,24 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (182) – v0.92.0: Faz 3.3 + 3.5 — Angestellte ansprechen, Dashboard-Guide hakt ab; Einrichtung am Handy
+
+Kullanıcı: "devam et, bana liste yapar mısın ne kontrol edeceğim".
+
+- **3.3** `onboarding/type`: Einzelperson → "Ich erfasse meine eigene Arbeitszeit" / "Für Angestellte, Monteure und
+  Selbstständige — Stunden, Überstunden, Urlaub und Notdienste." (eskiden sadece Freelancer/Einzelunternehmer).
+- **3.4 ertelendi (karar gerekiyor):** "14 Tage" sadece metin değil — `subscriptions.trial_end` (kişisel ve firma)
+  14 gün, ana sayfa + /pricing 14 gün, freemium Plus denemesi `TRIAL_DAYS` 30. Firma denemesi kaç gün olacak bir fiyat
+  kararı → /pricing 3 katman + Stripe işiyle birlikte. Beta açık olduğu için şu an ekranda "14 Tage" görünmüyor.
+- **3.5** Dashboard "In 3 Schritten startklar": Standardzeiten kaydedilmişse (cihaz kopyası, StandardTimesSync ile
+  diğer cihazdan da gelir) ve Stundenlohn > 0 ise adım ✓ + "Erledigt ✓" (yeşil). Adım 1 rehber zaten ilk kayıtla kaybolur.
+- Ekran görüntüsünde bulundu: kurulumdaki Pause alanı telefonda kartın sağından taşıyordu → sütunlar
+  `minmax(0,1fr)`, alanlara minWidth 0 + az iç boşluk.
+- Test: E2E onboarding — seçim metni, Pause kartın içinde (bounding box), Dashboard'da tam 1 "Erledigt ✓"
+  (Standardzeiten) ve "Lohn einstellen →" açık; ekran görüntüleri test çıktısına. Unit 747/747, E2E 15/15, tsc + lint
+  temiz. Migration yok.
+
+---
+
 ## 2026-11-08 (181) – v0.91.0: Faz 3.2 — Standardzeiten im Profil (geräteübergreifend) + Migration 040
 
 Kullanıcı: "devam" → 3.2. Migration 040 kullanıcı tarafından **canlıda ve test projesinde çalıştırıldı** (ikisinde de

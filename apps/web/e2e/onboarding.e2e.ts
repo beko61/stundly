@@ -33,11 +33,21 @@ test("Einrichtung: Arbeitszeiten → Standardzeiten + Soll gespeichert, Stundenl
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
 
+  // 3.3: Auswahl spricht auch Angestellte an
+  await page.goto("/onboarding/type");
+  await expect(page.getByText(/Für Angestellte, Monteure und Selbstständige/)).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("1-auswahl.png"), fullPage: true });
+
   await page.goto("/onboarding/setup?type=individual");
   await page.locator("select").selectOption("NI");
   // Standard Mo–Do 07:45–17:00 (60) bleibt; Fr bis 15:30 statt 14:30 → 4 × 8h15 + 7h15 = 40h15
   await page.getByLabel("Fr Ende").fill("15:30");
   await expect(page.getByText("40h 15m")).toBeVisible();
+  // Handy: Pause-Feld bleibt in der Karte (ragte vorher rechts heraus)
+  const card = (await page.locator(".card").first().boundingBox())!;
+  const pause = (await page.getByLabel("Fr Pause in Minuten").boundingBox())!;
+  expect(pause.x + pause.width).toBeLessThanOrEqual(card.x + card.width);
+  await page.screenshot({ path: test.info().outputPath("2-einrichtung.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Weiter" }).click();
   await page.waitForURL(/\/onboarding\/done/);
@@ -54,6 +64,14 @@ test("Einrichtung: Arbeitszeiten → Standardzeiten + Soll gespeichert, Stundenl
   // 3.2: Standardzeiten auch im Profil (Migration 040) …
   const { data: prof } = await admin.from("profiles").select("standard_times").eq("user_id", userId).single();
   expect(prof?.standard_times).toMatchObject({ friEnd: "15:30", monThuEnd: "17:00" });
+
+  // 3.5: Dashboard-Guide hakt Standardzeiten ab; Stundenlohn (0) noch offen
+  await page.goto("/dashboard");
+  await expect(page.getByText("🚀 In 3 Schritten startklar")).toBeVisible();
+  await expect(page.getByText("Erledigt ✓")).toHaveCount(1);
+  await expect(page.getByLabel("Schritt 2 erledigt")).toBeVisible();
+  await expect(page.getByText("Lohn einstellen →")).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("3-dashboard.png"), fullPage: true });
 });
 
 test("Anderes Gerät (leerer Speicher): Standardzeiten kommen aus dem Profil", async ({ browser }) => {

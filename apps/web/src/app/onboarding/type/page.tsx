@@ -8,8 +8,8 @@ const options = [
     type: "individual",
     icon: "👤",
     title: "Einzelperson",
-    subtitle: "Ich tracke meine eigene Arbeitszeit",
-    desc: "Perfekt für Freelancer, Handwerker und Einzelunternehmer.",
+    subtitle: "Ich erfasse meine eigene Arbeitszeit",
+    desc: "Für Angestellte, Monteure und Selbstständige — Stunden, Überstunden, Urlaub und Notdienste.",
   },
   {
     type: "company",

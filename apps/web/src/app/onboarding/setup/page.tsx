@@ -207,14 +207,18 @@ function SetupForm() {
               ["Mo–Do", "monThuStart", "monThuEnd", "monThuPause"],
               ["Fr",    "friStart",    "friEnd",    "friPause"],
             ] as const).map(([day, s, e, p]) => (
-              <div key={day} style={{ display: "grid", gridTemplateColumns: "48px 1fr 1fr 72px", gap: 8, alignItems: "center", marginBottom: 8 }}>
+              <div key={day} style={{ display: "grid", gridTemplateColumns: "40px minmax(0,1fr) minmax(0,1fr) 56px", gap: 6, alignItems: "center", marginBottom: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{day}</span>
+                {/* minWidth 0 + wenig Innenabstand: sonst sind time-Felder zu breit und die Pause ragt am Handy raus */}
                 <input className="input" type="time" aria-label={`${day} Beginn`} value={times[s]}
+                  style={{ minWidth: 0, paddingInline: 8 }}
                   onChange={(ev) => setTime(s, ev.target.value)} required />
                 <input className="input" type="time" aria-label={`${day} Ende`} value={times[e]}
+                  style={{ minWidth: 0, paddingInline: 8 }}
                   onChange={(ev) => setTime(e, ev.target.value)} required />
                 <input className="input" type="number" min={0} max={240} step={5} inputMode="numeric"
                   aria-label={`${day} Pause in Minuten`} value={times[p]}
+                  style={{ minWidth: 0, paddingInline: 8, textAlign: "center" }}
                   onChange={(ev) => setTime(p, ev.target.value)} />
               </div>
             ))}

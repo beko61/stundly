@@ -101,7 +101,7 @@ function ReportDonut({ arbeitenDays, urlaubDays, krankDays, feiertagDays }: {
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
           pointerEvents:"none",
         }}>
-          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:22, fontWeight:700, color:"var(--text)", lineHeight:1 }}>{total}</span>
+          <span style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:22, fontWeight:700, color:"var(--text)", lineHeight:1 }}>{total}</span>
           <span style={{ fontSize:10, color:"var(--muted)", fontWeight:700, marginTop:2, textTransform:"uppercase", letterSpacing:"0.08em" }}>Tage</span>
         </div>
       </div>
@@ -116,7 +116,7 @@ function ReportDonut({ arbeitenDays, urlaubDays, krankDays, feiertagDays }: {
                 <span style={{ fontSize:12, color:"var(--text)", fontWeight:600 }}>{s.label}</span>
               </div>
               <div style={{ display:"flex", gap:8, alignItems:"baseline" }}>
-                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:13, fontWeight:700, color:s.color }}>{s.value}T</span>
+                <span style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:13, fontWeight:700, color:s.color }}>{s.value}T</span>
                 <span style={{ fontSize:10, color:"var(--muted)" }}>{pct}%</span>
               </div>
             </div>
@@ -475,7 +475,7 @@ export default function ReportsPage() {
                 padding:"8px 16px", minHeight:36, borderRadius:9, cursor:"pointer", border:"none",
                 background:mode===v?"var(--accent)":"transparent",
                 color:mode===v?"white":"var(--muted)",
-                fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:700,
+                fontFamily:"var(--font-syne),sans-serif", fontSize:13, fontWeight:700,
               }}>{v==="month"?"📋 Monat":"📊 Jahr"}</button>
             ))}
           </div>
@@ -537,7 +537,7 @@ export default function ReportsPage() {
                     <div style={{ fontSize:10, color:"var(--muted)", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>
                       ⏱ Gesamt Überstunden
                     </div>
-                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:800, color: gesamtUeber >= 0 ? "var(--blue)" : "var(--red)" }}>
+                    <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:26, fontWeight:800, color: gesamtUeber >= 0 ? "var(--blue)" : "var(--red)" }}>
                       {minsToHM(gesamtUeber)}
                     </div>
                     <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
@@ -554,7 +554,7 @@ export default function ReportsPage() {
                     <div style={{ fontSize:10, color:"var(--muted)", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>
                       🚨 Notdienst
                     </div>
-                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:800, color:"var(--orange)" }}>
+                    <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:26, fontWeight:800, color:"var(--orange)" }}>
                       +{minsToHMNoSign(stats.ndMin)}
                     </div>
                     <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
@@ -580,7 +580,7 @@ export default function ReportsPage() {
               ].map(c=>(
                 <div key={c.label} className={`card ${c.color}`}>
                   <div className="label">{c.label}</div>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:500 }}>{c.val}</div>
+                  <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:20, fontWeight:500 }}>{c.val}</div>
                   <div style={{ fontSize:12, color:"var(--muted)", marginTop:4, lineHeight:1.4 }}>{c.hint}</div>
                 </div>
               ))}
@@ -597,7 +597,7 @@ export default function ReportsPage() {
               ].map(x => (
                 <div key={x.label} style={{ textAlign:"center" }}>
                   <div className="label" style={{ color:x.color, marginBottom:4 }}>{x.label}</div>
-                  <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:500 }}>{x.val}</div>
+                  <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:20, fontWeight:500 }}>{x.val}</div>
                   {x.sub && <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{x.sub}</div>}
                 </div>
               ))}
@@ -636,7 +636,7 @@ export default function ReportsPage() {
                       borderRadius:8, fontSize:11, display:"flex", gap:6, alignItems:"baseline",
                     }}>
                       <span style={{ fontWeight:700, color:"var(--text)" }}>{MONTHS_SHORT[m.month - 1]}</span>
-                      <span style={{ color:"var(--orange)", fontFamily:"'DM Mono',monospace", fontWeight:700 }}>
+                      <span style={{ color:"var(--orange)", fontFamily:"var(--font-dm-mono),monospace", fontWeight:700 }}>
                         {m.notdienst}× {minsToHMNoSign(m.ndMin)}
                       </span>
                     </div>
@@ -675,10 +675,10 @@ export default function ReportsPage() {
                       }}>
                         <span style={{ fontWeight:700 }}>{MONTHS_SHORT[w.month - 1]}</span>
                         <span style={{ color:"var(--muted)", fontSize:11 }}>KW {w.kw}</span>
-                        <span style={{ color:"var(--orange)", fontFamily:"'DM Mono',monospace", fontSize:11 }}>
+                        <span style={{ color:"var(--orange)", fontFamily:"var(--font-dm-mono),monospace", fontSize:11 }}>
                           {w.count}× {minsToHMNoSign(w.mins)}
                         </span>
-                        <span style={{ color:"var(--orange)", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:12, textAlign:"right" }}>
+                        <span style={{ color:"var(--orange)", fontFamily:"var(--font-dm-mono),monospace", fontWeight:700, fontSize:12, textAlign:"right" }}>
                           +{minsToHMNoSign(w.mins)}
                         </span>
                       </summary>
@@ -691,15 +691,15 @@ export default function ReportsPage() {
                             background:"color-mix(in srgb, var(--orange) 6%, transparent)",
                             alignItems:"center",
                           }}>
-                            <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>
+                            <span style={{ fontFamily:"var(--font-dm-mono),monospace", color:"var(--muted)" }}>
                               {new Date(it.date).toLocaleDateString("de-DE", { weekday:"short", day:"2-digit", month:"2-digit" })}
                             </span>
-                            <span style={{ fontFamily:"'DM Mono',monospace" }}>{it.start}</span>
-                            <span style={{ fontFamily:"'DM Mono',monospace" }}>{it.end}</span>
+                            <span style={{ fontFamily:"var(--font-dm-mono),monospace" }}>{it.start}</span>
+                            <span style={{ fontFamily:"var(--font-dm-mono),monospace" }}>{it.end}</span>
                             <span style={{ color:"var(--muted)", fontSize:10, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                               {it.kunde ?? ""}
                             </span>
-                            <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--orange)", fontWeight:700, textAlign:"right" }}>
+                            <span style={{ fontFamily:"var(--font-dm-mono),monospace", color:"var(--orange)", fontWeight:700, textAlign:"right" }}>
                               {minsToHMNoSign(it.mins)}
                             </span>
                           </div>
@@ -751,13 +751,13 @@ export default function ReportsPage() {
                   const rowBg = d.isWeekend && !e ? "color-mix(in srgb, var(--muted) 6%, transparent)" : undefined;
                   return (
                     <div key={d.date} className="report-table-row" style={{ padding:"10px 14px", borderBottom:"1px solid var(--surface2)", display:"grid", gridTemplateColumns:"60px 60px 1fr 80px 80px 60px 60px", gap:8, alignItems:"center", fontSize:12, background: rowBg }}>
-                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{formatDayMonth(d.date)}</span>
+                      <span style={{ fontFamily:"var(--font-dm-mono),monospace", color:"var(--muted)" }}>{formatDayMonth(d.date)}</span>
                       <span style={{ color:"var(--muted)", fontWeight:700 }}>{dow}</span>
                       <span style={{ color:COLOR[typLabel]??"var(--text)", fontWeight:700, textTransform:"capitalize" }}>{typLabel}</span>
-                      <span style={{ fontFamily:"'DM Mono',monospace", color:timeColor }}>{startTxt}</span>
-                      <span style={{ fontFamily:"'DM Mono',monospace", color:timeColor }}>{endTxt}</span>
-                      <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--muted)" }}>{pauseTxt}</span>
-                      <span style={{ fontFamily:"'DM Mono',monospace", color: dur === "—" ? "var(--muted)" : "var(--green)" }}>{dur}</span>
+                      <span style={{ fontFamily:"var(--font-dm-mono),monospace", color:timeColor }}>{startTxt}</span>
+                      <span style={{ fontFamily:"var(--font-dm-mono),monospace", color:timeColor }}>{endTxt}</span>
+                      <span style={{ fontFamily:"var(--font-dm-mono),monospace", color:"var(--muted)" }}>{pauseTxt}</span>
+                      <span style={{ fontFamily:"var(--font-dm-mono),monospace", color: dur === "—" ? "var(--muted)" : "var(--green)" }}>{dur}</span>
                     </div>
                   );
                 })}
@@ -796,13 +796,13 @@ export default function ReportsPage() {
                             <span style={{ fontSize:11, color:"var(--yellow)", fontWeight:700 }}>🎉 {s.feiertag}T</span>
                           )}
                           {s.notdienst > 0 && (
-                            <span style={{ fontSize:11, color:"var(--orange)", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
+                            <span style={{ fontSize:11, color:"var(--orange)", fontWeight:700, fontFamily:"var(--font-dm-mono),monospace" }}>
                               🚨 {minsToHMNoSign(s.ndMin)}
                             </span>
                           )}
                         </div>
                         <div style={{ textAlign:"right" }}>
-                          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:13, fontWeight:700, color: diffPlusNd >= 0 ? "var(--blue)" : "var(--red)" }}>
+                          <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:13, fontWeight:700, color: diffPlusNd >= 0 ? "var(--blue)" : "var(--red)" }}>
                             {minsToHM(diffPlusNd)}
                           </div>
                           {s.ndMin > 0 && (
@@ -814,11 +814,11 @@ export default function ReportsPage() {
                       </div>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:"var(--muted)" }}>
                         <div style={{ display:"flex", gap:4, alignItems:"center" }}>
-                          <span style={{ fontFamily:"'DM Mono',monospace", color:"var(--green)", fontWeight:700 }}>
+                          <span style={{ fontFamily:"var(--font-dm-mono),monospace", color:"var(--green)", fontWeight:700 }}>
                             {minsToHMNoSign(s.workedMinPure)}
                           </span>
                           <span>/</span>
-                          <span style={{ fontFamily:"'DM Mono',monospace" }}>
+                          <span style={{ fontFamily:"var(--font-dm-mono),monospace" }}>
                             {minsToHMNoSign(s.targetMin)} Std
                           </span>
                         </div>

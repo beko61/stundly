@@ -70,7 +70,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           </div>
           {list.map((r) => (
             <div key={r.id} className="sa-row" style={{ gridTemplateColumns: "150px minmax(160px,1fr) minmax(140px,1fr) minmax(200px,2fr)" }}>
-              <span className="sa-muted" style={{ fontFamily: "'DM Mono',monospace", fontSize: 12 }}>
+              <span className="sa-muted" style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 12 }}>
                 <span className="sa-cell-label">Zaman</span>{new Date(r.created_at).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}
               </span>
               <span><span className="sa-cell-label">Kim</span>{r.actor_user_id ? actorName.get(r.actor_user_id) ?? r.actor_user_id.slice(0, 8) : "sistem"}</span>

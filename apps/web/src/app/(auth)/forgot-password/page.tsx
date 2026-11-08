@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
           style={{
             display: "inline-block", padding: "10px 28px", borderRadius: 10,
             background: "var(--accent2)", color: "#1a1a2e",
-            fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 800,
+            fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 800,
             textDecoration: "none",
           }}
         >

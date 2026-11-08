@@ -60,15 +60,15 @@ export function ZuschlagRechner() {
           <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", marginBottom: 14 }}>
             <div style={{ padding: "14px 16px", borderRadius: 12, background: "color-mix(in srgb, var(--green) 12%, var(--surface))" }}>
               <div style={{ fontSize: 12, color: "var(--muted)" }}>Steuerfreie Zuschläge</div>
-              <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "'DM Mono',monospace", color: "var(--green)" }}>{euro(r.steuerfreiEuro)}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "var(--font-dm-mono),monospace", color: "var(--green)" }}>{euro(r.steuerfreiEuro)}</div>
             </div>
             <div style={{ padding: "14px 16px", borderRadius: 12, background: "var(--surface2)" }}>
               <div style={{ fontSize: 12, color: "var(--muted)" }}>davon sozialversicherungsfrei</div>
-              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'DM Mono',monospace" }}>{euro(r.svFreiEuro)}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-dm-mono),monospace" }}>{euro(r.svFreiEuro)}</div>
             </div>
             <div style={{ padding: "14px 16px", borderRadius: 12, background: "var(--surface2)" }}>
               <div style={{ fontSize: 12, color: "var(--muted)" }}>Grundlohn für {formatDur(r.totalMin)}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'DM Mono',monospace" }}>{euro(r.grundEuro)}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-dm-mono),monospace" }}>{euro(r.grundEuro)}</div>
             </div>
           </div>
 
@@ -93,8 +93,8 @@ export function ZuschlagRechner() {
                         {row.label}
                         <span style={{ display: "block", fontSize: 11, color: "var(--muted)" }}>{row.pct} % vom Grundlohn</span>
                       </td>
-                      <td style={{ padding: "8px 4px", textAlign: "right", fontFamily: "'DM Mono',monospace", whiteSpace: "nowrap" }}>{formatDur(row.minutes)}</td>
-                      <td style={{ padding: "8px 4px", textAlign: "right", fontFamily: "'DM Mono',monospace", whiteSpace: "nowrap" }}>{euro(row.steuerfreiEuro)}</td>
+                      <td style={{ padding: "8px 4px", textAlign: "right", fontFamily: "var(--font-dm-mono),monospace", whiteSpace: "nowrap" }}>{formatDur(row.minutes)}</td>
+                      <td style={{ padding: "8px 4px", textAlign: "right", fontFamily: "var(--font-dm-mono),monospace", whiteSpace: "nowrap" }}>{euro(row.steuerfreiEuro)}</td>
                     </tr>
                   ))}
                 </tbody>

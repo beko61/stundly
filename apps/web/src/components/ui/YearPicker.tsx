@@ -24,7 +24,7 @@ export function YearPicker({ value, onChange, years = DEFAULT_YEARS }: Props) {
         padding: "6px 28px 6px 12px",
         borderRadius: 8,
         cursor: "pointer",
-        fontFamily: "'Syne',sans-serif",
+        fontFamily: "var(--font-syne),sans-serif",
         fontSize: 13,
         fontWeight: 700,
         appearance: "none",

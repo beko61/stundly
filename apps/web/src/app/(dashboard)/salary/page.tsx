@@ -449,19 +449,19 @@ export default function SalaryPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
               <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 12%, transparent)", borderRadius: 10, padding: "10px 6px" }}>
                 <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 3 }}>BRUTTO</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--green)" }}>
+                <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, color: "var(--green)" }}>
                   {fmtEur(ytd.brutto)}
                 </div>
               </div>
               <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 10, padding: "10px 6px" }}>
                 <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 3 }}>NETTO</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--accent2)" }}>
+                <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, color: "var(--accent2)" }}>
                   {fmtEur(ytd.netto)}
                 </div>
               </div>
               <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--blue) 10%, transparent)", borderRadius: 10, padding: "10px 6px" }}>
                 <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 3 }}>Ø NETTO / MO</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--blue)" }}>
+                <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, color: "var(--blue)" }}>
                   {fmtEur(ytd.withData > 0 ? ytd.netto / ytd.withData : 0)}
                 </div>
               </div>
@@ -531,7 +531,7 @@ export default function SalaryPage() {
               background: "var(--accent)",
               color: "white",
               borderRadius: 10,
-              fontFamily: "'Syne',sans-serif",
+              fontFamily: "var(--font-syne),sans-serif",
               fontSize: 13,
               fontWeight: 800,
               textDecoration: "none",

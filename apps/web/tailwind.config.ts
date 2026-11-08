@@ -22,8 +22,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans:  ["Syne", "sans-serif"],
-        mono:  ["DM Mono", "monospace"],
+        sans:  ["var(--font-syne)", "sans-serif"],
+        mono:  ["var(--font-dm-mono)", "monospace"],
       },
       borderRadius: {
         workly: "14px",

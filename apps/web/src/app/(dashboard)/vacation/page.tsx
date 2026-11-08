@@ -729,10 +729,10 @@ export default function VacationPage() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <div>
-            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", fontFamily: "'Syne',sans-serif" }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", fontFamily: "var(--font-syne),sans-serif" }}>
               URLAUB · {year}
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 2, fontFamily: "'Syne',sans-serif" }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 2, fontFamily: "var(--font-syne),sans-serif" }}>
               Deine freie Zeit
             </h1>
           </div>
@@ -742,7 +742,7 @@ export default function VacationPage() {
               padding: "10px 18px", background: "var(--accent2)", color: "#1a1a2e",
               border: "none", borderRadius: 999, fontWeight: 800, fontSize: 12,
               cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-              fontFamily: "'Syne',sans-serif",
+              fontFamily: "var(--font-syne),sans-serif",
               boxShadow: "0 4px 16px color-mix(in srgb, var(--accent2) 35%, transparent)",
             }}
           >
@@ -768,7 +768,7 @@ export default function VacationPage() {
               <div style={{ fontSize: 10, color: "color-mix(in srgb, var(--accent2) 75%, white)", fontWeight: 800, letterSpacing: "0.1em", marginBottom: 4 }}>
                 VERFÜGBAR
               </div>
-              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 64, fontWeight: 500, lineHeight: 1, color: "white" }}>
+              <div style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 64, fontWeight: 500, lineHeight: 1, color: "white" }}>
                 {totalAvailable}
                 <span style={{ fontSize: 22, color: "color-mix(in srgb, var(--accent2) 75%, white)", marginLeft: 6 }}>Tage</span>
               </div>
@@ -792,7 +792,7 @@ export default function VacationPage() {
                   transform="rotate(-90 42 42)"
                 />
                 <text x="42" y="47" textAnchor="middle" fontSize="14" fill="white"
-                  fontWeight="700" fontFamily="'DM Mono', monospace">
+                  fontWeight="700" fontFamily="var(--font-dm-mono), monospace">
                   {remainingPercent}%
                 </text>
               </svg>
@@ -848,7 +848,7 @@ export default function VacationPage() {
                       paddingTop: heightPct > 30 ? 4 : 0,
                     }}>
                       {heightPct > 30 && (
-                        <span style={{ fontSize: 9, color: "#0f0f13", fontWeight: 700, fontFamily: "'DM Mono',monospace" }}>{c}</span>
+                        <span style={{ fontSize: 9, color: "#0f0f13", fontWeight: 700, fontFamily: "var(--font-dm-mono),monospace" }}>{c}</span>
                       )}
                     </div>
                   )}
@@ -872,7 +872,7 @@ export default function VacationPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
               <Icon name="clock" size={11} /> ÜBERSTUNDEN
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--blue)" }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: "var(--blue)" }}>
               {overtimeHours}h
             </div>
             <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
@@ -883,7 +883,7 @@ export default function VacationPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
               <Icon name="hourglass" size={11} /> WARTEN
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: pendingCount > 0 ? "var(--yellow)" : "var(--muted)" }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: pendingCount > 0 ? "var(--yellow)" : "var(--muted)" }}>
               {pendingCount}
             </div>
             <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
@@ -894,7 +894,7 @@ export default function VacationPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
               <Icon name="flag" size={11} /> NÄCHSTER
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--text)" }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: "var(--text)" }}>
               {nextVacation ? (daysUntilNext === 0 ? "heute" : `in ${daysUntilNext}T`) : "—"}
             </div>
             <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
@@ -936,7 +936,7 @@ export default function VacationPage() {
               style={{
                 padding: "10px 20px", background: "var(--accent2)", color: "#1a1a2e",
                 border: "none", borderRadius: 999, fontWeight: 800, fontSize: 12, cursor: "pointer",
-                fontFamily: "'Syne',sans-serif",
+                fontFamily: "var(--font-syne),sans-serif",
               }}
             >+ Ersten Antrag</button>
           </div>
@@ -967,7 +967,7 @@ export default function VacationPage() {
                 }}>
                   {/* Date block */}
                   <div style={{ flexShrink: 0, textAlign: "center", minWidth: 48 }}>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 500, lineHeight: 1, color: "white" }}>
+                    <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 22, fontWeight: 500, lineHeight: 1, color: "white" }}>
                       {dayNum}
                     </div>
                     <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginTop: 2 }}>
@@ -1030,7 +1030,7 @@ export default function VacationPage() {
                           borderRadius: 6,
                           display: "flex", alignItems: "center", gap: 4,
                           fontSize: 10, fontWeight: 700,
-                          fontFamily: "'Syne',sans-serif",
+                          fontFamily: "var(--font-syne),sans-serif",
                         }}
                         title="PDF neu erstellen & Mail senden"
                       >
@@ -1137,7 +1137,7 @@ export default function VacationPage() {
                           padding: "7px 13px", borderRadius: 999,
                           background: "var(--surface)", border: "1px solid var(--border)",
                           color: "var(--text)", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                          fontFamily: "'Syne',sans-serif",
+                          fontFamily: "var(--font-syne),sans-serif",
                         }}
                       >{p.label}</button>
                     ))}
@@ -1229,7 +1229,7 @@ export default function VacationPage() {
                             border: `1px solid ${active ? URLAUB_ART_COLORS[a] : "var(--border)"}`,
                             color: active ? URLAUB_ART_COLORS[a] : "var(--text)",
                             fontSize: 11, fontWeight: 700, cursor: "pointer",
-                            textAlign: "left", fontFamily: "'Syne',sans-serif",
+                            textAlign: "left", fontFamily: "var(--font-syne),sans-serif",
                           }}
                         >{a}</button>
                       );
@@ -1282,13 +1282,13 @@ export default function VacationPage() {
                     <button type="button" onClick={() => { sigRef.current?.clear(); setSigData(null); }} style={{
                       flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--border)",
                       background: "var(--surface)", color: "var(--muted)",
-                      fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      fontFamily: "var(--font-syne),sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                     }}><Icon name="trash" size={12} /> Löschen</button>
                     <button type="button" onClick={handleSaveSignature} style={{
                       flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--green)",
                       background: "color-mix(in srgb, var(--green) 12%, transparent)", color: "var(--green)",
-                      fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      fontFamily: "var(--font-syne),sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                     }}><Icon name="check" size={12} strokeWidth={2.5} /> Übernehmen</button>
                   </div>
@@ -1312,7 +1312,7 @@ export default function VacationPage() {
                     style={{
                       width: "100%", padding: 12, background: "var(--surface)",
                       border: "1px solid var(--border)", borderRadius: 12, color: "var(--text)",
-                      fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                      fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     }}
                   >
@@ -1323,7 +1323,7 @@ export default function VacationPage() {
                     style={{
                       width: "100%", padding: 14, background: "var(--accent2)",
                       border: "none", borderRadius: 12, color: "#1a1a2e",
-                      fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
+                      fontFamily: "var(--font-syne),sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       boxShadow: "0 4px 16px color-mix(in srgb, var(--accent2) 35%, transparent)",
                     }}
@@ -1380,7 +1380,7 @@ export default function VacationPage() {
             )}
             <button type="button" onClick={() => plan.can("share") ? sendShareReady() : setPlusFor("share")} style={{
               width: "100%", padding: 14, background: "var(--accent2)", border: "none", borderRadius: 12, color: "#1a1a2e",
-              fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
+              fontFamily: "var(--font-syne),sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
             }}>
               📧 Per Mail senden{!plan.can("share") && <PlusBadge />}
             </button>

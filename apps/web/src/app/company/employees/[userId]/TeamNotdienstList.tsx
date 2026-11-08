@@ -42,7 +42,7 @@ const durOf = (e: TeamNotdienst) => formatDur(calculateWorkDuration(hhmm(e.start
 const smallBtn: React.CSSProperties = {
   padding: "7px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
   background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)",
-  fontFamily: "'Syne',sans-serif",
+  fontFamily: "var(--font-syne),sans-serif",
 };
 
 export function TeamNotdienstList({ userId, entries }: Props) {
@@ -128,7 +128,7 @@ export function TeamNotdienstList({ userId, entries }: Props) {
                     background: `color-mix(in srgb, ${bezahlt ? "var(--green)" : "var(--orange)"} 14%, transparent)`,
                     color: bezahlt ? "var(--green)" : "var(--orange)",
                     border: `1px solid color-mix(in srgb, ${bezahlt ? "var(--green)" : "var(--orange)"} 35%, transparent)`,
-                    fontFamily: "'Syne',sans-serif",
+                    fontFamily: "var(--font-syne),sans-serif",
                   }}>
                   {busy === e.id ? "…" : bezahlt ? "✅ Bezahlt" : "⏳ Offen"}
                 </button>

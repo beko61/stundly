@@ -51,7 +51,7 @@ export function UeberstundenRechner() {
   const seg = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: "10px 12px", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer",
     background: active ? "var(--accent)" : "transparent", color: active ? "white" : "var(--muted)",
-    fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+    fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700,
   });
 
   return (
@@ -73,7 +73,7 @@ export function UeberstundenRechner() {
               <input className="input" type="time" aria-label={`${TAGE[i]} Beginn`} value={d.start} onChange={(e) => setDay(i, "start", e.target.value)} />
               <input className="input" type="time" aria-label={`${TAGE[i]} Ende`} value={d.end} onChange={(e) => setDay(i, "end", e.target.value)} />
               <input className="input" type="number" min={0} max={240} inputMode="numeric" aria-label={`${TAGE[i]} Pause in Minuten`} value={d.pause} onChange={(e) => setDay(i, "pause", e.target.value)} />
-              <span style={{ fontFamily: "'DM Mono',monospace", textAlign: "right", color: dayMins[i]! > ARBZG_DAY_MAX_MIN ? "var(--red)" : "var(--text)" }}>
+              <span style={{ fontFamily: "var(--font-dm-mono),monospace", textAlign: "right", color: dayMins[i]! > ARBZG_DAY_MAX_MIN ? "var(--red)" : "var(--text)" }}>
                 {dayMins[i] ? formatDur(dayMins[i]!) : "–"}
               </span>
             </div>
@@ -124,7 +124,7 @@ export function UeberstundenRechner() {
           border: `1px solid color-mix(in srgb, ${result.diffMin >= 0 ? "var(--green)" : "var(--red)"} 35%, transparent)`,
         }}>
           <div className="label" style={{ marginBottom: 4 }}>{result.diffMin >= 0 ? "Deine Überstunden" : "Deine Minusstunden"}</div>
-          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 34, fontWeight: 500, color: result.diffMin >= 0 ? "var(--green)" : "var(--red)" }}>
+          <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 34, fontWeight: 500, color: result.diffMin >= 0 ? "var(--green)" : "var(--red)" }}>
             {formatDur(result.diffMin, true)}
           </div>
           <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>

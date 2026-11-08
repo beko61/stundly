@@ -79,7 +79,7 @@ export function InfoTooltip({ title, children, color = "var(--accent2)", icon = 
             borderRadius: 10,
             padding: "9px 11px",
             boxShadow: "0 6px 20px rgba(0,0,0,0.45)",
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "var(--font-syne), sans-serif",
             color: "var(--text)",
           }}
         >

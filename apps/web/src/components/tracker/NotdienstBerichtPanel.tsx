@@ -36,13 +36,13 @@ const box: React.CSSProperties = {
   display: "flex", flexDirection: "column", gap: 12,
 };
 const smallBtn: React.CSSProperties = {
-  padding: "9px 12px", borderRadius: 10, fontFamily: "'Syne',sans-serif",
+  padding: "9px 12px", borderRadius: 10, fontFamily: "var(--font-syne),sans-serif",
   fontSize: 12, fontWeight: 700, cursor: "pointer", background: "var(--surface2)",
   border: "1px solid var(--border)", color: "var(--text)",
 };
 const bigBtn: React.CSSProperties = {
   width: "100%", padding: 14, borderRadius: 12, border: "none", color: "white",
-  fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
+  fontFamily: "var(--font-syne),sans-serif", fontSize: 14, fontWeight: 800, cursor: "pointer",
   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
 };
 

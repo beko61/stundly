@@ -61,7 +61,7 @@ function SuccessContent() {
       </div>
 
       {sessionId && (
-        <div style={{ marginTop: 24, fontSize: 10, color: "var(--muted)", fontFamily: "'DM Mono', monospace" }}>
+        <div style={{ marginTop: 24, fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-dm-mono), monospace" }}>
           Session: {sessionId.slice(0, 20)}…
         </div>
       )}

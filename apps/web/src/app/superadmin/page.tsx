@@ -130,7 +130,7 @@ export default async function SuperAdminKokpit() {
             </p>
           ) : (
             <>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 26, fontWeight: 800, color: "var(--green)" }}>{euro(mrr)}</div>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 26, fontWeight: 800, color: "var(--green)" }}>{euro(mrr)}</div>
               <div className="sa-muted" style={{ fontSize: 12 }}>MRR · {paying.length} aktif abonelik · ARR {euro(mrr * 12)}</div>
             </>
           )}

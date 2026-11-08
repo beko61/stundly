@@ -98,7 +98,7 @@ function EmailPopover() {
             borderRadius: 12,
             padding: "12px 14px",
             boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "var(--font-syne), sans-serif",
           }}
         >
           <div style={{ fontSize: 10, fontWeight: 800, color: "var(--accent2)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
@@ -108,7 +108,7 @@ function EmailPopover() {
             onClick={copyEmail}
             title="Klick zum Kopieren"
             style={{
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "var(--font-dm-mono), monospace",
               fontSize: 12,
               padding: "8px 10px",
               background: "var(--surface2)",
@@ -120,7 +120,7 @@ function EmailPopover() {
               color: "var(--text)",
             }}
           >
-            {EMAIL} {copied && <span style={{ color: "var(--green)", fontFamily: "'Syne', sans-serif", fontSize: 10 }}> ✓ kopiert</span>}
+            {EMAIL} {copied && <span style={{ color: "var(--green)", fontFamily: "var(--font-syne), sans-serif", fontSize: 10 }}> ✓ kopiert</span>}
           </div>
 
           <a

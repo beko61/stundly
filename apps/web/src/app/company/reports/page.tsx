@@ -204,7 +204,7 @@ function Stat({ label, value, color }: { label: string; value: string | number; 
       <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.04em" }}>
         {label.toUpperCase()}
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color, marginTop: 2, fontFamily: "'DM Mono',monospace" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color, marginTop: 2, fontFamily: "var(--font-dm-mono),monospace" }}>
         {value}
       </div>
     </div>
@@ -219,5 +219,5 @@ const kpiLabel: React.CSSProperties = {
   fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em",
 };
 const kpiValue = (color: string): React.CSSProperties => ({
-  fontSize: 18, fontWeight: 700, color, marginTop: 4, fontFamily: "'DM Mono',monospace",
+  fontSize: 18, fontWeight: 700, color, marginTop: 4, fontFamily: "var(--font-dm-mono),monospace",
 });

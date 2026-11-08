@@ -433,7 +433,7 @@ export default function SettingsPage() {
                     style={{
                       padding: "6px 10px", borderRadius: 8, border: "1px solid var(--red)",
                       background: "transparent", color: "var(--red)",
-                      fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                      fontFamily: "var(--font-syne),sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
                     }}
                   >
                     🗑 Entfernen
@@ -493,12 +493,12 @@ export default function SettingsPage() {
             <button onClick={handleClearSignature} style={{
               flex: 1, padding: "8px", borderRadius: 8, border: "1px solid var(--red)",
               background: "transparent", color: "var(--red)",
-              fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              fontFamily: "var(--font-syne),sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
             }}>🗑 Löschen</button>
             <button onClick={handleSaveSignature} style={{
               flex: 1, padding: "8px", borderRadius: 8, border: "1px solid var(--green)",
               background: "transparent", color: "var(--green)",
-              fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              fontFamily: "var(--font-syne),sans-serif", fontSize: 11, fontWeight: 700, cursor: "pointer",
             }}>💾 Übernehmen</button>
           </div>
 
@@ -710,11 +710,11 @@ export default function SettingsPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
                 <div style={{ textAlign: "center", background: "var(--surface)", borderRadius: 8, padding: "8px 6px" }}>
                   <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>TAGE</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--accent2)" }}>{importPreview.preview.totalDays}</div>
+                  <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, color: "var(--accent2)" }}>{importPreview.preview.totalDays}</div>
                 </div>
                 <div style={{ textAlign: "center", background: "var(--surface)", borderRadius: 8, padding: "8px 6px" }}>
                   <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>NOTDIENST</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, color: "var(--orange)" }}>{importPreview.preview.totalNd}</div>
+                  <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, color: "var(--orange)" }}>{importPreview.preview.totalNd}</div>
                 </div>
               </div>
 
@@ -741,7 +741,7 @@ export default function SettingsPage() {
                     flex: 1, padding: "10px 12px",
                     background: "transparent", border: "1px solid var(--border)",
                     borderRadius: 8, color: "var(--muted)",
-                    fontFamily: "'Syne',sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    fontFamily: "var(--font-syne),sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer",
                   }}
                 >
                   Abbrechen
@@ -792,7 +792,7 @@ export default function SettingsPage() {
               border: "1px solid var(--red)",
               color: "var(--red)",
               borderRadius: 10,
-              fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+              fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700,
               cursor: "pointer",
             }}
           >
@@ -847,7 +847,7 @@ export default function SettingsPage() {
                     border: "1px solid var(--border)",
                     color: "var(--muted)",
                     borderRadius: 10,
-                    fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                    fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700,
                     cursor: resetBusy ? "not-allowed" : "pointer",
                   }}
                 >
@@ -863,7 +863,7 @@ export default function SettingsPage() {
                     border: "1px solid var(--red)",
                     color: "white",
                     borderRadius: 10,
-                    fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                    fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700,
                     cursor: (resetBusy || resetText !== "LÖSCHEN") ? "not-allowed" : "pointer",
                     opacity: (resetBusy || resetText !== "LÖSCHEN") ? 0.6 : 1,
                   }}
@@ -886,7 +886,7 @@ export default function SettingsPage() {
             border: "1px solid var(--red)",
             background: "transparent",
             color: "var(--red)",
-            fontFamily: "'Syne',sans-serif",
+            fontFamily: "var(--font-syne),sans-serif",
             fontSize: 14,
             fontWeight: 700,
             cursor: "pointer",
@@ -902,7 +902,7 @@ export default function SettingsPage() {
           fontSize: 11,
           color: "var(--muted)",
           marginTop: 14,
-          fontFamily: "'DM Mono',monospace",
+          fontFamily: "var(--font-dm-mono),monospace",
           letterSpacing: "0.04em",
         }}>
           {STUNDLY_VERSION_LABEL}

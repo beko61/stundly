@@ -17,7 +17,7 @@ const box: React.CSSProperties = {
 };
 const btn: React.CSSProperties = {
   padding: "8px 12px", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer",
-  fontFamily: "'Syne',sans-serif", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--text)",
+  fontFamily: "var(--font-syne),sans-serif", border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--text)",
 };
 const tint = (c: string): React.CSSProperties => ({
   background: `color-mix(in srgb, ${c} 10%, var(--surface))`,

@@ -143,7 +143,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
         <div style={{ display:"flex", alignItems:"center", padding:"12px 14px", gap:12, cursor: locked ? "default" : "pointer" }}
           title={locked ? "Monat von deiner Firma freigegeben — Änderungen nur durch die Firma" : undefined}
           onClick={() => { if (!locked) setModalOpen(true); }}>
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:20, fontWeight:500,
+          <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:20, fontWeight:500,
             color: isToday?"var(--accent2)":"var(--muted)", width:28, textAlign:"center", flexShrink:0 }}>
             {String(dayNum).padStart(2,"0")}
           </div>
@@ -183,7 +183,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             {netHours && (
               <span
-                style={{ fontFamily:"'DM Mono',monospace", fontSize:14, fontWeight:600, color: netColor }}
+                style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:14, fontWeight:600, color: netColor }}
                 title={isPaidAbsence ? "Sollstunden — zählt zur Differenz" : "Tatsächlich gearbeitet"}
               >
                 {netHours}
@@ -362,7 +362,7 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
             style={{ width:"calc(100% - 28px)", margin:"0 14px 12px", padding:"7px",
               background:"transparent", border:"1px dashed var(--orange)", borderRadius:8,
               color:"var(--orange)", fontSize:11, fontWeight:700, cursor:"pointer",
-              fontFamily:"'Syne',sans-serif" }}>
+              fontFamily:"var(--font-syne),sans-serif" }}>
             + Notdienst hinzufügen
           </button>
         )}

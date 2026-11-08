@@ -20,7 +20,7 @@ const CONFIRM_WORD = "LÖSCHEN";
 
 const btn: React.CSSProperties = {
   width: "100%", padding: "12px", borderRadius: 10,
-  fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
+  fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
 };
 
 function formatDate(iso: string): string {

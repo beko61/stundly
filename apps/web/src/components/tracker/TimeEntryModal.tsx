@@ -224,7 +224,7 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
                 background: "color-mix(in srgb, var(--accent2) 12%, transparent)",
                 border:     "1px dashed color-mix(in srgb, var(--accent2) 40%, transparent)",
                 color:      "var(--accent2)",
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-syne), sans-serif",
                 fontSize: 12, fontWeight: 700,
                 display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
               }}
@@ -247,7 +247,7 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
                     border:      `1px solid ${dayType === value ? "var(--accent)" : "var(--border)"}`,
                     background:  dayType === value ? "color-mix(in srgb, var(--accent) 20%, transparent)" : "var(--surface2)",
                     color:       dayType === value ? "var(--accent2)" : "var(--muted)",
-                    fontFamily: "'Syne', sans-serif", fontSize: 12, fontWeight: 700,
+                    fontFamily: "var(--font-syne), sans-serif", fontSize: 12, fontWeight: 700,
                   }}
                 >
                   {label}
@@ -351,7 +351,7 @@ export function TimeEntryModal({ date, dayOfWeek, feiertag, entry, previousEntry
               onChange={(e) => setNote(e.target.value)}
               placeholder="Kurze Notiz... (Enter = neue Zeile)"
               rows={2}
-              style={{ resize: "vertical", minHeight: 44, fontFamily: "'Syne', sans-serif" }}
+              style={{ resize: "vertical", minHeight: 44, fontFamily: "var(--font-syne), sans-serif" }}
             />
           </div>
 

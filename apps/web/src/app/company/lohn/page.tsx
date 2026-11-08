@@ -31,7 +31,7 @@ export default async function LohnPage({ searchParams }: Props) {
   const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
 
   const th: React.CSSProperties = { textAlign: "right", padding: "10px 10px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", whiteSpace: "nowrap" };
-  const td: React.CSSProperties = { textAlign: "right", padding: "10px 10px", fontFamily: "'DM Mono',monospace", whiteSpace: "nowrap" };
+  const td: React.CSSProperties = { textAlign: "right", padding: "10px 10px", fontFamily: "var(--font-dm-mono),monospace", whiteSpace: "nowrap" };
 
   return (
     <div>

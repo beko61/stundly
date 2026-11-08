@@ -65,7 +65,7 @@ export function RecordModal({
               display: "flex", justifyContent: "space-between",
             }}>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>Steuer / Abzüge</span>
-              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: "var(--red)" }}>
+              <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 13, fontWeight: 700, color: "var(--red)" }}>
                 {fmtEur(parseFloat(brutto||"0") - parseFloat(netto||"0"))}
               </span>
             </div>
@@ -85,7 +85,7 @@ export function RecordModal({
             <button onClick={onDelete} style={{
               width: "100%", padding: 12, background: "transparent",
               border: "1px solid var(--red)", borderRadius: 12, color: "var(--red)",
-              fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
             }}>
               🗑 Eintrag löschen
             </button>

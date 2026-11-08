@@ -201,7 +201,7 @@ export default function TrackerPage() {
               background: "transparent",
               border: "1px solid color-mix(in srgb, var(--accent2) 30%, transparent)",
               color: "var(--accent2)", fontSize: 11, fontWeight: 700,
-              fontFamily: "'Syne',sans-serif",
+              fontFamily: "var(--font-syne),sans-serif",
             }}
           >
             {clearingSample ? "Wird gelöscht…" : "Alle löschen"}

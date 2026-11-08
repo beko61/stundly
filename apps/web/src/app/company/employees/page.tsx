@@ -236,7 +236,7 @@ export default function EmployeesPage() {
               placeholder="Temporäres Passwort (min. 8 Zeichen)"
               required
               minLength={8}
-              style={{ flex: 1, fontFamily: "'DM Mono',monospace" }}
+              style={{ flex: 1, fontFamily: "var(--font-dm-mono),monospace" }}
             />
             <button
               type="button"
@@ -310,7 +310,7 @@ export default function EmployeesPage() {
             }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em" }}>PASSWORT</div>
-                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2, fontFamily: "'DM Mono',monospace", color: "var(--accent2)" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2, fontFamily: "var(--font-dm-mono),monospace", color: "var(--accent2)" }}>
                   {created.password}
                 </div>
               </div>
@@ -448,7 +448,7 @@ export default function EmployeesPage() {
                 background: "transparent", border: "none",
                 color: "var(--muted)", fontSize: 12, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6,
-                fontFamily: "'Syne',sans-serif",
+                fontFamily: "var(--font-syne),sans-serif",
               }}
             >
               {showDeleted ? "▾" : "▸"} Gelöschte Mitarbeiter ({deletedEmployees.length})

@@ -41,7 +41,7 @@ export function LohnTab({ stats, state }: Props) {
           borderRadius: 12, padding: "16px 8px",
         }}>
           <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Brutto</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 700, color: "var(--green)" }}>
+          <div style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 22, fontWeight: 700, color: "var(--green)" }}>
             € {fmtEUR(stats.brutto)}
           </div>
         </div>
@@ -52,7 +52,7 @@ export function LohnTab({ stats, state }: Props) {
           borderRadius: 12, padding: "16px 8px",
         }}>
           <div style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Netto</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 700, color: "var(--accent2)" }}>
+          <div style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 22, fontWeight: 700, color: "var(--accent2)" }}>
             € {fmtEUR(stats.netto)}
           </div>
         </div>
@@ -80,7 +80,7 @@ export function LohnTab({ stats, state }: Props) {
             fontSize: 13,
           }}>
             <span style={{ color: "var(--text)" }}>{a.label}</span>
-            <span style={{ fontFamily: "'DM Mono', monospace", color: "var(--red)", fontWeight: 600 }}>
+            <span style={{ fontFamily: "var(--font-dm-mono), monospace", color: "var(--red)", fontWeight: 600 }}>
               −€ {a.value.toFixed(2).replace(".", ",")}
             </span>
           </div>
@@ -91,7 +91,7 @@ export function LohnTab({ stats, state }: Props) {
           fontSize: 14, fontWeight: 800,
         }}>
           <span>Gesamt</span>
-          <span style={{ fontFamily: "'DM Mono', monospace", color: "var(--red)" }}>
+          <span style={{ fontFamily: "var(--font-dm-mono), monospace", color: "var(--red)" }}>
             −€ {totalAbzug.toFixed(2).replace(".", ",")}
           </span>
         </div>

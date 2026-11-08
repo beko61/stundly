@@ -294,7 +294,7 @@ export function AutoFillReports() {
           border: `1px solid ${fullyFilled ? "var(--green)" : "var(--accent)"}`,
           color: fullyFilled ? "var(--green)" : "var(--accent2)",
           borderRadius: 10,
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "var(--font-syne), sans-serif",
           fontSize: 13,
           fontWeight: 800,
           cursor: (loadingYear || yearFilling || fullyFilled) ? "not-allowed" : "pointer",

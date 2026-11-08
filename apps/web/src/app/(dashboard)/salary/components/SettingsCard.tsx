@@ -87,10 +87,10 @@ export function SettingsCard({
             background: "color-mix(in srgb, var(--accent2) 8%, transparent)",
             border: "1px solid color-mix(in srgb, var(--accent2) 25%, transparent)",
             borderRadius: 10,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "var(--font-dm-mono),monospace",
             fontSize: 12,
           }}>
-            <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "'Syne',sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-syne),sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
               ⚡ Live {MONTHS[month-1]}
             </span>
             <span style={{ color: "var(--green)" }}>{fmtEur(totalGross)} <span style={{ fontSize: 9, color: "var(--muted)" }}>Brutto</span></span>

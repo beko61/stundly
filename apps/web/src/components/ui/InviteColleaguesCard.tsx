@@ -43,7 +43,7 @@ export function InviteColleaguesCard() {
         oder schick deinen Link — in der Beta ist Stundly für alle kostenlos.
       </p>
       <div style={{
-        fontFamily: "'DM Mono',monospace", fontSize: 13, padding: "10px 12px", borderRadius: 10,
+        fontFamily: "var(--font-dm-mono),monospace", fontSize: 13, padding: "10px 12px", borderRadius: 10,
         background: "var(--surface2)", border: "1px solid var(--border)", marginBottom: 12,
         overflowWrap: "anywhere",
       }}>

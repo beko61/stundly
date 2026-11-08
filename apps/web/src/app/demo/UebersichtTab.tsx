@@ -97,7 +97,7 @@ function KpiHero({ label, value, sub, color }: { label: string; value: string; s
         {label}
       </div>
       <div style={{
-        fontFamily: "'DM Mono', monospace", fontSize: 38, fontWeight: 700,
+        fontFamily: "var(--font-dm-mono), monospace", fontSize: 38, fontWeight: 700,
         lineHeight: 1.1, letterSpacing: "-0.02em", color, marginTop: 4,
       }}>{value}</div>
       <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{sub}</div>
@@ -113,7 +113,7 @@ function KpiSmall({ icon, label, value, sub }: { icon: string; label: string; va
     }}>
       <div style={{ fontSize: 18, marginBottom: 2 }}>{icon}</div>
       <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 700, lineHeight: 1.1, marginTop: 2 }}>{value}</div>
+      <div style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 22, fontWeight: 700, lineHeight: 1.1, marginTop: 2 }}>{value}</div>
       <div style={{ fontSize: 11, color: "var(--muted)" }}>{sub}</div>
     </div>
   );

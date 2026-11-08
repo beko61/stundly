@@ -100,7 +100,7 @@ export function ZeitTab({ state, onUpsert, onRemove }: Props) {
               }}
             >
               <div style={{
-                fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500,
+                fontFamily: "var(--font-dm-mono), monospace", fontSize: 18, fontWeight: 500,
                 color: "var(--muted)", width: 28, textAlign: "center", flexShrink: 0,
               }}>
                 {String(day).padStart(2, "0")}
@@ -113,7 +113,7 @@ export function ZeitTab({ state, onUpsert, onRemove }: Props) {
                   <div style={{ fontSize: 13, fontWeight: 700, color, marginTop: 1 }}>
                     {STATUS_ICON[entry.day_type]} {STATUS_LABEL[entry.day_type]}
                     {entry.start_time && entry.end_time && (
-                      <span style={{ color: "var(--muted)", fontWeight: 500, marginLeft: 8, fontFamily: "'DM Mono', monospace", fontSize: 11 }}>
+                      <span style={{ color: "var(--muted)", fontWeight: 500, marginLeft: 8, fontFamily: "var(--font-dm-mono), monospace", fontSize: 11 }}>
                         {entry.start_time} – {entry.end_time}
                       </span>
                     )}
@@ -126,7 +126,7 @@ export function ZeitTab({ state, onUpsert, onRemove }: Props) {
               </div>
               {entry && netMin > 0 && (
                 <span style={{
-                  fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 600,
+                  fontFamily: "var(--font-dm-mono), monospace", fontSize: 14, fontWeight: 600,
                   color, flexShrink: 0,
                 }}>
                   {fmtHM(netMin)}
@@ -169,7 +169,7 @@ function SummaryCell({ label, value, color }: { label: string; value: string; co
     <div style={{ textAlign: "center" }}>
       <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase" }}>{label}</div>
       <div style={{
-        fontFamily: "'DM Mono', monospace", fontSize: 16, fontWeight: 700,
+        fontFamily: "var(--font-dm-mono), monospace", fontSize: 16, fontWeight: 700,
         marginTop: 2, color: color ?? "var(--text)",
       }}>{value}</div>
     </div>

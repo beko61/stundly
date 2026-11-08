@@ -119,7 +119,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif", minHeight: "100dvh" }}>
+    <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-syne), sans-serif", minHeight: "100dvh" }}>
       {/* NAV */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
@@ -307,7 +307,7 @@ export default function PricingPage() {
                   padding: "10px 22px", borderRadius: 8, border: "none",
                   background: interval === iv ? "var(--accent)" : "transparent",
                   color: interval === iv ? "white" : "var(--muted)",
-                  fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                  fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700,
                   cursor: "pointer", transition: "all 0.15s",
                 }}
               >
@@ -408,7 +408,7 @@ export default function PricingPage() {
                       borderColor: plan.highlight ? "transparent" : "var(--border)",
                       borderWidth: 1, borderStyle: "solid",
                       padding: "11px", borderRadius: 10, fontWeight: 700, fontSize: 13,
-                      fontFamily: "'Syne', sans-serif",
+                      fontFamily: "var(--font-syne), sans-serif",
                     }}
                   >
                     {isLoading ? "Lädt..." : plan.cta}

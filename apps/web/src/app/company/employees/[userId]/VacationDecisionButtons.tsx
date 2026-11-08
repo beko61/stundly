@@ -79,7 +79,7 @@ export function VacationDecisionButtons({ vacationId, startDate, endDate, daysCo
               flex: 1, padding: "7px 12px", borderRadius: 8,
               background: "var(--red)", color: "white", border: "none",
               fontWeight: 700, fontSize: 12, cursor: busy ? "wait" : "pointer",
-              fontFamily: "'Syne',sans-serif",
+              fontFamily: "var(--font-syne),sans-serif",
             }}
           >
             {busy === "reject" ? "Speichern…" : "Endgültig ablehnen"}
@@ -92,7 +92,7 @@ export function VacationDecisionButtons({ vacationId, startDate, endDate, daysCo
               background: "var(--surface2)", color: "var(--text)",
               border: "1px solid var(--border)",
               fontWeight: 700, fontSize: 12, cursor: "pointer",
-              fontFamily: "'Syne',sans-serif",
+              fontFamily: "var(--font-syne),sans-serif",
             }}
           >
             Abbrechen
@@ -116,7 +116,7 @@ export function VacationDecisionButtons({ vacationId, startDate, endDate, daysCo
           padding: "7px 14px", borderRadius: 8,
           background: "var(--green)", color: "#0f0f13", border: "none",
           fontWeight: 800, fontSize: 12, cursor: busy ? "wait" : "pointer",
-          fontFamily: "'Syne',sans-serif",
+          fontFamily: "var(--font-syne),sans-serif",
         }}
       >
         {busy === "approve" ? "..." : "✓ Genehmigen"}
@@ -129,7 +129,7 @@ export function VacationDecisionButtons({ vacationId, startDate, endDate, daysCo
           background: "transparent", color: "var(--red)",
           border: "1px solid var(--red)",
           fontWeight: 800, fontSize: 12, cursor: "pointer",
-          fontFamily: "'Syne',sans-serif",
+          fontFamily: "var(--font-syne),sans-serif",
         }}
       >
         ✕ Ablehnen

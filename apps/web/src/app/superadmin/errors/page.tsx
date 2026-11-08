@@ -49,7 +49,7 @@ export default async function ErrorsPage({ searchParams }: { searchParams: Promi
         {groups.map((g) => (
           <div key={g.fingerprint} className="card" style={{ padding: "12px 14px" }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, color: "var(--red)", minWidth: 36 }}>{g.count}×</span>
+              <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontWeight: 700, color: "var(--red)", minWidth: 36 }}>{g.count}×</span>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: "anywhere" }}>{g.message}</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, display: "flex", flexWrap: "wrap", gap: "2px 10px" }}>

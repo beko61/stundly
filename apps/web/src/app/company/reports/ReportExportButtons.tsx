@@ -176,7 +176,7 @@ export function DatevBulkButton({ year, month }: { year: number; month: number }
           padding: "9px 16px", borderRadius: 999,
           background: "var(--blue)", color: "white", border: "none",
           fontWeight: 800, fontSize: 12, cursor: busy ? "wait" : "pointer",
-          fontFamily: "'Syne',sans-serif",
+          fontFamily: "var(--font-syne),sans-serif",
           boxShadow: "0 4px 16px color-mix(in srgb, var(--blue) 30%, transparent)",
         }}
       >
@@ -223,7 +223,7 @@ export function BulkCsvButton({ year, month }: { year: number; month: number }) 
           padding: "9px 16px", borderRadius: 999,
           background: "var(--accent2)", color: "#1a1a2e", border: "none",
           fontWeight: 800, fontSize: 12, cursor: busy ? "wait" : "pointer",
-          fontFamily: "'Syne',sans-serif",
+          fontFamily: "var(--font-syne),sans-serif",
           boxShadow: "0 4px 16px color-mix(in srgb, var(--accent2) 30%, transparent)",
         }}
       >
@@ -240,6 +240,6 @@ function btnStyle(color: string): React.CSSProperties {
     background: `color-mix(in srgb, ${color} 14%, transparent)`,
     color, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
     fontWeight: 800, fontSize: 11, cursor: "pointer",
-    fontFamily: "'Syne',sans-serif",
+    fontFamily: "var(--font-syne),sans-serif",
   };
 }

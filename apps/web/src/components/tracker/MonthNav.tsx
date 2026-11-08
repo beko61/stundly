@@ -39,7 +39,7 @@ export function MonthNav() {
     borderRadius:      10,
     minHeight:         44,
     cursor:            "pointer",
-    fontFamily:        "'DM Mono',monospace",
+    fontFamily:        "var(--font-dm-mono),monospace",
     fontSize:          14,
     fontWeight:        500,
     appearance:        "none",

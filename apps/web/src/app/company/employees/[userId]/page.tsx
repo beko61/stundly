@@ -383,7 +383,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Anspruch
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
               {entitlement.anspruch} Tage
             </div>
             {entitlement.isProrated && (
@@ -397,7 +397,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Übertrag
               </div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
                 +{konto.carryOverAvailable}
               </div>
               <div style={{ fontSize: 10, color: konto.verfallWarning ? "var(--red)" : "var(--muted)", marginTop: 2 }}>
@@ -409,7 +409,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Genommen
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, marginTop: 2 }}>
               {usedThisYear} Tage
             </div>
           </div>
@@ -418,7 +418,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
               Rest
             </div>
             <div style={{
-              fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 700, marginTop: 2,
+              fontFamily: "var(--font-dm-mono),monospace", fontSize: 18, fontWeight: 700, marginTop: 2,
               color: konto.remaining < 0 ? "var(--red)" : "var(--green)",
             }}>
               {konto.remaining} Tage

@@ -105,7 +105,7 @@ function UrlaubStat({ label, value, sub, color }: { label: string; value: string
   return (
     <div style={{ textAlign: "center" }}>
       <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 28, fontWeight: 700, color: color ?? "var(--text)", marginTop: 2 }}>{value}</div>
+      <div style={{ fontFamily: "var(--font-dm-mono), monospace", fontSize: 28, fontWeight: 700, color: color ?? "var(--text)", marginTop: 2 }}>{value}</div>
       <div style={{ fontSize: 10, color: "var(--muted)" }}>{sub}</div>
     </div>
   );

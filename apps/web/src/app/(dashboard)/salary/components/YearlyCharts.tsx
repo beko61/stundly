@@ -62,7 +62,7 @@ export function YearlyCharts({
           ].map(c => (
             <div key={c.label} style={{ textAlign: "center", background: "var(--surface2)", borderRadius: 10, padding: "10px 6px" }}>
               <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: c.color }}>{c.val}</div>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 14, fontWeight: 500, color: c.color }}>{c.val}</div>
             </div>
           ))}
         </div>
@@ -84,7 +84,7 @@ export function YearlyCharts({
                   {isEmpty ? (
                     <span style={{ fontSize: 10, color: "var(--muted)" }}>—</span>
                   ) : (
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+                    <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 10, color: "var(--muted)" }}>
                       B: {fmtEurNoCents(a.brutto)} · N: {fmtEurNoCents(a.netto)}
                     </span>
                   )}
@@ -128,7 +128,7 @@ export function YearlyCharts({
           ].map(c => (
             <div key={c.label} style={{ textAlign: "center", background: "var(--surface2)", borderRadius: 10, padding: "10px 6px" }}>
               <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: c.color }}>{c.val}</div>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 14, fontWeight: 500, color: c.color }}>{c.val}</div>
             </div>
           ))}
         </div>
@@ -149,7 +149,7 @@ export function YearlyCharts({
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
                   <span style={{ color: m === month ? "var(--accent2)" : "var(--muted)", fontWeight: 700, width: 28 }}>{MONTHS_S[i]}</span>
                   {rec ? (
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+                    <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 10, color: "var(--muted)" }}>
                       B: {fmtEurNoCents(rec.brutto)} · N: {fmtEurNoCents(rec.netto)}
                     </span>
                   ) : (

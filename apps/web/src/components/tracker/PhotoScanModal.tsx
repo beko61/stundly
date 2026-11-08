@@ -244,7 +244,7 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
                 background: consentChecked ? "var(--accent)" : "var(--surface2)",
                 border: "none", borderRadius: 10,
                 color: consentChecked ? "white" : "var(--muted)",
-                fontFamily: "'Syne',sans-serif", fontSize: 13, fontWeight: 700,
+                fontFamily: "var(--font-syne),sans-serif", fontSize: 13, fontWeight: 700,
                 cursor: consentChecked ? "pointer" : "not-allowed",
               }}
             >
@@ -259,7 +259,7 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
             onClick={handleScan}
             style={{
               width: "100%", padding: 14, background: "var(--accent)", border: "none",
-              borderRadius: 12, color: "white", fontFamily: "'Syne',sans-serif",
+              borderRadius: 12, color: "white", fontFamily: "var(--font-syne),sans-serif",
               fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10,
             }}
           >
@@ -322,10 +322,10 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
                     borderRadius: 10, padding: "10px 12px", marginBottom: 8,
                     display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
                   }}>
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: "var(--green)", fontWeight: 700 }}>
+                    <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 13, color: "var(--green)", fontWeight: 700 }}>
                       {e.datum !== "unbekannt" ? e.datum : "?"}
                     </span>
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13 }}>
+                    <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 13 }}>
                       {e.beginn} – {e.ende}
                     </span>
                     <span style={{ fontSize: 11, color: "var(--muted)" }}>Pause: {e.pause_minuten} min</span>
@@ -343,7 +343,7 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
                     disabled={applying}
                     style={{
                       width: "100%", padding: 14, background: "var(--green)", border: "none",
-                      borderRadius: 12, color: "white", fontFamily: "'Syne',sans-serif",
+                      borderRadius: 12, color: "white", fontFamily: "var(--font-syne),sans-serif",
                       fontSize: 15, fontWeight: 800, cursor: "pointer",
                     }}
                   >
@@ -363,7 +363,7 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
               style={{
                 width: "100%", marginTop: 10, padding: 12, background: "transparent",
                 border: "1px solid var(--border)", borderRadius: 12,
-                color: "var(--muted)", fontFamily: "'Syne',sans-serif", fontSize: 13, cursor: "pointer",
+                color: "var(--muted)", fontFamily: "var(--font-syne),sans-serif", fontSize: 13, cursor: "pointer",
               }}
             >
               Neues Foto scannen
@@ -378,7 +378,7 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
             padding: "10px 12px", marginTop: 10, maxHeight: 160, overflowY: "auto",
           }}>
             <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 6 }}>KI-ANTWORT</div>
-            <pre style={{ fontSize: 11, color: "var(--text)", whiteSpace: "pre-wrap", fontFamily: "'DM Mono',monospace" }}>
+            <pre style={{ fontSize: 11, color: "var(--text)", whiteSpace: "pre-wrap", fontFamily: "var(--font-dm-mono),monospace" }}>
               {rawText}
             </pre>
           </div>

@@ -121,7 +121,7 @@ export default function UsersTable({ initialUsers, initialSegment = "all" }: { i
               <span className="sa-muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span className="sa-cell-label">Firma</span>{u.companyName ?? "—"}</span>
               <span className="sa-muted"><span className="sa-cell-label">Kayıt</span>{dateTR(u.createdAt)}</span>
               <span><span className="sa-cell-label">Son aktivite</span>{ago(lastActivity(u) || null, now)}</span>
-              <span style={{ fontFamily: "'DM Mono',monospace" }}><span className="sa-cell-label">Gün</span>{u.entryDays}{u.ndCount ? <span className="sa-muted"> +{u.ndCount}N</span> : null}</span>
+              <span style={{ fontFamily: "var(--font-dm-mono),monospace" }}><span className="sa-cell-label">Gün</span>{u.entryDays}{u.ndCount ? <span className="sa-muted"> +{u.ndCount}N</span> : null}</span>
             </button>
           ))}
           {filtered.length === 0 && <div style={{ textAlign: "center", padding: 32, color: "var(--muted)", fontSize: 13 }}>Kullanıcı bulunamadı.</div>}

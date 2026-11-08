@@ -131,7 +131,7 @@ export default async function AuditPage({ searchParams }: Props) {
                   </div>
 
                   <div style={{
-                    fontSize: 11, color: "var(--muted)", fontFamily: "'DM Mono',monospace",
+                    fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-dm-mono),monospace",
                     textAlign: "right", flexShrink: 0,
                   }} title={fmtAbsolute(r.created_at)}>
                     {fmtRelative(r.created_at)}

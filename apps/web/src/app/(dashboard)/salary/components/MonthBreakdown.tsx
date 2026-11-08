@@ -92,14 +92,14 @@ export function MonthBreakdown({
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 10 }}>
           <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 12%, transparent)", borderRadius: 12, padding: "12px 8px" }}>
             <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>BRUTTO</div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--green)" }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: "var(--green)" }}>
               {fmtEur(breakdown.total_gross)}
             </div>
           </div>
           <div style={{ fontSize: 22, color: "var(--muted)" }}>→</div>
           <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 12, padding: "12px 8px" }}>
             <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>NETTO</div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, fontWeight: 500, color: "var(--accent2)" }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: "var(--accent2)" }}>
               {fmtEur(nettoCalc.netto)}
             </div>
           </div>
@@ -139,7 +139,7 @@ export function MonthBreakdown({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, fontSize: 12 }}>
             <div>
               <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Anspruch</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500 }}>
                 {urlaubskonto.entitlement.anspruch} Tage
               </div>
               {urlaubskonto.entitlement.isProrated && (
@@ -151,7 +151,7 @@ export function MonthBreakdown({
             {urlaubskonto.konto.carryOverAvailable > 0 && (
               <div>
                 <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Übertrag</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
+                <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500 }}>
                   +{urlaubskonto.konto.carryOverAvailable}
                 </div>
                 <div style={{ fontSize: 10, color: urlaubskonto.konto.verfallWarning ? "var(--red)" : "var(--muted)" }}>
@@ -161,13 +161,13 @@ export function MonthBreakdown({
             )}
             <div>
               <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Genommen</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500 }}>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500 }}>
                 {urlaubskonto.usedThisYear} Tage
               </div>
             </div>
             <div>
               <div style={{ color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Rest</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: urlaubskonto.konto.remaining < 0 ? "var(--red)" : "var(--green)" }}>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500, color: urlaubskonto.konto.remaining < 0 ? "var(--red)" : "var(--green)" }}>
                 {urlaubskonto.konto.remaining} Tage
               </div>
             </div>
@@ -270,13 +270,13 @@ export function MonthBreakdown({
               onMouseLeave={clickable ? (e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; } : undefined}
             >
               <span style={{ fontSize: 13, color: clickable ? "var(--orange)" : "var(--muted)", fontWeight: clickable ? 700 : 400 }}>{label}</span>
-              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13 }}>{value}</span>
+              <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 13 }}>{value}</span>
             </div>
           );
         })}
         <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10 }}>
           <span style={{ fontWeight: 700, fontSize: 14 }}>Brutto Gesamt</span>
-          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>
+          <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>
             {fmtEur(breakdown.total_gross)}
           </span>
         </div>
@@ -297,14 +297,14 @@ export function MonthBreakdown({
           ].map(({ label, value }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
               <span style={{ fontSize: 12, color: "var(--muted)" }}>{label}</span>
-              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: value > 0 ? "var(--red)" : "var(--muted)" }}>
+              <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 12, color: value > 0 ? "var(--red)" : "var(--muted)" }}>
                 − {fmtEur(value)}
               </span>
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10 }}>
             <span style={{ fontWeight: 700, fontSize: 13 }}>Summe Abzüge</span>
-            <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 500, color: "var(--red)" }}>
+            <span style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 14, fontWeight: 500, color: "var(--red)" }}>
               − {fmtEur(nettoCalc.abzuege.gesamt)}
             </span>
           </div>
@@ -320,7 +320,7 @@ export function MonthBreakdown({
             style={{
               background: "var(--accent)", border: "none", color: "white",
               padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-              fontFamily: "'Syne',sans-serif", fontSize: 11, fontWeight: 700,
+              fontFamily: "var(--font-syne),sans-serif", fontSize: 11, fontWeight: 700,
             }}
           >
             {curRecord ? "✏️ Bearbeiten" : "+ Eintragen"}
@@ -331,15 +331,15 @@ export function MonthBreakdown({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>BRUTTO</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>{fmtEur(curRecord.brutto)}</div>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500, color: "var(--green)" }}>{fmtEur(curRecord.brutto)}</div>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>NETTO</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--blue)" }}>{fmtEur(curRecord.netto)}</div>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500, color: "var(--blue)" }}>{fmtEur(curRecord.netto)}</div>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>STEUER</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 500, color: "var(--red)" }}>{fmtEur(curRecord.brutto - curRecord.netto)}</div>
+              <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 500, color: "var(--red)" }}>{fmtEur(curRecord.brutto - curRecord.netto)}</div>
             </div>
             {curRecord.note && (
               <div style={{ gridColumn: "1/-1", fontSize: 12, color: "var(--muted)", paddingTop: 8, borderTop: "1px solid var(--border)" }}>

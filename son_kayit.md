@@ -1,5 +1,16 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (178) – v0.88.1: Google Fonts artık kendi sunucumuzdan (DSGVO)
+
+- Syne (400/600/700/800) ve DM Mono (400/500) artık `next/font/google` ile build sırasında indiriliyor ve
+  stundly.de'den servis ediliyor; ziyaretçinin IP'si Google'a gitmiyor (LG München 20.01.2022 riski kapandı).
+- `globals.css`'teki `@import fonts.googleapis.com` satırı silindi. `layout.tsx` `<html>`'e `--font-syne` /
+  `--font-dm-mono` değişkenlerini koyuyor; CSS, Tailwind ve 50 bileşendeki `'Syne'` / `'DM Mono'` yazıları bu
+  değişkenlere çevrildi (görünüm aynı). E-posta şablonlarına dokunulmadı (orada CSS değişkeni çalışmaz).
+- CSP: `style-src`'den `https://fonts.googleapis.com`, `font-src`'den `https://fonts.gstatic.com` çıkarıldı.
+- Kontrol: tsc + lint temiz, unit 731/731. Prod build + tarayıcıda / ve /ueberstundenrechner: dış font isteği yok,
+  CSP hatası yok, 6 font ağırlığının hepsi yüklendi, görünüm aynı.
+
 ## 2026-11-08 (177) – v0.88.0: Faz 2 güvenlik (Stripe öncesi) + Migration 038
 
 Kullanıcı: "bunların hepsini yap bana soru sorma" (Faz 1 + Faz 2 tablosu; 2.2 davet maddesi dahil → davet

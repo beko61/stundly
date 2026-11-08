@@ -89,7 +89,7 @@ function PhoneMock({ children }: { children: ReactNode }) {
           fontSize: 10,
           color: "var(--text)",
           fontWeight: 700,
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "var(--font-dm-mono), monospace",
           flexShrink: 0,
         }}>
           <span>09:41</span>
@@ -142,7 +142,7 @@ function BrowserMock({ url, children }: { url: string; children: ReactNode }) {
         <div style={{
           flex: 1, background: "var(--bg)", borderRadius: 6,
           padding: "4px 10px", fontSize: 10, color: "var(--muted)",
-          fontFamily: "'DM Mono',monospace", textAlign: "center",
+          fontFamily: "var(--font-dm-mono),monospace", textAlign: "center",
         }}>
           🔒 {url}
         </div>
@@ -217,7 +217,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Syne, sans-serif" }}>
+    <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-syne), sans-serif" }}>
 
       {/* schema.org SoftwareApplication structured data */}
       <script
@@ -382,12 +382,12 @@ export default async function LandingPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
                     <div style={{ background: "color-mix(in srgb, var(--green) 10%, var(--surface))", border: "1px solid color-mix(in srgb, var(--green) 30%, transparent)", borderRadius: 7, padding: "7px 9px" }}>
                       <div style={{ fontSize: 8, fontWeight: 800, color: "var(--green)", textTransform: "uppercase" }}>📊 Differenz</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: "var(--green)", marginTop: 2 }}>+04:15</div>
+                      <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 13, fontWeight: 700, color: "var(--green)", marginTop: 2 }}>+04:15</div>
                       <div style={{ fontSize: 8, color: "var(--muted)", marginTop: 1 }}>Überstunden</div>
                     </div>
                     <div style={{ background: "color-mix(in srgb, var(--blue) 10%, var(--surface))", border: "1px solid color-mix(in srgb, var(--blue) 30%, transparent)", borderRadius: 7, padding: "7px 9px" }}>
                       <div style={{ fontSize: 8, fontWeight: 800, color: "var(--blue)", textTransform: "uppercase" }}>⏱ Gearbeitet</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: "var(--blue)", marginTop: 2 }}>178:15</div>
+                      <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 13, fontWeight: 700, color: "var(--blue)", marginTop: 2 }}>178:15</div>
                       <div style={{ fontSize: 8, color: "var(--muted)", marginTop: 1 }}>von 174 Std</div>
                     </div>
                   </div>
@@ -404,11 +404,11 @@ export default async function LandingPage() {
                       borderLeft: `2px solid ${e.color}`,
                       borderRadius: 5, padding: "6px 9px", marginBottom: 3,
                     }}>
-                      <div style={{ width: 28, fontFamily: "'DM Mono',monospace", fontSize: 9, color: "var(--muted)", fontWeight: 700 }}>{e.d}</div>
+                      <div style={{ width: 28, fontFamily: "var(--font-dm-mono),monospace", fontSize: 9, color: "var(--muted)", fontWeight: 700 }}>{e.d}</div>
                       <div style={{ width: 18, fontSize: 9, color: "var(--muted)" }}>{e.dow}</div>
                       <div style={{ flex: 1, fontSize: 10, fontWeight: 700, color: e.color }}>{e.icon} {e.type}</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, color: "var(--muted)" }}>{e.se}</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, fontWeight: 700, color: e.color, width: 34, textAlign: "right" }}>{e.dur}</div>
+                      <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 9, color: "var(--muted)" }}>{e.se}</div>
+                      <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 10, fontWeight: 700, color: e.color, width: 34, textAlign: "right" }}>{e.dur}</div>
                     </div>
                   ))}
                 </div>
@@ -434,10 +434,10 @@ export default async function LandingPage() {
                     borderLeft: `2px solid ${e.color}`,
                     borderRadius: 4, padding: "3px 5px", marginBottom: 2,
                   }}>
-                    <div style={{ width: 14, fontFamily: "'DM Mono',monospace", fontSize: 8, color: "var(--muted)", fontWeight: 700 }}>{e.d}</div>
+                    <div style={{ width: 14, fontFamily: "var(--font-dm-mono),monospace", fontSize: 8, color: "var(--muted)", fontWeight: 700 }}>{e.d}</div>
                     <div style={{ width: 14, fontSize: 7, color: "var(--muted)" }}>{e.dow}</div>
                     <div style={{ flex: 1, fontSize: 8, fontWeight: 700, color: e.color }}>{e.icon}</div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 8, fontWeight: 700, color: e.color }}>{e.dur}</div>
+                    <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 8, fontWeight: 700, color: e.color }}>{e.dur}</div>
                   </div>
                 ))}
               </PhoneMock>
@@ -456,12 +456,12 @@ export default async function LandingPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 12 }}>
                     <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--green) 14%, transparent)", borderRadius: 10, padding: "10px 8px" }}>
                       <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>BRUTTO</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
+                      <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
                     </div>
                     <div style={{ fontSize: 18, color: "var(--muted)" }}>→</div>
                     <div style={{ textAlign: "center", background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 10, padding: "10px 8px" }}>
                       <div style={{ fontSize: 8, color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>NETTO</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
+                      <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
                     </div>
                   </div>
                   <div style={{ background: "color-mix(in srgb, var(--red) 8%, var(--surface))", border: "1px solid color-mix(in srgb, var(--red) 25%, transparent)", borderRadius: 8, padding: "8px 10px" }}>
@@ -475,7 +475,7 @@ export default async function LandingPage() {
                     ].map((r) => (
                       <div key={r.l} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0" }}>
                         <span style={{ color: "var(--muted)" }}>{r.l}</span>
-                        <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--red)" }}>−€ {r.v}</span>
+                        <span style={{ fontFamily: "var(--font-dm-mono),monospace", color: "var(--red)" }}>−€ {r.v}</span>
                       </div>
                     ))}
                   </div>
@@ -490,12 +490,12 @@ export default async function LandingPage() {
                 </div>
                 <div style={{ background: "color-mix(in srgb, var(--green) 14%, transparent)", borderRadius: 7, padding: "7px 8px", marginBottom: 3, textAlign: "center" }}>
                   <div style={{ fontSize: 7, color: "var(--muted)", fontWeight: 700 }}>BRUTTO</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
+                  <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 14, fontWeight: 700, color: "var(--green)" }}>€ 2.847</div>
                 </div>
                 <div style={{ textAlign: "center", color: "var(--muted)", fontSize: 11, margin: "1px 0" }}>↓</div>
                 <div style={{ background: "color-mix(in srgb, var(--accent2) 14%, transparent)", borderRadius: 7, padding: "7px 8px", marginBottom: 4, textAlign: "center" }}>
                   <div style={{ fontSize: 7, color: "var(--muted)", fontWeight: 700 }}>NETTO</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
+                  <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 14, fontWeight: 700, color: "var(--accent2)" }}>€ 1.973</div>
                 </div>
               </PhoneMock>
             </div>

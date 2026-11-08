@@ -122,7 +122,7 @@ export function NotdienstWeekly() {
           background: "transparent",
           border: "none",
           color: "var(--text)",
-          fontFamily: "'Syne',sans-serif",
+          fontFamily: "var(--font-syne),sans-serif",
           fontWeight: 800,
           fontSize: 13,
           cursor: "pointer",
@@ -152,7 +152,7 @@ export function NotdienstWeekly() {
             aus den Lohn-Einstellungen vergütet.
           </InfoTooltip>
         </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "var(--font-dm-mono),monospace", fontSize: 11 }}>
           <span style={{ color: "var(--orange)", fontWeight: 700 }}>{totals.ndCount}×</span>
           <span style={{ color: "var(--orange)" }}>{minsToTime(totals.ndMins)}</span>
           <span style={{ color: "var(--muted)" }}>{paidLabel(totals.ndPaid, totals.ndCount)}</span>
@@ -194,16 +194,16 @@ export function NotdienstWeekly() {
                 borderBottom: "1px solid color-mix(in srgb, var(--border) 50%, transparent)",
                 fontSize: 12,
               }}>
-                <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--muted)", fontWeight: 700 }}>
+                <span style={{ fontFamily: "var(--font-dm-mono),monospace", color: "var(--muted)", fontWeight: 700 }}>
                   KW {w.kw}
                 </span>
                 <div style={{ height: 6, background: "var(--surface2)", borderRadius: 3, overflow: "hidden" }}>
                   <div style={{ width: `${pct}%`, height: "100%", background: "var(--orange)", borderRadius: 3 }} />
                 </div>
-                <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: "var(--orange)", fontWeight: 700 }}>
+                <span style={{ textAlign: "right", fontFamily: "var(--font-dm-mono),monospace", color: "var(--orange)", fontWeight: 700 }}>
                   {w.ndCount}× · {minsToTime(w.ndMins)}
                 </span>
-                <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: "var(--muted)" }}>
+                <span style={{ textAlign: "right", fontFamily: "var(--font-dm-mono),monospace", color: "var(--muted)" }}>
                   {paidLabel(w.ndPaid, w.ndCount)}
                 </span>
               </div>
@@ -224,10 +224,10 @@ export function NotdienstWeekly() {
           }}>
             <span style={{ color: "var(--text)" }}>Ges.</span>
             <span></span>
-            <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: "var(--orange)" }}>
+            <span style={{ textAlign: "right", fontFamily: "var(--font-dm-mono),monospace", color: "var(--orange)" }}>
               {totals.ndCount}× · {minsToTime(totals.ndMins)}
             </span>
-            <span style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", color: "var(--muted)" }}>
+            <span style={{ textAlign: "right", fontFamily: "var(--font-dm-mono),monospace", color: "var(--muted)" }}>
               {paidLabel(totals.ndPaid, totals.ndCount)}
             </span>
           </div>

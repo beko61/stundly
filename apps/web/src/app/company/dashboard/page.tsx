@@ -479,7 +479,7 @@ export default async function CompanyDashboardPage() {
                 </div>
                 <div style={{ fontSize: 12, color, fontWeight: 600 }}>{label}</div>
                 {timeRange && (
-                  <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "'DM Mono',monospace" }}>{timeRange}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-dm-mono),monospace" }}>{timeRange}</div>
                 )}
               </Link>
             );
@@ -602,21 +602,21 @@ export default async function CompanyDashboardPage() {
                         {s.name}
                       </Link>
                     </td>
-                    <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "'DM Mono',monospace" }}>
+                    <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "var(--font-dm-mono),monospace" }}>
                       {formatMinutes(s.monthWorkedMin)}
                     </td>
                     <td style={{
-                      padding: "12px 14px", textAlign: "right", fontFamily: "'DM Mono',monospace",
+                      padding: "12px 14px", textAlign: "right", fontFamily: "var(--font-dm-mono),monospace",
                       color: s.urlaubRemaining < 0 ? "var(--red)" : "inherit",
                     }}>
                       {s.urlaubRemaining} T
                     </td>
-                    <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "'DM Mono',monospace" }}>
+                    <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "var(--font-dm-mono),monospace" }}>
                       {s.monthKrankDays > 0
                         ? <span style={{ color: "var(--red)" }}>{s.monthKrankDays} T</span>
                         : <span style={{ color: "var(--muted)" }}>—</span>}
                     </td>
-                    <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "'DM Mono',monospace" }}>
+                    <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "var(--font-dm-mono),monospace" }}>
                       {s.monthNotdienstDays > 0
                         ? <span style={{ color: "var(--orange)" }}>{s.monthNotdienstDays}×</span>
                         : <span style={{ color: "var(--muted)" }}>—</span>}

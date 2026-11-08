@@ -264,7 +264,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
   const taStyle: React.CSSProperties = {
     width: "100%", background: "var(--surface2)", border: "1px solid var(--border)",
     borderRadius: 10, padding: "11px 14px", color: "var(--text)",
-    fontFamily: "'Syne',sans-serif", fontSize: 13, outline: "none",
+    fontFamily: "var(--font-syne),sans-serif", fontSize: 13, outline: "none",
     resize: "none", lineHeight: 1.5, boxSizing: "border-box",
   };
 
@@ -402,7 +402,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
                     background: start===s && end===e ? "rgba(251,146,60,0.2)" : "var(--surface2)",
                     border:"1px solid var(--orange)", color:"var(--orange)",
                     padding:"7px 11px", borderRadius:8,
-                    fontFamily:"'DM Mono',monospace", fontSize:11, cursor:"pointer",
+                    fontFamily:"var(--font-dm-mono),monospace", fontSize:11, cursor:"pointer",
                   }}>
                   {label}
                 </button>
@@ -419,7 +419,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
               </div>
               <div>
                 <label className="label">Arbeitszeit</label>
-                <div className="input" style={{ color:"var(--orange)", fontFamily:"'DM Mono',monospace" }}>{duration}</div>
+                <div className="input" style={{ color:"var(--orange)", fontFamily:"var(--font-dm-mono),monospace" }}>{duration}</div>
               </div>
             </div>
           </div>
@@ -434,7 +434,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
               onChange={e => setNote(e.target.value)}
               placeholder="Kurze Notiz... (Enter = neue Zeile)"
               rows={2}
-              style={{ resize: "vertical", minHeight: 44, fontFamily: "'Syne', sans-serif" }}
+              style={{ resize: "vertical", minHeight: 44, fontFamily: "var(--font-syne), sans-serif" }}
             />
           </div>
 
@@ -524,7 +524,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
           {/* Speichern */}
           <button onClick={handleSave} disabled={saving} style={{
             width:"100%", padding:14, background:"var(--orange)", border:"none",
-            borderRadius:12, color:"white", fontFamily:"'Syne',sans-serif",
+            borderRadius:12, color:"white", fontFamily:"var(--font-syne),sans-serif",
             fontSize:15, fontWeight:800, cursor:"pointer",
           }}>
             {saving ? "Speichern..." : savedId ? "💾 Aktualisieren" : "💾 Speichern"}
@@ -541,7 +541,7 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
             <button onClick={handleDelete} style={{
               width:"100%", padding:12, background:"transparent",
               border:"1px solid var(--red)", borderRadius:12,
-              color:"var(--red)", fontFamily:"'Syne',sans-serif",
+              color:"var(--red)", fontFamily:"var(--font-syne),sans-serif",
               fontSize:13, fontWeight:700, cursor:"pointer",
             }}>
               🗑 Eintrag löschen

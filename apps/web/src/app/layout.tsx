@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { headers } from "next/headers";
+import { Syne, DM_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/ui/CookieBanner";
@@ -12,6 +13,21 @@ import { InstallPrompt } from "@/components/ui/InstallPrompt";
 import { ErrorListener } from "@/components/ui/ErrorListener";
 import { QueryProvider } from "@/providers/QueryProvider";
 import "./globals.css";
+
+// Schriften werden beim Build heruntergeladen und von unserer eigenen Domain ausgeliefert
+// (keine Anfrage an Google → DSGVO, LG München 20.01.2022). Genutzt über var(--font-syne) / var(--font-dm-mono).
+const syne = Syne({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-syne",
+});
+const dmMono = DM_Mono({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-dm-mono",
+});
 
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
 
@@ -86,7 +102,7 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} className={`${syne.variable} ${dmMono.variable}`} suppressHydrationWarning>
       <head>
         {/* Theme FOUC-önlemi: React hydration'dan ÖNCE data-theme'i ayarla.
             localStorage öncelik, sonra prefers-color-scheme, fallback dark. */}

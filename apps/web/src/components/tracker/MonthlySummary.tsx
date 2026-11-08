@@ -116,18 +116,18 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
           {icon && <span style={{ fontSize: 12 }}>{icon}</span>} {title}
         </div>
         <div style={{
-          fontFamily: "'DM Mono',monospace", fontSize: 17, fontWeight: 700, color,
+          fontFamily: "var(--font-dm-mono),monospace", fontSize: 17, fontWeight: 700, color,
           lineHeight: 1.1, marginTop: 2,
         }}>
           {big}
         </div>
         {mid && (
-          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+          <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 10, color: "var(--muted)" }}>
             {mid}
           </div>
         )}
         {sub && (
-          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)" }}>
+          <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 10, color: "var(--muted)" }}>
             {sub}
           </div>
         )}
@@ -225,10 +225,10 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--blue)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               🏖 Urlaub
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--blue)", lineHeight: 1.1, marginTop: 2 }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 700, color: "var(--blue)", lineHeight: 1.1, marginTop: 2 }}>
               {stats.urlaubDays} T
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 1 }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 10, color: "var(--muted)", marginTop: 1 }}>
               {minsToTime(stats.urlaubMin)}
             </div>
           </div>
@@ -236,10 +236,10 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--red)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               🤒 Krank
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: "var(--red)", lineHeight: 1.1, marginTop: 2 }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 16, fontWeight: 700, color: "var(--red)", lineHeight: 1.1, marginTop: 2 }}>
               {stats.krankDays} T
             </div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: "var(--muted)", marginTop: 1 }}>
+            <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 10, color: "var(--muted)", marginTop: 1 }}>
               {minsToTime(stats.krankMin)}
             </div>
           </div>

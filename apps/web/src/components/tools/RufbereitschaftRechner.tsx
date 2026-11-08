@@ -81,15 +81,15 @@ export function RufbereitschaftRechner() {
       <div aria-live="polite" style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
         <div style={{ padding: "14px 16px", borderRadius: 12, background: "color-mix(in srgb, var(--green) 12%, var(--surface))" }}>
           <div style={{ fontSize: 12, color: "var(--muted)" }}>Gesamt brutto</div>
-          <div style={{ fontSize: "clamp(20px, 6vw, 26px)", fontWeight: 800, fontFamily: "'DM Mono',monospace", color: "var(--green)", whiteSpace: "nowrap" }}>{euro(r.gesamtEuro)}</div>
+          <div style={{ fontSize: "clamp(20px, 6vw, 26px)", fontWeight: 800, fontFamily: "var(--font-dm-mono),monospace", color: "var(--green)", whiteSpace: "nowrap" }}>{euro(r.gesamtEuro)}</div>
         </div>
         <div style={{ padding: "14px 16px", borderRadius: 12, background: "var(--surface2)" }}>
           <div style={{ fontSize: 12, color: "var(--muted)" }}>für die Bereitschaft</div>
-          <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'DM Mono',monospace" }}>{euro(r.bereitschaftEuro)}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-dm-mono),monospace" }}>{euro(r.bereitschaftEuro)}</div>
         </div>
         <div style={{ padding: "14px 16px", borderRadius: 12, background: "var(--surface2)" }}>
           <div style={{ fontSize: 12, color: "var(--muted)" }}>für die Einsätze</div>
-          <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'DM Mono',monospace" }}>{euro(r.einsatzEuro)}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-dm-mono),monospace" }}>{euro(r.einsatzEuro)}</div>
         </div>
       </div>
       {lohnNum > 0 && lohnNum < MINDESTLOHN_CURRENT && (

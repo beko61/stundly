@@ -24,7 +24,7 @@ const pill: React.CSSProperties = {
   position: "fixed", top: "calc(env(safe-area-inset-top, 0px) + 8px)", left: "50%",
   transform: "translateX(-50%)", zIndex: 1000, maxWidth: "calc(100vw - 32px)",
   padding: "7px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700,
-  fontFamily: "'Syne',sans-serif", boxShadow: "0 4px 16px rgba(0,0,0,.25)",
+  fontFamily: "var(--font-syne),sans-serif", boxShadow: "0 4px 16px rgba(0,0,0,.25)",
   display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "center",
 };
 

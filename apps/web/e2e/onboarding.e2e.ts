@@ -50,4 +50,24 @@ test("Einrichtung: Arbeitszeiten → Standardzeiten + Soll gespeichert, Stundenl
   expect(data).toHaveLength(1);
   expect(Number(data![0]!.monthly_target_hours)).toBe(174.42); // 40,25 × 52 / 12
   expect(Number(data![0]!.hourly_rate)).toBe(0);
+
+  // 3.2: Standardzeiten auch im Profil (Migration 040) …
+  const { data: prof } = await admin.from("profiles").select("standard_times").eq("user_id", userId).single();
+  expect(prof?.standard_times).toMatchObject({ friEnd: "15:30", monThuEnd: "17:00" });
+});
+
+test("Anderes Gerät (leerer Speicher): Standardzeiten kommen aus dem Profil", async ({ browser }) => {
+  const ctx = await browser.newContext(); // eigener, leerer localStorage
+  const page = await ctx.newPage();
+  await page.goto("/login");
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+
+  await page.goto("/tracker");
+  await expect.poll(async () => JSON.parse(
+    (await page.evaluate(() => localStorage.getItem("workly_standard_times_v1"))) ?? "{}",
+  ).friEnd).toBe("15:30");
+  await ctx.close();
 });

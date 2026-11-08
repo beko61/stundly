@@ -1,5 +1,26 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (181) – v0.91.0: Faz 3.2 — Standardzeiten im Profil (geräteübergreifend) + Migration 040
+
+Kullanıcı: "devam" → 3.2. Migration 040 kullanıcı tarafından **canlıda ve test projesinde çalıştırıldı** (ikisinde de
+kolon var — yoklandı). Kullanıcı notu: test projesi Free'de uyuyor → canlıda çalıştırmayı tercih ediyor; 040 gibi
+sadece ekleyen migration'lar canlıda erken çalıştırılabilir, E2E için test projesinde de gerekir.
+
+**Sorun:** Standardzeiten sadece localStorage'daydı → telefonda ayarlanan saatler bilgisayarda yoktu (yeni girişler,
+Jahres-Befüllung yanlış saatle).
+
+- Migration 040 (`supabase/migrations/040_standard_times.sql`): `profiles.standard_times jsonb` (null = varsayılan).
+  Mevcut "kendi profilini güncelle" policy'si yeterli. `test_setup.sql` 001–040.
+- `lib/utils/standardTimesSync.ts`: `saveStandardTimes` (cihaz hemen + profil), `syncStandardTimes` (açılışta: profil
+  değeri kazanır → cihaz; profil boş + cihazda özel ayar → profile yükle, eski ayarlar kaybolmaz), `parseStandardTimes`
+  (eksik/bozuk değer reddedilir). Hata/offline → cihaz kopyası kalır.
+- `components/ui/StandardTimesSync.tsx` dashboard layout'ta; Profil → Standardzeiten (`AutoFillReports`) ve kurulum
+  `saveStandardTimes` kullanıyor. Okuyanlar (TimeEntryModal, AutoFillReports) aynen localStorage kopyasını okur.
+- Test: `standardTimesSync.test.ts` (5); E2E onboarding: profilde standard_times + boş tarayıcıda giriş → saatler
+  gelir. Unit 747/747, E2E 15/15, tsc + lint temiz.
+
+---
+
 ## 2026-11-08 (180) – v0.90.0: Faz 3.1 — Einrichtung fragt die üblichen Arbeitszeiten ab (Soll passt ab Tag 1)
 
 Kullanıcı: "devam" → Faz 3 (ilk kullanım). Faz 3 maddeleri (bu oturumda akıştan çıkarıldı):

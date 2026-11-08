@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { OfflineSync } from "@/components/ui/OfflineSync";
+import { StandardTimesSync } from "@/components/ui/StandardTimesSync";
 
 export default async function DashboardLayout({
   children,
@@ -45,6 +46,7 @@ export default async function DashboardLayout({
         <BottomNav />
       </div>
       <OfflineSync />
+      <StandardTimesSync />
     </div>
   );
 }

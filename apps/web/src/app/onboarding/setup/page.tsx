@@ -6,9 +6,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 import {
-  DEFAULT_STANDARD_TIMES, setStandardTimes, dayNetMinutes, weeklyNetMinutes,
+  DEFAULT_STANDARD_TIMES, dayNetMinutes, weeklyNetMinutes,
   monthlyTargetHoursFromStandard, type StandardTimes,
 } from "@/lib/utils/standardTimes";
+import { saveStandardTimes } from "@/lib/utils/standardTimesSync";
 import { saveSollFromOnboarding } from "@/lib/onboarding/saveSoll";
 import { formatDur } from "@/lib/utils/formatDur";
 
@@ -108,7 +109,7 @@ function SetupForm() {
         setLoading(false);
         return;
       }
-      setStandardTimes(times);
+      await saveStandardTimes(times, supabase); // Gerät + Profil (Migration 040)
       const soll = await saveSollFromOnboarding(supabase, user.id, monthlyTargetHoursFromStandard(times));
       if (soll.error) {
         setError("Arbeitszeiten konnten nicht gespeichert werden. Bitte erneut versuchen.");

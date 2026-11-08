@@ -12,10 +12,10 @@ import { AUTOFILL_TAG } from "@/lib/company/monthCheck";
 import {
   DEFAULT_STANDARD_TIMES,
   getStandardTimes,
-  setStandardTimes,
   STANDARD_TIMES_LS_KEY,
   type StandardTimes,
 } from "@/lib/utils/standardTimes";
+import { saveStandardTimes } from "@/lib/utils/standardTimesSync";
 
 /**
  * Settings → "Jahres-Befüllung" kartı.
@@ -50,7 +50,7 @@ export function AutoFillReports() {
   function updateStd<K extends keyof StandardTimes>(key: K, value: StandardTimes[K]) {
     const next = { ...std, [key]: value };
     setStd(next);
-    setStandardTimes(next);
+    void saveStandardTimes(next); // Gerät + Profil (geräteübergreifend, Migration 040)
     setStdSaved(true);
     setTimeout(() => setStdSaved(false), 1200);
   }

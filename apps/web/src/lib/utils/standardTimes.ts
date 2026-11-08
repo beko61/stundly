@@ -6,8 +6,8 @@
  *   1. TimeEntryModal → yeni Arbeiten entry default'u
  *   2. AutoFillReports → "Jahr komplett befüllen" butonu
  *
- * Şu an localStorage'da saklanır (cihaz-başına ayar). İleride DB'ye
- * taşınabilir (salary_settings extension veya migration 015).
+ * localStorage'da kopya (senkron okuma, offline). Kalıcı kaynak profiles.standard_times
+ * (Migration 040) — kaydetme/eşitleme: lib/utils/standardTimesSync.ts.
  */
 
 export interface StandardTimes {

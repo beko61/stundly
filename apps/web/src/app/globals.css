@@ -898,6 +898,8 @@ body:has([aria-modal="true"]) .install-fab,
 body:has([aria-modal="true"]) .support-fab,
 body:has([aria-modal="true"]) .scroll-top-fab,
 body:has([aria-modal="true"]) .floating-scan { display: none !important; } /* schwebende Knöpfe nie über einem Fenster; !important wegen inline display */
+/* Einrichtung: "Weiter" ganz unten darf nicht unter dem Banner liegen → Platz zum Hochscrollen */
+body:has(.cookie-banner) .onboarding-shell { padding-bottom: 300px !important; } /* !important wegen inline padding */
 
 .cookie-banner-inner {
   max-width: 1200px;

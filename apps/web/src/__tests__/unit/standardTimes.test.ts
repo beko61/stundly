@@ -1,5 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { getDefaultForDow, DEFAULT_STANDARD_TIMES } from "@/lib/utils/standardTimes";
+import {
+  getDefaultForDow, DEFAULT_STANDARD_TIMES, dayNetMinutes, weeklyNetMinutes, monthlyTargetHoursFromStandard,
+} from "@/lib/utils/standardTimes";
+
+describe("Soll aus Standardzeiten (Onboarding)", () => {
+  it("Tag netto = Ende − Beginn − Pause; ungültig ≤ 0", () => {
+    expect(dayNetMinutes("07:45", "17:00", 60)).toBe(495);
+    expect(dayNetMinutes("08:00", "08:30", 30)).toBe(0);
+    expect(dayNetMinutes("17:00", "08:00", 0)).toBeLessThan(0);
+  });
+
+  it("Standard: 4 × 8h15 + 6h15 = 39h15 pro Woche → 170,08 h Soll", () => {
+    expect(weeklyNetMinutes(DEFAULT_STANDARD_TIMES)).toBe(39 * 60 + 15);
+    expect(monthlyTargetHoursFromStandard(DEFAULT_STANDARD_TIMES)).toBe(170.08);
+  });
+
+  it("40-Stunden-Woche → 173,33 h (gleiche Formel wie Firmenvertrag: × 52 / 12)", () => {
+    const t = { monThuStart: "07:00", monThuEnd: "15:30", monThuPause: 30, friStart: "07:00", friEnd: "15:30", friPause: 30 };
+    expect(weeklyNetMinutes(t)).toBe(40 * 60);
+    expect(monthlyTargetHoursFromStandard(t)).toBe(173.33);
+  });
+});
 
 describe("getDefaultForDow", () => {
   it("Mo-Do (dow 1-4) → monThuStart/End/Pause", () => {

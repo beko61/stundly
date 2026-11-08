@@ -1,5 +1,31 @@
 ﻿# Stundly – Son Kayıt
 
+## 2026-11-08 (180) – v0.90.0: Faz 3.1 — Einrichtung fragt die üblichen Arbeitszeiten ab (Soll passt ab Tag 1)
+
+Kullanıcı: "devam" → Faz 3 (ilk kullanım). Faz 3 maddeleri (bu oturumda akıştan çıkarıldı):
+3.1 kurulumda çalışma saatleri ✅ · 3.2 Standardzeiten DB'ye (şu an sadece cihazda/localStorage → başka cihazda
+kayboluyor; migration) · 3.3 "Einzelperson" metni Angestellte'yi de kapsasın (şu an "Freelancer, Handwerker,
+Einzelunternehmer") · 3.4 deneme süresi tek rakam (done sayfası "14 Tage", TRIAL_DAYS 30) · 3.5 Dashboard
+"3 Schritte" rehberi yapılan adımları ✓ göstersin.
+
+**Sorun:** Kurulum sadece Bundesland soruyordu. Standardzeiten varsayılanı 39h15/hafta, Soll varsayılanı 174 h/ay
+(40h) → yeni kullanıcı standart günlerini girse de her ay eksi Überstunden görüyordu. Gehalt sayfası ilk açılışta
+15 €/h'yi kaydedip Dashboard'da uydurma brüt gösteriyordu.
+
+- `onboarding/setup` (Einzelperson): "Deine üblichen Arbeitszeiten" — Mo–Do / Fr Beginn · Ende · Pause (varsayılan
+  dolu), canlı "= 39h 15m pro Woche → Soll 170h 5m im Monat". Ende ≤ Beginn + Pause → hata. Firma akışı aynı.
+- Kaydet: Standardzeiten (`setStandardTimes`, yeni girişler + Jahres-Befüllung) + Soll = haftalık × 52 / 12 (firma
+  sözleşmesiyle aynı formül, Migration 033) → `lib/onboarding/saveSoll.ts`: satır varsa sadece
+  monthly_target_hours, yoksa yeni satır `hourly_rate 0` (→ Dashboard "Stundenlohn eintragen →", 15 € yok).
+- `lib/utils/standardTimes.ts`: `dayNetMinutes`, `weeklyNetMinutes`, `monthlyTargetHoursFromStandard`.
+- E2E'nin bulduğu: form uzayınca telefonda "Weiter" çerez bandının altında kalıyordu → bant açıkken
+  `.onboarding-shell` altına 300 px boşluk (globals.css).
+- Test: standardTimes +3, `saveSoll.test.ts` (2), E2E `onboarding.e2e.ts` (Fr 15:30 → 40h 15m, DB'de Soll 174,42 +
+  hourly_rate 0, localStorage). Unit 742/742, E2E 14/14, tsc + lint temiz. Migration yok.
+- Not: aylık Soll sabit → standart çalışan için Überstunden yıl ortalamasında 0 (aylar iş günü sayısıyla oynar).
+
+---
+
 ## 2026-11-08 (179) – v0.89.0: Süper admin ayrı işaret (is_super_admin) — firmaya çalışan olarak katılabilir + Migration 039
 
 Kullanıcı: "firmaya kayıt olmam lazım … çıktığımda bilgilerim silinmesin, süper adminin firma çalışanı olarak kayıt

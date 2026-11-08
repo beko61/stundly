@@ -5,6 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
+import {
+  DEFAULT_STANDARD_TIMES, setStandardTimes, dayNetMinutes, weeklyNetMinutes,
+  monthlyTargetHoursFromStandard, type StandardTimes,
+} from "@/lib/utils/standardTimes";
+import { saveSollFromOnboarding } from "@/lib/onboarding/saveSoll";
+import { formatDur } from "@/lib/utils/formatDur";
 
 const BUNDESLAENDER = [
   { code: "BB", name: "Brandenburg" },
@@ -37,6 +43,12 @@ function SetupForm() {
   const [city, setCity] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Übliche Arbeitszeiten → Standardzeiten (neue Einträge, Jahres-Befüllung) + Soll/Monat
+  const [times, setTimes] = useState<StandardTimes>(DEFAULT_STANDARD_TIMES);
+  const setTime = (k: keyof StandardTimes, v: string) =>
+    setTimes((t) => ({ ...t, [k]: typeof t[k] === "number" ? Math.max(0, Number(v) || 0) : v }));
+  const timesValid = dayNetMinutes(times.monThuStart, times.monThuEnd, times.monThuPause) > 0
+    && dayNetMinutes(times.friStart, times.friEnd, times.friPause) > 0;
 
   useEffect(() => {
     // Kullanıcı giriş yapmamışsa login'e yönlendir
@@ -80,6 +92,11 @@ function SetupForm() {
       await supabase.auth.refreshSession();
       router.push("/onboarding/done?type=company");
     } else {
+      if (!timesValid) {
+        setError("Bitte prüfe deine Arbeitszeiten: Ende muss nach Beginn + Pause liegen.");
+        setLoading(false);
+        return;
+      }
       const res = await fetch("/api/onboarding/set-bundesland", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,6 +105,13 @@ function SetupForm() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(j.error ?? "Fehler beim Speichern.");
+        setLoading(false);
+        return;
+      }
+      setStandardTimes(times);
+      const soll = await saveSollFromOnboarding(supabase, user.id, monthlyTargetHoursFromStandard(times));
+      if (soll.error) {
+        setError("Arbeitszeiten konnten nicht gespeichert werden. Bitte erneut versuchen.");
         setLoading(false);
         return;
       }
@@ -174,6 +198,34 @@ function SetupForm() {
             Bestimmt die gesetzlichen Feiertage in deinem Bundesland.
           </p>
         </div>
+
+        {!isCompany && (
+          <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+            <legend className="label">Deine üblichen Arbeitszeiten</legend>
+            {([
+              ["Mo–Do", "monThuStart", "monThuEnd", "monThuPause"],
+              ["Fr",    "friStart",    "friEnd",    "friPause"],
+            ] as const).map(([day, s, e, p]) => (
+              <div key={day} style={{ display: "grid", gridTemplateColumns: "48px 1fr 1fr 72px", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{day}</span>
+                <input className="input" type="time" aria-label={`${day} Beginn`} value={times[s]}
+                  onChange={(ev) => setTime(s, ev.target.value)} required />
+                <input className="input" type="time" aria-label={`${day} Ende`} value={times[e]}
+                  onChange={(ev) => setTime(e, ev.target.value)} required />
+                <input className="input" type="number" min={0} max={240} step={5} inputMode="numeric"
+                  aria-label={`${day} Pause in Minuten`} value={times[p]}
+                  onChange={(ev) => setTime(p, ev.target.value)} />
+              </div>
+            ))}
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+              Beginn · Ende · Pause (Min.).{" "}
+              {timesValid
+                ? <>= <strong>{formatDur(weeklyNetMinutes(times))}</strong> pro Woche → Soll {formatDur(monthlyTargetHoursFromStandard(times) * 60)} im Monat.</>
+                : <span style={{ color: "var(--red)" }}>Ende muss nach Beginn + Pause liegen.</span>}
+              {" "}Später änderbar (Profil → Standardzeiten, Lohn → Sollstunden).
+            </p>
+          </fieldset>
+        )}
 
         {error && (
           <p style={{

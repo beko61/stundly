@@ -69,3 +69,28 @@ export function getDefaultForDow(
 }
 
 export const STANDARD_TIMES_LS_KEY = LS_KEY;
+
+const toMin = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+};
+
+/** Netto-Minuten eines Standardtags (Ende − Beginn − Pause); ≤ 0 = ungültig. */
+export function dayNetMinutes(start: string, end: string, pause: number): number {
+  return toMin(end) - toMin(start) - pause;
+}
+
+/** Netto-Wochenminuten der Standardzeiten: 4 × Mo–Do + Fr. */
+export function weeklyNetMinutes(t: StandardTimes): number {
+  return 4 * dayNetMinutes(t.monThuStart, t.monThuEnd, t.monThuPause)
+    + dayNetMinutes(t.friStart, t.friEnd, t.friPause);
+}
+
+/**
+ * Soll/Monat aus den Standardzeiten — gleiche Formel wie beim Firmenvertrag
+ * (Wochenstunden × 52 / 12, Migration 033). Wer seine Standardtage arbeitet, hat im Jahresmittel
+ * 0 Überstunden (einzelne Monate schwanken mit der Zahl der Arbeitstage).
+ */
+export function monthlyTargetHoursFromStandard(t: StandardTimes): number {
+  return Math.round((weeklyNetMinutes(t) / 60) * 52 / 12 * 100) / 100;
+}

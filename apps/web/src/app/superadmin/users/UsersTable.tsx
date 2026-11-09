@@ -136,6 +136,14 @@ export default function UsersTable({ initialUsers, initialSegment = "all" }: { i
   );
 }
 
+/** Gut lesbar/abtippbar: ohne 0/O/1/l/I, mit Ziffer + Sonderzeichen (z. B. "Kx7m-Pq4r-W9tz") */
+function genTempPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const rnd = crypto.getRandomValues(new Uint32Array(12));
+  const s = Array.from(rnd, (n) => chars[n % chars.length]).join("");
+  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8)}${2 + (rnd[0]! % 8)}`;
+}
+
 function UserDrawer({ user: u, now, onClose, onPatch, onDeleted }: {
   user: SaUser; now: number; onClose: () => void; onPatch: (p: Partial<SaUser>) => void; onDeleted: () => void;
 }) {
@@ -143,6 +151,10 @@ function UserDrawer({ user: u, now, onClose, onPatch, onDeleted }: {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmDel, setConfirmDel] = useState(false);
   const [typed, setTyped] = useState("");
+  // Geçici şifre: Admin yazar/üretir, kullanıcı ilk girişte değiştirmek zorunda (must_change_password)
+  const [tmpOpen, setTmpOpen] = useState(false);
+  const [tmpPw, setTmpPw] = useState("");
+  const [tmpSet, setTmpSet] = useState<string | null>(null);
 
   async function call(key: string, init: RequestInit, url = `/api/superadmin/users/${u.id}`): Promise<boolean> {
     setBusy(key); setMsg(null);
@@ -211,6 +223,42 @@ function UserDrawer({ user: u, now, onClose, onPatch, onDeleted }: {
           <button className="btn btn-secondary" disabled={busy === "reset_password"} onClick={() => void act("reset_password", "Şifre sıfırlama maili gönderildi")}>
             🔑 Şifre sıfırlama maili gönder
           </button>
+          {!tmpOpen ? (
+            <button className="btn btn-secondary" onClick={() => { setTmpOpen(true); setTmpPw(genTempPassword()); setTmpSet(null); }}>
+              🔐 Geçici şifre ata
+            </button>
+          ) : (
+            <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 12, display: "grid", gap: 8 }}>
+              {tmpSet ? (<>
+                <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                  Geçici şifre atandı. Kullanıcıya güvenli bir yoldan ilet; ilk girişte yeni şifre belirlemek zorunda.
+                </p>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <code data-testid="temp-password" style={{ flex: 1, fontSize: 15, fontWeight: 700, overflowWrap: "anywhere" }}>{tmpSet}</code>
+                  <button className="btn btn-secondary" onClick={() => void navigator.clipboard.writeText(tmpSet)}>Kopyala</button>
+                </div>
+                <button className="btn btn-ghost" onClick={() => { setTmpOpen(false); setTmpSet(null); setTmpPw(""); }}>Kapat</button>
+              </>) : (<>
+                <label className="label" htmlFor="sa-tmp-pw" style={{ marginBottom: 0 }}>Geçici şifre (8–72 karakter)</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input id="sa-tmp-pw" className="input" value={tmpPw} onChange={(e) => setTmpPw(e.target.value)}
+                    autoComplete="off" spellCheck={false} style={{ flex: 1, fontFamily: "var(--font-dm-mono),monospace" }} />
+                  <button className="btn btn-secondary" onClick={() => setTmpPw(genTempPassword())} title="Yeni şifre üret">⟲</button>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setTmpOpen(false)}>İptal</button>
+                  <button className="btn btn-primary" style={{ flex: 1 }} disabled={tmpPw.length < 8 || busy === "set_temp_password"}
+                    onClick={async () => {
+                      if (await call("set_temp_password", { method: "POST", body: JSON.stringify({ action: "set_temp_password", password: tmpPw }) })) {
+                        setTmpSet(tmpPw); setMsg({ ok: true, text: "Geçici şifre atandı" });
+                      }
+                    }}>
+                    {busy === "set_temp_password" ? "Kaydediliyor..." : "Şifreyi ata"}
+                  </button>
+                </div>
+              </>)}
+            </div>
+          )}
           {!u.emailConfirmed && (
             <button className="btn btn-secondary" disabled={busy === "resend_confirmation"} onClick={() => void act("resend_confirmation", "Onay maili tekrar gönderildi")}>
               ✉️ Onay mailini tekrar gönder

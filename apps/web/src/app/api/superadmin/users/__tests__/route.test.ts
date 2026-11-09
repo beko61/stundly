@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   updates: [] as Record<string, unknown>[],
   reset: vi.fn(),
   resend: vi.fn(),
+  setPw: vi.fn(),
 }));
 
 vi.mock("@/lib/superadmin/auth", () => ({
@@ -18,7 +19,10 @@ vi.mock("@/lib/superadmin/auth", () => ({
       update: (row: Record<string, unknown>) => { h.updates.push(row); return { eq: async () => ({ error: null }) }; },
     }),
     auth: {
-      admin: { getUserById: async () => ({ data: { user: h.authUser } }) },
+      admin: {
+        getUserById: async () => ({ data: { user: h.authUser } }),
+        updateUserById: (...a: unknown[]) => h.setPw(...a),
+      },
       resetPasswordForEmail: (...a: unknown[]) => h.reset(...a),
       resend: (...a: unknown[]) => h.resend(...a),
     },
@@ -37,9 +41,30 @@ beforeEach(() => {
   h.inserts = []; h.updates = [];
   h.reset.mockReset().mockResolvedValue({ error: null });
   h.resend.mockReset().mockResolvedValue({ error: null });
+  h.setPw.mockReset().mockResolvedValue({ error: null });
 });
 
 describe("/api/superadmin/users/[id]", () => {
+  it("POST set_temp_password → Passwort + Pflicht zum Ändern, Audit ohne Passwort", async () => {
+    const res = await post({ action: "set_temp_password", password: "Vorlaeufig-2026!" });
+    expect(res.status).toBe(200);
+    expect(h.setPw).toHaveBeenCalledWith("u1", { password: "Vorlaeufig-2026!" });
+    expect(h.updates).toContainEqual({ must_change_password: true });
+    const audit = h.inserts.find(i => i.table === "audit_log")!;
+    expect(audit.row).toMatchObject({ action: "superadmin.set_temp_password", resource_id: "u1" });
+    expect(JSON.stringify(audit.row)).not.toContain("Vorlaeufig");
+  });
+
+  it("POST set_temp_password: eigenes Konto / zu kurz / kein Super-Admin → abgelehnt, nichts geändert", async () => {
+    expect((await post({ action: "set_temp_password", password: "Vorlaeufig-2026!" }, "me")).status).toBe(400);
+    expect((await post({ action: "set_temp_password", password: "kurz" })).status).toBe(400);
+    expect((await post({ action: "set_temp_password" })).status).toBe(400);
+    h.caller = null;
+    expect((await post({ action: "set_temp_password", password: "Vorlaeufig-2026!" })).status).toBe(403);
+    expect(h.setPw).not.toHaveBeenCalled();
+    expect(h.updates).toHaveLength(0);
+  });
+
   it("POST reset_password → Supabase-Mail + Audit", async () => {
     const res = await post({ action: "reset_password" });
     expect(res.status).toBe(200);

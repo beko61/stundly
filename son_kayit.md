@@ -1,4 +1,20 @@
-﻿## 2026-11-09 (190) – v0.95.2: SICHERHEIT — Passwort-Reset änderte das eingeloggte Konto statt des Link-Kontos
+﻿## 2026-11-09 (191) – v0.96.0: Kokpit — geçici şifre atama
+
+Kullanıcı: "Aydın Bektaş hesabına şimdilik geçici şifre atayabilir misin" → canlıya service-role ile benim yazmam yerine
+admin'in kendisinin yapacağı özellik ("2. yapalım").
+
+- Kokpit → Kullanıcılar → kullanıcı → "🔐 Geçici şifre ata": şifre otomatik üretiliyor (okunaklı, 0/O/1/l yok) ya da
+  elle yazılıyor (8–72, /api/account/change-password ile aynı kural) → "Şifreyi ata" → şifre + Kopyala gösteriliyor.
+- `/api/superadmin/users/[id]` POST action `set_temp_password`: süper admin şart, kendi hesabına yasak,
+  auth.admin.updateUserById + profiles.must_change_password=true (ilk girişte /password-change zorunlu);
+  audit `superadmin.set_temp_password` sadece e-posta ile (şifre asla loglanmıyor).
+- Test: unit 2 (başarı + audit'te şifre yok; kendi hesap/kısa/yok/403 → hiçbir şey değişmiyor); E2E: Kokpit'te ata →
+  hedef bu şifreyle giriyor ve /password-change'e yönleniyor, admin şifresi aynı, audit'te şifre yok.
+  Unit 95 dosya yeşil, E2E 24/24. Migration yok.
+
+---
+
+## 2026-11-09 (190) – v0.95.2: SICHERHEIT — Passwort-Reset änderte das eingeloggte Konto statt des Link-Kontos
 
 Kullanıcı: "başka maile gönderdim ama ana hesabımın şifresi sıfırlandı".
 

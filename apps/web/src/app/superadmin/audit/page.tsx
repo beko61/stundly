@@ -10,6 +10,7 @@ const ACTION_LABELS: Record<string, string> = {
   "superadmin.user_role_changed":     "Rol değiştirildi",
   "superadmin.user_active_changed":   "Aktif/pasif değiştirildi",
   "superadmin.reset_password":        "Şifre sıfırlama maili",
+  "superadmin.set_temp_password":     "Geçici şifre atandı",
   "superadmin.resend_confirmation":   "Onay maili tekrar",
 };
 

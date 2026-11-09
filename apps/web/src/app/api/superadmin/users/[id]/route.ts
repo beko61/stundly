@@ -47,15 +47,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 /**
- * POST /api/superadmin/users/[id]  Body: { action: "reset_password" | "resend_confirmation" }
- * Schickt dem Nutzer die Standard-Mail von Supabase Auth (kein Passwort sichtbar für den Admin).
+ * POST /api/superadmin/users/[id]
+ *   { action: "reset_password" | "resend_confirmation" } → Standard-Mail von Supabase Auth
+ *   { action: "set_temp_password", password } → vorläufiges Passwort; der Nutzer muss es beim nächsten Login
+ *     ändern (must_change_password → /password-change). Nicht fürs eigene Konto; Passwort nie im Audit-Log.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const caller = await checkSuperAdmin();
   if (!caller) return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
 
   const { id } = await params;
-  const { action } = await req.json().catch(() => ({ action: null })) as { action?: string | null };
+  const { action, password } = await req.json().catch(() => ({ action: null })) as { action?: string | null; password?: unknown };
   const admin = adminClient();
   const { data } = await admin.auth.admin.getUserById(id);
   const email = data?.user?.email;
@@ -64,6 +66,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   let error: { message: string } | null = null;
   if (action === "reset_password") {
     ({ error } = await admin.auth.resetPasswordForEmail(email, { redirectTo: `${APP_URL}/reset-password` }));
+  } else if (action === "set_temp_password") {
+    if (id === caller.id) return NextResponse.json({ error: "Kendi şifreni Profil'den değiştir" }, { status: 400 });
+    if (typeof password !== "string" || password.length < 8 || password.length > 72) {
+      return NextResponse.json({ error: "Şifre 8–72 karakter olmalı" }, { status: 400 });
+    }
+    ({ error } = await admin.auth.admin.updateUserById(id, { password }));
+    if (!error) {
+      ({ error } = await admin.from("profiles").update({ must_change_password: true }).eq("user_id", id));
+    }
   } else if (action === "resend_confirmation") {
     if (data.user?.email_confirmed_at) return NextResponse.json({ error: "E-posta zaten onaylı" }, { status: 400 });
     ({ error } = await admin.auth.resend({ type: "signup", email }));

@@ -31,9 +31,10 @@ interface DataPayload {
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 
-async function fetchData(year: number, month: number, userId?: string): Promise<DataPayload> {
+async function fetchData(year: number, month: number, userId?: string, scope?: "year"): Promise<DataPayload> {
   const params = new URLSearchParams({ year: String(year), month: String(month) });
   if (userId) params.set("userId", userId);
+  if (scope) params.set("scope", scope);
   const res = await fetch(`/api/company/reports/data?${params}`);
   if (!res.ok) throw new Error("Daten konnten nicht geladen werden");
   return res.json();
@@ -49,17 +50,30 @@ export function EmployeeExportButtons({
 }: {
   userId: string; fullName: string; year: number; month: number;
 }) {
-  const [busy, setBusy] = useState<"pdf" | "csv" | null>(null);
+  const [busy, setBusy] = useState<"pdf" | "csv" | "jahr" | null>(null);
   const [err,  setErr]  = useState<string | null>(null);
 
-  async function download(format: "pdf" | "csv") {
+  async function download(format: "pdf" | "csv" | "jahr") {
     setBusy(format); setErr(null);
     try {
-      const data = await fetchData(year, month, userId);
+      const data = await fetchData(year, month, userId, format === "jahr" ? "year" : undefined);
       const emp  = data.employees[0];
       if (!emp) { setErr("Mitarbeiter nicht gefunden"); setBusy(null); return; }
 
-      if (format === "pdf") {
+      if (format === "jahr") {
+        // Jahresbericht zum Unterschreiben — gleiche Monatsrechnung wie das Monats-PDF
+        const { generateYearlyReportPDF } = await import("@/lib/pdf/yearlyReportPdf");
+        await generateYearlyReportPDF({
+          year: data.year,
+          entries:   emp.entries,
+          notdienst: emp.notdienst.map(n => ({
+            date: n.date, start_time: n.start_time ?? "", end_time: n.end_time ?? "",
+            ...(n.erledigt != null ? { erledigt: !!n.erledigt } : {}),
+          })),
+          feiertage: data.feiertage,
+          profile: emp.profile as Parameters<typeof generateYearlyReportPDF>[0]["profile"],
+        });
+      } else if (format === "pdf") {
         // Lazy load PDF module (~200KB) — sadece PDF butonuna basınca
         const { generateMonthlyReportPDF } = await import("@/lib/pdf/monthlyReportPdf");
         await generateMonthlyReportPDF({
@@ -118,6 +132,13 @@ export function EmployeeExportButtons({
         title="Detail-CSV (Tagesübersicht)"
       >
         {busy === "csv" ? "..." : "CSV"}
+      </button>
+      <button
+        onClick={() => download("jahr")} disabled={busy !== null}
+        style={btnStyle("var(--green)")}
+        title={`Jahresbericht ${year} als PDF (zum Unterschreiben)`}
+      >
+        {busy === "jahr" ? "..." : `Jahr ${year}`}
       </button>
       {err && <span style={{ fontSize: 10, color: "var(--red)" }}>{err}</span>}
     </div>

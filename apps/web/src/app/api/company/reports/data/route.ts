@@ -6,6 +6,7 @@ import { applyBriefkopf, briefkopfFromCompany, COMPANY_BRIEFKOPF_SELECT } from "
 
 /**
  * GET /api/company/reports/data?year=2026&month=6&userId=<optional>
+ * GET /api/company/reports/data?year=2026&scope=year&userId=<id>   → ganzes Jahr (Jahresbericht)
  *
  * Company admin için ay-bazlı veri dump (export için JSON).
  *  - userId verilirse: tek çalışan (PDF veya detail CSV için)
@@ -28,14 +29,15 @@ export async function GET(req: NextRequest) {
   const yearRaw  = parseInt(sp.get("year")  ?? "", 10);
   const monthRaw = parseInt(sp.get("month") ?? "", 10);
   const userId   = sp.get("userId");
+  const isYear   = sp.get("scope") === "year";
 
   const now = new Date();
   const year  = Number.isInteger(yearRaw)  && yearRaw  >= 2020 && yearRaw  <= 2100 ? yearRaw  : now.getFullYear();
   const month = Number.isInteger(monthRaw) && monthRaw >= 1    && monthRaw <= 12   ? monthRaw : now.getMonth() + 1;
 
   const daysIn = new Date(year, month, 0).getDate();
-  const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
-  const lastDay  = `${year}-${String(month).padStart(2, "0")}-${String(daysIn).padStart(2, "0")}`;
+  const firstDay = isYear ? `${year}-01-01` : `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay  = isYear ? `${year}-12-31` : `${year}-${String(month).padStart(2, "0")}-${String(daysIn).padStart(2, "0")}`;
 
   // ── Şirket bilgisi + Briefkopf (Migration 036; vorher nur Name/Adresse) ──
   const full = await admin.from("companies").select(COMPANY_BRIEFKOPF_SELECT).eq("id", companyId).maybeSingle();
@@ -82,7 +84,9 @@ export async function GET(req: NextRequest) {
   // ── Notdienst (aylık) — hafta-Pazar-ay-atfı ────────────────────
   // Bir Notdienst-Woche, haftasının Pazar'ının bulunduğu ayda sayılır.
   // ±7 gün pay ile fetch, sonra `notdienstBelongsToMonth` ile filter.
-  const ndRange = notdienstLoadRange(year, month);
+  const ndRange = isYear
+    ? { start: notdienstLoadRange(year, 1).start, end: notdienstLoadRange(year, 12).end }
+    : notdienstLoadRange(year, month);
   const { data: ndRaw } = userIds.length > 0
     ? await admin
         .from("notdienst_entries")
@@ -91,7 +95,9 @@ export async function GET(req: NextRequest) {
         .gte("date", ndRange.start).lte("date", ndRange.end)
         .order("date", { ascending: true })
     : { data: [] };
-  const ndEntries = (ndRaw ?? []).filter(n => notdienstBelongsToMonth(n.date, year, month));
+  const ndEntries = (ndRaw ?? []).filter(n => isYear
+    ? Array.from({ length: 12 }, (_, i) => i + 1).some(m => notdienstBelongsToMonth(n.date, year, m))
+    : notdienstBelongsToMonth(n.date, year, month));
 
   // ── Salary settings (DATEV export için) ────────────────────────
   const { data: salarySettingsList } = userIds.length > 0
@@ -129,7 +135,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({
-    year, month, bundesland,
+    year, month, scope: isYear ? "year" : "month", bundesland,
     companyName: (company as { name?: string } | null)?.name ?? null,
     feiertage,
     employees: result,

@@ -18,7 +18,7 @@ import { addVorschauWatermark } from "./watermark";
 /** Link in der Fußzeile ("Erstellt mit Stundly") */
 const STUNDLY_URL = "https://stundly.de";
 
-const MONTHS_DE = [
+export const MONTHS_DE = [
   "Januar","Februar","März","April","Mai","Juni",
   "Juli","August","September","Oktober","November","Dezember"
 ];
@@ -77,7 +77,7 @@ function timeToMins(t: string | null | undefined): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
-function minsToTime(m: number): string {
+export function minsToTime(m: number): string {
   const sign  = m < 0 ? "-" : "";
   const abs   = Math.abs(m);
   const h     = Math.floor(abs / 60);
@@ -85,7 +85,7 @@ function minsToTime(m: number): string {
   return `${sign}${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
-function pad2(n: number): string {
+export function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
@@ -112,7 +112,7 @@ const DEFAULT_STD = {
 // Aylık istatistik hesabı
 // ───────────────────────────────────────────────────────────────
 
-interface MonthStats {
+export interface MonthStats {
   arbeitstage:  number;
   workedMins:   number;
   standardMins: number;
@@ -125,7 +125,7 @@ interface MonthStats {
   ndMins:       number;
 }
 
-function calcMonthStats(input: MonthlyReportInput): MonthStats {
+export function calcMonthStats(input: Omit<MonthlyReportInput, "profile">): MonthStats {
   const std = input.standardTimes ?? DEFAULT_STD;
   const daysInMonth = new Date(input.year, input.month, 0).getDate();
   const entryMap = new Map(input.entries.map(e => [e.date, e]));
@@ -194,6 +194,80 @@ function calcMonthStats(input: MonthlyReportInput): MonthStats {
 }
 
 // ───────────────────────────────────────────────────────────────
+// Gemeinsam mit dem Jahresbericht (yearlyReportPdf.ts)
+// ───────────────────────────────────────────────────────────────
+
+type PdfDoc = InstanceType<typeof import("jspdf").default>;
+
+/** Briefkopf (Logo + Firma, zentriert). Gibt das neue y zurück. */
+export function drawBriefkopf(doc: PdfDoc, profile: ProfileInfo, y: number): number {
+  const W = 210;
+  // ── Briefkopf: Logo + Firma bilgileri ORTALANMIŞ ────────────────
+  const LOGO_SIZE = 22;
+  if (profile.logo_data) {
+    try {
+      doc.addImage(profile.logo_data, "PNG", (W - LOGO_SIZE) / 2, y, LOGO_SIZE, LOGO_SIZE);
+      y += LOGO_SIZE + 3;
+    } catch {
+      // Logo yüklenemediyse atla
+    }
+  }
+
+  doc.setTextColor(0);
+  doc.setFontSize(14); doc.setFont("helvetica", "bold");
+  doc.text(profile.company_name || "Stundly", W / 2, y + 4, { align: "center" });
+  y += 6;
+
+  doc.setFontSize(9); doc.setFont("helvetica", "normal");
+  if (profile.firma_strasse) {
+    doc.text(profile.firma_strasse, W / 2, y + 3, { align: "center" });
+    y += 4;
+  }
+  if (profile.firma_plz || profile.firma_ort) {
+    doc.text([profile.firma_plz, profile.firma_ort].filter(Boolean).join(" "), W / 2, y + 3, { align: "center" });
+    y += 4;
+  }
+  if (profile.firma_telefon) {
+    doc.text(`Tel.: ${profile.firma_telefon}`, W / 2, y + 3, { align: "center" });
+    y += 4;
+  }
+  if (profile.company_email) {
+    doc.text(profile.company_email, W / 2, y + 3, { align: "center" });
+    y += 4;
+  }
+
+  return y;
+}
+
+/** Unterschriften Mitarbeiter (links, ggf. gespeicherte Signatur) + Vorgesetzte/r (rechts) + Fußzeile. */
+export function drawUnterschrift(doc: PdfDoc, profile: ProfileInfo, y: number, maName: string, heuteStr: string): void {
+  const W = 210, L = 14, R = 196;
+  // Sol: Mitarbeiter — varsa kayıtlı imzayı çizgiye yerleştir
+  if (profile.signature_data) {
+    try {
+      // İmza: 35 mm genişlik, 12 mm yükseklik, sol blok ortalı
+      doc.addImage(profile.signature_data, "PNG", L + 17, y - 12, 36, 12);
+    } catch { /* signature yüklenemediyse atla */ }
+  }
+  doc.setDrawColor(80); doc.setLineWidth(0.3);
+  doc.line(L, y, L + 70, y);
+  doc.line(R - 70, y, R, y);
+  doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+  doc.text(`${maName} — ${heuteStr}`, L + 35, y + 4, { align: "center" });
+  // Sağ: Vorgesetzter — adı varsa altında yaz
+  const supLabel = profile.vorgesetzter
+    ? `${profile.vorgesetzter} — Datum`
+    : "Vorgesetzte/r — Datum";
+  doc.text(supLabel, R - 35, y + 4, { align: "center" });
+  y += 12;
+  doc.setFontSize(6.5); doc.setTextColor(140);
+  const footer = `Erstellt am ${heuteStr} mit Stundly · stundly.de`;
+  doc.text(footer, W/2, y, { align: "center" });
+  const fw = doc.getTextWidth(footer);
+  doc.link(W/2 - fw/2, y - 2.5, fw, 3.5, { url: STUNDLY_URL });
+}
+
+// ───────────────────────────────────────────────────────────────
 // Ana fonksiyon — PDF üret + indir
 // ───────────────────────────────────────────────────────────────
 
@@ -221,40 +295,7 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput, opts: 
     if (y + need > 285) { doc.addPage(); y = 16; }
   };
 
-  // ── Briefkopf: Logo + Firma bilgileri ORTALANMIŞ ────────────────
-  const LOGO_SIZE = 22;
-  if (input.profile.logo_data) {
-    try {
-      doc.addImage(input.profile.logo_data, "PNG", (W - LOGO_SIZE) / 2, y, LOGO_SIZE, LOGO_SIZE);
-      y += LOGO_SIZE + 3;
-    } catch {
-      // Logo yüklenemediyse atla
-    }
-  }
-
-  doc.setTextColor(0);
-  doc.setFontSize(14); doc.setFont("helvetica", "bold");
-  doc.text(input.profile.company_name || "Stundly", W / 2, y + 4, { align: "center" });
-  y += 6;
-
-  doc.setFontSize(9); doc.setFont("helvetica", "normal");
-  if (input.profile.firma_strasse) {
-    doc.text(input.profile.firma_strasse, W / 2, y + 3, { align: "center" });
-    y += 4;
-  }
-  if (input.profile.firma_plz || input.profile.firma_ort) {
-    doc.text([input.profile.firma_plz, input.profile.firma_ort].filter(Boolean).join(" "), W / 2, y + 3, { align: "center" });
-    y += 4;
-  }
-  if (input.profile.firma_telefon) {
-    doc.text(`Tel.: ${input.profile.firma_telefon}`, W / 2, y + 3, { align: "center" });
-    y += 4;
-  }
-  if (input.profile.company_email) {
-    doc.text(input.profile.company_email, W / 2, y + 3, { align: "center" });
-    y += 4;
-  }
-
+  y = drawBriefkopf(doc, input.profile, y);
   y += 5;
   doc.setDrawColor(80); doc.setLineWidth(0.4); doc.line(L, y, R, y); y += 7;
 
@@ -418,29 +459,7 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput, opts: 
   checkPage(35);
   y = Math.max(y, 258);
 
-  // Sol: Mitarbeiter — varsa kayıtlı imzayı çizgiye yerleştir
-  if (input.profile.signature_data) {
-    try {
-      // İmza: 35 mm genişlik, 12 mm yükseklik, sol blok ortalı
-      doc.addImage(input.profile.signature_data, "PNG", L + 17, y - 12, 36, 12);
-    } catch { /* signature yüklenemediyse atla */ }
-  }
-  doc.setDrawColor(80); doc.setLineWidth(0.3);
-  doc.line(L, y, L + 70, y);
-  doc.line(R - 70, y, R, y);
-  doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
-  doc.text(`${maName} — ${heuteStr}`, L + 35, y + 4, { align: "center" });
-  // Sağ: Vorgesetzter — adı varsa altında yaz
-  const supLabel = input.profile.vorgesetzter
-    ? `${input.profile.vorgesetzter} — Datum`
-    : "Vorgesetzte/r — Datum";
-  doc.text(supLabel, R - 35, y + 4, { align: "center" });
-  y += 12;
-  doc.setFontSize(6.5); doc.setTextColor(140);
-  const footer = `Erstellt am ${heuteStr} mit Stundly · stundly.de`;
-  doc.text(footer, W/2, y, { align: "center" });
-  const fw = doc.getTextWidth(footer);
-  doc.link(W/2 - fw/2, y - 2.5, fw, 3.5, { url: STUNDLY_URL });
+  drawUnterschrift(doc, input.profile, y, maName, heuteStr);
 
   if (opts.vorschau) {
     addVorschauWatermark(doc);

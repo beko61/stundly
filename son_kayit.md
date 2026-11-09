@@ -1,4 +1,21 @@
-﻿## 2026-11-08 (185) – v0.93.0: Firmen-Panel lädt bestehende Konten per Link ein
+﻿## 2026-11-09 (186) – v0.94.0: Jahresbericht-PDF für Firmen (zum Unterschreiben)
+
+Kullanıcı: "Firmalar aylık saat çıktısı alınabilsin imzalatmak için ve yıllık" → aylık zaten vardı
+(Berichte → PDF, imza alanlı); "Yap".
+
+- Firma → Berichte: çalışan satırında yeni "Jahr <yıl>" düğmesi → Jahresbericht PDF: 12 ay Arb.-Tage / Soll / Ist /
+  Notdienst / Differenz / kümülatif Saldo / Urlaub / Krank + Summe, "Arbeitszeitkonto <yıl>", imza alanları
+  (Mitarbeiter + Vorgesetzte/r).
+- Tek rakam: her ay aylık PDF'in `calcMonthStats`'ı ile hesaplanıyor (aylık PDF'lerin toplamı = yıllık);
+  Notdienst hafta-Pazar-ay kuralıyla. İçinde bulunulan yılda gelecek aylar sayılmıyor ("—").
+- `monthlyReportPdf.ts`: Briefkopf + Unterschrift `drawBriefkopf`/`drawUnterschrift` olarak ayrıldı (çıktı aynı).
+- `/api/company/reports/data?scope=year`: yılın tüm kayıtları + Notdienst (aynı company_admin kontrolü).
+- Test: unit 3 (aylık = calcMonthStats, ND atfı, gelecek aylar, toplamlar), E2E: admin "Jahr 2025" → PDF indiriliyor,
+  içerik kontrolü. Unit 91 dosya yeşil, E2E 19/19, tsc + lint temiz. Migration yok.
+
+---
+
+## 2026-11-08 (185) – v0.93.0: Firmen-Panel lädt bestehende Konten per Link ein
 
 Kullanıcı: kopyaladığı link firma daveti değil tavsiye linkiydi (/register?ref=…); panelde mevcut hesabı davet
 etmenin yolu yoktu (v0.22.0'da kaldırılmış, sadece "Mitarbeiter direkt erstellen" kalmıştı). "Evet, ekle".

@@ -44,14 +44,15 @@ test.afterAll(async () => {
 });
 
 test("Foto → Tabelle prüfen/korrigieren → bei allen gespeichert", async ({ page }) => {
-  await page.route("**/api/company/scan", (route) => route.fulfill({ json: {
+  let sentWeek: string | undefined;
+  await page.route("**/api/company/scan", (route) => { sentWeek = route.request().postDataJSON().weekStart; return route.fulfill({ json: {
     hinweis: "Schichtplan KW 45",
     rows: [
       { name: "Müller", userId: max.id, date: "2026-11-03", day_type: "arbeiten", start_time: "07:00", end_time: "15:30", break_minutes: 30 },
       { name: "Müller", userId: max.id, date: "2026-11-04", day_type: "urlaub", start_time: null, end_time: null, break_minutes: 0 },
       { name: "A. Yilmz", userId: null, date: "2026-11-03", day_type: "arbeiten", start_time: "06:00", end_time: "41:00", break_minutes: 45 },
     ],
-  } }));
+  } }); });
 
   await page.goto("/login");
   const nur = page.getByRole("button", { name: "Nur notwendige" });
@@ -64,6 +65,7 @@ test("Foto → Tabelle prüfen/korrigieren → bei allen gespeichert", async ({ 
   await page.goto("/company/reports");
   await page.getByRole("link", { name: "📷 Foto-Import" }).click();
   await page.getByText("Ich bestätige als Arbeitgeber").click();
+  await page.getByLabel("Woche ab Montag").fill("2026-11-04"); // Mittwoch → Woche ab Mo 02.11.
   await page.getByLabel("Foto aus Galerie").setInputFiles({
     name: "plan.png", mimeType: "image/png",
     buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64"),
@@ -71,6 +73,7 @@ test("Foto → Tabelle prüfen/korrigieren → bei allen gespeichert", async ({ 
 
   const rows = page.getByTestId("import-row");
   await expect(rows).toHaveCount(3);
+  expect(sentWeek).toBe("2026-11-02");
   await expect(page.getByText("3 Zeilen erkannt")).toBeVisible();
   const save = page.getByRole("button", { name: /Bei allen speichern/ });
   await expect(save).toBeDisabled();                       // Zeile 3: kein Mitarbeiter

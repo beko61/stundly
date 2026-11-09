@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { shrinkImage } from "@/lib/scan/shrinkImage";
-import type { ScanRow } from "@/lib/company/scanRows";
+import { mondayOf, type ScanRow } from "@/lib/company/scanRows";
 
 type Row = ScanRow & { key: number };
 interface Member { user_id: string; name: string }
@@ -32,6 +32,8 @@ export function ImportClient({ team }: { team: Member[] }) {
   const [hinweis, setHinweis] = useState<string | null>(null);
   const [done, setDone]       = useState<{ created: number; updated: number; unchanged: number; failed: number } | null>(null);
   const [consent, setConsent] = useState(false);
+  // Wochenliste: Woche wählen (Standard: letzte Woche — der Zettel kommt meist nach Wochenende)
+  const [week, setWeek] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return mondayOf(d); });
   useEffect(() => { try { setConsent(localStorage.getItem(CONSENT_KEY) === "1"); } catch { /* privat */ } }, []);
   const cameraRef  = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -61,7 +63,7 @@ export function ImportClient({ team }: { team: Member[] }) {
       const img = await shrinkImage(file);
       const res = await fetch("/api/company/scan", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: img.data, mediaType: img.type }),
+        body: JSON.stringify({ image: img.data, mediaType: img.type, weekStart: week }),
       });
       const j = await res.json().catch(() => ({ error: `Scan fehlgeschlagen (Fehler ${res.status}).` })) as
         { rows?: ScanRow[]; hinweis?: string; error?: string };
@@ -107,7 +109,13 @@ export function ImportClient({ team }: { team: Member[] }) {
             </span>
           </label>
         ) : (
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--muted)", flexBasis: "100%" }}>
+              Woche ab
+              <input className="input" type="date" value={week} aria-label="Woche ab Montag" style={{ maxWidth: 170, padding: "6px 8px" }}
+                onChange={(e) => e.target.value && setWeek(mondayOf(new Date(`${e.target.value}T12:00:00`)))} />
+              <span>(Mo–So; für Listen ohne Datum)</span>
+            </label>
             <button className="btn btn-primary" disabled={busy !== null} onClick={() => cameraRef.current?.click()}>
               {busy === "scan" ? "KI liest… (bis 1 Min.)" : rows.length ? "📷 Weiteres Foto" : "📷 Foto aufnehmen"}
             </button>

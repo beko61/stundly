@@ -46,3 +46,30 @@ export function toRows(parsed: unknown, team: TeamMember[]): ScanRow[] {
   }
   return rows;
 }
+
+const WD = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+/** Montag der Woche, in der `d` liegt (lokal, YYYY-MM-DD). */
+export function mondayOf(d: Date): string {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Wochenlisten haben oft nur Spalten Mo–Fr (+ KW) ohne Datum → die KI soll nicht rechnen:
+ * feste Zuordnung Wochentag → Datum für die vom Admin gewählte Woche. null bei ungültigem Datum.
+ */
+export function weekHint(weekStart: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return null;
+  const [y, m, d] = weekStart.split("-").map(Number) as [number, number, number];
+  const start = new Date(y, m - 1, d);
+  if (start.getMonth() !== m - 1) return null;
+  const monday = mondayOf(start);
+  const [my, mm, md] = monday.split("-").map(Number) as [number, number, number];
+  const days = WD.map((wd, i) => {
+    const x = new Date(my, mm - 1, md + i);
+    return `${wd}=${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  });
+  return `Der Zettel gilt für die Woche ab Montag ${monday}. Stehen nur Wochentage (ohne Datum) da, nimm genau diese Daten: ${days.join(", ")}.`;
+}

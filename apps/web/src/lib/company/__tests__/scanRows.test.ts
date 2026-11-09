@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toRows } from "../scanRows";
+import { toRows, weekHint, mondayOf } from "../scanRows";
 
 const team = [{ user_id: "u1", full_name: "Max Müller" }, { user_id: "u2", full_name: "Ayşe Yılmaz" }];
 
@@ -24,5 +24,24 @@ describe("toRows (KI-Antwort Firma → Tabelle)", () => {
     expect(rows[0]).toMatchObject({ date: "", start_time: "07:00", break_minutes: 0 });
     expect(toRows(null, team)).toEqual([]);
     expect(toRows({ personen: "x" }, team)).toEqual([]);
+  });
+});
+
+describe("weekHint (Wochenliste: Wochentag → Datum)", () => {
+  it("beliebiger Tag der Woche → Montag + feste Daten Mo–So, auch über Monatsgrenze", () => {
+    const h = weekHint("2026-11-04")!; // Mittwoch
+    expect(h).toContain("Woche ab Montag 2026-11-02");
+    expect(h).toContain("Mo=2026-11-02");
+    expect(h).toContain("Fr=2026-11-06");
+    expect(h).toContain("So=2026-11-08");
+    expect(weekHint("2026-11-30")).toContain("Do=2026-12-03");
+  });
+  it("ungültig → null", () => {
+    expect(weekHint("")).toBeNull();
+    expect(weekHint("2026-02-31")).toBeNull();
+  });
+  it("mondayOf", () => {
+    expect(mondayOf(new Date(2026, 10, 8))).toBe("2026-11-02"); // Sonntag
+    expect(mondayOf(new Date(2026, 10, 9))).toBe("2026-11-09"); // Montag
   });
 });

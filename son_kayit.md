@@ -1,4 +1,17 @@
-﻿## 2026-11-09 (188) – v0.95.0: Firma Foto-Import — Stundenzettel/Schichtplan für das ganze Team
+﻿## 2026-11-09 (189) – v0.95.1: Foto-Import für Wochenlisten — „Woche ab“
+
+Kullanıcı: "hafta hafta yapıyoruz, liste var yazıyor".
+
+- Foto-Import'ta "Woche ab" tarih alanı (varsayılan: geçen haftanın Pazartesi'si; hangi gün seçilirse o haftanın
+  Pazartesi'sine çekiliyor). Tarama isteğine `weekStart` gidiyor; KI talimatına sabit eşleme ekleniyor
+  ("Mo=2026-11-02 … So=2026-11-08") → sadece Mo–Fr sütunlu, tarihsiz listelerde KI tarih hesaplamıyor.
+  Kâğıtta tarih yazıyorsa o geçerli. `lib/company/scanRows.ts`: mondayOf, weekHint.
+- Test: unit weekHint/mondayOf 3 (ay geçişi, geçersiz tarih), company scan route 3 (403, talimatta hafta + satırlar,
+  yarım yanıt → 422); E2E: seçilen Çarşamba → weekStart Pazartesi gidiyor. Unit 95 dosya yeşil, E2E 21/21. Migration yok.
+
+---
+
+## 2026-11-09 (188) – v0.95.0: Firma Foto-Import — Stundenzettel/Schichtplan für das ganze Team
 
 Kullanıcı: "firma için de olması lazım… ~15 kişi… resimden tablo yapsın, sonra düzenleme modu, kaydedince herkesinkine kaydetsin".
 

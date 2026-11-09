@@ -26,6 +26,32 @@ function revokeConsent() {
   try { localStorage.removeItem(OCR_CONSENT_STORAGE_KEY); } catch {}
 }
 
+/**
+ * Foto vor dem Senden verkleinern (längste Seite 2000 px, JPEG 0,85 → meist 300–800 KB).
+ * Handyfotos (4–10 MB) lagen sonst über dem Server-Limit (3 MB / Vercel 4,5 MB) → "Netzwerkfehler";
+ * iPhone-HEIC wird dabei zu JPEG (vorher "Ungültiger Bildtyp").
+ */
+const MAX_SIDE = 2000;
+async function shrinkImage(file: File): Promise<{ data: string; type: string }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("Bild konnte nicht gelesen werden."));
+      i.src = url;
+    });
+    const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return { data: canvas.toDataURL("image/jpeg", 0.85), type: "image/jpeg" };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 interface ScanEntry {
   datum:           string;
   beginn:          string;
@@ -62,21 +88,20 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
 
   useEffect(() => { setConsent(loadConsent()); }, []);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setMediaType(file.type || "image/jpeg");
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const data = ev.target?.result as string;
+    setResult(null);
+    setRawText("");
+    setError(null);
+    try {
+      const { data, type } = await shrinkImage(file);
+      setMediaType(type);
       setImageData(data);
       setPreview(data);
-      setResult(null);
-      setRawText("");
-      setError(null);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bild konnte nicht gelesen werden.");
+    }
   }
 
   async function handleScan() {
@@ -96,7 +121,10 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
         body: JSON.stringify({ image: imageData, mediaType }),
       });
 
-      const data = await res.json() as { result?: string; parsed?: ScanResult | null; error?: string };
+      // Kein JSON (z. B. Server-Limit/Timeout) → echte Meldung statt "Netzwerkfehler"
+      const data = await res.json().catch(() => ({
+        error: res.status === 413 ? "Bild zu groß." : `Scan fehlgeschlagen (Fehler ${res.status}).`,
+      })) as { result?: string; parsed?: ScanResult | null; error?: string };
 
       if (!res.ok || data.error) {
         setError(data.error ?? "Scan fehlgeschlagen.");
@@ -128,7 +156,7 @@ export function PhotoScanModal({ onCreate, onClose }: Props) {
         day_type:       "arbeiten",
         start_time:     e.beginn,
         end_time:       e.ende,
-        break_minutes:  e.pause_minuten ?? 60,
+        break_minutes:  e.pause_minuten ?? 0,
         is_night_shift: false,
         note:           e.notiz ?? null,
         tags:           [],

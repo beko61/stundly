@@ -187,4 +187,16 @@ describe('POST /api/scan', () => {
       expect.objectContaining({ model: 'claude-haiku-4-5-20251001' })
     );
   });
+
+  it('ganzer Monat: genug Tokens (vorher 1024 → JSON brach ab) + heutiges Datum im Prompt', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: `month-${Date.now()}` } } });
+    mockAnthropicCreate.mockResolvedValue(ANTHROPIC_SUCCESS);
+    await POST(makeRequest(VALID_BODY));
+    const arg = mockAnthropicCreate.mock.calls.at(-1)![0] as {
+      max_tokens: number; messages: { content: { type: string; text?: string }[] }[];
+    };
+    expect(arg.max_tokens).toBeGreaterThanOrEqual(4096);
+    const prompt = arg.messages[0]!.content.find(c => c.type === 'text')!.text!;
+    expect(prompt).toContain(`Heute ist ${new Date().toISOString().slice(0, 10)}`);
+  });
 });

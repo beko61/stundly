@@ -7,7 +7,7 @@ import { PAYWALL_ACTIVE, canTier, resolveTier } from "@/lib/plan/entitlements";
 import { fetchSubscriptionStatus } from "@/lib/plan/subscriptionStatus";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60; // ganzer Monat = lange Antwort
 
 // Persistent rate limit (R4 fix): serverless-safe.
 // Anthropic API çağrısı $$: dar limitler.
@@ -98,7 +98,8 @@ export async function POST(req: NextRequest) {
   try {
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+      // Ein ganzer Monat (bis 31 Zeilen) braucht ~2–3k Tokens; mit 1024 brach das JSON ab → nichts erkannt
+      max_tokens: 4096,
       messages: [
         {
           role: "user",
@@ -130,7 +131,9 @@ Extrahiere alle Arbeitszeiten und gib sie im folgenden JSON-Format zurück (nur 
   "hinweis": "Kurze Erklärung was erkannt wurde"
 }
 
-Falls kein gültiges Datum erkennbar ist, verwende die aktuelle Woche. Falls kein Datum im Bild steht, schreibe "unbekannt".
+Heute ist ${new Date().toISOString().slice(0, 10)}. Steht im Bild nur Tag und Monat (z. B. "03.11." oder nur "3" in einer Monatstabelle), ergänze Monat/Jahr aus der Überschrift des Zettels, sonst das aktuelle Jahr.
+Nimm nur Tage mit Arbeitszeiten auf (keine leeren, Urlaubs- oder Krankheitstage). Pause in Minuten; fehlt sie, schätze sie nicht, sondern setze 0.
+Falls gar kein Datum erkennbar ist, schreibe "unbekannt".
 Wenn das Bild keine Arbeitszeiten enthält, gib zurück: {"eintraege": [], "hinweis": "Keine Arbeitszeiten erkannt"}`,
             },
           ],

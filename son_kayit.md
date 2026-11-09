@@ -1,4 +1,21 @@
-﻿## 2026-11-09 (186) – v0.94.0: Jahresbericht-PDF für Firmen (zum Unterschreiben)
+﻿## 2026-11-09 (187) – v0.94.1: Foto-Scan funktioniert mit Handyfotos und ganzen Monaten
+
+Kullanıcı: "yapay zeka ile tablodan yani fotodan o ayı nasıl doldurabilirim, şu an çalışmıyor".
+
+- Sebep 1: foto küçültülmeden gönderiliyordu → telefon fotoğrafı (4–10 MB) sunucu sınırını (3 MB, Vercel 4,5 MB)
+  aşıyordu; yanıt JSON değildi → ekranda sadece "Netzwerkfehler beim Scannen".
+- Sebep 2: max_tokens 1024 → bütün ay (~31 satır) JSON'u yarıda kesiyordu → hiçbir kayıt çıkmıyordu.
+- Sebep 3: iPhone HEIC "Ungültiger Bildtyp".
+- Düzeltme: PhotoScanModal fotoğrafı canvas ile en uzun kenar 2000 px JPEG 0,85'e küçültüyor (HEIC/BMP → JPEG);
+  JSON olmayan yanıtta gerçek hata kodu. /api/scan: max_tokens 4096, maxDuration 60, prompt'ta bugünün tarihi
+  (sadece gün/ay yazan tablolar için yıl), boş/Urlaub/Krank günleri alınmıyor, pause yoksa 0 (eskiden 60 uyduruluyordu).
+- Test: unit +1 (token + tarih), yeni e2e/scan.e2e.ts (KI yanıtı mock): 18 MB foto → <3 MB JPEG gidiyor, 2 kayıt
+  aktarılıyor; düzeltmeden önce kırmızıydı. Unit 91 dosya yeşil, E2E 20/20, tsc + lint temiz. Migration yok.
+- Canlıda gerçek Anthropic çağrısı test edilmedi (ANTHROPIC_API_KEY Vercel'de, model claude-haiku-4-5).
+
+---
+
+## 2026-11-09 (186) – v0.94.0: Jahresbericht-PDF für Firmen (zum Unterschreiben)
 
 Kullanıcı: "Firmalar aylık saat çıktısı alınabilsin imzalatmak için ve yıllık" → aylık zaten vardı
 (Berichte → PDF, imza alanlı); "Yap".

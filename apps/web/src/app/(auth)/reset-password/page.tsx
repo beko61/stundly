@@ -18,7 +18,25 @@ import { createClient } from "@/lib/supabase/client";
  *   6. Success → /login'e yönlendir (fresh sign-in için)
  *
  * Session yoksa (link expired veya direkt açıldı) — hata mesajı + retry link.
+ *
+ * SICHERHEIT (09.11.2026): Nur die Sitzung AUS DEM LINK zählt, nie eine schon vorhandene Anmeldung.
+ * Vorher: Admin-Reset-Link (Implicit, #access_token) im Browser des eingeloggten Admins → der PKCE-Client
+ * verwirft den Link, behält die Admin-Sitzung → das Formular änderte das Passwort des ADMINS.
+ *   - #access_token…&type=recovery (Admin-Panel) → setSession explizit
+ *   - ?code=… (Passwort vergessen, PKCE) → zählt nur, wenn der Client den Code eingelöst hat (Code aus URL entfernt)
+ *   - sonst → "Link ungültig", auch wenn jemand eingeloggt ist
+ * Das Formular zeigt die E-Mail des Kontos, dessen Passwort geändert wird.
  */
+
+type LinkInfo = { code: string | null; access_token: string | null; refresh_token: string | null; type: string | null };
+
+/** URL beim ersten Rendern lesen — bevor der Supabase-Client sie verarbeitet/entfernt. */
+function readLink(): LinkInfo | null {
+  if (typeof window === "undefined") return null;
+  const q = new URLSearchParams(window.location.search);
+  const h = new URLSearchParams(window.location.hash.slice(1));
+  return { code: q.get("code"), access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), type: h.get("type") };
+}
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password,        setPassword]        = useState("");
@@ -31,18 +49,32 @@ export default function ResetPasswordPage() {
   // true       → recovery session var
   // false      → session yok (link expired / direct visit)
   const [hasSession, setHasSession] = useState<boolean | undefined>(undefined);
+  const [forEmail, setForEmail]     = useState<string | null>(null);
+  const [link] = useState(readLink);
 
   useEffect(() => {
     async function check() {
       const supabase = createClient();
-      // Supabase client hash'i otomatik parse eder ve session kurar
-      // (detectSessionInUrl default true). Kısa bir gecikme sonrası kontrol.
-      await new Promise(r => setTimeout(r, 100));
-      const { data: { session } } = await supabase.auth.getSession();
-      setHasSession(!!session);
+      let ok = false;
+      if (link?.access_token && link.refresh_token && link.type === "recovery") {
+        // Admin-Link: Sitzung des Link-Kontos setzen (ersetzt eine vorhandene Anmeldung)
+        const { error } = await supabase.auth.setSession({ access_token: link.access_token, refresh_token: link.refresh_token });
+        ok = !error;
+        window.history.replaceState(window.history.state, "", window.location.pathname);
+      } else if (link?.code) {
+        await supabase.auth.getSession(); // wartet, bis der Client den Code eingelöst hat
+        // Eingelöst → Client entfernt ?code; steht er noch da, ist er abgelaufen/aus anderem Browser
+        ok = !new URLSearchParams(window.location.search).has("code");
+      }
+      if (ok) {
+        const { data: { user } } = await supabase.auth.getUser();
+        setForEmail(user?.email ?? null);
+        ok = !!user;
+      }
+      setHasSession(ok);
     }
     void check();
-  }, []);
+  }, [link]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,7 +160,7 @@ export default function ResetPasswordPage() {
         Neues Passwort setzen
       </h1>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-        Wähle ein starkes Passwort mit mindestens 8 Zeichen.
+        Für <strong style={{ color: "var(--text)" }}>{forEmail}</strong>. Wähle ein starkes Passwort mit mindestens 8 Zeichen.
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>

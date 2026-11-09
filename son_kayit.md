@@ -1,4 +1,22 @@
-﻿## 2026-11-09 (189) – v0.95.1: Foto-Import für Wochenlisten — „Woche ab“
+﻿## 2026-11-09 (190) – v0.95.2: SICHERHEIT — Passwort-Reset änderte das eingeloggte Konto statt des Link-Kontos
+
+Kullanıcı: "başka maile gönderdim ama ana hesabımın şifresi sıfırlandı".
+
+- Sebep: Kokpit'ten gönderilen sıfırlama linki implicit akış (#access_token…&type=recovery). Tarayıcı istemcisi
+  (@supabase/ssr) PKCE; auth-js bu linki "Not a valid PKCE flow url" ile reddediyor ve MEVCUT oturumu koruyor
+  ("Don't remove existing session on URL login failure"). /reset-password sadece "oturum var mı" bakıyordu →
+  linki giriş yapılı tarayıcıda açan süper adminin KENDİ şifresi değişti. Ayrıca giriş yapılıyken linksiz
+  /reset-password da formu açıyordu.
+- Düzeltme (reset-password/page.tsx): URL ilk render'da okunuyor; #access_token+type=recovery → setSession açıkça
+  (link hesabı oturumu devralıyor); ?code → sadece istemci kodu gerçekten bozdurduysa (code URL'den silinmişse)
+  geçerli; aksi halde "Link ungültig" (giriş yapılı olsa bile). Form hangi hesabın şifresinin değiştiğini gösteriyor.
+- Test: yeni e2e/reset-password.e2e.ts — A girişliyken B'nin linki: sadece B'nin şifresi değişiyor, A'nınki aynı;
+  linksiz sayfada form yok. Düzeltmeden önce ikisi de kırmızıydı. Unit 95 dosya yeşil, E2E 23/23. Migration yok.
+- Kullanıcının ana hesabı: şifresi formda girdiği yeni şifre oldu; hedef hesap değişmedi.
+
+---
+
+## 2026-11-09 (189) – v0.95.1: Foto-Import für Wochenlisten — „Woche ab“
 
 Kullanıcı: "hafta hafta yapıyoruz, liste var yazıyor".
 

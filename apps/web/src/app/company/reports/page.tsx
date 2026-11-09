@@ -106,6 +106,13 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <DatevBulkButton year={year} month={month} />
           <BulkCsvButton year={year} month={month} />
+          {/* Mobil ist Foto-Import nicht in der Tab-Leiste → hier erreichbar */}
+          <Link href="/company/import" style={{
+            padding: "9px 16px", borderRadius: 999, background: "var(--surface2)", color: "var(--text)",
+            border: "1px solid var(--border)", fontWeight: 800, fontSize: 12, textDecoration: "none",
+          }}>
+            📷 Foto-Import
+          </Link>
         </div>
       </div>
 

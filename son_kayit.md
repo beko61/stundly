@@ -1,4 +1,25 @@
-﻿## 2026-11-09 (187) – v0.94.1: Foto-Scan funktioniert mit Handyfotos und ganzen Monaten
+﻿## 2026-11-09 (188) – v0.95.0: Firma Foto-Import — Stundenzettel/Schichtplan für das ganze Team
+
+Kullanıcı: "firma için de olması lazım… ~15 kişi… resimden tablo yapsın, sonra düzenleme modu, kaydedince herkesinkine kaydetsin".
+
+- Yeni sayfa Firma → 📷 Foto-Import (/company/import; masaüstü menü + Berichte'de düğme): foto (kamera/galeri,
+  küçültülerek) → `/api/company/scan` (Claude Vision, kompakt JSON: kişi başına gün listesi, A/U/K) → isimler
+  çalışanlarla otomatik eşleşiyor (`lib/company/nameMatch.ts`: umlaut/ı/ş, sıra, baş harf; belirsizse boş).
+- Düzenleme modu: her satır kart (telefonda yan kaydırma yok) — Mitarbeiter seç, Datum, Typ, Beginn/Ende/Pause,
+  satır sil/ekle, birden fazla foto ekleme. Eksik çalışan/tarih/saat veya aynı kişi+gün iki kez → kırmızı, kayıt kapalı.
+- "Bei allen speichern" → `/api/company/import`: her satır firma düzeltmesi olarak (`lib/company/applyCorrection.ts`,
+  /api/company/corrections ile ortak) entry_corrections'a sebep "Import aus Stundenzettel-Foto" ile yazılıyor →
+  çalışan kendi uygulamasında görüyor; aynı olan günler atlanıyor; audit `entries.imported`.
+- İşveren onayı (DSGVO, Anthropic USA) bir kez kutucukla. Kişisel foto taraması ortak `lib/scan/vision.ts` +
+  `lib/scan/shrinkImage.ts` kullanıyor (davranış aynı).
+- Test: unit nameMatch 5, toRows 2, import route 4; E2E company-import (KI yanıtı mock): 3 satır, eşleşmeyen isim
+  atanıp saat düzeltiliyor, kayıt → 2 yeni + 1 değişti, 3 düzeltme kaydı. Unit 94 dosya yeşil, E2E 21/21. Migration yok.
+- Canlıda gerçek fotoğrafla denenmedi (maxDuration 120 s; çok büyük çizelgede yanıt kesilirse "kleineren Teil
+  fotografieren" uyarısı).
+
+---
+
+## 2026-11-09 (187) – v0.94.1: Foto-Scan funktioniert mit Handyfotos und ganzen Monaten
 
 Kullanıcı: "yapay zeka ile tablodan yani fotodan o ayı nasıl doldurabilirim, şu an çalışmıyor".
 

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { checkRateLimit } from "@/lib/rateLimit/check";
 import { PAYWALL_ACTIVE, canTier, resolveTier } from "@/lib/plan/entitlements";
 import { fetchSubscriptionStatus } from "@/lib/plan/subscriptionStatus";
+import { checkImage, extractJson, runVision } from "@/lib/scan/vision";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // ganzer Monat = lange Antwort
@@ -14,8 +14,6 @@ export const maxDuration = 60; // ganzer Monat = lange Antwort
 const SCAN_LIMIT_PER_HOUR = 20;
 const SCAN_WINDOW_SEC     = 3600;
 
-// Max image size: 4 MB base64 string (~3 MB actual image)
-const MAX_IMAGE_B64_LENGTH = 4 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   // 1. Authenticate the user via Supabase session cookie
@@ -70,51 +68,14 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Parse and validate body
-  let body: { image: string; mediaType: string };
-  try {
-    body = await req.json() as typeof body;
-  } catch {
-    return NextResponse.json({ error: "Ungültige Anfrage." }, { status: 400 });
-  }
-
-  if (!body.image || !body.mediaType) {
-    return NextResponse.json({ error: "Bild und Medientyp sind erforderlich." }, { status: 400 });
-  }
-
-  const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-  if (!allowedTypes.includes(body.mediaType)) {
-    return NextResponse.json({ error: "Ungültiger Bildtyp." }, { status: 400 });
-  }
-
-  const imageData = body.image.split(",")[1] ?? body.image;
-  if (imageData.length > MAX_IMAGE_B64_LENGTH) {
-    return NextResponse.json({ error: "Bild zu groß. Maximal 3 MB." }, { status: 413 });
-  }
+  const img = checkImage(await req.json().catch(() => null));
+  if (!img.ok) return NextResponse.json({ error: img.error }, { status: img.status });
 
   // 5. Call Anthropic
-  const client = new Anthropic({ apiKey });
-
   let text = "";
   try {
-    const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      // Ein ganzer Monat (bis 31 Zeilen) braucht ~2–3k Tokens; mit 1024 brach das JSON ab → nichts erkannt
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: body.mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-                data: imageData,
-              },
-            },
-            {
-              type: "text",
-              text: `Du bist ein Arbeitszeiterfassungs-Assistent. Analysiere dieses Bild einer Arbeitszeitaufzeichnung oder eines Stundenzettels.
+    // Ein ganzer Monat (bis 31 Zeilen) braucht ~2–3k Tokens; mit 1024 brach das JSON ab → nichts erkannt
+    text = await runVision(apiKey, img, `Du bist ein Arbeitszeiterfassungs-Assistent. Analysiere dieses Bild einer Arbeitszeitaufzeichnung oder eines Stundenzettels.
 
 Extrahiere alle Arbeitszeiten und gib sie im folgenden JSON-Format zurück (nur JSON, kein anderer Text):
 
@@ -134,14 +95,7 @@ Extrahiere alle Arbeitszeiten und gib sie im folgenden JSON-Format zurück (nur 
 Heute ist ${new Date().toISOString().slice(0, 10)}. Steht im Bild nur Tag und Monat (z. B. "03.11." oder nur "3" in einer Monatstabelle), ergänze Monat/Jahr aus der Überschrift des Zettels, sonst das aktuelle Jahr.
 Nimm nur Tage mit Arbeitszeiten auf (keine leeren, Urlaubs- oder Krankheitstage). Pause in Minuten; fehlt sie, schätze sie nicht, sondern setze 0.
 Falls gar kein Datum erkennbar ist, schreibe "unbekannt".
-Wenn das Bild keine Arbeitszeiten enthält, gib zurück: {"eintraege": [], "hinweis": "Keine Arbeitszeiten erkannt"}`,
-            },
-          ],
-        },
-      ],
-    });
-
-    text = message.content[0]?.type === "text" ? message.content[0].text : "";
+Wenn das Bild keine Arbeitszeiten enthält, gib zurück: {"eintraege": [], "hinweis": "Keine Arbeitszeiten erkannt"}`, 4096);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unbekannter Fehler";
     console.error("Anthropic API error:", message);
@@ -149,15 +103,5 @@ Wenn das Bild keine Arbeitszeiten enthält, gib zurück: {"eintraege": [], "hinw
   }
 
   // 6. Extract JSON — handle text before/after the JSON block
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    return NextResponse.json({ result: text, parsed: null });
-  }
-
-  try {
-    const parsed = JSON.parse(jsonMatch[0]) as unknown;
-    return NextResponse.json({ result: text, parsed });
-  } catch {
-    return NextResponse.json({ result: text, parsed: null });
-  }
+  return NextResponse.json({ result: text, parsed: extractJson(text) });
 }

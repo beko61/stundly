@@ -95,7 +95,8 @@ describe("NotdienstModal", () => {
       note: null, kunde: "Frau Kraft", adresse: null, problem: null, ergebnis: null, erledigt: true } as NotdienstEntry;
     render(<NotdienstModal date="2026-09-27" entry={entry} paidByCompany onSave={vi.fn()} onClose={vi.fn()} />);
 
-    expect(screen.getByText(/Bezahlt-Status setzt deine Firma/)).toBeInTheDocument();
+    // Migration 041: bezahlt = Firma überwiesen + vom Mitarbeiter bestätigt
+    expect(screen.getByText(/überwiesen und von dir als erhalten bestätigt/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /als (un)?bezahlt markieren/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Aktualisieren/ }));

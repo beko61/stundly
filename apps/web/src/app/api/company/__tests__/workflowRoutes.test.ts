@@ -129,34 +129,44 @@ describe("PATCH /api/company/employees/[userId]/contract", () => {
   });
 });
 
-// ── Notdienst bezahlt ──────────────────────────────────────────────────────
+// ── Notdienst: Firma markiert überwiesen (Migration 041), Mitarbeiter bestätigt separat ──
 describe("PATCH /api/company/notdienst/[id]", () => {
-  const ND = { id: ND_ID, user_id: UID, date: "2026-09-12", erledigt: false };
+  const ND = { id: ND_ID, user_id: UID, date: "2026-09-12", erledigt: false, ueberwiesen_am: null as string | null };
 
-  it("400 bei ungültiger ID", async () => {
+  it("400 bei ungültiger ID oder altem Body", async () => {
     mockGetContext.mockResolvedValue(ctx(makeAdmin({ nd: ND }).admin));
-    expect((await PATCH_ND(req({ erledigt: true }), ndParams("abc"))).status).toBe(400);
+    expect((await PATCH_ND(req({ ueberwiesen: true }), ndParams("abc"))).status).toBe(400);
+    expect((await PATCH_ND(req({ erledigt: true }), ndParams())).status).toBe(400);
   });
 
   it("404 wenn der Einsatz einem fremden Mitarbeiter gehört", async () => {
     mockGetContext.mockResolvedValue(ctx(makeAdmin({ nd: ND }).admin));
     mockGetMember.mockResolvedValue(null);
-    expect((await PATCH_ND(req({ erledigt: true }), ndParams())).status).toBe(404);
+    expect((await PATCH_ND(req({ ueberwiesen: true }), ndParams())).status).toBe(404);
   });
 
-  it("markiert als bezahlt und schreibt Audit-Log", async () => {
+  it("überwiesen: setzt ueberwiesen_am, bezahlt (erledigt) bleibt false bis der Mitarbeiter bestätigt", async () => {
     const { admin, calls } = makeAdmin({ nd: ND });
     mockGetContext.mockResolvedValue(ctx(admin));
-    const res = await PATCH_ND(req({ erledigt: true }), ndParams());
+    const res = await PATCH_ND(req({ ueberwiesen: true }), ndParams());
     expect(res.status).toBe(200);
-    expect(calls).toEqual([{ table: "notdienst_entries", op: "update", payload: { erledigt: true } }]);
-    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "notdienst.marked_paid" }));
+    expect(calls).toEqual([{ table: "notdienst_entries", op: "update",
+      payload: { ueberwiesen_am: expect.stringMatching(/^\d{4}-/), erledigt: false } }]);
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "notdienst.marked_transferred" }));
   });
 
-  it("keine Änderung, wenn der Status schon stimmt", async () => {
-    const { admin, calls } = makeAdmin({ nd: { ...ND, erledigt: true } });
+  it("zurücknehmen: ueberwiesen_am + bestätigtes bezahlt werden beide zurückgesetzt", async () => {
+    const { admin, calls } = makeAdmin({ nd: { ...ND, erledigt: true, ueberwiesen_am: "2026-10-01T10:00:00Z" } });
     mockGetContext.mockResolvedValue(ctx(admin));
-    await PATCH_ND(req({ erledigt: true }), ndParams());
+    await PATCH_ND(req({ ueberwiesen: false }), ndParams());
+    expect(calls).toEqual([{ table: "notdienst_entries", op: "update", payload: { ueberwiesen_am: null, erledigt: false } }]);
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "notdienst.marked_unpaid" }));
+  });
+
+  it("keine Änderung, wenn schon überwiesen (Datum bleibt)", async () => {
+    const { admin, calls } = makeAdmin({ nd: { ...ND, ueberwiesen_am: "2026-10-01T10:00:00Z" } });
+    mockGetContext.mockResolvedValue(ctx(admin));
+    await PATCH_ND(req({ ueberwiesen: true }), ndParams());
     expect(calls).toHaveLength(0);
     expect(mockLogAudit).not.toHaveBeenCalled();
   });

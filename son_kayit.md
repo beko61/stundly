@@ -1,4 +1,22 @@
-﻿## 2026-11-09 (191) – v0.96.0: Kokpit — geçici şifre atama
+﻿## 2026-11-09 (192) – v0.97.0: Notdienst-Zahlung von beiden Seiten bestätigt (Migration 041)
+
+Kullanıcı: "Notdienst ödemeleri 2 tarafta kontrol ettikten sonra onaylansın — firma yattı diye okeylesin, personel
+yattı diye onaylasın, o zaman tam onay olsun ödendi olsun".
+
+- Migration 041 (test + canlıda çalıştırıldı): `notdienst_entries.ueberwiesen_am`; eskiden firmanın bezahlt
+  işaretlediği kayıtlar = überwiesen + onaylı; guard_notdienst_paid çalışanın ueberwiesen_am'ı da değiştirmesini engelliyor.
+- Firma: `/api/company/notdienst/[id]` artık { ueberwiesen } → ueberwiesen_am (erledigt false kalır); geri alma ikisini
+  de sıfırlıyor (onay sorulur). Liste 3 durum: ⏳ Offen · 💸 Überwiesen · wartet · ✅ Bezahlt; "Alle … als überwiesen".
+- Çalışan: yeni `/api/notdienst/[id]/erhalten` (service_role, sadece kendi kaydı, sadece firma çalışanı, sadece
+  überwiesen ise) → erledigt=true. Tagesliste'de "💸 Erhalten?" düğmesi (kapalı ayda da çalışır); modal metinleri.
+- erledigt anlamı = iki taraf onaylı → Lohn/raporlar/PDF değişmeden "bezahlt" sayıyor. Tek kişilik kullanıcılar aynı.
+- Audit: notdienst.marked_transferred / marked_unpaid / payment_confirmed / payment_disputed.
+- Test: unit firma route 5, çalışan route 4, modal; E2E notdienst-zahlung: firma işaretler → çalışan doğrudan
+  erledigt yazamıyor (DB) → çalışan onaylar → firma "Bezahlt" görür. Unit 96 dosya yeşil, E2E 25/25.
+
+---
+
+## 2026-11-09 (191) – v0.96.0: Kokpit — geçici şifre atama
 
 Kullanıcı: "Aydın Bektaş hesabına şimdilik geçici şifre atayabilir misin" → canlıya service-role ile benim yazmam yerine
 admin'in kendisinin yapacağı özellik ("2. yapalım").

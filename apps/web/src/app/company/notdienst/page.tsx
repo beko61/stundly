@@ -69,7 +69,7 @@ export default async function NotdienstZentralePage({ searchParams }: Props) {
       kunde: (n.kunde as string | null) ?? null, kunde_telefon: (n.kunde_telefon as string | null) ?? null,
       adresse: (n.adresse as string | null) ?? null, problem: (n.problem as string | null) ?? null,
       ergebnis: (n.ergebnis as string | null) ?? null, note: (n.note as string | null) ?? null,
-      erledigt: !!n.erledigt, user_id: n.user_id as string, name: nameOf.get(n.user_id as string) ?? "—",
+      erledigt: !!n.erledigt, ueberwiesen: !!n.ueberwiesen_am, user_id: n.user_id as string, name: nameOf.get(n.user_id as string) ?? "—",
     }));
   const minutesOf = (e: TeamNotdienst) => calculateWorkDuration(e.start_time.slice(0, 5), e.end_time.slice(0, 5), 0).net_minutes;
   const totalMin = entries.reduce((s, e) => s + minutesOf(e), 0);

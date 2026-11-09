@@ -21,7 +21,10 @@ export interface TeamNotdienst {
   problem:       string | null;
   ergebnis:      string | null;
   note:          string | null;
+  /** bezahlt = von beiden Seiten bestätigt (Firma überwiesen + Mitarbeiter erhalten), Migration 041 */
   erledigt:      boolean;
+  /** Firma hat als überwiesen markiert (wartet ggf. auf Bestätigung des Mitarbeiters) */
+  ueberwiesen:   boolean;
   /** Team-Ansicht (Notdienst-Zentrale): wem gehört der Einsatz */
   user_id?:      string;
   name?:         string;
@@ -47,36 +50,44 @@ const smallBtn: React.CSSProperties = {
 
 export function TeamNotdienstList({ userId, entries }: Props) {
   const router = useRouter();
-  const [paid, setPaid] = useState<Record<string, boolean>>(() => Object.fromEntries(entries.map(e => [e.id, e.erledigt])));
+  const [st, setSt] = useState<Record<string, { ueberwiesen: boolean; erledigt: boolean }>>(
+    () => Object.fromEntries(entries.map(e => [e.id, { ueberwiesen: e.ueberwiesen, erledigt: e.erledigt }])));
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
-  const offen = entries.filter(e => !paid[e.id]);
+  // Noch nicht überwiesen (wartet auf die Firma)
+  const offen = entries.filter(e => !st[e.id]?.ueberwiesen);
 
-  async function setBezahlt(id: string, value: boolean): Promise<boolean> {
+  async function setUeberwiesen(id: string, value: boolean): Promise<boolean> {
     const res = await fetch(`/api/company/notdienst/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ erledigt: value }),
+      body: JSON.stringify({ ueberwiesen: value }),
     }).catch(() => null);
     if (!res?.ok) return false;
-    setPaid(p => ({ ...p, [id]: value }));
+    const j = await res.json().catch(() => ({})) as { erledigt?: boolean };
+    setSt(s => ({ ...s, [id]: { ueberwiesen: value, erledigt: !!j.erledigt } }));
     return true;
   }
 
   async function toggle(id: string) {
+    const cur = st[id];
+    // Zurücknehmen nur mit Rückfrage (setzt auch die Bestätigung des Mitarbeiters zurück)
+    if (cur?.ueberwiesen && !confirm(cur.erledigt
+      ? "Zahlung ist schon vom Mitarbeiter bestätigt. Wirklich wieder auf offen setzen?"
+      : "Überweisung zurücknehmen?")) return;
     setBusy(id); setError(null);
-    const ok = await setBezahlt(id, !paid[id]);
+    const ok = await setUeberwiesen(id, !cur?.ueberwiesen);
     setBusy(null);
-    if (!ok) setError("Bezahlt-Status konnte nicht gespeichert werden.");
+    if (!ok) setError("Zahlungsstatus konnte nicht gespeichert werden.");
     else router.refresh();
   }
 
   async function alleBezahlt() {
     setBusy("all"); setError(null);
     let failed = 0;
-    for (const e of offen) if (!(await setBezahlt(e.id, true))) failed++;
+    for (const e of offen) if (!(await setUeberwiesen(e.id, true))) failed++;
     setBusy(null);
     if (failed) setError(`${failed} Einsatz/Einsätze konnten nicht gespeichert werden.`);
     router.refresh();
@@ -96,13 +107,16 @@ export function TeamNotdienstList({ userId, entries }: Props) {
       {offen.length > 1 && (
         <button type="button" onClick={() => void alleBezahlt()} disabled={busy !== null}
           style={{ ...smallBtn, marginBottom: 10, borderColor: "var(--green)", color: "var(--green)" }}>
-          {busy === "all" ? "Speichert…" : `✅ Alle ${offen.length} offenen als bezahlt markieren`}
+          {busy === "all" ? "Speichert…" : `💸 Alle ${offen.length} offenen als überwiesen markieren`}
         </button>
       )}
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {entries.map((e, i) => {
           const isOpen = open === e.id;
-          const bezahlt = !!paid[e.id];
+          const s = st[e.id] ?? { ueberwiesen: false, erledigt: false };
+          // ✅ bezahlt (beide bestätigt) · 💸 überwiesen, wartet auf Mitarbeiter · ⏳ offen
+          const color = s.erledigt ? "var(--green)" : s.ueberwiesen ? "var(--blue)" : "var(--orange)";
+          const label = s.erledigt ? "✅ Bezahlt" : s.ueberwiesen ? "💸 Überwiesen · wartet" : "⏳ Offen";
           const dow = new Date(`${e.date}T00:00:00`).getDay();
           return (
             <div key={e.id} style={{ borderBottom: i < entries.length - 1 ? "1px solid var(--border)" : "none" }}>
@@ -122,15 +136,16 @@ export function TeamNotdienstList({ userId, entries }: Props) {
                   </div>
                 </button>
                 <button type="button" onClick={() => void toggle(e.id)} disabled={busy !== null}
-                  aria-label={bezahlt ? "Als unbezahlt markieren" : "Als bezahlt markieren"}
+                  aria-label={s.ueberwiesen ? "Überweisung zurücknehmen" : "Als überwiesen markieren"}
+                  title={s.erledigt ? "Vom Mitarbeiter als erhalten bestätigt" : s.ueberwiesen ? "Wartet auf Bestätigung durch den Mitarbeiter" : "Als überwiesen markieren"}
                   style={{
                     padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 800, cursor: "pointer", flexShrink: 0,
-                    background: `color-mix(in srgb, ${bezahlt ? "var(--green)" : "var(--orange)"} 14%, transparent)`,
-                    color: bezahlt ? "var(--green)" : "var(--orange)",
-                    border: `1px solid color-mix(in srgb, ${bezahlt ? "var(--green)" : "var(--orange)"} 35%, transparent)`,
+                    background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                    color,
+                    border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
                     fontFamily: "var(--font-syne),sans-serif",
                   }}>
-                  {busy === e.id ? "…" : bezahlt ? "✅ Bezahlt" : "⏳ Offen"}
+                  {busy === e.id ? "…" : label}
                 </button>
               </div>
               {isOpen && <EinsatzDetails userId={e.user_id ?? userId ?? ""} entry={e} />}

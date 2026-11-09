@@ -177,6 +177,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       ergebnis:      (n.ergebnis as string | null) ?? null,
       note:          (n.note as string | null) ?? null,
       erledigt:      !!n.erledigt,
+      ueberwiesen:   !!n.ueberwiesen_am,
     }));
   const ndOffen = ndEntries.filter((n) => !n.erledigt).length;
 

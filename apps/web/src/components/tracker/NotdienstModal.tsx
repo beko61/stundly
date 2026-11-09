@@ -34,6 +34,8 @@ export interface NotdienstEntry {
   problem: string | null;
   ergebnis: string | null;
   erledigt: boolean;
+  /** Firma hat überwiesen; bezahlt (erledigt) erst nach Bestätigung des Mitarbeiters (Migration 041) */
+  ueberwiesen_am?: string | null;
 }
 
 interface Props {
@@ -455,11 +457,15 @@ export function NotdienstModal({ date, entry, paidByCompany = false, onSave, onD
           }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: erledigt ? "var(--green)" : "var(--orange)" }}>
-                {erledigt ? "✅ Bezahlt" : "⏳ Noch offen"}
+                {erledigt ? "✅ Bezahlt" : paidByCompany && entry?.ueberwiesen_am ? "💸 Überwiesen – bitte bestätigen" : "⏳ Noch offen"}
               </div>
               <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
                 {paidByCompany
-                  ? "🔒 Den Bezahlt-Status setzt deine Firma."
+                  ? erledigt
+                    ? "Von deiner Firma überwiesen und von dir als erhalten bestätigt."
+                    : entry?.ueberwiesen_am
+                      ? "Deine Firma hat überwiesen. Bestätige in der Tagesliste mit „Erhalten“, sobald das Geld da ist."
+                      : "Deine Firma markiert die Überweisung, danach bestätigst du den Eingang."
                   : "Notdienst wird oft erst nächsten Monat ausgezahlt — hier markieren wenn das Geld da ist."}
               </div>
             </div>

@@ -31,6 +31,7 @@ export interface NotdienstEntry {
   end_time:    string | null;
   erledigt:    boolean | null;
   bezahlt:     boolean | null;
+  ueberwiesen_am?: string | null;
   note:        string | null;
   created_at:  string;
 }

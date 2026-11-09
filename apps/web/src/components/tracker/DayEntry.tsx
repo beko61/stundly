@@ -91,6 +91,7 @@ interface Props {
 export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feiertag, ndEntries, paidByCompany = false, locked = false, ndLocked = false, corrected = false, onCreate, onUpdate, onDelete }: Props) {
   const [modalOpen, setModalOpen]   = useState(false);
   const [ndModal, setNdModal]       = useState<"new" | NotdienstEntry | null>(null);
+  const [ndBusy, setNdBusy]         = useState<string | null>(null);
   const qc = useQueryClient();
   // Früher lud jede Tageszeile ihre Notdienste selbst (~30 Requests, nach dem Scroll-zu-heute
   // → Zeilen wuchsen nachträglich und schoben "heute" aus dem Bild). Jetzt: Monats-Query im
@@ -299,11 +300,38 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
                     {nd.kunde && <NoteLine icon="📋" text={nd.kunde} />}
                     {nd.adresse && <NoteLine icon="📍" text={nd.adresse} />}
                   </div>
-                  {paidByCompany ? (
+                  {paidByCompany && nd.ueberwiesen_am && !nd.erledigt ? (
+                    // Firma hat überwiesen → Mitarbeiter bestätigt den Eingang (auch im abgeschlossenen Monat)
+                    <button
+                      type="button"
+                      disabled={ndBusy === nd.id}
+                      onClick={async (ev) => {
+                        ev.stopPropagation();
+                        setNdBusy(nd.id);
+                        const res = await fetch(`/api/notdienst/${nd.id}/erhalten`, {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ erhalten: true }),
+                        }).catch(() => null);
+                        setNdBusy(null);
+                        if (res?.ok) refreshNd();
+                        else alert("Bestätigung fehlgeschlagen — bitte mit Internet erneut versuchen.");
+                      }}
+                      aria-label="Zahlung erhalten bestätigen"
+                      title="Deine Firma hat überwiesen — tippen, wenn das Geld da ist"
+                      style={{
+                        minHeight: 44, padding: "0 10px", borderRadius: 10, cursor: "pointer", flexShrink: 0,
+                        background: "color-mix(in srgb, var(--blue) 14%, transparent)", color: "var(--blue)",
+                        border: "1px solid color-mix(in srgb, var(--blue) 40%, transparent)",
+                        fontSize: 12, fontWeight: 800, fontFamily: "var(--font-syne),sans-serif", whiteSpace: "nowrap",
+                      }}
+                    >
+                      {ndBusy === nd.id ? "…" : "💸 Erhalten?"}
+                    </button>
+                  ) : paidByCompany ? (
                     <span
                       role="img"
-                      aria-label={nd.erledigt ? "Von deiner Firma als bezahlt markiert" : "Noch nicht bezahlt — setzt deine Firma"}
-                      title={nd.erledigt ? "Von deiner Firma als bezahlt markiert" : "Noch nicht bezahlt — setzt deine Firma"}
+                      aria-label={nd.erledigt ? "Bezahlt — von dir bestätigt" : "Noch nicht überwiesen — markiert deine Firma"}
+                      title={nd.erledigt ? "Bezahlt — von dir bestätigt" : "Noch nicht überwiesen — markiert deine Firma"}
                       style={{
                         fontSize: 20, lineHeight: 1, minWidth: 44, minHeight: 44,
                         display: "inline-flex", alignItems: "center", justifyContent: "center",

@@ -16,6 +16,9 @@ Kullanıcı: "İkisi de çıkarabilsin" + "Geçmiş kalsın".
 - Migration yokken kod eski davranışa düşer (tablo yok → mevcut üyeler sınırsız).
 - Testler: +21 (membership, remove, leave) → vitest 99/802 ✓, tsc ✓, lint ✓, E2E 25/25 (superadmin testi 1. denemede flaky).
 - Açık: Firma Dashboard / Notdienst-Zentrale / Foto-Import ekranları visible_from'u henüz uygulamıyor (sadece güncel üyeler).
+- Migration 042 test + canlıda çalıştırıldı (10.11, anon yoklama: tablo + company_admin_sees var).
+- Yeni E2E `e2e/austritt.e2e.ts` (test projesinde 3/3 ✓): trigger + visible_from, firma "Entfernen" + RLS penceresi
+  + "Ausgeschieden" banner, çalışan "Firma verlassen".
 
 ## 2026-11-10 (196) – v0.97.4: Mitarbeiter sieht "💸 Erhalten?" nach Firmen-Überweisung
 

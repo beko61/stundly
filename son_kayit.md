@@ -4,7 +4,7 @@ Kullanıcı: "notdienst firmada oluyor ama personda olmuyor, sadece resim diye d
 - Sebep (muhtemel): Notdienst listesi önbellekte (localStorage + refetchOnWindowFocus=false); PWA'ya geri dönünce
   yeniden yüklenmiyordu → firma "überwiesen" yapsa da çalışan ⏳ görüyordu.
 - `useNotdienstEntriesQuery`: `refetchOnWindowFocus: true` (staleTime 60 s'den eskiyse uygulamaya dönünce yeniler).
-- Canlıda kullanıcı doğrulaması bekleniyor.
+- Canlıda kullanıcı doğruladı: "düzeldi" (10.11).
 
 ## 2026-11-10 (195) – v0.97.3: Faz 4 SEO — canonical, fiyatlar tek kaynaktan, robots
 

@@ -11,6 +11,8 @@ Kullanıcı: "Faz 5 temizlik".
   `audit_logs_alt` olur (silinmez); `daily_logs`/`activity_logs`/`plan_features` boşsa silinir, doluysa `*_alt`
   olur; hiç çağrılmayan `check_employee_limit()` silinir. Kod migration'dan önce de çalışır.
 - vitest 99/804 ✓, tsc ✓, lint ✓, E2E 28/28 ✓.
+- Migration 043 test + canlıda çalıştırıldı (anon yoklama: audit_logs_alt + plan_features_alt var; daily_logs,
+  activity_logs silindi; check_employee_limit yok).
 
 ## 2026-11-10 (198) – v0.98.1: Kalan firma ekranları da üyelik penceresine bağlı
 

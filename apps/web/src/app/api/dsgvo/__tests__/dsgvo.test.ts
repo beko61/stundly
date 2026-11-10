@@ -70,7 +70,7 @@ describe("DSGVO Löschung", () => {
 
     await del.POST();
     expect(db.deletion_requests!.filter(x => x.status === "pending")).toHaveLength(1);
-    expect(db.audit_logs!.some(a => a.action === "deletion_requested")).toBe(true);
+    expect(db.audit_log!.some(a => a.action === "deletion_requested")).toBe(true);
   });
 
   it("Widerruf → kein offener Antrag mehr", async () => {

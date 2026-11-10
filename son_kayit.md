@@ -1,4 +1,18 @@
-﻿## 2026-11-10 (198) – v0.98.1: Kalan firma ekranları da üyelik penceresine bağlı
+﻿## 2026-11-10 (199) – v0.98.2: Faz 5 temizlik
+
+Kullanıcı: "Faz 5 temizlik".
+- `apps/mobile` (Expo, hiç kullanılmıyordu) repo'dan kaldırıldı; yereldeki kalıntı (.env, node_modules, 148 MB)
+  silinmedi → `yedekler/apps-mobile-eski` (gitignore'da). DEPLOY.md'deki Mobile bölümü kaldırıldı.
+- Kökteki eski ekran görüntüleri kaldırıldı (landing-*, salary-*, tracker-new). `omr-logo-64.png` kaldı (OMR).
+- Kök lockfile: next@14 (next-intl'in eski peer çözümü) ve react-dom@18 gitti → tek next 15.5.26 / react-dom 19.1.0;
+  1371 → 804 paket. `next build` ✓.
+- Audit tek tablo: DSGVO olayları (deletion_requested/canceled/processed, data_export, data_reset) artık `audit_log`'a.
+- **Migration 043** (kullanıcı çalıştıracak): eski `audit_logs` satırları `audit_log`'a kopyalanır, tablo
+  `audit_logs_alt` olur (silinmez); `daily_logs`/`activity_logs`/`plan_features` boşsa silinir, doluysa `*_alt`
+  olur; hiç çağrılmayan `check_employee_limit()` silinir. Kod migration'dan önce de çalışır.
+- vitest 99/804 ✓, tsc ✓, lint ✓, E2E 28/28 ✓.
+
+## 2026-11-10 (198) – v0.98.1: Kalan firma ekranları da üyelik penceresine bağlı
 
 Kullanıcı: "Kalan ekranlar".
 - Ortak `visibleFn(access)` (lib/company/membership.ts) — 4 kopya lambda kaldırıldı (tek kural).

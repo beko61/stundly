@@ -16,7 +16,7 @@ const RESET_DATA_WINDOW_SEC    = 86400;
  *   time_entries · notdienst_entries · vacation_requests · salary_records
  *
  * Saklar:
- *   profiles · salary_settings · auth.users · audit_logs
+ *   profiles · salary_settings · auth.users · audit_log
  *
  * Onay: client tarafında modal + "LÖSCHEN" yazma + body.confirm === "LÖSCHEN".
  * Audit-log'a yazılır (DSGVO + güvenlik için iz bırakır).
@@ -97,10 +97,10 @@ export async function POST(req: Request) {
   }
 
   // Audit log (DSGVO + sorumluluğu izle)
-  await admin.from("audit_logs").insert({
-    user_id: user.id,
+  await admin.from("audit_log").insert({
+    actor_user_id: user.id,
     action: "data_reset",
-    resource: "user_time_data",
+    resource_type: "user_time_data",
   });
 
   const total = Object.values(counts).reduce((s, c) => s + c, 0);

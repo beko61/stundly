@@ -99,10 +99,10 @@ export async function POST() {
     return NextResponse.json({ error: "Löschantrag konnte nicht gespeichert werden." }, { status: 500 });
   }
 
-  await db.from("audit_logs").insert({
-    user_id: user.id,
+  await db.from("audit_log").insert({
+    actor_user_id: user.id,
     action: "deletion_requested",
-    resource: "account",
+    resource_type: "account",
   });
 
   return NextResponse.json({
@@ -127,10 +127,10 @@ export async function DELETE() {
     return NextResponse.json({ error: "Widerruf fehlgeschlagen." }, { status: 500 });
   }
 
-  await db.from("audit_logs").insert({
-    user_id: user.id,
+  await db.from("audit_log").insert({
+    actor_user_id: user.id,
     action: "deletion_canceled",
-    resource: "account",
+    resource_type: "account",
   });
 
   return NextResponse.json({ message: "Löschantrag widerrufen." });

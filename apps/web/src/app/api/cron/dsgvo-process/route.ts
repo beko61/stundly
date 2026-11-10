@@ -82,11 +82,11 @@ export async function GET(req: Request) {
 
       // 4. Audit-Log (fire-and-forget)
       admin
-        .from("audit_logs")
+        .from("audit_log")
         .insert({
-          user_id: null,
+          actor_user_id: null,
           action: "deletion_processed",
-          resource: "account",
+          resource_type: "account",
         })
         .then(({ error }) => {
           if (error) console.error("[cron/dsgvo] audit insert failed:", error);

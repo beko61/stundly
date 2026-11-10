@@ -58,10 +58,10 @@ export async function GET() {
   };
 
   // Audit log
-  await admin.from("audit_logs").insert({
-    user_id: user.id,
+  await admin.from("audit_log").insert({
+    actor_user_id: user.id,
     action: "data_export",
-    resource: "all_user_data",
+    resource_type: "all_user_data",
   });
 
   return new NextResponse(JSON.stringify(exportData, null, 2), {

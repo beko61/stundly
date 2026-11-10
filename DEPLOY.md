@@ -35,15 +35,6 @@
 2. Domain → `stundly.de` ekle → DNS kayıtlarını ekle
 3. API Key oluştur → `.env`'e ekle
 
-## Mobile (EAS Build)
-
-```bash
-cd apps/mobile
-npm install -g eas-cli
-eas login
-eas build --platform all --profile production
-```
-
 ## Checklist (Go-Live)
 
 - [ ] Supabase EU region (Frankfurt)

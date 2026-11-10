@@ -17,6 +17,7 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 import { checkMonth, AUTOFILL_TAG, type CheckEntry, type CheckKind } from "@/lib/company/monthCheck";
 import { MonthClosingCard } from "./MonthClosingCard";
 import { CorrectionButton } from "./CorrectionButton";
+import { getMemberAccess, inRanges } from "@/lib/company/membership";
 
 const FINDING_LABEL: Record<CheckKind, { icon: string; label: string; color: string }> = {
   over10h:  { icon: "⏱", label: "Über 10 Stunden",  color: "var(--red)" },
@@ -82,7 +83,12 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
     .eq("user_id", userId)
     .single();
 
-  if (!employee || employee.company_id !== companyId) notFound();
+  if (!employee) notFound();
+  // Aktuelle oder ehemalige Mitgliedschaft (Migration 042) — Firma sieht nur Daten aus diesem Zeitraum
+  const access = await getMemberAccess(admin, companyId, userId);
+  if (!access || (!access.former && employee.company_id !== companyId)) notFound();
+  const readOnly = access.former;
+  const visible = (d: string) => inRanges(d, access.ranges);
 
   // Vertragsdaten (Migration 033) — getrennt abfragen: fehlt die Spalte noch, läuft die Seite trotzdem
   const { data: contractRow, error: contractErr } = await admin
@@ -106,14 +112,15 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   // 3) Time entries (bu ay + Vortag für die Ruhezeit-Prüfung am 1.)
   const prevDayDate = new Date(Date.UTC(year, month - 1, 0));
   const prevDay = prevDayDate.toISOString().slice(0, 10);
-  const { data: entriesWithPrev } = await admin
+  const { data: entriesWithPrevRaw } = await admin
     .from("time_entries")
     .select("id, date, start_time, end_time, break_minutes, day_type, note, is_night_shift, tags")
     .eq("user_id", userId)
     .gte("date", prevDay)
     .lte("date", lastDay)
     .order("date", { ascending: true });
-  const entries = (entriesWithPrev ?? []).filter((e) => e.date >= firstDay);
+  const entriesWithPrev = (entriesWithPrevRaw ?? []).filter((e) => visible(e.date));
+  const entries = entriesWithPrev.filter((e) => e.date >= firstDay);
 
   // Monatsabschluss + Korrekturen dieses Monats (Migration 033)
   const [{ data: closingRow }, { data: correctionRows }] = await Promise.all([
@@ -127,22 +134,23 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       .gte("entry_date", firstDay).lte("entry_date", lastDay)
       .order("created_at", { ascending: false }),
   ]);
-  const closing = closingRow as { status: "submitted" | "approved"; submitted_at: string | null; approved_at: string | null } | null;
-  const corrections = (correctionRows ?? []) as {
+  const closing = (visible(firstDay) || visible(lastDay) ? closingRow : null) as { status: "submitted" | "approved"; submitted_at: string | null; approved_at: string | null } | null;
+  const corrections = (correctionRows ?? []).filter((c) => visible(c.entry_date)) as {
     id: string; entry_date: string; reason: string; created_at: string; seen_at: string | null;
     before: Record<string, unknown> | null; after: Record<string, unknown> | null;
   }[];
   const correctedDates = new Set(corrections.map((c) => c.entry_date));
 
   // 4) Tüm Urlaubsanträge (zaman sınırı yok)
-  const { data: vacations } = await admin
+  const { data: vacationsRaw } = await admin
     .from("vacation_requests")
     .select("id, start_date, end_date, days_count, reason, status, created_at, urlaub_art, vertretung, approved_at, rejected_at, rejection_reason")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(20);
 
-  const pendingCount = (vacations ?? []).filter(v => v.status === "pending").length;
+  const vacations = (vacationsRaw ?? []).filter((v) => visible(v.start_date));
+  const pendingCount = vacations.filter(v => v.status === "pending").length;
 
   // 5) Aggregate
   const entryMap = new Map((entries ?? []).map((e) => [e.date, e]));
@@ -155,7 +163,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
 
   // Notdienst: Woche zählt zum Monat ihres Sonntags (wie beim Mitarbeiter)
   const ndRange = notdienstLoadRange(year, month);
-  const { data: ndRaw } = await admin
+  const { data: ndRawAll } = await admin
     .from("notdienst_entries")
     .select("*")
     .eq("user_id", userId)
@@ -163,6 +171,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
     .lte("date", ndRange.end)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
+  const ndRaw = (ndRawAll ?? []).filter((n) => visible(n.date as string));
   const ndEntries: TeamNotdienst[] = ((ndRaw ?? []) as Record<string, unknown>[])
     .filter((n) => notdienstBelongsToMonth(n.date as string, year, month))
     .map((n) => ({
@@ -204,7 +213,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   // ─────────────────────────────────────────────────────────────
   const yearStartISO = `${now.getFullYear()}-01-01`;
   const yearEndISO   = `${now.getFullYear()}-12-31`;
-  const [{ data: yearEntries }, { data: salarySettingsList }] = await Promise.all([
+  const [{ data: yearEntriesRaw }, { data: salarySettingsList }] = await Promise.all([
     admin
       .from("time_entries")
       .select("id, date, day_type, start_time, end_time, break_minutes, is_night_shift, tags")
@@ -219,6 +228,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       .limit(1),
   ]);
   const settings = (salarySettingsList ?? [])[0] ?? null;
+  const yearEntries = (yearEntriesRaw ?? []).filter((e) => visible(e.date));
 
   // Monatsstatistik — gleiche Rechnung wie beim Mitarbeiter (Feiertage seines Bundeslands, Notdienst inkl.)
   // Soll: Vertrag der Firma > Lohn-Einstellung des Mitarbeiters > 174 h
@@ -294,8 +304,16 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
         </div>
       </div>
 
+      {readOnly && (
+        <div className="card" role="status" style={{ padding: "12px 16px", marginBottom: 20, fontSize: 13,
+          border: "1px solid color-mix(in srgb, var(--orange) 40%, transparent)" }}>
+          🚪 Ausgeschieden am {access.leftAt ? new Date(`${access.leftAt}T12:00:00`).toLocaleDateString("de-DE") : "–"} —
+          nur Ansicht. Sichtbar sind Daten aus der Zeit der Firmenzugehörigkeit (Berichte weiter unter „Berichte“).
+        </div>
+      )}
+
       {/* Monatsabschluss */}
-      <MonthClosingCard
+      {!readOnly && <MonthClosingCard
         key={`${year}-${month}`}
         userId={userId}
         year={year}
@@ -305,7 +323,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
         submittedAt={closing?.submitted_at ?? null}
         approvedAt={closing?.approved_at ?? null}
         findingsCount={findings.length}
-      />
+      />}
 
       {/* Auffälligkeiten */}
       {findings.length > 0 && (
@@ -360,7 +378,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
 
       {/* Vertrag — Soll-Stunden, Urlaubsanspruch, Beschäftigungsbeginn (Migration 033) */}
       <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Vertrag</h2>
-      <ContractCard userId={userId} contract={contract} supported={contractSupported} />
+      {!readOnly && <ContractCard userId={userId} contract={contract} supported={contractSupported} />}
 
       {/* Zeitkonto (Urlaub + Krankheit) — YIL bazlı */}
       <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
@@ -519,11 +537,11 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
                       {nm > 0 ? formatMinutes(nm) : "—"}
                     </td>
                     <td style={{ padding: "6px 10px", textAlign: "right" }}>
-                      <CorrectionButton
+                      {!readOnly && <CorrectionButton
                         userId={userId}
                         date={d.dateStr}
                         entry={e ? { day_type: e.day_type, start_time: e.start_time, end_time: e.end_time, break_minutes: e.break_minutes } : null}
-                      />
+                      />}
                     </td>
                   </tr>
                 );
@@ -573,7 +591,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       <p style={{ fontSize: 11, color: "var(--muted)", marginTop: -6, marginBottom: 10 }}>
         Eine Notdienst-Woche zählt zu dem Monat, in dem ihr Sonntag liegt.
       </p>
-      <TeamNotdienstList key={`${year}-${month}`} userId={userId} entries={ndEntries} />
+      <TeamNotdienstList key={`${year}-${month}`} userId={userId} entries={ndEntries} readOnly={readOnly} />
 
       {/* Urlaubsanträge */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -646,7 +664,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
                       <> · Abgelehnt: {new Date(v.rejected_at).toLocaleDateString("de-DE")}</>
                     )}
                   </div>
-                  {isPending && (
+                  {isPending && !readOnly && (
                     <div style={{ marginTop: 10 }}>
                       <VacationDecisionButtons
                         vacationId={v.id}

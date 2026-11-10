@@ -368,6 +368,31 @@ export default function SettingsPage() {
                       ? <>Gilt für das ganze Team. <a href="/company/firmendaten" style={{ color: "var(--accent2)", fontWeight: 700 }}>Im Firmen-Panel bearbeiten →</a></>
                       : "Wird von deiner Firma verwaltet."}
                   </div>
+                  {membership.data?.isCompanyEmployee && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm(
+                          `Firma „${firmaBk.name}" verlassen?\n\n` +
+                          "• Dein Konto und deine Daten bleiben — du arbeitest als Einzelperson weiter.\n" +
+                          "• Die Firma sieht weiterhin deine Daten aus der Zeit der Zugehörigkeit (Aufbewahrungspflicht).\n" +
+                          "• Rückgängig nur über eine neue Einladung der Firma.",
+                        )) return;
+                        const res = await fetch("/api/company/leave", { method: "POST" }).catch(() => null);
+                        if (res?.ok) { window.location.href = "/dashboard"; return; }
+                        const j = await res?.json().catch(() => ({})) as { error?: string } | undefined;
+                        alert(j?.error ?? "Austritt fehlgeschlagen — bitte mit Internet erneut versuchen.");
+                      }}
+                      style={{
+                        marginTop: 10, minHeight: 44, padding: "0 14px", borderRadius: 10, cursor: "pointer",
+                        background: "transparent", color: "var(--orange)", fontSize: 12, fontWeight: 700,
+                        border: "1px solid color-mix(in srgb, var(--orange) 35%, transparent)",
+                        fontFamily: "var(--font-syne),sans-serif",
+                      }}
+                    >
+                      🚪 Firma verlassen
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (<>

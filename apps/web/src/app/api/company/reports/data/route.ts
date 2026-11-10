@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
+import { loadMemberAccess, inRanges } from "@/lib/company/membership";
 import { applyBriefkopf, briefkopfFromCompany, COMPANY_BRIEFKOPF_SELECT } from "@/lib/company/briefkopf";
 
 /**
@@ -55,7 +56,9 @@ export async function GET(req: NextRequest) {
       .select("user_id, full_name, email, vorname, nachname, personal_nr, abteilung, vorgesetzter, signature_data, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, bundesland, company_id")
       .eq("user_id", userId)
       .single();
-    if (!emp || emp.company_id !== companyId) {
+    // auch ehemalige Mitarbeiter (Migration 042) — Daten nur aus dem Zeitraum der Zugehörigkeit
+    const acc = emp ? (await loadMemberAccess(admin, companyId, [userId])).get(userId) : undefined;
+    if (!emp || !acc || (!acc.former && emp.company_id !== companyId)) {
       return NextResponse.json({ error: "Mitarbeiter nicht in deinem Unternehmen" }, { status: 404 });
     }
     employees = [emp];
@@ -70,6 +73,8 @@ export async function GET(req: NextRequest) {
     employees = list ?? [];
   }
   const userIds = employees.map(e => e.user_id as string);
+  const access = await loadMemberAccess(admin, companyId, userIds);
+  const visible = (uid: string, d: string) => { const a = access.get(uid); return !!a && inRanges(d, a.ranges); };
 
   // ── Time entries (aylık) ───────────────────────────────────────
   const { data: timeEntries } = userIds.length > 0
@@ -128,8 +133,8 @@ export async function GET(req: NextRequest) {
     const uid = emp.user_id as string;
     return {
       profile: applyBriefkopf(emp, briefkopf),
-      entries:   (timeEntries ?? []).filter(t => t.user_id === uid),
-      notdienst: (ndEntries  ?? []).filter(n => n.user_id === uid),
+      entries:   (timeEntries ?? []).filter(t => t.user_id === uid && visible(uid, t.date)),
+      notdienst: (ndEntries  ?? []).filter(n => n.user_id === uid && visible(uid, n.date)),
       salarySettings: salaryByUser.get(uid) ?? null,
     };
   });

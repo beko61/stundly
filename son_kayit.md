@@ -1,4 +1,23 @@
-﻿## 2026-11-10 (196) – v0.97.4: Mitarbeiter sieht "💸 Erhalten?" nach Firmen-Überweisung
+﻿## 2026-11-10 (197) – v0.98.0: Firmadan ayrılma — geçmiş firmada kalır (Migration 042)
+
+Kullanıcı: "İkisi de çıkarabilsin" + "Geçmiş kalsın".
+
+- **Migration 042** (`company_memberships`): firma üyeliği tarih aralığıyla. Trigger `profiles.company_id` değişince
+  üyeliği açar/kapatır (davet, /join, firma kurma, ayrılma — davet kabul kodu değişmedi). Görünürlük penceresi
+  [visible_from, left_at]; mevcut üyeler visible_from=null (davranış aynı). Kendi verisi olan hesap katılırsa
+  visible_from = katılış günü → yeni firma eski firmadaki kayıtları göremez. RLS: `company_admin_sees(user, tarih)`
+  time_entries / vacation / notdienst / salary_records / month_closings / corrections / anhänge.
+- **API:** `POST /api/company/employees/remove` (firma, sadece role=employee), `POST /api/company/leave` (çalışan).
+  Ortak `lib/company/membership.ts → endMembership`: company_id=null, role=individual, sözleşme alanları null,
+  gelecek Notdienst-Rota haftaları silinir, audit (employee.removed / employee.left).
+- **Firma ekranları** pencereye göre filtreliyor: çalışan detay (eski çalışan = sadece görüntüleme, banner),
+  Berichte listesi + PDF/CSV verisi ("ausgeschieden" etiketi), Lohn (ayrıldığı ayda hâlâ listede), Team-Übersicht.
+- **UI:** Mitarbeiter listesinde "Entfernen" + "Ehemalige Mitarbeiter" bölümü; çalışan Einstellungen → "🚪 Firma verlassen".
+- Migration yokken kod eski davranışa düşer (tablo yok → mevcut üyeler sınırsız).
+- Testler: +21 (membership, remove, leave) → vitest 99/802 ✓, tsc ✓, lint ✓, E2E 25/25 (superadmin testi 1. denemede flaky).
+- Açık: Firma Dashboard / Notdienst-Zentrale / Foto-Import ekranları visible_from'u henüz uygulamıyor (sadece güncel üyeler).
+
+## 2026-11-10 (196) – v0.97.4: Mitarbeiter sieht "💸 Erhalten?" nach Firmen-Überweisung
 
 Kullanıcı: "notdienst firmada oluyor ama personda olmuyor, sadece resim diye duruyor".
 - Sebep (muhtemel): Notdienst listesi önbellekte (localStorage + refetchOnWindowFocus=false); PWA'ya geri dönünce

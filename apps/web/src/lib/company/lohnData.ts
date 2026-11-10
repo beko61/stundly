@@ -9,6 +9,7 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { DEFAULT_TARGET_HOURS_PER_MONTH } from "@/lib/utils/monthStats";
 import { monthlyTargetFromWeekly } from "./contract";
+import { listFormerMembers, loadMemberAccess, inRanges } from "./membership";
 import { computeLohnRows, type LohnEmployee, type LohnNd, type LohnRow } from "./lohn";
 
 export const MONTHS_DE = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -59,7 +60,19 @@ export async function loadLohnMonth(admin: SupabaseClient, companyId: string, ye
   const { data: profs } = await admin.from("profiles")
     .select("user_id, full_name, email, personal_nr, bundesland, is_active")
     .eq("company_id", companyId).is("deleted_at", null);
-  const people = (profs ?? []) as { user_id: string; full_name: string | null; email: string | null; personal_nr: string | null; bundesland: string | null; is_active: boolean }[];
+  type Person = { user_id: string; full_name: string | null; email: string | null; personal_nr: string | null; bundesland: string | null; is_active: boolean };
+  const people = (profs ?? []) as Person[];
+  // Ehemalige (Migration 042), die in diesem Monat noch dazugehörten → Lohn für den letzten Monat
+  const formerIds = (await listFormerMembers(admin, companyId)).map((f) => f.user_id);
+  const access = await loadMemberAccess(admin, companyId, [...people.map((p) => p.user_id), ...formerIds]);
+  const formerInMonth = formerIds.filter((uid) => (access.get(uid)?.ranges ?? [])
+    .some((r) => (r.from === null || r.from <= last) && (r.to === null || r.to >= first)));
+  if (formerInMonth.length > 0) {
+    const { data: fp } = await admin.from("profiles")
+      .select("user_id, full_name, email, personal_nr, bundesland, is_active").in("user_id", formerInMonth);
+    people.push(...((fp ?? []) as Person[]));
+  }
+  const visible = (uid: string, d: string) => { const a = access.get(uid); return !a || inRanges(d, a.ranges); };
   const ids = people.map((p) => p.user_id);
   if (ids.length === 0) return { company, rows: [], monthLabel };
 
@@ -82,7 +95,7 @@ export async function loadLohnMonth(admin: SupabaseClient, companyId: string, ye
     }
   }
 
-  const entries = (te ?? []) as (TimeEntry & { user_id: string })[];
+  const entries = ((te ?? []) as (TimeEntry & { user_id: string })[]).filter((e) => visible(e.user_id, e.date));
   const withData = new Set(entries.map((e) => e.user_id));
   const feiertageCache = new Map<string, Record<string, string>>();
   const employees: LohnEmployee[] = people
@@ -99,7 +112,7 @@ export async function loadLohnMonth(admin: SupabaseClient, companyId: string, ye
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 
   const rows = computeLohnRows({
-    employees, entries, ndEntries: (nd ?? []) as LohnNd[],
+    employees, entries, ndEntries: ((nd ?? []) as LohnNd[]).filter((n) => visible(n.user_id, n.date)),
     closings: new Map(((cl ?? []) as { user_id: string; status: "approved" | "submitted" }[]).map((c) => [c.user_id, c.status])),
     year, month, pauschale: company.notdienst_pauschale,
   });

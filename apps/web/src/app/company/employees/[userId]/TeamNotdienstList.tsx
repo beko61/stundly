@@ -36,6 +36,8 @@ interface Props {
   /** Einzelansicht: Mitarbeiter-ID. Team-Ansicht: null (dann entry.user_id) */
   userId:  string | null;
   entries: TeamNotdienst[];
+  /** Ehemaliger Mitarbeiter: nur Ansicht */
+  readOnly?: boolean;
 }
 
 const WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
@@ -48,7 +50,7 @@ const smallBtn: React.CSSProperties = {
   fontFamily: "var(--font-syne),sans-serif",
 };
 
-export function TeamNotdienstList({ userId, entries }: Props) {
+export function TeamNotdienstList({ userId, entries, readOnly = false }: Props) {
   const router = useRouter();
   const [st, setSt] = useState<Record<string, { ueberwiesen: boolean; erledigt: boolean }>>(
     () => Object.fromEntries(entries.map(e => [e.id, { ueberwiesen: e.ueberwiesen, erledigt: e.erledigt }])));
@@ -104,7 +106,7 @@ export function TeamNotdienstList({ userId, entries }: Props) {
   return (
     <div style={{ marginBottom: 32 }}>
       {error && <div role="alert" style={{ fontSize: 12, color: "var(--red)", marginBottom: 8 }}>⚠️ {error}</div>}
-      {offen.length > 1 && (
+      {offen.length > 1 && !readOnly && (
         <button type="button" onClick={() => void alleBezahlt()} disabled={busy !== null}
           style={{ ...smallBtn, marginBottom: 10, borderColor: "var(--green)", color: "var(--green)" }}>
           {busy === "all" ? "Speichert…" : `💸 Alle ${offen.length} offenen als überwiesen markieren`}
@@ -135,7 +137,7 @@ export function TeamNotdienstList({ userId, entries }: Props) {
                     {[e.kunde, e.adresse].filter(Boolean).join(" · ") || "Ohne Kundenangabe"}
                   </div>
                 </button>
-                <button type="button" onClick={() => void toggle(e.id)} disabled={busy !== null}
+                <button type="button" onClick={() => void toggle(e.id)} disabled={busy !== null || readOnly}
                   aria-label={s.ueberwiesen ? "Überweisung zurücknehmen" : "Als überwiesen markieren"}
                   title={s.erledigt ? "Vom Mitarbeiter als erhalten bestätigt" : s.ueberwiesen ? "Wartet auf Bestätigung durch den Mitarbeiter" : "Als überwiesen markieren"}
                   style={{

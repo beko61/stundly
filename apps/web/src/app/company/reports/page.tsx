@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
+import { listFormerMembers, loadMemberAccess, inRanges } from "@/lib/company/membership";
 import { EmployeeExportButtons, BulkCsvButton, DatevBulkButton } from "./ReportExportButtons";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -26,7 +27,7 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
   const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
   const lastDay  = `${year}-${String(month).padStart(2, "0")}-${String(daysIn).padStart(2, "0")}`;
 
-  const { data: employees } = await admin
+  const { data: currentEmployees } = await admin
     .from("profiles")
     .select("user_id, full_name, email, personal_nr")
     .eq("company_id", companyId)
@@ -34,8 +35,23 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
     .is("deleted_at", null)
     .order("nachname", { ascending: true });
 
-  if (!employees) notFound();
+  if (!currentEmployees) notFound();
+
+  // Ehemalige Mitarbeiter (Migration 042), deren Zugehörigkeit in diesen Monat fällt
+  const formerIds = (await listFormerMembers(admin, companyId)).map((f) => f.user_id);
+  const allAccess = await loadMemberAccess(admin, companyId, [...currentEmployees.map(e => e.user_id), ...formerIds]);
+  const overlaps = (uid: string) => (allAccess.get(uid)?.ranges ?? [])
+    .some((r) => (r.from === null || r.from <= lastDay) && (r.to === null || r.to >= firstDay));
+  const formerInMonth = formerIds.filter(overlaps);
+  const { data: formerProfiles } = formerInMonth.length > 0
+    ? await admin.from("profiles").select("user_id, full_name, email, personal_nr").in("user_id", formerInMonth)
+    : { data: [] };
+  const employees = [
+    ...currentEmployees.map(e => ({ ...e, former: false })),
+    ...(formerProfiles ?? []).map(e => ({ ...e, former: true })),
+  ];
   const userIds = employees.map(e => e.user_id);
+  const visible = (uid: string, d: string) => { const a = allAccess.get(uid); return !a || inRanges(d, a.ranges); };
 
   const { data: timeEntries } = userIds.length > 0
     ? await admin
@@ -58,8 +74,8 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
   const ndEntries = (ndRawEntries ?? []).filter(n => notdienstBelongsToMonth(n.date, year, month));
 
   const summaries = employees.map(emp => {
-    const entries = (timeEntries ?? []).filter(e => e.user_id === emp.user_id);
-    const nd      = ndEntries.filter(n => n.user_id === emp.user_id);
+    const entries = (timeEntries ?? []).filter(e => e.user_id === emp.user_id && visible(emp.user_id, e.date));
+    const nd      = ndEntries.filter(n => n.user_id === emp.user_id && visible(emp.user_id, n.date));
     const workMin = entries.reduce((s, e) =>
       s + netMinutesForEntry({
         date: e.date,
@@ -162,6 +178,9 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
                   style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
                     {emp.full_name ?? "—"}
+                    {emp.former && (
+                      <span style={{ fontSize: 11, color: "var(--orange)", marginLeft: 8, fontWeight: 600 }}>ausgeschieden</span>
+                    )}
                     {emp.personal_nr && (
                       <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 8, fontWeight: 500 }}>
                         Nr. {emp.personal_nr}

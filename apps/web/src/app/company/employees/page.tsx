@@ -20,6 +20,14 @@ interface EmployeeSummary {
   prevMonthStatus?: "submitted" | "approved" | null;
 }
 
+interface FormerEmployee {
+  user_id:     string;
+  full_name:   string | null;
+  email:       string | null;
+  left_at:     string;
+  left_reason: string | null;
+}
+
 interface Invitation {
   id:         string;
   email:      string;
@@ -46,6 +54,8 @@ export default function EmployeesPage() {
   const [employees, setEmployees]     = useState<EmployeeSummary[]>([]);
   const [deletedEmployees, setDeletedEmployees] = useState<EmployeeSummary[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [formerEmployees, setFormerEmployees] = useState<FormerEmployee[]>([]);
+  const [showFormer, setShowFormer] = useState(false);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [companyId, setCompanyId]     = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -109,6 +119,7 @@ export default function EmployeesPage() {
       const all: EmployeeSummary[] = summary.employees ?? [];
       setEmployees(all.filter(e => !e.deleted_at));
       setDeletedEmployees(all.filter(e => e.deleted_at));
+      setFormerEmployees(summary.former ?? []);
     }
     setInvitations(invs ?? []);
     setLoading(false);
@@ -207,6 +218,27 @@ export default function EmployeesPage() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Löschen fehlgeschlagen");
+      return;
+    }
+    load();
+  }
+
+  async function removeEmployee(userId: string, name: string) {
+    if (!confirm(
+      `„${name}" aus dem Team entfernen?\n\n` +
+      `• ${name} behält das Konto und die eigenen Daten und arbeitet als Einzelperson weiter.\n` +
+      `• Du siehst die Daten aus der Zeit der Firmenzugehörigkeit weiterhin (Ehemalige, Berichte, Lohn).\n` +
+      `• Offene Notdienst-Zahlungen vorher abschließen — danach ist nur noch Ansicht möglich.`,
+    )) return;
+    setError(null);
+    const res = await fetch("/api/company/employees/remove", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ userId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Entfernen fehlgeschlagen");
       return;
     }
     load();
@@ -494,6 +526,21 @@ export default function EmployeesPage() {
                   >
                     {emp.is_active ? "Deaktivieren" : "Aktivieren"}
                   </button>
+                  {emp.role === "employee" && (
+                    <button
+                      onClick={() => removeEmployee(emp.user_id, emp.full_name ?? emp.email ?? "Mitarbeiter")}
+                      className="btn"
+                      style={{
+                        fontSize: 11, padding: "6px 12px",
+                        background: "transparent",
+                        color: "var(--orange)",
+                        border: "1px solid color-mix(in srgb, var(--orange) 30%, transparent)",
+                      }}
+                      title="Austritt — Mitarbeiter behält sein Konto, du siehst die Daten aus seiner Zeit weiter"
+                    >
+                      Entfernen
+                    </button>
+                  )}
                   <button
                     onClick={() => deleteEmployee(emp.user_id, emp.full_name ?? emp.email ?? "Mitarbeiter")}
                     className="btn"
@@ -509,6 +556,51 @@ export default function EmployeesPage() {
                   </button>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Ehemalige Mitarbeiter (Migration 042) */}
+        {formerEmployees.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <button
+              onClick={() => setShowFormer(v => !v)}
+              aria-expanded={showFormer}
+              style={{
+                background: "transparent", border: "none",
+                color: "var(--muted)", fontSize: 12, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 6, minHeight: 44,
+                fontFamily: "var(--font-syne),sans-serif",
+              }}
+            >
+              {showFormer ? "▾" : "▸"} Ehemalige Mitarbeiter ({formerEmployees.length})
+            </button>
+          </div>
+        )}
+        {showFormer && formerEmployees.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+            {formerEmployees.map((emp) => (
+              <Link
+                key={emp.user_id}
+                href={`/company/employees/${emp.user_id}?year=${Number(emp.left_at.slice(0, 4))}&month=${Number(emp.left_at.slice(5, 7))}`}
+                className="card"
+                style={{
+                  padding: "12px 16px", display: "flex", alignItems: "center", gap: 12,
+                  textDecoration: "none", color: "inherit",
+                  borderLeft: "3px solid var(--orange)",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {emp.full_name ?? emp.email ?? "–"}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                    {emp.left_reason === "left" ? "selbst ausgetreten" : "entfernt"} am{" "}
+                    {new Date(`${emp.left_at}T12:00:00`).toLocaleDateString("de-DE")} · Daten aus der Zeit im Team ansehen
+                  </div>
+                </div>
+                <span style={{ fontSize: 18, color: "var(--muted)", flexShrink: 0 }}>›</span>
+              </Link>
             ))}
           </div>
         )}

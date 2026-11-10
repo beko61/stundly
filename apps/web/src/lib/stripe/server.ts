@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { TRIAL_DAYS } from "@/lib/plan/entitlements";
 
 /**
  * Lazy Stripe client — sadece ilk kullanımda init olur.
@@ -79,7 +80,7 @@ export async function createCheckoutSession({
     cancel_url: cancelUrl,
     locale: "de",
     subscription_data: {
-      trial_period_days: 14,
+      trial_period_days: TRIAL_DAYS,
       metadata: {
         company_id: companyId ?? "",
         user_id: userId ?? "",

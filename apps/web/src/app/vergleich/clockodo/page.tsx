@@ -33,7 +33,7 @@ interface Row {
 const rows: Row[] = [
   { category: "Preis pro Monat (nach Beta)", stundly: "€5,99 pauschal",       clockodo: "ab €10/Nutzer",     advantage: "stundly" },
   { category: "Team-Tarif",                  stundly: "€19,99 flat (bis 10 MA)", clockodo: "je Nutzer",       advantage: "stundly" },
-  { category: "Kostenlose Testphase",        stundly: `Beta bis ${BETA_END_DATE_LABEL} / 14 Tage regulär`, clockodo: "14 Tage", advantage: "tie" },
+  { category: "Kostenlose Testphase",        stundly: `Beta bis ${BETA_END_DATE_LABEL} / 30 Tage regulär`, clockodo: "14 Tage", advantage: "stundly" },
   { category: "Zielgruppe",                  stundly: "Handwerksbetriebe",     clockodo: "Alle Branchen",     advantage: "stundly" },
   { category: "Sprache",                     stundly: "Deutsch",               clockodo: "Deutsch",           advantage: "tie" },
   { category: "Server-Standort",             stundly: "EU (Frankfurt)",        clockodo: "EU (Deutschland)",  advantage: "tie" },

@@ -114,7 +114,7 @@ export async function sendWelcomeEmail({
         </p>
         ` : `
         <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
-          Ihr Konto ist jetzt aktiv. Sie haben <strong style="color: #c084fc;">14 Tage kostenlos</strong> Zugang zu allen Funktionen.
+          Ihr Konto ist jetzt aktiv. Sie haben <strong style="color: #c084fc;">30 Tage kostenlos</strong> Zugang zu allen Funktionen.
         </p>
         `}
 

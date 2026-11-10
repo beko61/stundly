@@ -170,7 +170,7 @@ const plans = [
     period: "/ Monat",
     desc: "Für Freelancer & Selbstständige",
     features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
-    cta: "14 Tage gratis testen",
+    cta: "30 Tage gratis testen",
     highlight: false,
   },
   {
@@ -180,7 +180,7 @@ const plans = [
     period: "/ Monat",
     desc: "Für Handwerk-Betriebe bis 10 MA",
     features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
-    cta: "14 Tage gratis testen",
+    cta: "30 Tage gratis testen",
     highlight: true,
   },
   {
@@ -190,7 +190,7 @@ const plans = [
     period: "/ Monat",
     desc: "Für größere Betriebe",
     features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
-    cta: "14 Tage gratis testen",
+    cta: "30 Tage gratis testen",
     highlight: false,
   },
 ];
@@ -291,7 +291,7 @@ export default async function LandingPage() {
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "14px 28px" }}>
-              {BETA_MODE ? "Kostenlos starten" : "14 Tage gratis testen"}
+              {BETA_MODE ? "Kostenlos starten" : "30 Tage gratis testen"}
             </Link>
             <Link href="/demo" className="btn" style={{
               fontSize: 16, padding: "14px 28px",
@@ -639,7 +639,7 @@ export default async function LandingPage() {
           Gemäß § 19 UStG ohne Umsatzsteuer · Monatlich kündbar
         </p>
         <p style={{ textAlign: "center", color: "var(--accent2)", fontWeight: 700, fontSize: 13, marginBottom: 52 }}>
-          14 Tage kostenlos testen – keine Kreditkarte erforderlich
+          30 Tage kostenlos testen – keine Kreditkarte erforderlich
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
@@ -717,7 +717,7 @@ export default async function LandingPage() {
         <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 32 }}>
           {BETA_MODE
             ? "Kostenlos – keine Kreditkarte – kein Abo – sofort loslegen"
-            : "14 Tage kostenlos – keine Kreditkarte – sofort loslegen"}
+            : "30 Tage kostenlos – keine Kreditkarte – sofort loslegen"}
         </p>
         <Link href="/register" className="btn btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>
           Jetzt kostenlos starten

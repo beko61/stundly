@@ -27,11 +27,11 @@ const PLANS: Plan[] = [
   {
     id: "trial",
     name: "Kostenlos testen",
-    desc: "14 Tage gratis · keine Kreditkarte",
+    desc: "30 Tage gratis · keine Kreditkarte",
     monthlyPrice: 0,
     yearlyPrice:  0,
     isTrial: true,
-    features: ["1 Benutzer", "Alle Grundfunktionen", "PDF Export", "Mobile App", "Volle 14 Tage"],
+    features: ["1 Benutzer", "Alle Grundfunktionen", "PDF Export", "Mobile App", "Volle 30 Tage"],
     cta: "Jetzt starten",
   },
   {
@@ -41,7 +41,7 @@ const PLANS: Plan[] = [
     monthlyPrice: PLAN_PRICES.individual.monthly,
     yearlyPrice:  PLAN_PRICES.individual.yearly / 12,   // 2 Monate gratis
     features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
-    cta: "14 Tage gratis testen",
+    cta: "30 Tage gratis testen",
   },
   {
     id: "team",
@@ -52,7 +52,7 @@ const PLANS: Plan[] = [
     highlight: true,
     badge: "BELIEBTESTE WAHL",
     features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
-    cta: "14 Tage gratis testen",
+    cta: "30 Tage gratis testen",
   },
   {
     id: "business",
@@ -61,7 +61,7 @@ const PLANS: Plan[] = [
     monthlyPrice: PLAN_PRICES.business.monthly,
     yearlyPrice:  PLAN_PRICES.business.yearly / 12,
     features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
-    cta: "14 Tage gratis testen",
+    cta: "30 Tage gratis testen",
   },
 ];
 
@@ -265,7 +265,7 @@ export default function PricingPage() {
             Einfache, transparente Preise
           </h1>
           <p style={{ color: "var(--muted)", fontSize: 15 }}>
-            14 Tage kostenlos testen · keine Kreditkarte erforderlich · jederzeit kündbar
+            30 Tage kostenlos testen · keine Kreditkarte erforderlich · jederzeit kündbar
           </p>
         </div>
 
@@ -368,7 +368,7 @@ export default function PricingPage() {
                     {plan.isTrial ? "€0" : `€${price?.toFixed(2)}`}
                   </span>
                   <span style={{ color: "var(--muted)", fontSize: 13 }}>
-                    {plan.isTrial ? " / 14 Tage" : " / Monat"}
+                    {plan.isTrial ? " / 30 Tage" : " / Monat"}
                   </span>
                   {!plan.isTrial && interval === "yearly" && yearlyTotal && (
                     <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>

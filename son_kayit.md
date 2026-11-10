@@ -1,4 +1,15 @@
-﻿## 2026-11-09 (192) – v0.97.0: Notdienst-Zahlung von beiden Seiten bestätigt (Migration 041)
+﻿## 2026-11-10 (193) – v0.97.1: Testphase einheitlich 30 Tage
+
+Kullanıcı: "Trial day 30 gün olsun".
+
+- Kod: firma (`create-company`, süper admin `create-account`), kişisel (`set-bundesland`) trial_end ve Stripe
+  `trial_period_days` artık `TRIAL_DAYS` (= 30, `lib/plan/entitlements.ts`) kullanıyor — tek rakam.
+- Metinler 14 → 30: ana sayfa, /pricing, onboarding/done, hoş geldin maili, billing/success, AGB, Clockodo
+  karşılaştırması (artık "stundly" avantajı).
+- Mevcut aboneliklerin trial_end'i değişmedi (yalnızca yeni kayıtlar). Beta açık olduğu için ekranda şu an görünmüyor.
+- Testler: vitest 96/781 ✓, tsc ✓, lint ✓.
+
+## 2026-11-09 (192) – v0.97.0: Notdienst-Zahlung von beiden Seiten bestätigt (Migration 041)
 
 Kullanıcı: "Notdienst ödemeleri 2 tarafta kontrol ettikten sonra onaylansın — firma yattı diye okeylesin, personel
 yattı diye onaylasın, o zaman tam onay olsun ödendi olsun".

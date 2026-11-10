@@ -32,7 +32,7 @@ function SuccessContent() {
         Vielen Dank!
       </h1>
       <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
-        Dein Abonnement ist jetzt aktiv. Deine 14-tägige kostenlose Testphase hat begonnen — danach wird automatisch abgerechnet, sofern du nicht vorher kündigst.
+        Dein Abonnement ist jetzt aktiv. Deine 30-tägige kostenlose Testphase hat begonnen — danach wird automatisch abgerechnet, sofern du nicht vorher kündigst.
       </p>
 
       <div style={{

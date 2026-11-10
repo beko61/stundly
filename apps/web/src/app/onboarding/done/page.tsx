@@ -150,7 +150,7 @@ function DoneContent() {
       }}>
         {isBetaActive()
           ? `🎁 Beta-Phase: Alle Funktionen kostenlos bis ${BETA_END_DATE_LABEL}`
-          : "✓ 14 Tage kostenlos testen – keine Kreditkarte erforderlich"}
+          : "✓ 30 Tage kostenlos testen – keine Kreditkarte erforderlich"}
       </div>
 
       {/* Demo-Daten Import Prompt */}

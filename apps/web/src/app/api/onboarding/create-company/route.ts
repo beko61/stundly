@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
+import { TRIAL_DAYS } from "@/lib/plan/entitlements";
 import { checkRateLimit } from "@/lib/rateLimit/check";
 
 // Company spam koruması: user başına günde 5 attempt (idempotency check
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
     plan: "trial",
     status: "trialing",
     currency: "eur",
-    trial_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    trial_end: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString(),
   });
 
   if (subErr) {

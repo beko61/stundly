@@ -1,4 +1,12 @@
-﻿## 2026-11-10 (195) – v0.97.3: Faz 4 SEO — canonical, fiyatlar tek kaynaktan, robots
+﻿## 2026-11-10 (196) – v0.97.4: Mitarbeiter sieht "💸 Erhalten?" nach Firmen-Überweisung
+
+Kullanıcı: "notdienst firmada oluyor ama personda olmuyor, sadece resim diye duruyor".
+- Sebep (muhtemel): Notdienst listesi önbellekte (localStorage + refetchOnWindowFocus=false); PWA'ya geri dönünce
+  yeniden yüklenmiyordu → firma "überwiesen" yapsa da çalışan ⏳ görüyordu.
+- `useNotdienstEntriesQuery`: `refetchOnWindowFocus: true` (staleTime 60 s'den eskiyse uygulamaya dönünce yeniler).
+- Canlıda kullanıcı doğrulaması bekleniyor.
+
+## 2026-11-10 (195) – v0.97.3: Faz 4 SEO — canonical, fiyatlar tek kaynaktan, robots
 
 - Canonical: `/`, `/pricing`, `/demo`, `/login`, `/register` (meta başlık/açıklama zaten vardı).
 - `/pricing` açıklaması ve landing JSON-LD `offers` artık `PLAN_PRICES`'tan (lib/pricing.ts) — fiyat değişince SEO da değişir.

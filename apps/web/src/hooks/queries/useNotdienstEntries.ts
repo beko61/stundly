@@ -51,6 +51,9 @@ export function useNotdienstEntriesQuery(start: string, end: string) {
   return useQuery({
     queryKey: notdienstEntriesKey(userId, start, end),
     enabled:  typeof userId === "string" && !!start && !!end,
+    // Firma markiert "überwiesen" von außen → beim Zurückkehren in die App neu laden,
+    // sonst bleibt "⏳" statt "💸 Erhalten?" stehen (PWA wird nicht neu gemountet).
+    refetchOnWindowFocus: true,
     queryFn:  async (): Promise<NotdienstEntry[]> => {
       if (!userId) return [];
       const supabase = createClient();

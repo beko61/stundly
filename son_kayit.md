@@ -1,4 +1,16 @@
-﻿## 2026-11-10 (197) – v0.98.0: Firmadan ayrılma — geçmiş firmada kalır (Migration 042)
+﻿## 2026-11-10 (198) – v0.98.1: Kalan firma ekranları da üyelik penceresine bağlı
+
+Kullanıcı: "Kalan ekranlar".
+- Ortak `visibleFn(access)` (lib/company/membership.ts) — 4 kopya lambda kaldırıldı (tek kural).
+- Firma Dashboard (ay/yıl saatleri, Notdienst, bekleyen Urlaub, önceki ay kapanış/Auffälligkeiten, ödenmemiş
+  Notdienst sayısı, Ruhezeit), Notdienst-Zentrale (Einsätze + Ruhezeit), haftalık Team-Digest maili:
+  yeni katılanın katılmadan önceki verisi sayılmıyor.
+- Firma düzeltmesi (`/api/company/corrections`) → katılmadan önceki gün 403; Foto-Import → bu tür satır varsa
+  400 "vor dem Firmeneintritt …" (hiçbir şey yazılmaz). Çalışanın eski geçmişi firmaca değiştirilemez.
+- Steuerberater maili zaten `loadLohnMonth` üzerinden filtreli.
+- Testler: +2 (corrections 403, import 400) → vitest 99/804 ✓, tsc ✓, lint ✓, E2E 28/28 ✓.
+
+## 2026-11-10 (197) – v0.98.0: Firmadan ayrılma — geçmiş firmada kalır (Migration 042)
 
 Kullanıcı: "İkisi de çıkarabilsin" + "Geçmiş kalsın".
 

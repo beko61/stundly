@@ -24,6 +24,12 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => serviceClient }));
+// Mitgliedschaft (Migration 042): Standard = keine Daten → alles sichtbar
+const mockAccess = vi.fn();
+vi.mock("@/lib/company/membership", async (orig) => ({
+  ...(await orig<typeof import("@/lib/company/membership")>()),
+  loadMemberAccess: (...a: unknown[]) => mockAccess(...a),
+}));
 
 type Call = { table: string; op: string; payload?: unknown };
 
@@ -59,6 +65,7 @@ const req = (body: unknown) => new NextRequest("http://l/x", { method: "POST", b
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetMember.mockResolvedValue({ user_id: UID, role: "employee", full_name: "Max" });
+  mockAccess.mockResolvedValue(new Map());
 });
 
 // ── Freigabe ───────────────────────────────────────────────────────────────
@@ -105,6 +112,14 @@ describe("POST /api/company/corrections", () => {
   it("400 ohne Grund", async () => {
     mockGetContext.mockResolvedValue(ctx(makeAdmin({}).admin));
     expect((await POST_CORR(req(body({ reason: " " })))).status).toBe(400);
+  });
+
+  it("403 — Tag vor dem Firmeneintritt (Vorgeschichte des Mitarbeiters)", async () => {
+    const { admin, calls } = makeAdmin({ time_entries: before });
+    mockGetContext.mockResolvedValue(ctx(admin));
+    mockAccess.mockResolvedValue(new Map([[UID, { ranges: [{ from: "2026-10-01", to: null }], former: false, leftAt: null }]]));
+    expect((await POST_CORR(req(body()))).status).toBe(403);
+    expect(calls).toHaveLength(0);
   });
 
   it("protokolliert Vorher/Nachher + Grund und schreibt dann den Eintrag", async () => {

@@ -7,6 +7,11 @@ const mockApply = vi.fn();
 vi.mock("@/lib/company/admin", () => ({ getCompanyAdminContext: () => mockGetContext() }));
 vi.mock("@/lib/company/applyCorrection", () => ({ applyCorrection: (...a: unknown[]) => mockApply(...a) }));
 vi.mock("@/lib/audit/logger", () => ({ logAudit: vi.fn().mockResolvedValue(undefined) }));
+const mockAccess = vi.fn();
+vi.mock("@/lib/company/membership", async (orig) => ({
+  ...(await orig<typeof import("@/lib/company/membership")>()),
+  loadMemberAccess: (...a: unknown[]) => mockAccess(...a),
+}));
 
 const U1 = "11111111-1111-4111-8111-111111111111";
 const U2 = "22222222-2222-4222-8222-222222222222";
@@ -24,7 +29,7 @@ const row = (userId: string, date: string, extra: Record<string, unknown> = {}) 
   ({ userId, date, day_type: "arbeiten", start_time: "07:00", end_time: "15:30", break_minutes: 30, ...extra });
 
 describe("POST /api/company/import", () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => { vi.clearAllMocks(); mockAccess.mockResolvedValue(new Map()); });
 
   it("403 ohne Firmen-Admin", async () => {
     mockGetContext.mockResolvedValue(null);
@@ -41,6 +46,15 @@ describe("POST /api/company/import", () => {
   it("404 wenn ein Mitarbeiter nicht zur Firma gehört — nichts geschrieben", async () => {
     ctx([U1]);
     expect((await POST(req([row(U1, "2026-11-03"), row(U2, "2026-11-03")]))).status).toBe(404);
+    expect(mockApply).not.toHaveBeenCalled();
+  });
+
+  it("400 — Tage vor dem Firmeneintritt werden nicht überschrieben (Migration 042)", async () => {
+    ctx([U1]);
+    mockAccess.mockResolvedValue(new Map([[U1, { ranges: [{ from: "2026-11-04", to: null }], former: false, leftAt: null }]]));
+    const res = await POST(req([row(U1, "2026-11-03"), row(U1, "2026-11-04")]));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/vor dem Firmeneintritt.*2026-11-03/);
     expect(mockApply).not.toHaveBeenCalled();
   });
 

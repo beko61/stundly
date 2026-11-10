@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCompanyAdminContext, getTeamMember } from "@/lib/company/admin";
 import { logAudit } from "@/lib/audit/logger";
 import { applyCorrection } from "@/lib/company/applyCorrection";
+import { loadMemberAccess, visibleFn } from "@/lib/company/membership";
 
 /**
  * POST /api/company/corrections
@@ -41,6 +42,10 @@ export async function POST(req: NextRequest) {
 
   if (!(await getTeamMember(admin, companyId, userId))) {
     return NextResponse.json({ error: "Mitarbeiter nicht gefunden" }, { status: 404 });
+  }
+  // Vorgeschichte vor dem Beitritt gehört nicht der Firma (Migration 042)
+  if (!visibleFn(await loadMemberAccess(admin, companyId, [userId]))(userId, date)) {
+    return NextResponse.json({ error: "Dieser Tag liegt vor dem Firmeneintritt — die Firma kann ihn nicht ändern." }, { status: 403 });
   }
 
   const r = await applyCorrection(admin, { companyId, actorId: ctx.user.id, userId, date, reason, entry });

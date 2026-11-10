@@ -3,6 +3,7 @@ import { createClient as createAdmin } from "@supabase/supabase-js";
 import { netMinutesForEntry } from "@/lib/company/admin";
 import { addDays, berlinNowLocal, mondayOf } from "@/lib/company/notdienstZentrale";
 import { sendTeamDigest } from "@/lib/email/companyMails";
+import { loadMemberAccess, visibleFn } from "@/lib/company/membership";
 
 /**
  * Montags-Überblick für den Chef — montags 05:30 UTC (vercel.json).
@@ -43,15 +44,24 @@ export async function GET(req: Request) {
       const recipients = all.filter((p) => p.is_active && p.email && p.role === "company_admin");
       if (recipients.length === 0 || ids.length === 0) { results.push({ company: c.id, sent: 0 }); continue; }
 
-      const [{ data: te }, { count: ndCount }, { data: rota }, { data: closings }, { count: vac }, { count: unpaid }] = await Promise.all([
-        admin.from("time_entries").select("date, day_type, start_time, end_time, break_minutes").in("user_id", ids).gte("date", lastMonday).lte("date", lastSunday),
-        admin.from("notdienst_entries").select("id", { count: "exact", head: true }).in("user_id", ids).gte("date", lastMonday).lte("date", lastSunday),
+      const [{ data: teRaw }, { data: ndRows }, { data: rota }, { data: closingsRaw }, { data: vacRows }, { data: unpaidRows }] = await Promise.all([
+        admin.from("time_entries").select("user_id, date, day_type, start_time, end_time, break_minutes").in("user_id", ids).gte("date", lastMonday).lte("date", lastSunday),
+        admin.from("notdienst_entries").select("user_id, date").in("user_id", ids).gte("date", lastMonday).lte("date", lastSunday),
         admin.from("notdienst_rota").select("user_id").eq("company_id", c.id).eq("week_start", thisMonday).maybeSingle(),
-        admin.from("month_closings").select("status").in("user_id", ids).eq("year", pm.y).eq("month", pm.m),
-        admin.from("vacation_requests").select("id", { count: "exact", head: true }).in("user_id", ids).eq("status", "pending"),
-        admin.from("notdienst_entries").select("id", { count: "exact", head: true }).in("user_id", ids).eq("erledigt", false).gte("date", addDays(today, -120)),
+        admin.from("month_closings").select("user_id, status").in("user_id", ids).eq("year", pm.y).eq("month", pm.m),
+        admin.from("vacation_requests").select("user_id, start_date").in("user_id", ids).eq("status", "pending"),
+        admin.from("notdienst_entries").select("user_id, date").in("user_id", ids).eq("erledigt", false).gte("date", addDays(today, -120)),
       ]);
-      const teamMin = ((te ?? []) as Parameters<typeof netMinutesForEntry>[0][]).reduce((s, e) => s + netMinutesForEntry(e), 0);
+      // Neue Mitglieder mit Vorgeschichte: nur Daten ab Beitritt (Migration 042)
+      const visible = visibleFn(await loadMemberAccess(admin, c.id, ids));
+      const vis = <T extends { user_id: string; date: string }>(rows: unknown): T[] => ((rows ?? []) as T[]).filter((r) => visible(r.user_id, r.date));
+      const pmLast = `${pm.y}-${String(pm.m).padStart(2, "0")}-${String(new Date(pm.y, pm.m, 0).getDate()).padStart(2, "0")}`;
+      const te = vis<Parameters<typeof netMinutesForEntry>[0] & { user_id: string }>(teRaw);
+      const ndCount = vis(ndRows).length;
+      const closings = ((closingsRaw ?? []) as { user_id: string; status: string }[]).filter((x) => visible(x.user_id, pmLast));
+      const vac = ((vacRows ?? []) as { user_id: string; start_date: string }[]).filter((v) => visible(v.user_id, v.start_date)).length;
+      const unpaid = vis(unpaidRows).length;
+      const teamMin = te.reduce((s, e) => s + netMinutesForEntry(e), 0);
       const onDutyId = (rota as { user_id: string } | null)?.user_id;
       const onDuty = onDutyId ? (all.find((p) => p.user_id === onDutyId)?.full_name ?? all.find((p) => p.user_id === onDutyId)?.email ?? null) : null;
       const cl = (closings ?? []) as { status: string }[];

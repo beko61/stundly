@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getCompanyAdminContext, netMinutesForEntry, formatMinutes } from "@/lib/company/admin";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
-import { listFormerMembers, loadMemberAccess, inRanges } from "@/lib/company/membership";
+import { listFormerMembers, loadMemberAccess, visibleFn } from "@/lib/company/membership";
 import { EmployeeExportButtons, BulkCsvButton, DatevBulkButton } from "./ReportExportButtons";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -51,7 +51,7 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
     ...(formerProfiles ?? []).map(e => ({ ...e, former: true })),
   ];
   const userIds = employees.map(e => e.user_id);
-  const visible = (uid: string, d: string) => { const a = allAccess.get(uid); return !a || inRanges(d, a.ranges); };
+  const visible = visibleFn(allAccess);
 
   const { data: timeEntries } = userIds.length > 0
     ? await admin

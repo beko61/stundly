@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext, netMinutesForEntry } from "@/lib/company/admin";
-import { listFormerMembers, loadMemberAccess, inRanges } from "@/lib/company/membership";
+import { listFormerMembers, loadMemberAccess, visibleFn } from "@/lib/company/membership";
 
 /**
  * GET /api/company/team-summary?month=YYYY-MM
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   const userIds = empList.map((e) => e.user_id);
   // Neue Mitglieder mit Vorgeschichte: Daten vor dem Beitritt nicht zeigen (Migration 042)
   const access = await loadMemberAccess(admin, companyId, userIds);
-  const visible = (uid: string, d: string) => { const a = access.get(uid); return !a || inRanges(d, a.ranges); };
+  const visible = visibleFn(access);
 
   // 2) Bu ay'ın time_entries kayıtları
   const { data: timeEntries } = userIds.length > 0

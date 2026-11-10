@@ -9,7 +9,7 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstLoadRange } from "@/lib/utils/weekMonth";
 import { DEFAULT_TARGET_HOURS_PER_MONTH } from "@/lib/utils/monthStats";
 import { monthlyTargetFromWeekly } from "./contract";
-import { listFormerMembers, loadMemberAccess, inRanges } from "./membership";
+import { listFormerMembers, loadMemberAccess, visibleFn } from "./membership";
 import { computeLohnRows, type LohnEmployee, type LohnNd, type LohnRow } from "./lohn";
 
 export const MONTHS_DE = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -72,7 +72,7 @@ export async function loadLohnMonth(admin: SupabaseClient, companyId: string, ye
       .select("user_id, full_name, email, personal_nr, bundesland, is_active").in("user_id", formerInMonth);
     people.push(...((fp ?? []) as Person[]));
   }
-  const visible = (uid: string, d: string) => { const a = access.get(uid); return !a || inRanges(d, a.ranges); };
+  const visible = visibleFn(access);
   const ids = people.map((p) => p.user_id);
   if (ids.length === 0) return { company, rows: [], monthLabel };
 

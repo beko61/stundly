@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { applyCorrection } from "@/lib/company/applyCorrection";
 import { logAudit } from "@/lib/audit/logger";
+import { loadMemberAccess, visibleFn } from "@/lib/company/membership";
 
 export const maxDuration = 60;
 
@@ -51,6 +52,15 @@ export async function POST(req: NextRequest) {
   const allowed = new Set((members ?? []).map(m => (m as { user_id: string }).user_id));
   if (ids.some(id => !allowed.has(id))) {
     return NextResponse.json({ error: "Mitarbeiter nicht in deinem Unternehmen" }, { status: 404 });
+  }
+
+  // Keine Tage vor dem Firmeneintritt überschreiben (eigene Vorgeschichte des Mitarbeiters, Migration 042)
+  const visible = visibleFn(await loadMemberAccess(admin, companyId, ids));
+  const before = rows.filter((r) => !visible(r.userId, r.date));
+  if (before.length > 0) {
+    return NextResponse.json({
+      error: `${before.length} Zeile${before.length === 1 ? "" : "n"} vor dem Firmeneintritt (z. B. ${before[0]!.date}) — bitte aus der Tabelle entfernen.`,
+    }, { status: 400 });
   }
 
   const counts = { created: 0, updated: 0, unchanged: 0, failed: 0 };

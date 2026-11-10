@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
-import { loadMemberAccess, inRanges } from "@/lib/company/membership";
+import { loadMemberAccess, visibleFn } from "@/lib/company/membership";
 import { applyBriefkopf, briefkopfFromCompany, COMPANY_BRIEFKOPF_SELECT } from "@/lib/company/briefkopf";
 
 /**
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
   }
   const userIds = employees.map(e => e.user_id as string);
   const access = await loadMemberAccess(admin, companyId, userIds);
-  const visible = (uid: string, d: string) => { const a = access.get(uid); return !!a && inRanges(d, a.ranges); };
+  const visible = visibleFn(access);
 
   // ── Time entries (aylık) ───────────────────────────────────────
   const { data: timeEntries } = userIds.length > 0

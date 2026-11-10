@@ -24,6 +24,14 @@ export function inRanges(date: string, ranges: MemberRange[]): boolean {
   return ranges.some((r) => (r.from === null || date >= r.from) && (r.to === null || date <= r.to));
 }
 
+/** (Nutzer, Datum) → für die Firma sichtbar? Ohne Mitgliedschaftsdaten (Migration fehlt) sichtbar. */
+export function visibleFn(access: Map<string, MemberAccess>): (userId: string, date: string) => boolean {
+  return (userId, date) => {
+    const a = access.get(userId);
+    return !a || inRanges(date, a.ranges);
+  };
+}
+
 /** Zugriffsfenster für mehrere Nutzer einer Firma. Fehlt die Tabelle (Migration 042 noch nicht gelaufen),
  *  gelten aktuelle Mitglieder ohne Einschränkung (bisheriges Verhalten). */
 export async function loadMemberAccess(admin: Admin, companyId: string, userIds: string[]): Promise<Map<string, MemberAccess>> {

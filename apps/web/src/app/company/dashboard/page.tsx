@@ -13,6 +13,7 @@ import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { contractFromProfile, type Contract } from "@/lib/company/contract";
 import { checkMonth, type CheckEntry } from "@/lib/company/monthCheck";
 import { addDays, berlinNowLocal, restUntil } from "@/lib/company/notdienstZentrale";
+import { loadMemberAccess, visibleFn } from "@/lib/company/membership";
 
 // v0.33.0: dashboard komple redesign — patronun günlük iş akışına odaklı.
 // HEUTE-Ansicht + Compliance-Warnings + Mitarbeiter-Übersicht eklendi.
@@ -66,6 +67,9 @@ export default async function CompanyDashboardPage() {
 
   const activeEmployees = (employees ?? []).filter((e) => e.is_active);
   const userIds = activeEmployees.map((e) => e.user_id);
+  // Neue Mitglieder mit Vorgeschichte: nur Daten ab Beitritt (Migration 042)
+  const visible = visibleFn(await loadMemberAccess(admin, companyId, userIds));
+  const vis = <T extends { user_id: string; date: string }>(rows: T[] | null | undefined): T[] => (rows ?? []).filter((r) => visible(r.user_id, r.date));
 
   // Zaman aralıkları
   const now       = new Date();
@@ -76,7 +80,7 @@ export default async function CompanyDashboardPage() {
   const yearEnd   = `${now.getFullYear()}-12-31`;
 
   // Bu ayın time_entries kayıtları (team)
-  const { data: monthEntries } = userIds.length > 0
+  const { data: monthEntriesRaw } = userIds.length > 0
     ? await admin
         .from("time_entries")
         .select("id, user_id, date, start_time, end_time, break_minutes, day_type, is_night_shift, note")
@@ -86,7 +90,7 @@ export default async function CompanyDashboardPage() {
     : { data: [] as TimeEntry[] };
 
   // Yılın time_entries — compliance ve Urlaub sayacı için
-  const { data: yearEntries } = userIds.length > 0
+  const { data: yearEntriesRaw } = userIds.length > 0
     ? await admin
         .from("time_entries")
         .select("id, user_id, date, start_time, end_time, break_minutes, day_type, is_night_shift, tags")
@@ -94,6 +98,9 @@ export default async function CompanyDashboardPage() {
         .gte("date", yearStart)
         .lte("date", yearEnd)
     : { data: [] as TimeEntry[] };
+
+  const monthEntries = vis(monthEntriesRaw);
+  const yearEntries  = vis(yearEntriesRaw);
 
   // Notdienst bu ay — hafta-Pazar-atfı (±7 gün pay ile fetch, sonra filter)
   const ndRange = notdienstLoadRange(now.getFullYear(), now.getMonth() + 1);
@@ -105,7 +112,7 @@ export default async function CompanyDashboardPage() {
         .gte("date", ndRange.start)
         .lte("date", ndRange.end)
     : { data: [] };
-  const monthNdEntries = (monthNdRaw ?? []).filter(n =>
+  const monthNdEntries = vis(monthNdRaw as { user_id: string; date: string }[] | null).filter(n =>
     notdienstBelongsToMonth(n.date, now.getFullYear(), now.getMonth() + 1),
   );
 
@@ -154,7 +161,7 @@ export default async function CompanyDashboardPage() {
   }
 
   // Pending Urlaub sayacı per user
-  const { data: pendingVacationsAll } = userIds.length > 0
+  const { data: pendingVacationsRaw } = userIds.length > 0
     ? await admin
         .from("vacation_requests")
         .select("id, user_id, start_date, end_date, days_count, created_at")
@@ -162,6 +169,7 @@ export default async function CompanyDashboardPage() {
         .eq("status", "pending")
         .order("created_at", { ascending: false })
     : { data: [] };
+  const pendingVacationsAll = (pendingVacationsRaw ?? []).filter((v) => visible(v.user_id, v.start_date));
   const pendingByUser = new Map<string, number>();
   for (const v of pendingVacationsAll ?? []) {
     pendingByUser.set(v.user_id, (pendingByUser.get(v.user_id) ?? 0) + 1);
@@ -185,19 +193,24 @@ export default async function CompanyDashboardPage() {
   const pmFirst = `${pm.y}-${String(pm.m).padStart(2, "0")}-01`;
   const pmLast  = `${pm.y}-${String(pm.m).padStart(2, "0")}-${String(new Date(pm.y, pm.m, 0).getDate()).padStart(2, "0")}`;
   const pmNd    = notdienstLoadRange(pm.y, pm.m);
-  const [{ data: pmClosings }, { data: pmEntries }, { data: pmNdRaw }, { count: unpaidNd }, { data: recentNd }] = userIds.length > 0
+  const [{ data: pmClosingsRaw }, { data: pmEntriesRaw }, { data: pmNdAll }, { data: unpaidNdRows }, { data: recentNdRaw }] = userIds.length > 0
     ? await Promise.all([
         admin.from("month_closings").select("user_id, status").in("user_id", userIds).eq("year", pm.y).eq("month", pm.m),
         admin.from("time_entries").select("user_id, date, day_type, start_time, end_time, break_minutes, tags")
           .in("user_id", userIds).gte("date", addDays(pmFirst, -1)).lte("date", pmLast),
         admin.from("notdienst_entries").select("user_id, date, start_time, end_time")
           .in("user_id", userIds).gte("date", pmNd.start).lte("date", pmNd.end),
-        admin.from("notdienst_entries").select("id", { count: "exact", head: true })
+        admin.from("notdienst_entries").select("user_id, date")
           .in("user_id", userIds).eq("erledigt", false).gte("date", addDays(todayISO, -120)),
         admin.from("notdienst_entries").select("user_id, date, start_time, end_time")
           .in("user_id", userIds).gte("date", addDays(todayISO, -1)).lte("date", todayISO),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }, { count: 0 }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
+  const pmClosings = ((pmClosingsRaw ?? []) as { user_id: string; status: string }[]).filter((c) => visible(c.user_id, pmLast));
+  const pmEntries  = vis(pmEntriesRaw as { user_id: string; date: string }[] | null);
+  const pmNdRaw    = vis(pmNdAll as { user_id: string; date: string }[] | null);
+  const unpaidNd   = vis(unpaidNdRows as { user_id: string; date: string }[] | null).length;
+  const recentNd   = vis(recentNdRaw as { user_id: string; date: string }[] | null);
   const closingByUser = new Map(((pmClosings ?? []) as { user_id: string; status: string }[]).map((c) => [c.user_id, c.status]));
   const pmApproved  = activeEmployees.filter((e) => closingByUser.get(e.user_id) === "approved").length;
   const pmSubmitted = activeEmployees.filter((e) => closingByUser.get(e.user_id) === "submitted");

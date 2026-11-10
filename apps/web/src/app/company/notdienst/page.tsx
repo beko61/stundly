@@ -6,6 +6,7 @@ import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMon
 import { addDays, berlinNowLocal, mondayOf, restUntil, type CsvEinsatz } from "@/lib/company/notdienstZentrale";
 import { TeamNotdienstList, type TeamNotdienst } from "../employees/[userId]/TeamNotdienstList";
 import { CsvButton, PauschaleCard, RotaCard } from "./ZentraleClient";
+import { loadMemberAccess, visibleFn } from "@/lib/company/membership";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 
@@ -36,6 +37,8 @@ export default async function NotdienstZentralePage({ searchParams }: Props) {
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
   const nameOf = new Map(employees.map((e) => [e.user_id, e.name]));
   const userIds = employees.map((e) => e.user_id);
+  // Neue Mitglieder mit Vorgeschichte: Einsätze erst ab Beitritt (Migration 042)
+  const visible = visibleFn(await loadMemberAccess(admin, companyId, userIds));
 
   // Pauschale + Plan (Migration 034 — tolerant, falls noch nicht ausgeführt)
   const { data: compRow, error: compErr } = await admin.from("companies").select("notdienst_pauschale").eq("id", companyId).maybeSingle();
@@ -63,7 +66,7 @@ export default async function NotdienstZentralePage({ searchParams }: Props) {
       .gte("date", addDays(todayISO, -1)).lte("date", todayISO) : Promise.resolve({ data: [] }),
   ]);
   const entries: TeamNotdienst[] = ((ndRaw ?? []) as Record<string, unknown>[])
-    .filter((n) => notdienstBelongsToMonth(n.date as string, year, month))
+    .filter((n) => notdienstBelongsToMonth(n.date as string, year, month) && visible(n.user_id as string, n.date as string))
     .map((n) => ({
       id: n.id as string, date: n.date as string, start_time: n.start_time as string, end_time: n.end_time as string,
       kunde: (n.kunde as string | null) ?? null, kunde_telefon: (n.kunde_telefon as string | null) ?? null,
@@ -79,7 +82,8 @@ export default async function NotdienstZentralePage({ searchParams }: Props) {
     kunde: e.kunde, kunde_telefon: e.kunde_telefon, adresse: e.adresse, problem: e.problem, ergebnis: e.ergebnis, erledigt: e.erledigt,
   }));
 
-  const rest = restUntil((recentRaw ?? []) as { user_id: string; date: string; start_time: string | null; end_time: string | null }[], nowLocal);
+  const rest = restUntil(((recentRaw ?? []) as { user_id: string; date: string; start_time: string | null; end_time: string | null }[])
+    .filter((n) => visible(n.user_id, n.date)), nowLocal);
 
   const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
   const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };

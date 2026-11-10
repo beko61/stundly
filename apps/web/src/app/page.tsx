@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { homePathForRole } from "@/lib/auth/homePath";
 import { BETA_MODE } from "@/lib/beta";
@@ -9,6 +10,8 @@ import { PLAN_PRICES } from "@/lib/pricing";
 const APP_URL = process.env["NEXT_PUBLIC_APP_URL"] ?? "https://stundly.de";
 
 /** schema.org JSON-LD — Google'a "bu bir SaaS" der, fiyat + organisator info ile rich snippet üretir. */
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
 const SCHEMA_JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -19,9 +22,9 @@ const SCHEMA_JSON_LD = {
   "inLanguage": "de-DE",
   "description": "Arbeitszeiterfassung, Urlaubsverwaltung und Notdienst-Tracking für deutsche Handwerk-Betriebe. DSGVO-konform, ArbZG-ready, mobil nutzbar.",
   "offers": [
-    { "@type": "Offer", "name": "Einzelperson",  "price": "5.99",  "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
-    { "@type": "Offer", "name": "Team",          "price": "19.99", "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
-    { "@type": "Offer", "name": "Unternehmen",   "price": "49.99", "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
+    { "@type": "Offer", "name": PLAN_PRICES.individual.name, "price": PLAN_PRICES.individual.monthly.toFixed(2), "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
+    { "@type": "Offer", "name": PLAN_PRICES.team.name, "price": PLAN_PRICES.team.monthly.toFixed(2), "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
+    { "@type": "Offer", "name": PLAN_PRICES.business.name, "price": PLAN_PRICES.business.monthly.toFixed(2), "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
   ],
   "creator": {
     "@type": "Organization",

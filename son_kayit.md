@@ -1,4 +1,12 @@
-﻿## 2026-11-10 (194) – v0.97.2: AGB Beta-Ende aktuell
+﻿## 2026-11-10 (195) – v0.97.3: Faz 4 SEO — canonical, fiyatlar tek kaynaktan, robots
+
+- Canonical: `/`, `/pricing`, `/demo`, `/login`, `/register` (meta başlık/açıklama zaten vardı).
+- `/pricing` açıklaması ve landing JSON-LD `offers` artık `PLAN_PRICES`'tan (lib/pricing.ts) — fiyat değişince SEO da değişir.
+- robots: `/join`, `/billing`, `/password-change`, `/reset-password`, `/forgot-password` disallow.
+- Sitemap kontrol edildi: tüm herkese açık sayfalar var, değişiklik yok.
+- vitest ✓, tsc ✓, lint ✓.
+
+## 2026-11-10 (194) – v0.97.2: AGB Beta-Ende aktuell
 
 - AGB §5: sabit "07.09.2026" yerine `BETA_END_DATE_LABEL` (31. März 2027) — beta uzarsa AGB kendiliğinden güncel.
 - "Stand: Juni 2026" → "Stand: November 2026".

@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "Demo",
   description: "Stundly live ausprobieren — ohne Konto, ohne Anmeldung. Sieh, wie Zeiterfassung, Lohnberechnung und Urlaubsanträge funktionieren.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "/demo" },
 };
 
 export default function DemoLayout({ children }: { children: React.ReactNode }) {

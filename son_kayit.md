@@ -1,4 +1,9 @@
-﻿## 2026-11-10 (193) – v0.97.1: Testphase einheitlich 30 Tage
+﻿## 2026-11-10 (194) – v0.97.2: AGB Beta-Ende aktuell
+
+- AGB §5: sabit "07.09.2026" yerine `BETA_END_DATE_LABEL` (31. März 2027) — beta uzarsa AGB kendiliğinden güncel.
+- "Stand: Juni 2026" → "Stand: November 2026".
+
+## 2026-11-10 (193) – v0.97.1: Testphase einheitlich 30 Tage
 
 Kullanıcı: "Trial day 30 gün olsun".
 

@@ -31,7 +31,7 @@ const SECTIONS: { title: string; content: string }[] = [
   {
     title: "§5 Kostenlose Testphase / Beta-Phase",
     content:
-      "Stundly befindet sich aktuell in der Beta-Phase. Alle neu registrierten Kunden erhalten während dieser Phase bis einschließlich 07.09.2026 kostenlosen Zugang zu sämtlichen Funktionen. Eine Zahlungsmethode ist während der Beta-Phase nicht erforderlich. Nach Ende der Beta-Phase startet eine optionale 30-tägige Testphase für kostenpflichtige Pläne. Ohne aktive Buchung endet der Zugang nach Beta-Ende — vorhandene Daten bleiben jedoch 30 Tage lang abrufbar.",
+      `Stundly befindet sich aktuell in der Beta-Phase. Alle neu registrierten Kunden erhalten während dieser Phase bis einschließlich ${BETA_END_DATE_LABEL} kostenlosen Zugang zu sämtlichen Funktionen. Eine Zahlungsmethode ist während der Beta-Phase nicht erforderlich. Nach Ende der Beta-Phase startet eine optionale 30-tägige Testphase für kostenpflichtige Pläne. Ohne aktive Buchung endet der Zugang nach Beta-Ende — vorhandene Daten bleiben jedoch 30 Tage lang abrufbar.`,
   },
   {
     title: "§6 Preise und Zahlung",
@@ -91,7 +91,7 @@ export default function AgbPage() {
           Allgemeine Geschäftsbedingungen
         </h1>
         <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 32 }}>
-          Stand: Juni 2026
+          Stand: November 2026
         </p>
 
         <div

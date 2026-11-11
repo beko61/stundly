@@ -126,7 +126,8 @@ export default function SalaryPage() {
       const n = applyContract(s, contract);
       return n.monthly_target_hours === s.monthly_target_hours
         && n.urlaub_anspruch === s.urlaub_anspruch
-        && n.employment_start_date === s.employment_start_date ? s : n;
+        && n.employment_start_date === s.employment_start_date
+        && n.notdienst_bonus === s.notdienst_bonus ? s : n;
     });
   }, [settingsLoaded, contract]);
 
@@ -417,6 +418,7 @@ export default function SalaryPage() {
             monthly_target_hours:  contract?.weekly_hours  != null,
             urlaub_anspruch:       contract?.vacation_days != null,
             employment_start_date: contract?.start_date    != null,
+            notdienst_bonus:       contract?.notdienst_pauschale != null,
           }}
         />
 

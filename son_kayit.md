@@ -1,4 +1,18 @@
-﻿## 2026-11-11 (201) – v0.98.4: Mobil tarama — 5 düzen hatası düzeltildi
+﻿## 2026-11-11 (202) – v0.99.0: Firmen-Notdienst-Pauschale fließt automatisch ins Gehalt
+
+Kullanıcı: Pauschale maaşa "Eklensin" → "Maaşla başla".
+- Eskiden iki ayrı rakam: çalışanın kendi "Notdienst €/Tag" ayarı (Gehalt/Dashboard/DATEV) ve firmanın
+  `companies.notdienst_pauschale` (sadece Lohn sayfası). Tek rakam kuralı → firma Pauschale girdiyse firma
+  çalışanında (role=employee, Chef hariç) o geçerli.
+- `Contract.notdienst_pauschale` (opsiyonel); `useCompanyMembership` çalışan için firmadan okur (RLS: üye kendi
+  firmasını okuyabiliyor; 034 yoksa yok sayar). `applyContract` → `notdienst_bonus = pauschale`
+  → Gehalt + Dashboard otomatik; Gehalt sayfası bunu salary_settings'e kaydeder → DATEV de aynı rakam.
+- Gehalt ayarlarında "Notdienst €/Tag" kilitli + "🔒 Von deiner Firma festgelegt" (sözleşme alanları gibi).
+- Pauschale boşsa çalışanın kendi değeri kalır. Sayım değişmedi (önceki ayın Einsatz'ları × tutar).
+- Test: companyContract +2; test projesinde geçici Playwright: alan 80, kilitli, DB'de 80 (sonra silindi).
+  vitest 806 ✓, tsc ✓, lint ✓, E2E 28/28 ✓.
+
+## 2026-11-11 (201) – v0.98.4: Mobil tarama — 5 düzen hatası düzeltildi
 
 Kullanıcı: "Tüm uygulamayı deneyebilir misin, kontrol böyle var mı hata" + "sayı ile haftanın ismi aynı boyutta değil".
 - Tarama: test projesinde örnek veriyle 44 sayfa × (375 px + 1280 px) = 88 sayfa; otomatik kontrol (yatay taşma,

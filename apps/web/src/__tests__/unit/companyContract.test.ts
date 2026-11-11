@@ -33,6 +33,22 @@ describe("lib/company/contract", () => {
     expect(applyContract(s, null)).toBe(s);
   });
 
+  it("applyContract: Notdienst-Pauschale der Firma ersetzt den eigenen Notdienst-Betrag", () => {
+    const s = { monthly_target_hours: 174, urlaub_anspruch: 30, notdienst_bonus: 50 };
+    expect(applyContract(s, { weekly_hours: null, vacation_days: null, start_date: null, notdienst_pauschale: 80 }))
+      .toEqual({ ...s, notdienst_bonus: 80 });
+    // keine Pauschale gesetzt → eigener Wert bleibt
+    expect(applyContract(s, { weekly_hours: 40, vacation_days: null, start_date: null, notdienst_pauschale: null }))
+      .toEqual({ ...s, monthly_target_hours: 173.33 });
+    // 0 € ist ein gültiger Firmenwert (kein Zuschlag)
+    expect(applyContract(s, { weekly_hours: null, vacation_days: null, start_date: null, notdienst_pauschale: 0 }).notdienst_bonus).toBe(0);
+  });
+
+  it("applyContract: Objekt ohne notdienst_bonus bekommt keins dazu", () => {
+    const s = { monthly_target_hours: 174, urlaub_anspruch: 30 };
+    expect(applyContract(s, { weekly_hours: null, vacation_days: null, start_date: null, notdienst_pauschale: 80 })).toEqual(s);
+  });
+
   it("applyContract: Objekt ohne employment_start_date bekommt keins dazu", () => {
     const s = { monthly_target_hours: 174, urlaub_anspruch: 30 };
     expect(applyContract(s, { weekly_hours: null, vacation_days: null, start_date: "2026-03-01" })).toEqual(s);

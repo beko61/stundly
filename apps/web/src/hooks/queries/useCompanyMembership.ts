@@ -45,7 +45,18 @@ export function useCompanyMembership() {
         .select("contract_weekly_hours, contract_vacation_days, contract_start")
         .eq("user_id", userId!)
         .maybeSingle();
-      return { isCompanyEmployee, hasCompany: true, contract: cErr ? null : contractFromProfile(c as Record<string, unknown> | null) };
+      let contract = cErr ? null : contractFromProfile(c as Record<string, unknown> | null);
+
+      // Notdienst-Pauschale der Firma gilt für Mitarbeiter (nicht für den Chef selbst) — Spalte evtl. noch nicht da (034)
+      if (isCompanyEmployee) {
+        const { data: co, error: coErr } = await supabase
+          .from("companies").select("notdienst_pauschale").eq("id", p.company_id).maybeSingle();
+        const raw = coErr ? null : (co as { notdienst_pauschale: number | string | null } | null)?.notdienst_pauschale;
+        if (raw != null) {
+          contract = { ...(contract ?? { weekly_hours: null, vacation_days: null, start_date: null }), notdienst_pauschale: Number(raw) };
+        }
+      }
+      return { isCompanyEmployee, hasCompany: true, contract };
     },
   });
 }

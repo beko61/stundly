@@ -56,7 +56,7 @@ type Props = {
   /** Basic-Tarif: nur Brutto, keine Netto-Angaben (Lohn im Detail = Plus) */
   simple?:         boolean;
   /** Von der Firma im Vertrag festgelegte Felder — nur Anzeige (Migration 033) */
-  locked?:         Partial<Record<"monthly_target_hours" | "urlaub_anspruch" | "employment_start_date", boolean>>;
+  locked?:         Partial<Record<"monthly_target_hours" | "urlaub_anspruch" | "employment_start_date" | "notdienst_bonus", boolean>>;
 };
 
 const lockedStyle = { opacity: 0.75, cursor: "not-allowed" } as const;
@@ -105,7 +105,7 @@ export function SettingsCard({
             const isHourly = key === "hourly_rate";
             const rate = settings.hourly_rate ?? 0;
             const belowMindestlohn = isHourly && rate > 0 && rate < MINDESTLOHN_CURRENT;
-            const isLocked = (key === "monthly_target_hours" || key === "urlaub_anspruch") && !!locked[key];
+            const isLocked = (key === "monthly_target_hours" || key === "urlaub_anspruch" || key === "notdienst_bonus") && !!locked[key];
             return (
               <div key={key}>
                 <label className="label" style={{ display: "inline-flex", alignItems: "center" }}>

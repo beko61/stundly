@@ -7,6 +7,9 @@ export interface Contract {
   weekly_hours:  number | null;
   vacation_days: number | null;
   start_date:    string | null;
+  /** € pro Notdienst-Einsatz, firmenweit (companies.notdienst_pauschale, Migration 034).
+   *  Gesetzt → ersetzt den eigenen "Notdienst €"-Wert des Mitarbeiters im Lohn (Entscheidung 11.11.2026). */
+  notdienst_pauschale?: number | null;
 }
 
 /** Monatliche Soll-Stunden aus Wochenstunden: × 52 Wochen / 12 Monate, auf 2 Stellen. 40 h → 173,33 h. */
@@ -35,7 +38,7 @@ export function contractFromProfile(row: Record<string, unknown> | null | undefi
  * Lohn-Einstellungen mit den Vertragswerten überschreiben — die Firma hat Vorrang
  * (auch vor einem veralteten localStorage-Stand des Mitarbeiters).
  */
-export function applyContract<T extends { monthly_target_hours: number; urlaub_anspruch?: number | null }>(
+export function applyContract<T extends { monthly_target_hours: number; urlaub_anspruch?: number | null; notdienst_bonus?: number }>(
   settings: T,
   contract: Contract | null | undefined,
 ): T {
@@ -43,6 +46,7 @@ export function applyContract<T extends { monthly_target_hours: number; urlaub_a
   const next = { ...settings };
   if (contract.weekly_hours != null)  next.monthly_target_hours = monthlyTargetFromWeekly(contract.weekly_hours);
   if (contract.vacation_days != null) next.urlaub_anspruch = contract.vacation_days;
+  if (contract.notdienst_pauschale != null && "notdienst_bonus" in next) next.notdienst_bonus = contract.notdienst_pauschale;
   if (contract.start_date != null && "employment_start_date" in next) {
     (next as T & { employment_start_date: string | null }).employment_start_date = contract.start_date;
   }

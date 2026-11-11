@@ -1,4 +1,13 @@
-﻿## 2026-11-10 (199) – v0.98.2: Faz 5 temizlik
+﻿## 2026-11-11 (200) – v0.98.3: Mitarbeiter-Liste mobil düzeltildi
+
+Kullanıcı (iPhone ekran görüntüsü): "Yazilar beden böyle mobilde" — "Entfernen" eklenince 3 düğme satırı ezdi,
+e-posta harf harf alt alta yazılıyordu.
+- Satır `flex-wrap`, isim alanı `flex: 1 1 280px`, düğmeler `margin-left:auto` → dar ekranda düğmeler alt satıra,
+  sağa yaslı; e-posta satırı tek satır + "…".
+- Test projesinde geçici Playwright ile mobil (375) + masaüstü (1280) ekran görüntüsü alındı, ikisi de düzgün;
+  geçici test silindi. tsc ✓, lint ✓, vitest 804 ✓.
+
+## 2026-11-10 (199) – v0.98.2: Faz 5 temizlik
 
 Kullanıcı: "Faz 5 temizlik".
 - `apps/mobile` (Expo, hiç kullanılmıyordu) repo'dan kaldırıldı; yereldeki kalıntı (.env, node_modules, 148 MB)

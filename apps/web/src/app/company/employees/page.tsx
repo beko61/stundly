@@ -462,15 +462,17 @@ export default function EmployeesPage() {
                 style={{
                   padding: "14px 18px",
                   display: "flex",
+                  flexWrap: "wrap",
                   alignItems: "center",
                   gap: 12,
                   opacity: emp.is_active ? 1 : 0.6,
                 }}
               >
+                {/* Mobil: zu schmal für Name + 3 Buttons → Buttons rutschen in eine eigene Zeile */}
                 <Link
                   href={`/company/employees/${emp.user_id}`}
                   style={{
-                    flex: 1,
+                    flex: "1 1 280px",
                     textDecoration: "none",
                     color: "var(--text)",
                     display: "flex",
@@ -483,7 +485,7 @@ export default function EmployeesPage() {
                     <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {emp.full_name ?? emp.email ?? "–"}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {emp.email} · {emp.role === "company_admin" ? "Admin" : "Mitarbeiter"}
                       {emp.last_seen_at && ` · Letzte Aktivität: ${new Date(emp.last_seen_at).toLocaleDateString("de-DE")}`}
                     </div>
@@ -508,7 +510,7 @@ export default function EmployeesPage() {
                   <span style={{ fontSize: 18, color: "var(--muted)", flexShrink: 0 }}>›</span>
                 </Link>
 
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flexShrink: 0, marginLeft: "auto" }}>
                   <button
                     onClick={() => toggleEmployee(emp.user_id)}
                     className="btn"

@@ -314,7 +314,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
 
       {/* Monatsabschluss */}
       {!readOnly && <MonthClosingCard
-        key={`${year}-${month}`}
+        key={`closing-${year}-${month}`}
         userId={userId}
         year={year}
         month={month}
@@ -591,7 +591,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       <p style={{ fontSize: 11, color: "var(--muted)", marginTop: -6, marginBottom: 10 }}>
         Eine Notdienst-Woche zählt zu dem Monat, in dem ihr Sonntag liegt.
       </p>
-      <TeamNotdienstList key={`${year}-${month}`} userId={userId} entries={ndEntries} readOnly={readOnly} />
+      <TeamNotdienstList key={`nd-${year}-${month}`} userId={userId} entries={ndEntries} readOnly={readOnly} />
 
       {/* Urlaubsanträge */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>

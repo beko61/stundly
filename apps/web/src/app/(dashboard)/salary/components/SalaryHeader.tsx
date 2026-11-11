@@ -46,7 +46,7 @@ export function SalaryHeader({
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
         <button onClick={onPrevMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 44, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Vorheriger Monat">‹</button>
-        <h1 style={{ fontSize: 18, fontWeight: 800, minWidth: 90, textAlign: "center" }}>{MONTHS[month - 1]}</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 800, minWidth: 90, textAlign: "center", whiteSpace: "nowrap" }}>{MONTHS[month - 1]}</h1>
         <button onClick={onNextMonth} style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 44, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Nächster Monat">›</button>
       </div>
     </div>

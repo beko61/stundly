@@ -144,13 +144,14 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
         <div style={{ display:"flex", alignItems:"center", padding:"12px 14px", gap:12, cursor: locked ? "default" : "pointer" }}
           title={locked ? "Monat von deiner Firma freigegeben — Änderungen nur durch die Firma" : undefined}
           onClick={() => { if (!locked) setModalOpen(true); }}>
-          <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:20, fontWeight:500,
-            color: isToday?"var(--accent2)":"var(--muted)", width:28, textAlign:"center", flexShrink:0 }}>
+          {/* Tageszahl und Wochentag gleich groß (Nutzerwunsch 11.11.2026) */}
+          <div style={{ fontFamily:"var(--font-dm-mono),monospace", fontSize:16, fontWeight:600, lineHeight:"22px",
+            color: isToday?"var(--accent2)":"var(--muted)", width:24, textAlign:"center", flexShrink:0, alignSelf:"flex-start" }}>
             {String(dayNum).padStart(2,"0")}
           </div>
 
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:12, color:"var(--muted)", fontWeight:600 }}>
+            <div style={{ fontSize:16, lineHeight:"22px", color:"var(--muted)", fontWeight:600 }}>
               {WEEKDAYS[dayOfWeek]}
               {isToday && <span style={{ display:"inline-block", width:7, height:7, background:"var(--accent2)", borderRadius:"50%", marginLeft:6, verticalAlign:"middle" }} />}
               {corrected && <span title="Von deiner Firma korrigiert" style={{ marginLeft:6, fontSize:10, color:"var(--yellow)", fontWeight:700 }}>✏️ korrigiert</span>}

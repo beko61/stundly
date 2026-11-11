@@ -867,9 +867,10 @@ export default function VacationPage() {
         </div>
 
         {/* ── 3 KPI CARDS ─────────────────────────────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 18 }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
+        {/* minmax(0,1fr): Karten dürfen schrumpfen — auf 375px lief die dritte Karte sonst aus dem Bild */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 18 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 10px", minWidth: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.02em", marginBottom: 6 }}>
               <Icon name="clock" size={11} /> ÜBERSTUNDEN
             </div>
             <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: "var(--blue)" }}>
@@ -879,8 +880,8 @@ export default function VacationPage() {
               = {overtimeDays} Tag{overtimeDays === 1 ? "" : "e"}
             </div>
           </div>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 10px", minWidth: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.02em", marginBottom: 6 }}>
               <Icon name="hourglass" size={11} /> WARTEN
             </div>
             <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: pendingCount > 0 ? "var(--yellow)" : "var(--muted)" }}>
@@ -890,8 +891,8 @@ export default function VacationPage() {
               {pendingCount === 1 ? "Antrag offen" : "Anträge offen"}
             </div>
           </div>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 6 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 10px", minWidth: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3, fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.02em", marginBottom: 6 }}>
               <Icon name="flag" size={11} /> NÄCHSTER
             </div>
             <div style={{ fontFamily: "var(--font-dm-mono),monospace", fontSize: 20, fontWeight: 500, color: "var(--text)" }}>

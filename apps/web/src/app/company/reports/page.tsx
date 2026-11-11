@@ -175,7 +175,8 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
             <div key={emp.user_id} className="card" style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
                 <Link href={`/company/employees/${emp.user_id}?year=${year}&month=${month}`}
-                  style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
+                  style={{ textDecoration: "none", color: "inherit", flex: "1 1 220px", minWidth: 0 }}>
+                  {/* 220px Basis: auf dem Handy rutschen die Export-Buttons in eine eigene Zeile */}
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
                     {emp.full_name ?? "—"}
                     {emp.former && (
@@ -187,7 +188,7 @@ export default async function CompanyReportsPage({ searchParams }: Props) {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--muted)" }}>{emp.email}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{emp.email}</div>
                 </Link>
                 <EmployeeExportButtons
                   userId={emp.user_id} fullName={emp.full_name ?? "Mitarbeiter"}

@@ -1,4 +1,19 @@
-﻿## 2026-11-11 (200) – v0.98.3: Mitarbeiter-Liste mobil düzeltildi
+﻿## 2026-11-11 (201) – v0.98.4: Mobil tarama — 5 düzen hatası düzeltildi
+
+Kullanıcı: "Tüm uygulamayı deneyebilir misin, kontrol böyle var mı hata" + "sayı ile haftanın ismi aynı boyutta değil".
+- Tarama: test projesinde örnek veriyle 44 sayfa × (375 px + 1280 px) = 88 sayfa; otomatik kontrol (yatay taşma,
+  sıkışmış metin, ekran dışı metin, konsol hatası) + mobil ekran görüntüleri incelendi. Geçici test silindi.
+- Zeiterfassung gün satırı: gün numarası 20 px ↔ gün adı 12 px → ikisi de 16 px, aynı satır (`DayEntry`).
+- Firma Berichte (mobil): isim/e-posta harf harf alt alta (Mitarbeiter listesiyle aynı hata) → düğmeler alt satıra.
+- Sayfa başlıkları (mobil): globals.css'teki landing kuralı `h1 ≥ 28px !important` uygulama başlıklarını da
+  büyütüyordu → `.page-header h1` = clamp(18px, 5.6vw, 28px). "Gehaltsübersicht" ve "November" artık sığıyor.
+- Urlaub: 3 KPI kartı 375 px'e sığmıyordu → `minmax(0,1fr)`, etiket ikonun altına.
+- Firma çalışan detayı: React uyarısı "two children with the same key" (MonthClosingCard + TeamNotdienstList ikisi
+  de `${year}-${month}`) → `closing-…` / `nd-…`.
+- Sorunsuz: landing + SEO sayfaları, Dashboard'lar, Lohn, Notdienst-Zentrale, Kokpit, Einstellungen.
+- tsc ✓, lint ✓, vitest 804 ✓; düzeltilen sayfalar tekrar tarandı → 0 sorun.
+
+## 2026-11-11 (200) – v0.98.3: Mitarbeiter-Liste mobil düzeltildi
 
 Kullanıcı (iPhone ekran görüntüsü): "Yazilar beden böyle mobilde" — "Entfernen" eklenince 3 düğme satırı ezdi,
 e-posta harf harf alt alta yazılıyordu.

@@ -98,6 +98,8 @@ body {
   a[href^="http"], a[href^="mailto"], code { overflow-wrap: anywhere !important; }
   /* Mobile typography scale-down for inline-styled landing */
   h1 { font-size: clamp(28px, 7vw, 56px) !important; }
+  /* App-Seitenköpfe nicht auf 28px aufblasen: Syne ist so breit, dass "Gehaltsübersicht"/"November" auf 375px überliefen */
+  .page-header h1 { font-size: clamp(18px, 5.6vw, 28px) !important; }
   h2 { font-size: clamp(22px, 5.5vw, 32px) !important; }
   h3 { font-size: clamp(16px, 4vw, 20px) !important; }
   /* Sections with large desktop paddings → tighter on mobile */

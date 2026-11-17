@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
 import { BETA_DISCOUNT_PCT, PAID_START_LABEL, PLAN_PRICES, euro, type PaidPlanId } from "@/lib/pricing";
 import { ND_BASIC_PER_MONTH, PLUS_BENEFITS, TRIAL_DAYS } from "@/lib/plan/entitlements";
+import { startCheckout } from "@/lib/stripe/checkoutClient";
 
 type PlanId  = "individual" | "team" | "business";
 type Interval = "monthly" | "yearly";
@@ -97,32 +98,16 @@ export default function PricingPage() {
   async function handleCheckout(plan: PlanId) {
     setError(null);
     setLoading(plan);
-
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
       router.push(`/register?next=/pricing`);
       return;
     }
-
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, interval }),
-      });
-      const data = await res.json() as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
-        setError(data.error ?? "Checkout konnte nicht gestartet werden. Stripe ist möglicherweise noch nicht konfiguriert.");
-        setLoading(null);
-        return;
-      }
-      window.location.href = data.url;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
-      setLoading(null);
-    }
+    const err = await startCheckout(plan, interval);
+    if (err) { setError(err); setLoading(null); }
   }
+
 
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-syne), sans-serif", minHeight: "100dvh" }}>

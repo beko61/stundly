@@ -1,12 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { FEATURE_INFO, PLUS_BENEFITS, type Feature } from "@/lib/plan/entitlements";
 import { PLAN_PRICES, euro } from "@/lib/pricing";
+import { startCheckout } from "@/lib/stripe/checkoutClient";
 
-/** Kurze, ruhige Erklärung: was Plus freischaltet und was es kostet. Kein Druck, kein Popup-Spam. */
+/**
+ * Kurze, ruhige Erklärung: was Plus freischaltet und was es kostet. Kein Druck, kein Popup-Spam.
+ * Kauf direkt aus der App (Entscheidung 25.10.2026): Basic bleibt nutzbar, niemand muss kaufen.
+ */
 export function PlusSheet({ feature, onClose, preview }: { feature: Feature; onClose: () => void; preview?: boolean | undefined }) {
   const info = FEATURE_INFO[feature];
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  async function buy() {
+    setBusy(true); setMsg(null);
+    const err = await startCheckout("individual", "monthly");
+    if (err) { setMsg(err); setBusy(false); }
+  }
   return (
     <div onClick={onClose} style={{
       position: "fixed", inset: 0, zIndex: 1100, background: "rgba(0,0,0,0.6)",
@@ -33,15 +45,18 @@ export function PlusSheet({ feature, onClose, preview }: { feature: Feature; onC
         {preview && (
           <div style={{ fontSize: 11, color: "var(--orange)" }}>Vorschau (Super-Admin): so sieht es ein Basic-Nutzer.</div>
         )}
+        {msg && <div role="alert" style={{ fontSize: 12, color: "var(--orange)", lineHeight: 1.5 }}>{msg}</div>}
         <div style={{ display: "flex", gap: 8 }}>
-          <Link href="/pricing" className="btn btn-primary" style={{ flex: 1, textAlign: "center", textDecoration: "none" }}>
-            Plus ansehen
-          </Link>
+          <button type="button" onClick={() => void buy()} disabled={busy} className="btn btn-primary"
+            style={{ flex: 1, cursor: busy ? "wait" : "pointer" }}>
+            {busy ? "Weiterleitung…" : "Plus holen"}
+          </button>
           <button type="button" onClick={onClose} style={{
             flex: 1, padding: 10, background: "transparent", border: "1px solid var(--border)", borderRadius: 10,
             color: "var(--muted)", fontSize: 13, fontWeight: 700, cursor: "pointer",
           }}>Später</button>
         </div>
+        <Link href="/pricing" style={{ fontSize: 12, color: "var(--muted)", textAlign: "center" }}>Alle Preise vergleichen</Link>
       </div>
     </div>
   );

@@ -1,4 +1,18 @@
-﻿## 2026-11-17 (204) – v0.99.2: Stripe hazırlığı — deneme yok, beta kuponu, Basic/Plus/Firma fiyat sayfası
+﻿## 2026-11-17 (205) – v0.99.3: Kauf direkt in der App; Firmen-Abo-Seite korrigiert
+
+Kullanıcı: "uygulama içinde satın alacaktı … boş pakette bir şey kullanabilecek, mecburen satın alması gerekmesin".
+- Kontrol: Basic zaten ücretsiz/kullanılabilir, hiçbir yerde zorunlu satın alma yok (doğru). Ama:
+- Plus-Fenster: "Plus ansehen" uygulamadan çıkıp /pricing'e gidiyordu → "Plus holen" satın almayı doğrudan
+  başlatıyor (`lib/stripe/checkoutClient.ts → startCheckout`, Plus-Fenster + Firmen-Abo + /pricing tek yerden);
+  sunucu mesajı pencerede (beta: "komplett kostenlos …"). "Alle Preise vergleichen" bağlantısı kaldı.
+- /company/billing YANLIŞTI: 29,99/79,99 €, "zzgl. 19 % MwSt." (Kleinunternehmer → yanlış/riskli),
+  "KI-Funktionen", "API-Zugang", "Unbegrenzte Mitarbeiter" → PLAN_PRICES'tan 19,99/49,99 + beta fiyatı,
+  gerçek özellikler, "§ 19 UStG ohne Umsatzsteuer". Abo satırı olmayan firmada satın alma bölümü hiç
+  görünmüyordu → görünüyor; "Abonnement verwalten" sadece gerçek abonelikte.
+- Doğrulama: test projesinde geçici Playwright (Basic önizleme → CSV → Plus-Fenster → "Plus holen" → beta mesajı;
+  Firmen-Abo fiyat/MwSt/buchen) ✓, sonra silindi. vitest 816 ✓, tsc ✓, lint ✓, E2E 28/28 (2 flaky tekrar ✓).
+
+## 2026-11-17 (204) – v0.99.2: Stripe hazırlığı — deneme yok, beta kuponu, Basic/Plus/Firma fiyat sayfası
 
 Kullanıcı: "Stripe" → Stripe denemesini "kaldır".
 - Checkout: `trial_period_days` kaldırıldı (uygulama zaten kartsız 30 gün Plus veriyor; satın alan hemen öder).

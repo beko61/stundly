@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PLAN_PRICES, euro } from "@/lib/pricing";
+import { startCheckout } from "@/lib/stripe/checkoutClient";
 
+// Preise aus lib/pricing (eine Quelle); nur, was es wirklich gibt
 const plans = [
-  { id: "team", name: "Team", price: "29,99", features: ["Bis 10 Mitarbeiter", "KI-Funktionen", "Prioritäts-Support"] },
-  { id: "business", name: "Unternehmen", price: "79,99", features: ["Unbegrenzte Mitarbeiter", "API-Zugang", "Onboarding-Service"] },
+  { id: "team" as const, features: ["Bis 10 Mitarbeiter", "Alle Mitarbeiter mit Plus", "Firmen-Panel, Lohn-Vorbereitung, Foto-Import"] },
+  { id: "business" as const, features: ["Bis 50 Mitarbeiter", "Alles aus Team", "Persönliche Einrichtung"] },
 ];
 
 export default function CompanyBillingPage() {
@@ -13,6 +16,7 @@ export default function CompanyBillingPage() {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -30,16 +34,11 @@ export default function CompanyBillingPage() {
     });
   }, []);
 
-  async function handleUpgrade(planId: string) {
+  async function handleUpgrade(planId: "team" | "business") {
     setUpgrading(planId);
-    const res = await fetch("/api/stripe/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: planId, interval: "monthly" }),
-    });
-    const { url } = await res.json();
-    if (url) window.location.href = url;
-    setUpgrading(null);
+    setBuyError(null);
+    const err = await startCheckout(planId, "monthly");
+    if (err) { setBuyError(err); setUpgrading(null); }
   }
 
   async function handlePortal() {
@@ -52,7 +51,7 @@ export default function CompanyBillingPage() {
 
   if (loading) return <div style={{ color: "var(--muted)" }}>Laden...</div>;
 
-  const planLabels: Record<string, string> = { trial: "Testphase", individual: "Einzelperson", team: "Team", business: "Unternehmen" };
+  const planLabels: Record<string, string> = { trial: "Testphase", individual: "Plus", team: "Team", business: "Unternehmen" };
   const trialEnd = subscription?.trial_end ? new Date(subscription.trial_end) : null;
   const trialDaysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : 0;
 
@@ -78,7 +77,7 @@ export default function CompanyBillingPage() {
               </div>
             )}
           </div>
-          {subscription?.plan !== "trial" && (
+          {subscription && subscription.plan !== "trial" && (
             <button
               className="btn"
               onClick={handlePortal}
@@ -92,17 +91,21 @@ export default function CompanyBillingPage() {
       </div>
 
       {/* Plan yükseltme */}
-      {(subscription?.plan === "trial" || subscription?.plan === "individual") && (
+      {/* Auch ohne Abo-Zeile (z. B. Firma vor Migration/ohne Testzeile) muss man buchen können */}
+      {(!subscription || subscription.plan === "trial" || subscription.plan === "individual") && (
         <>
-          <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Auf Premium upgraden</h2>
+          <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Firmen-Abo buchen</h2>
+          {buyError && (
+            <div role="alert" style={{ fontSize: 13, color: "var(--orange)", marginBottom: 14, lineHeight: 1.5 }}>{buyError}</div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
             {plans.map(plan => (
               <div key={plan.id} className="card" style={{ padding: "22px" }}>
-                <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 4 }}>{plan.name}</div>
+                <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 4 }}>{PLAN_PRICES[plan.id].name}</div>
                 <div style={{ marginBottom: 16 }}>
-                  <span style={{ fontSize: 28, fontWeight: 800, color: "var(--accent2)" }}>€{plan.price}</span>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: "var(--accent2)" }}>{euro(PLAN_PRICES[plan.id].monthly)}</span>
                   <span style={{ color: "var(--muted)", fontSize: 13 }}> / Monat</span>
-                  <div style={{ fontSize: 11, color: "var(--green)" }}>zzgl. 19% MwSt.</div>
+                  <div style={{ fontSize: 11, color: "var(--green)" }}>Beta-Tester: {euro(PLAN_PRICES[plan.id].beta)} / Monat</div>
                 </div>
                 <ul style={{ listStyle: "none", marginBottom: 18 }}>
                   {plan.features.map(f => (
@@ -117,13 +120,13 @@ export default function CompanyBillingPage() {
                   onClick={() => handleUpgrade(plan.id)}
                   disabled={upgrading === plan.id}
                 >
-                  {upgrading === plan.id ? "Weiterleitung..." : "Jetzt upgraden"}
+                  {upgrading === plan.id ? "Weiterleitung..." : "Jetzt buchen"}
                 </button>
               </div>
             ))}
           </div>
           <p style={{ marginTop: 16, fontSize: 11, color: "var(--muted)" }}>
-            Alle Preise netto zzgl. 19% MwSt. · Monatlich kündbar · Sichere Zahlung via Stripe
+            Endpreise · gemäß § 19 UStG ohne Umsatzsteuer · Monatlich kündbar · Sichere Zahlung via Stripe
           </p>
         </>
       )}

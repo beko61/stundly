@@ -165,39 +165,6 @@ const features = [
   { icon: "📱", title: "Mobile App", desc: "Auf iOS & Android wie eine App installierbar – Daten sind auf Handy und PC automatisch synchron." },
 ];
 
-const plans = [
-  {
-    id: "individual",
-    name: "Einzelperson",
-    price: PLAN_PRICES.individual.monthly.toFixed(2).replace(".", ","),
-    period: "/ Monat",
-    desc: "Für Freelancer & Selbstständige",
-    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
-    cta: "30 Tage gratis testen",
-    highlight: false,
-  },
-  {
-    id: "team",
-    name: "Team",
-    price: PLAN_PRICES.team.monthly.toFixed(2).replace(".", ","),
-    period: "/ Monat",
-    desc: "Für Handwerk-Betriebe bis 10 MA",
-    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
-    cta: "30 Tage gratis testen",
-    highlight: true,
-  },
-  {
-    id: "business",
-    name: "Unternehmen",
-    price: PLAN_PRICES.business.monthly.toFixed(2).replace(".", ","),
-    period: "/ Monat",
-    desc: "Für größere Betriebe",
-    features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
-    cta: "30 Tage gratis testen",
-    highlight: false,
-  },
-];
-
 const faqs = [
   { q: "Ist Stundly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
   { q: "Muss ich eine Kreditkarte angeben?", a: "Nein. Du startest kostenlos, ohne Zahlungsdaten und ohne Abo. Die Grundfunktionen – Zeiterfassung, Überstunden und Urlaub – bleiben kostenlos." },
@@ -606,8 +573,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* PRICING — während Beta-Phase komplett ausgeblendet */}
-      {BETA_MODE ? (
+      {/* PRICING — kein Preis auf der Startseite (Entscheidung 25.10.2026), Preise nur unter /pricing */}
         <section style={{ padding: "60px 24px 80px", maxWidth: 760, margin: "0 auto", textAlign: "center" }}>
           <div style={{
             background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent2) 16%, transparent) 100%)",
@@ -633,66 +599,11 @@ export default async function LandingPage() {
                 Jetzt kostenlos starten →
               </Link>
             </div>
+            <Link href="/pricing" style={{ display: "inline-block", marginTop: 14, fontSize: 13, color: "var(--accent2)", fontWeight: 700 }}>
+              Preise &amp; Plus ansehen →
+            </Link>
           </div>
         </section>
-      ) : (
-      <section id="pricing" style={{ padding: "80px 24px", maxWidth: 1100, margin: "0 auto" }}>
-        <h2 style={{ textAlign: "center", fontSize: 32, fontWeight: 800, marginBottom: 12 }}>Einfache Preise</h2>
-        <p style={{ textAlign: "center", color: "var(--muted)", marginBottom: 16, fontSize: 15 }}>
-          Gemäß § 19 UStG ohne Umsatzsteuer · Monatlich kündbar
-        </p>
-        <p style={{ textAlign: "center", color: "var(--accent2)", fontWeight: 700, fontSize: 13, marginBottom: 52 }}>
-          30 Tage kostenlos testen – keine Kreditkarte erforderlich
-        </p>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
-          {plans.map((plan) => (
-            <div key={plan.id} className="card" style={{
-              padding: "28px 24px",
-              border: plan.highlight ? "2px solid var(--accent2)" : "1px solid var(--border)",
-              position: "relative",
-            }}>
-              {plan.highlight && (
-                <div style={{
-                  position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
-                  background: "var(--accent2)", color: "#fff",
-                  fontSize: 11, fontWeight: 700, padding: "4px 14px", borderRadius: 20,
-                  whiteSpace: "nowrap",
-                }}>
-                  BELIEBTESTE WAHL
-                </div>
-              )}
-              <div style={{ marginBottom: 6, fontSize: 13, color: "var(--muted)" }}>{plan.desc}</div>
-              <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>{plan.name}</div>
-              <div style={{ marginBottom: 24 }}>
-                <span style={{ fontSize: 36, fontWeight: 800, color: plan.highlight ? "var(--accent2)" : "var(--text)" }}>
-                  €{plan.price}
-                </span>
-                <span style={{ color: "var(--muted)", fontSize: 14 }}>{plan.period}</span>
-              </div>
-
-              <ul style={{ listStyle: "none", marginBottom: 28 }}>
-                {plan.features.map((f) => (
-                  <li key={f} style={{ fontSize: 13, color: "var(--muted)", padding: "5px 0", display: "flex", gap: 8 }}>
-                    <span style={{ color: "var(--green)" }}>✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-
-              <Link href="/register" className="btn" style={{
-                display: "block", textAlign: "center", textDecoration: "none",
-                background: plan.highlight ? "var(--accent)" : "var(--surface2)",
-                color: plan.highlight ? "#fff" : "var(--text)",
-                border: plan.highlight ? "none" : "1px solid var(--border)",
-                padding: "12px", borderRadius: 10, fontWeight: 700, fontSize: 14,
-              }}>
-                {plan.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
-      )}
 
       {/* FAQ */}
       <section style={{ padding: "80px 24px", maxWidth: 700, margin: "0 auto" }}>

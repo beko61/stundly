@@ -369,6 +369,31 @@ describe("POST /api/stripe/webhook", () => {
     const upd = admin.calls.subscriptionsUpdate as Record<string, unknown>;
     expect(upd.status).toBe("canceled");
     expect(typeof upd.canceled_at).toBe("string");
+    // ohne metadata kein Profil-Update
+    expect(admin.calls.profilesUpdate).toBeNull();
+  });
+
+  it("200 — customer.subscription.deleted mit user_id: profiles.plan zurück auf trial", async () => {
+    mockConstructEvent.mockReturnValue({
+      id: "evt_sub_del_user",
+      type: "customer.subscription.deleted",
+      data: {
+        object: {
+          id: "sub_del_u", status: "canceled", cancel_at_period_end: false,
+          current_period_start: 1_700_000_000, current_period_end: 1_702_000_000,
+          items: { data: [] }, metadata: { company_id: "", user_id: "user-9" }, customer: "cus_z",
+        },
+      },
+    });
+    const admin = makeAdmin();
+    mockCreateAdmin.mockReturnValue(admin);
+
+    const { POST } = await import("../route");
+    const res = await POST(makeReq("{}", "sig"));
+
+    expect(res.status).toBe(200);
+    expect(admin.calls.profilesUpdate).toEqual({ plan: "trial" });
+    expect(admin.calls.profilesUpdateWhere).toEqual({ col: "user_id", val: "user-9" });
   });
 
   it("200 — invoice.payment_failed: past_due (string subscription)", async () => {

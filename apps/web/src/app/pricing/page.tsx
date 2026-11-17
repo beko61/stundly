@@ -6,76 +6,82 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
 import { BETA_DISCOUNT_PCT, PAID_START_LABEL, PLAN_PRICES, euro, type PaidPlanId } from "@/lib/pricing";
+import { ND_BASIC_PER_MONTH, PLUS_BENEFITS, TRIAL_DAYS } from "@/lib/plan/entitlements";
 
 type PlanId  = "individual" | "team" | "business";
 type Interval = "monthly" | "yearly";
 
 interface Plan {
-  id: PlanId | "trial";
+  id: PlanId | "basic";
   name: string;
   desc: string;
-  monthlyPrice: number | null;   // null = trial (free)
-  yearlyPrice:  number | null;   // ay başına, yıllık fatura
+  monthlyPrice: number;
+  yearlyPrice:  number;   // pro Monat, bei jährlicher Zahlung
   features: string[];
   cta: string;
   highlight?: boolean;
   badge?: string | null;
-  isTrial?: boolean;
+  isFree?: boolean;
 }
 
+/**
+ * Drei Stufen (Entscheidung 25.10.2026): Basic kostenlos · Plus · Firma (Team / Unternehmen, Mitarbeiter haben Plus).
+ * Plus-Vorteile kommen aus lib/plan/entitlements (dieselbe Liste wie im Plus-Fenster der App).
+ */
 const PLANS: Plan[] = [
   {
-    id: "trial",
-    name: "Kostenlos testen",
-    desc: "30 Tage gratis · keine Kreditkarte",
+    id: "basic",
+    name: "Basic",
+    desc: "Für immer kostenlos",
     monthlyPrice: 0,
     yearlyPrice:  0,
-    isTrial: true,
-    features: ["1 Benutzer", "Alle Grundfunktionen", "PDF Export", "Mobile App", "Volle 30 Tage"],
-    cta: "Jetzt starten",
+    isFree: true,
+    features: ["Arbeitszeit & Überstunden", "Urlaub, Krank & Feiertage", `Bis ${ND_BASIC_PER_MONTH} Notdienste pro Monat`, "Lohn einfach (Brutto)", "PDF-Vorschau"],
+    cta: "Kostenlos starten",
   },
   {
     id: "individual",
-    name: "Einzelperson",
-    desc: "Für Freelancer & Selbstständige",
+    name: PLAN_PRICES.individual.name,
+    desc: "Für Mitarbeiter & Selbstständige",
     monthlyPrice: PLAN_PRICES.individual.monthly,
     yearlyPrice:  PLAN_PRICES.individual.yearly / 12,   // 2 Monate gratis
-    features: ["1 Benutzer", "Arbeitszeiterfassung", "Lohn- & Steuerberechnung", "Notdienst-Verwaltung", "PDF Monatsbericht", "Mobile App"],
-    cta: "30 Tage gratis testen",
+    highlight: true,
+    badge: `${TRIAL_DAYS} TAGE GRATIS`,
+    features: ["Alles aus Basic", ...PLUS_BENEFITS],
+    cta: "Plus buchen",
   },
   {
     id: "team",
-    name: "Team",
-    desc: "Für Handwerk-Betriebe bis 10 MA",
+    name: `Firma ${PLAN_PRICES.team.name}`,
+    desc: "Für Betriebe bis 10 Mitarbeiter",
     monthlyPrice: PLAN_PRICES.team.monthly,
     yearlyPrice:  PLAN_PRICES.team.yearly / 12,
-    highlight: true,
-    badge: "BELIEBTESTE WAHL",
-    features: ["Bis zu 10 Mitarbeiter", "Admin-Panel", "Mitarbeiter einladen", "Alle Berichte & Exporte", "ArbZG-Warnungen", "Prioritäts-Support"],
-    cta: "30 Tage gratis testen",
+    features: ["Alle Mitarbeiter mit Plus", "Firmen-Panel & Team-Übersicht", "Monatsfreigabe & Korrekturen", "Lohn-Vorbereitung & Mail an Steuerberater", "Foto-Import für Stundenzettel", "Notdienst-Plan & Pauschale"],
+    cta: "Team buchen",
   },
   {
     id: "business",
-    name: "Unternehmen",
-    desc: "Für größere Betriebe",
+    name: `Firma ${PLAN_PRICES.business.name}`,
+    desc: "Für Betriebe bis 50 Mitarbeiter",
     monthlyPrice: PLAN_PRICES.business.monthly,
     yearlyPrice:  PLAN_PRICES.business.yearly / 12,
-    features: ["Bis zu 50 Mitarbeiter", "Alle Team-Funktionen", "API-Zugang (geplant)", "Eigene Berichte", "Onboarding-Service", "Dedizierter Support"],
-    cta: "30 Tage gratis testen",
+    features: ["Alles aus Team", "Bis zu 50 Mitarbeiter", "Persönliche Einrichtung"],
+    cta: "Unternehmen buchen",
   },
 ];
 
+/** Nur, was im Code wirklich gesperrt bzw. enthalten ist (entitlements.ts) */
 const COMPARISON_ROWS = [
-  { feature: "Benutzer",              trial: "1",   individual: "1",   team: "Bis 10", business: "Bis 50" },
-  { feature: "Arbeitszeiterfassung",  trial: "✓",  individual: "✓",  team: "✓",     business: "✓" },
-  { feature: "Lohn- & Steuerberechnung", trial: "✓", individual: "✓", team: "✓",   business: "✓" },
-  { feature: "PDF Export",            trial: "✓",  individual: "✓",  team: "✓",     business: "✓" },
-  { feature: "Mobile App / PWA",      trial: "✓",  individual: "✓",  team: "✓",     business: "✓" },
-  { feature: "Admin-Panel",           trial: "–",  individual: "–",  team: "✓",     business: "✓" },
-  { feature: "Mitarbeiter einladen",  trial: "–",  individual: "–",  team: "✓",     business: "✓" },
-  { feature: "KI-Funktionen",         trial: "–",  individual: "–",  team: "✓",     business: "✓" },
-  { feature: "API-Zugang",            trial: "–",  individual: "–",  team: "–",     business: "✓" },
-  { feature: "Prioritäts-Support",    trial: "–",  individual: "–",  team: "✓",     business: "✓" },
+  { feature: "Benutzer",                         basic: "1",          individual: "1",   team: "Bis 10", business: "Bis 50" },
+  { feature: "Arbeitszeit, Urlaub, Feiertage",   basic: "✓",          individual: "✓",   team: "✓",      business: "✓" },
+  { feature: "Notdienste",                       basic: `${ND_BASIC_PER_MONTH}/Monat`, individual: "Unbegrenzt", team: "Unbegrenzt", business: "Unbegrenzt" },
+  { feature: "PDF, Excel & CSV herunterladen",   basic: "Vorschau",   individual: "✓",   team: "✓",      business: "✓" },
+  { feature: "Berichte & Anträge senden",        basic: "–",          individual: "✓",   team: "✓",      business: "✓" },
+  { feature: "Lohn im Detail (Netto, Steuer)",   basic: "–",          individual: "✓",   team: "✓",      business: "✓" },
+  { feature: "Ohne Internet arbeiten",           basic: "–",          individual: "✓",   team: "✓",      business: "✓" },
+  { feature: "Foto-Scan",                        basic: "–",          individual: "✓",   team: "✓",      business: "✓" },
+  { feature: "Firmen-Panel & Lohn-Vorbereitung", basic: "–",          individual: "–",   team: "✓",      business: "✓" },
+  { feature: "Meine Daten herunterladen (DSGVO)", basic: "✓",         individual: "✓",   team: "✓",      business: "✓" },
 ];
 
 export default function PricingPage() {
@@ -262,10 +268,10 @@ export default function PricingPage() {
         {/* Title */}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 800, marginBottom: 12 }}>
-            Einfache, transparente Preise
+            Kostenlos starten, mehr mit Plus
           </h1>
           <p style={{ color: "var(--muted)", fontSize: 15 }}>
-            30 Tage kostenlos testen · keine Kreditkarte erforderlich · jederzeit kündbar
+            Basic bleibt kostenlos · Plus {TRIAL_DAYS} Tage gratis testen, ohne Kreditkarte · jederzeit kündbar
           </p>
         </div>
 
@@ -342,7 +348,7 @@ export default function PricingPage() {
           {PLANS.map((plan) => {
             const price = interval === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
             const yearlyTotal = plan.yearlyPrice ? (plan.yearlyPrice * 12).toFixed(0) : null;
-            const isLoading = plan.id !== "trial" && loading === plan.id;
+            const isLoading = plan.id !== "basic" && loading === plan.id;
             return (
               <div key={plan.id} className="card" style={{
                 padding: "28px 22px",
@@ -365,14 +371,14 @@ export default function PricingPage() {
                     fontSize: 34, fontWeight: 800,
                     color: plan.highlight ? "var(--accent2)" : "var(--text)",
                   }}>
-                    {plan.isTrial ? "€0" : `€${price?.toFixed(2)}`}
+                    {plan.isFree ? "0 €" : euro(price)}
                   </span>
                   <span style={{ color: "var(--muted)", fontSize: 13 }}>
-                    {plan.isTrial ? " / 30 Tage" : " / Monat"}
+                    {plan.isFree ? " für immer" : " / Monat"}
                   </span>
-                  {!plan.isTrial && interval === "yearly" && yearlyTotal && (
+                  {!plan.isFree && interval === "yearly" && yearlyTotal && (
                     <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>
-                      Jährlich €{yearlyTotal} (2 Monate gratis)
+                      Jährlich {yearlyTotal} € (2 Monate gratis)
                     </div>
                   )}
                 </div>
@@ -385,7 +391,7 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                {plan.isTrial ? (
+                {plan.isFree ? (
                   <Link
                     href="/register"
                     style={{
@@ -426,8 +432,8 @@ export default function PricingPage() {
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)" }}>
                 <th style={{ textAlign: "left", padding: "12px 16px", color: "var(--muted)", fontWeight: 600 }}>Funktion</th>
-                {["Kostenlos", "Einzelperson", "Team", "Unternehmen"].map((h) => (
-                  <th key={h} style={{ textAlign: "center", padding: "12px 16px", color: h === "Team" ? "var(--accent2)" : "var(--muted)", fontWeight: 700 }}>{h}</th>
+                {["Basic", "Plus", "Team", "Unternehmen"].map((h) => (
+                  <th key={h} style={{ textAlign: "center", padding: "12px 16px", color: h === "Plus" ? "var(--accent2)" : "var(--muted)", fontWeight: 700 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -435,7 +441,7 @@ export default function PricingPage() {
               {COMPARISON_ROWS.map((row, i) => (
                 <tr key={row.feature} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
                   <td style={{ padding: "12px 16px", color: "var(--text)" }}>{row.feature}</td>
-                  {[row.trial, row.individual, row.team, row.business].map((val, j) => (
+                  {[row.basic, row.individual, row.team, row.business].map((val, j) => (
                     <td key={j} style={{ textAlign: "center", padding: "12px 16px", color: val === "✓" ? "var(--green)" : val === "–" ? "var(--muted)" : "var(--text)", fontWeight: val === "✓" ? 700 : 400 }}>{val}</td>
                   ))}
                 </tr>

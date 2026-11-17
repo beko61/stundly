@@ -1,5 +1,4 @@
 import Stripe from "stripe";
-import { TRIAL_DAYS } from "@/lib/plan/entitlements";
 
 /**
  * Lazy Stripe client — sadece ilk kullanımda init olur.
@@ -53,16 +52,10 @@ export const PRICE_IDS: Record<string, Record<string, string>> = {
   },
 };
 
-export async function createCheckoutSession({
-  priceId,
-  customerId,
-  companyId,
-  userId,
-  billingInterval,
-  successUrl,
-  cancelUrl,
-  customerEmail,
-}: {
+/** Stripe v22 exportiert den Parametertyp nicht direkt */
+type CheckoutParams = NonNullable<Parameters<Stripe["checkout"]["sessions"]["create"]>[0]>;
+
+type CheckoutInput = {
   priceId: string;
   customerId?: string | undefined;
   companyId?: string | undefined;
@@ -71,40 +64,53 @@ export async function createCheckoutSession({
   successUrl: string;
   cancelUrl: string;
   customerEmail?: string | undefined;
-}) {
-  const params: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+  /** Stripe-Coupon "-50 % forever" für Beta-Tester (STRIPE_BETA_COUPON_ID) — wird automatisch abgezogen */
+  betaCouponId?: string | undefined;
+};
+
+/**
+ * Checkout-Parameter (rein, testbar).
+ * Keine Stripe-Testphase: die App gibt schon 30 Tage Plus ohne Karte (Entscheidung 17.11.2026) —
+ * wer bucht, zahlt ab sofort.
+ * Stripe erlaubt `discounts` und `allow_promotion_codes` nicht zusammen: mit Beta-Coupon kein Code-Feld.
+ */
+export function buildCheckoutParams(i: CheckoutInput): CheckoutParams {
+  const params: CheckoutParams = {
     mode: "subscription",
     payment_method_types: ["card", "sepa_debit"],
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
+    line_items: [{ price: i.priceId, quantity: 1 }],
+    success_url: i.successUrl,
+    cancel_url: i.cancelUrl,
     locale: "de",
     subscription_data: {
-      trial_period_days: TRIAL_DAYS,
       metadata: {
-        company_id: companyId ?? "",
-        user_id: userId ?? "",
+        company_id: i.companyId ?? "",
+        user_id: i.userId ?? "",
       },
     },
     // Kleinunternehmer-Regelung (§ 19 UStG): keine MwSt — Stripe Tax deaktiviert
     tax_id_collection: { enabled: false },
     automatic_tax: { enabled: false },
-    // Beta-Tester / Promo-Codes (z.B. BETA30) am Checkout eingebbar
-    allow_promotion_codes: true,
     metadata: {
-      company_id: companyId ?? "",
-      user_id: userId ?? "",
-      billing_interval: billingInterval,
+      company_id: i.companyId ?? "",
+      user_id: i.userId ?? "",
+      billing_interval: i.billingInterval,
     },
   };
 
-  if (customerId) {
-    params.customer = customerId;
-  } else if (customerEmail) {
-    params.customer_email = customerEmail;
-  }
+  if (i.betaCouponId) params.discounts = [{ coupon: i.betaCouponId }];
+  else params.allow_promotion_codes = true;
 
-  return stripe.checkout.sessions.create(params);
+  if (i.customerId) {
+    params.customer = i.customerId;
+  } else if (i.customerEmail) {
+    params.customer_email = i.customerEmail;
+  }
+  return params;
+}
+
+export async function createCheckoutSession(i: CheckoutInput) {
+  return stripe.checkout.sessions.create(buildCheckoutParams(i));
 }
 
 export async function createPortalSession({

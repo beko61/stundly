@@ -1,4 +1,20 @@
-﻿## 2026-11-17 (203) – v0.99.1: Kod borcu — yedek içe aktarma Notdienst'leri ikiye katlamıyor
+﻿## 2026-11-17 (204) – v0.99.2: Stripe hazırlığı — deneme yok, beta kuponu, Basic/Plus/Firma fiyat sayfası
+
+Kullanıcı: "Stripe" → Stripe denemesini "kaldır".
+- Checkout: `trial_period_days` kaldırıldı (uygulama zaten kartsız 30 gün Plus veriyor; satın alan hemen öder).
+  Saf `buildCheckoutParams` (test edilebilir). Beta-Tester (kayıt ≤ BETA_END_DATE, `betaDiscountApplies` —
+  lib/pricing) → `STRIPE_BETA_COUPON_ID` kuponu otomatik `discounts`; Stripe `discounts` + `allow_promotion_codes`
+  birlikte kabul etmediği için kupon varken kod alanı yok.
+- Beta sırasında checkout hâlâ kapalı; sadece test için `STRIPE_CHECKOUT_DURING_BETA=1` (Production'da asla).
+- Webhook `customer.subscription.deleted` → `profiles.plan = 'trial'` (metadata'daki company/user).
+- /pricing (beta sonrası bölüm) 25.10 kararına göre: Basic · Plus · Firma Team · Firma Unternehmen; Plus
+  özellikleri `PLUS_BENEFITS`'ten; karşılaştırma sadece kodda gerçekten kilitli olanlar ("API geplant" vb. yok).
+  `PLAN_PRICES.individual.name` = "Plus". Ana sayfada beta sonrası da fiyat kutusu yok (karar), "Preise & Plus ansehen →".
+- `STRIPE_KURULUM.md`: kullanıcının Stripe/Vercel adımları (ürünler, kupon, webhook, portal, test, canlıya geçiş).
+- Test: checkoutParams +5, webhook +1 → vitest 101/816 ✓, tsc ✓, lint ✓, E2E 28/28 (2 flaky tekrar ✓).
+- Açık: Stripe test anahtarları yerelde yok → uçtan uca ödeme testi kullanıcı anahtarları girince.
+
+## 2026-11-17 (203) – v0.99.1: Kod borcu — yedek içe aktarma Notdienst'leri ikiye katlamıyor
 
 Kullanıcı: "Kod borcu".
 - Tarama: 13 istemci dosyasında 34 doğrudan Supabase çağrısı. Yazmaların çoğu zaten önbelleği yeniliyor

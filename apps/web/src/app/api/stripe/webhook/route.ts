@@ -185,6 +185,15 @@ async function handleSubscriptionDeleted(supabase: SupabaseAdmin, sub: StripeSub
     status: "canceled",
     canceled_at: new Date().toISOString(),
   }).eq("stripe_subscription_id", sub.id);
+
+  // Abo beendet → profiles.plan zurück (Gegenstück zu handleCheckoutCompleted; metadata kommt aus dem Checkout)
+  const companyId = sub.metadata?.company_id || null;
+  const userId = sub.metadata?.user_id || null;
+  if (companyId) {
+    await supabase.from("profiles").update({ plan: "trial" }).eq("company_id", companyId);
+  } else if (userId) {
+    await supabase.from("profiles").update({ plan: "trial" }).eq("user_id", userId);
+  }
 }
 
 async function handlePaymentFailed(supabase: SupabaseAdmin, invoice: StripeInvoiceRaw) {

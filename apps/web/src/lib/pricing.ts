@@ -15,7 +15,7 @@ export type PaidPlanId = "individual" | "team" | "business";
 export const BETA_DISCOUNT_PCT = 50;
 
 export const PLAN_PRICES: Record<PaidPlanId, { name: string; monthly: number; yearly: number; beta: number }> = {
-  individual: { name: "Einzelperson", monthly: 5.99,  yearly: 59,  beta: 2.99 },
+  individual: { name: "Plus",         monthly: 5.99,  yearly: 59,  beta: 2.99 },
   team:       { name: "Team",         monthly: 19.99, yearly: 199, beta: 9.99 },
   business:   { name: "Unternehmen",  monthly: 49.99, yearly: 499, beta: 24.99 },
 };
@@ -23,6 +23,11 @@ export const PLAN_PRICES: Record<PaidPlanId, { name: string; monthly: number; ye
 /** "5,99 €" */
 export function euro(v: number): string {
   return `${v.toFixed(2).replace(".", ",")} €`;
+}
+
+/** Beta-Tester (Konto bis einschließlich BETA_END_DATE angelegt) zahlen dauerhaft BETA_DISCOUNT_PCT % weniger. */
+export function betaDiscountApplies(createdAtISO: string | null | undefined): boolean {
+  return !!createdAtISO && createdAtISO.slice(0, 10) <= BETA_END_DATE;
 }
 
 /** Erster Tag mit regulären Preisen, z. B. "01.04.2027" */

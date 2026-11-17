@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createCheckoutSession, PRICE_IDS } from "@/lib/stripe/server";
 import { isBetaActive, BETA_END_DATE_LABEL } from "@/lib/beta";
+import { betaDiscountApplies } from "@/lib/pricing";
 
 export async function POST(req: NextRequest) {
   // Beta-Phase: Zahlungen sind komplett deaktiviert.
-  if (isBetaActive()) {
+  // Nur zum Testen mit Stripe-Testschlüsseln (lokal/Preview) freischaltbar — nie in Production setzen.
+  if (isBetaActive() && process.env.STRIPE_CHECKOUT_DURING_BETA !== "1") {
     return NextResponse.json(
       {
         error: `Stundly ist während der Beta-Phase bis ${BETA_END_DATE_LABEL} komplett kostenlos. Eine Buchung ist erst ab dem Beta-Ende möglich.`,
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
   // Profil & şirket bilgisi al
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, company_id")
+    .select("role, company_id, created_at")
     .eq("user_id", user.id)
     .single();
 
@@ -68,6 +70,10 @@ export async function POST(req: NextRequest) {
       successUrl: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${appUrl}/pricing`,
       customerEmail: user.email,
+      // Beta-Versprechen: dauerhaft −50 % für alle, die sich bis Beta-Ende registriert haben
+      betaCouponId: betaDiscountApplies(profile?.created_at as string | null | undefined)
+        ? (process.env.STRIPE_BETA_COUPON_ID || undefined)
+        : undefined,
     });
     return NextResponse.json({ url: session.url });
   } catch (err) {

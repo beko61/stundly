@@ -6,7 +6,8 @@ import { ChefEinladenCard } from "@/components/ui/ChefEinladenCard";
 import { createClient } from "@/lib/supabase/client";
 import SignatureCanvas from "react-signature-canvas";
 import { BUNDESLAENDER } from "@/lib/utils/feiertage";
-import { parseInternetsizExport } from "@/lib/import/internetsizImport";
+import { filterNewNotdienst, parseInternetsizExport } from "@/lib/import/internetsizImport";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ImportPayload } from "@/lib/import/internetsizImport";
 import { AutoFillReports } from "@/components/settings/AutoFillReports";
 import { AdminPanelLinks } from "@/components/ui/AdminPanelLinks";
@@ -70,6 +71,7 @@ export default function SettingsPage() {
   const [importing,     setImporting]     = useState(false);
   const [importResult,  setImportResult]  = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     setImportError(null);
@@ -114,10 +116,23 @@ export default function SettingsPage() {
         teInserted += batch.length;
       }
 
-      // 2) notdienst_entries — plain insert (allows multiple per day)
+      // 2) notdienst_entries — mehrere pro Tag erlaubt, aber schon vorhandene Einsätze überspringen
+      //    (sonst verdoppelt ein zweiter Import derselben Datei alle Notdienste)
       let ndInserted = 0;
+      let ndSkipped = 0;
       const ndBatchSize = 200;
-      const ndRows = importPreview.notdienst.map(n => ({ ...n, user_id: userId }));
+      const ndDates = importPreview.notdienst.map(n => n.date).sort();
+      let ndNew = importPreview.notdienst;
+      if (ndDates.length > 0) {
+        const { data: existing, error: exErr } = await supabase
+          .from("notdienst_entries").select("date, start_time, end_time")
+          .eq("user_id", userId).gte("date", ndDates[0]!).lte("date", ndDates[ndDates.length - 1]!);
+        if (exErr) throw new Error(`notdienst_entries lesen: ${exErr.message}`);
+        const f = filterNewNotdienst(importPreview.notdienst, existing ?? []);
+        ndNew = f.rows;
+        ndSkipped = f.skipped;
+      }
+      const ndRows = ndNew.map(n => ({ ...n, user_id: userId }));
       for (let i = 0; i < ndRows.length; i += ndBatchSize) {
         const batch = ndRows.slice(i, i + ndBatchSize);
         const { error } = await supabase.from("notdienst_entries").insert(batch);
@@ -125,7 +140,12 @@ export default function SettingsPage() {
         ndInserted += batch.length;
       }
 
-      setImportResult(`✅ Erfolgreich importiert: ${teInserted} Tage, ${ndInserted} Notdienst-Einträge.`);
+      setImportResult(`✅ Erfolgreich importiert: ${teInserted} Tage, ${ndInserted} Notdienst-Einträge`
+        + (ndSkipped > 0 ? ` (${ndSkipped} schon vorhanden, übersprungen).` : "."));
+      // Zeiterfassung/Dashboard sofort mit den neuen Daten (auch der gespeicherte Offline-Cache)
+      void qc.invalidateQueries({ queryKey: ["time_entries"] });
+      void qc.invalidateQueries({ queryKey: ["time_entries_range"] });
+      void qc.invalidateQueries({ queryKey: ["notdienst_entries"] });
       setImportPreview(null);
       if (importFileRef.current) importFileRef.current.value = "";
     } catch (err) {

@@ -1,4 +1,18 @@
-﻿## 2026-11-11 (202) – v0.99.0: Firmen-Notdienst-Pauschale fließt automatisch ins Gehalt
+﻿## 2026-11-17 (203) – v0.99.1: Kod borcu — yedek içe aktarma Notdienst'leri ikiye katlamıyor
+
+Kullanıcı: "Kod borcu".
+- Tarama: 13 istemci dosyasında 34 doğrudan Supabase çağrısı. Yazmaların çoğu zaten önbelleği yeniliyor
+  (Urlaub, AutoFill, NotdienstModal/DayEntry). Açık kalan: Einstellungen → eski uygulamadan içe aktarma.
+- Hata: Notdienst satırları düz `insert` → aynı dosya iki kez içe aktarılınca tüm Notdienst'ler çiftleniyordu.
+  Düzeltme: `filterNewNotdienst` (aynı gün + başlangıç + bitiş = aynı Einsatz; dosya içindeki tekrarlar da) →
+  sadece yeniler eklenir, sonuç mesajında "X schon vorhanden, übersprungen".
+- İçe aktarmadan sonra `time_entries`, `time_entries_range`, `notdienst_entries` önbelleği yenileniyor
+  (yoksa Zeiterfassung kalıcı önbellekten eski veriyi gösterebiliyordu).
+- Kalan kod borcu (düşük öncelik, kullanıcıya etkisi yok): sadece okuma yapan doğrudan çağrılar
+  (bundesland, salary_records, reports profili) — RQ'ya taşımak davranışı değiştirmez.
+- Test: internetsizImport +4 → vitest 100/810 ✓, tsc ✓, lint ✓, E2E 28/28 ✓.
+
+## 2026-11-11 (202) – v0.99.0: Firmen-Notdienst-Pauschale fließt automatisch ins Gehalt
 
 Kullanıcı: Pauschale maaşa "Eklensin" → "Maaşla başla".
 - Eskiden iki ayrı rakam: çalışanın kendi "Notdienst €/Tag" ayarı (Gehalt/Dashboard/DATEV) ve firmanın

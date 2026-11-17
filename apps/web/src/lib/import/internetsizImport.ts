@@ -297,3 +297,27 @@ export function parseInternetsizExport(raw: string): ImportPayload {
     },
   };
 }
+
+/** Gleicher Einsatz = gleicher Tag + gleiche Start-/Endzeit (Sekunden aus Postgres ignorieren). */
+function ndKey(n: { date: string; start_time: string | null; end_time: string | null }): string {
+  return `${n.date}|${(n.start_time ?? "").slice(0, 5)}|${(n.end_time ?? "").slice(0, 5)}`;
+}
+
+/**
+ * Notdienste ohne Duplikate: schon vorhandene Einsätze (z. B. dieselbe Datei zweimal importiert)
+ * und Doppelte innerhalb der Datei werden übersprungen.
+ */
+export function filterNewNotdienst(
+  rows: StundlyNotdienstInsert[],
+  existing: { date: string; start_time: string | null; end_time: string | null }[],
+): { rows: StundlyNotdienstInsert[]; skipped: number } {
+  const seen = new Set(existing.map(ndKey));
+  const out: StundlyNotdienstInsert[] = [];
+  for (const r of rows) {
+    const k = ndKey(r);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return { rows: out, skipped: rows.length - out.length };
+}

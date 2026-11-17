@@ -196,6 +196,7 @@ function UserDrawer({ user: u, now, onClose, onPatch, onDeleted }: {
           {row("Firma", u.companyName ?? "—")}
           {row("Nereden", u.source ? SOURCE_LABELS[u.source] ?? u.source : "belirtilmemiş")}
           {row("Davet kodu", u.referredBy ?? "—")}
+          {row("Reklam / kampanya", u.campaign ?? "—")}
           {row("E-posta", u.emailConfirmed ? "✓ onaylı" : "✉️ onaysız")}
           {row("Hatırlatma", u.reminderLastType ? `${u.reminderLastType} · ${ago(u.reminderLastSentAt, now)}` : "gönderilmedi")}
           {u.pendingDeletion && row("DSGVO", <span style={{ color: "var(--red)" }}>Silme talebi bekliyor</span>)}

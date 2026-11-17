@@ -11,6 +11,7 @@ import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { RegisterSW } from "@/components/ui/RegisterSW";
 import { InstallPrompt } from "@/components/ui/InstallPrompt";
 import { ErrorListener } from "@/components/ui/ErrorListener";
+import { UtmCapture } from "@/components/marketing/UtmCapture";
 import { QueryProvider } from "@/providers/QueryProvider";
 import "./globals.css";
 
@@ -122,6 +123,7 @@ export default async function RootLayout({
             <InstallPrompt />
             <RegisterSW />
             <ErrorListener />
+            <UtmCapture />
             <Analytics />
             <SpeedInsights />
           </QueryProvider>

@@ -20,6 +20,7 @@ export interface SaUser {
   ndCount:         number;
   source:          string | null;   // "Wie hast du von Stundly erfahren?"
   referredBy:      string | null;   // Empfehlungscode
+  campaign:        string | null;   // utm-Kampagne, z. B. "google · notdienst" (lib/marketing/utm)
   reminderLastType:   string | null;
   reminderLastSentAt: string | null;
   pendingDeletion: boolean;
@@ -71,6 +72,8 @@ export interface Cockpit {
   daily:          { date: string; signups: number; active: number }[]; // letzte 30 Tage
   sources:        { key: string; label: string; count: number }[];
   topReferrers:   { code: string; name: string; count: number }[];
+  /** Werbung/Posts: wie viele kamen je Kampagne, wie viele davon haben etwas eingetragen */
+  campaigns:      { label: string; count: number; activated: number }[];
   reminders7:     Record<string, number>;
 }
 
@@ -111,6 +114,18 @@ export function computeCockpit(all: SaUser[], now: Date): Cockpit {
     .map(([key, count]) => ({ key, label: key === "none" ? "Belirtilmemiş" : SOURCE_LABELS[key]!, count }))
     .sort((a, b) => b.count - a.count);
 
+  const campMap = new Map<string, { count: number; activated: number }>();
+  for (const u of users) {
+    if (!u.campaign) continue;
+    const c = campMap.get(u.campaign) ?? { count: 0, activated: 0 };
+    c.count++;
+    if (hasData(u)) c.activated++;
+    campMap.set(u.campaign, c);
+  }
+  const campaigns = [...campMap.entries()]
+    .map(([label, c]) => ({ label, ...c }))
+    .sort((a, b) => b.count - a.count);
+
   const byCode = new Map(all.map((u) => [u.id.replace(/-/g, "").slice(0, 8).toLowerCase(), u]));
   const refCount = new Map<string, number>();
   for (const u of users) if (u.referredBy) refCount.set(u.referredBy, (refCount.get(u.referredBy) ?? 0) + 1);
@@ -145,6 +160,7 @@ export function computeCockpit(all: SaUser[], now: Date): Cockpit {
     daily,
     sources,
     topReferrers,
+    campaigns,
     reminders7,
   };
 }

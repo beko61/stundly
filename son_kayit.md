@@ -1,4 +1,16 @@
-﻿## 2026-11-17 (205) – v0.99.3: Kauf direkt in der App; Firmen-Abo-Seite korrigiert
+﻿## 2026-11-17 (206) – v0.99.4: Reklam kaynağı (utm) kayıtta ölçülüyor
+
+Kullanıcı: "bizim reklama ihtiyacımız var düşün bakalım" → plan (Google arama reklamı + kısa video), sonra "tamam şimdi diğerine geçelim".
+- Sorun: reklamdan gelenin kaynağı kaydedilmiyordu (sadece isteğe bağlı "Wie hast du von Stundly erfahren?").
+- `lib/marketing/utm.ts`: `?utm_source/medium/campaign` okunur (sadece kısa kimlik, [a-z0-9._-], ≤ 40), ilk giriş
+  sayfasındaki değer **sadece bellekte** (çerez/localStorage yok) kayda kadar tutulur → `signUp` metadata
+  `utm_source`, `utm_medium`, `utm_campaign`. `components/marketing/UtmCapture.tsx` layout'ta.
+- Süper admin: Kokpit'te "Reklam / kampanya (utm)" kartı (kayıt + kaç kişi gerçekten kullandı), kullanıcı detayında satır.
+- Datenschutz: reklam kimliği maddesi eklendi (Art. 6 (1) f, çerezsiz).
+- Test: utm.test.ts (4), metrics +1, yeni E2E `e2e/utm.e2e.ts` (Zuschlagsrechner?utm… → Register, signup isteği yakalanır, hesap açılmaz).
+- Reklam linki örneği: `https://stundly.de/zuschlagsrechner?utm_source=google&utm_medium=cpc&utm_campaign=notdienst`
+
+## 2026-11-17 (205) – v0.99.3: Kauf direkt in der App; Firmen-Abo-Seite korrigiert
 
 Kullanıcı: "uygulama içinde satın alacaktı … boş pakette bir şey kullanabilecek, mecburen satın alması gerekmesin".
 - Kontrol: Basic zaten ücretsiz/kullanılabilir, hiçbir yerde zorunlu satın alma yok (doğru). Ama:

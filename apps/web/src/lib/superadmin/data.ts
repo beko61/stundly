@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SaUser } from "./metrics";
+import { utmLabel } from "@/lib/marketing/utm";
 
 /**
  * Alle Nutzer für das Super-Admin-Panel zusammenführen:
@@ -105,6 +106,7 @@ export async function loadSuperadminUsers(admin: SupabaseClient): Promise<SaUser
       ndCount:        act?.ndCount ?? 0,
       source:         (meta.signup_source as string | null) ?? null,
       referredBy:     (meta.referred_by as string | null) ?? null,
+      campaign:       utmLabel(meta.utm_source as string | null, meta.utm_campaign as string | null),
       reminderLastType:   (p.reminder_last_type as string | null) ?? null,
       reminderLastSentAt: (p.reminder_last_sent_at as string | null) ?? null,
       pendingDeletion: pending.has(id),

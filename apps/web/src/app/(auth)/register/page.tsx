@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DemoDataBadge } from "@/components/ui/DemoDataBadge";
 import { SIGNUP_SOURCES, isReferralCode } from "@/lib/marketing/referral";
 import { afterSignupPath } from "@/lib/marketing/afterSignup";
+import { currentUtm, utmMeta } from "@/lib/marketing/utm";
 
 /**
  * Einladung per Token (E-Mail + Firmenname). Seit Migration 038 nur noch über die RPC —
@@ -138,6 +139,8 @@ function RegisterForm() {
           // Freiwillige Angabe + Empfehlungscode — Auswertung siehe lib/marketing/referral
           ...(source ? { signup_source: source } : {}),
           ...(referredBy ? { referred_by: referredBy } : {}),
+          // Kampagne (Werbeanzeige, Post) — lib/marketing/utm
+          ...utmMeta(currentUtm(window.location.search)),
         },
       },
     });

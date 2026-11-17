@@ -9,7 +9,7 @@ const iso = (daysAgo: number) => new Date(Date.now() - daysAgo * DAY).toISOStrin
 const u = (over: Partial<SaUser>): SaUser => ({
   id: "id", email: "x@x.de", name: "X", role: "individual", isSuperAdmin: false, isActive: true, companyId: null, companyName: null,
   createdAt: iso(30), lastSignInAt: null, emailConfirmed: true, lastDataAt: null, entryDays: 0, ndCount: 0,
-  source: null, referredBy: null, reminderLastType: null, reminderLastSentAt: null, pendingDeletion: false, ...over,
+  source: null, referredBy: null, campaign: null, reminderLastType: null, reminderLastSentAt: null, pendingDeletion: false, ...over,
 });
 
 const USERS = [

@@ -8,7 +8,7 @@ const ago = (d: number) => new Date(NOW.getTime() - d * 86_400_000).toISOString(
 const u = (over: Partial<SaUser>): SaUser => ({
   id: "00000000-0000-0000-0000-000000000000", email: "x@x.de", name: null, role: "individual", isSuperAdmin: false, isActive: true,
   companyId: null, companyName: null, createdAt: ago(40), lastSignInAt: null, emailConfirmed: true,
-  lastDataAt: null, entryDays: 0, ndCount: 0, source: null, referredBy: null,
+  lastDataAt: null, entryDays: 0, ndCount: 0, source: null, referredBy: null, campaign: null,
   reminderLastType: null, reminderLastSentAt: null, pendingDeletion: false, ...over,
 });
 
@@ -65,5 +65,21 @@ describe("inSegment", () => {
   it("Segmente", () => {
     expect(users.filter((x) => inSegment(x, "never", n)).map((x) => x.id.slice(0, 4))).toEqual(["bbbb", "dddd"]);
     expect(users.filter((x) => inSegment(x, "inactive", n)).map((x) => x.id.slice(0, 4))).toEqual(["cccc"]);
+  });
+});
+
+describe("Kampagnen (utm)", () => {
+  it("zählt Registrierungen je Kampagne und wie viele etwas eingetragen haben", () => {
+    const c = computeCockpit([
+      u({ id: "a1", campaign: "google · nd", lastDataAt: ago(1), entryDays: 1 }),
+      u({ id: "a2", campaign: "google · nd" }),
+      u({ id: "a3", campaign: "linkedin" }),
+      u({ id: "a4" }),
+      u({ id: "a5", campaign: "linkedin", isSuperAdmin: true }),
+    ], NOW);
+    expect(c.campaigns).toEqual([
+      { label: "google · nd", count: 2, activated: 1 },
+      { label: "linkedin", count: 1, activated: 0 },
+    ]);
   });
 });

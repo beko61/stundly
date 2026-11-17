@@ -102,6 +102,16 @@ export default async function SuperAdminKokpit() {
         </div>
 
         <div className="card" style={{ padding: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>Reklam / kampanya (utm)</h3>
+          {c.campaigns.length === 0
+            ? <p className="sa-muted" style={{ fontSize: 13, marginBottom: 18 }}>Henüz reklam linkiyle gelen yok.</p>
+            : <div style={{ marginBottom: 18 }}>{c.campaigns.map((k) => (
+              <div key={k.label} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 13, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                <span style={{ overflowWrap: "anywhere" }}>{k.label}</span>
+                <span><strong>{k.count}</strong> <span className="sa-muted">kayıt · {k.activated} kullandı</span></span>
+              </div>
+            ))}</div>}
+
           <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>En çok davet getirenler</h3>
           {c.topReferrers.length === 0
             ? <p className="sa-muted" style={{ fontSize: 13 }}>Henüz davet linkiyle gelen yok.</p>

@@ -53,19 +53,22 @@ export function YearFillCard({ userId, name, suggested }: { userId: string; name
     const days = WEEKDAYS.filter(({ dow }) => b.week[dow]).map(({ label }) => label).join(", ");
     if (!window.confirm(
       `${year} für ${name} füllen (${days})?\n\n` +
-      `Ab heute, ohne Feiertage und Urlaub. Vorhandene Einträge bleiben unverändert. ` +
-      `Die Tage sind als „automatisch“ markiert und können jederzeit geändert werden.`,
+      `Ab heute, ohne Feiertage und Urlaub. Schon automatisch gefüllte Tage bekommen die neuen Zeiten, ` +
+      `selbst eingetragene Tage bleiben unverändert.`,
     )) return;
     setBusy(true); setMsg(null);
     try {
       const res = await fetch(`/api/company/employees/${userId}/year-fill`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ year, week: b.week }),
       });
-      const json = await res.json().catch(() => ({})) as { error?: string; inserted?: number };
+      const json = await res.json().catch(() => ({})) as { error?: string; inserted?: number; updated?: number };
       if (!res.ok) { setMsg({ ok: false, text: json.error ?? "Fehlgeschlagen" }); return; }
+      const n = json.inserted ?? 0, u = json.updated ?? 0;
       setMsg({
         ok: true,
-        text: json.inserted ? `✅ ${json.inserted} Tage in ${year} eingetragen.` : `${year} ist schon komplett gefüllt.`,
+        text: n || u
+          ? `✅ ${year}: ${n} Tage neu eingetragen${u ? `, ${u} automatisch gefüllte Tage aktualisiert` : ""}.`
+          : `${year}: keine freien Tage (alles selbst eingetragen, Urlaub oder Feiertag).`,
       });
       router.refresh();
     } catch {
@@ -82,7 +85,7 @@ export function YearFillCard({ userId, name, suggested }: { userId: string; name
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>⚡ Jahr mit festen Zeiten füllen</div>
       <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5, margin: "0 0 12px" }}>
         Trägt alle freien Tage ab heute mit diesen Zeiten ein (ohne Feiertage und Urlaub).
-        Bestehende Einträge werden nicht überschrieben.
+        Schon automatisch gefüllte Tage werden aktualisiert, selbst eingetragene bleiben.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 1fr 64px", gap: 6, alignItems: "center", marginBottom: 12 }}>

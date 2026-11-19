@@ -95,6 +95,22 @@ describe("POST /api/company/employees/[userId]/year-fill", () => {
     expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "entries.year_filled" }));
   });
 
+  it("automatisch gefüllte Tage bekommen neue Zeiten, selbst eingetragene bleiben", async () => {
+    const f = fakeAdmin({
+      profiles: { bundesland: "NI", contract_start: null },
+      time_entries: [{ date: "2027-01-04", tags: [] }, { date: "2027-01-05", tags: ["autofill"] }],
+      vacation_requests: [],
+    });
+    mockGetContext.mockResolvedValue({ user: { id: "boss" }, companyId: "co", admin: f.admin });
+    const res = await POST(req({ year: 2027, week: WEEK }), params);
+    const json = await res.json();
+    const fresh = f.upserts[0] as { date: string }[];
+    const refill = f.upserts[1] as { date: string; start_time: string }[];
+    expect(fresh.some((r) => r.date === "2027-01-04" || r.date === "2027-01-05")).toBe(false);
+    expect(refill).toEqual([expect.objectContaining({ date: "2027-01-05", start_time: "06:30" })]);
+    expect(json).toMatchObject({ updated: 1, inserted: fresh.length });
+  });
+
   it("dieses Jahr erst ab heute, nichts in der Vergangenheit", async () => {
     const f = fakeAdmin({ profiles: { bundesland: "NI", contract_start: null }, time_entries: [], vacation_requests: [] });
     mockGetContext.mockResolvedValue({ user: { id: "boss" }, companyId: "co", admin: f.admin });

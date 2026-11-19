@@ -59,7 +59,7 @@ test("Chef füllt das nächste Jahr mit den Standardzeiten des Mitarbeiters", as
   await page.getByLabel("Sa Ende").fill("12:00");
   page.once("dialog", (d) => void d.accept());
   await page.getByRole("button", { name: `${next} füllen` }).click();
-  await expect(page.getByRole("status")).toContainText(`Tage in ${next} eingetragen`, { timeout: 30_000 });
+  await expect(page.getByRole("status")).toContainText(`Tage neu eingetragen`, { timeout: 30_000 });
 
   const { data } = await admin.from("time_entries").select("date, start_time, end_time, tags")
     .eq("user_id", emp.id).gte("date", `${next}-01-01`).lte("date", `${next}-12-31`).order("date");
@@ -71,4 +71,14 @@ test("Chef füllt das nächste Jahr mit den Standardzeiten des Mitarbeiters", as
   const sat = rows.find((r) => new Date(`${r.date}T12:00:00`).getDay() === 6);
   expect(sat).toMatchObject({ start_time: "08:00:00", end_time: "12:00:00" });
   expect(rows.some((r) => new Date(`${r.date}T12:00:00`).getDay() === 0)).toBe(false);          // Sonntag
+
+  // Nochmal mit anderer Zeit: automatisch gefüllte Tage werden aktualisiert, selbst eingetragene nicht
+  await page.getByLabel("Mo Beginn").fill("07:15");
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: `${next} füllen` }).click();
+  await expect(page.getByRole("status")).toContainText("automatisch gefüllte Tage aktualisiert", { timeout: 30_000 });
+  const { data: after } = await admin.from("time_entries").select("date, start_time")
+    .eq("user_id", emp.id).in("date", [KEEP, `${next}-01-11`]);
+  expect(after?.find((r) => r.date === KEEP)).toMatchObject({ start_time: "09:00:00" });
+  expect(after?.find((r) => r.date === `${next}-01-11`)).toMatchObject({ start_time: "07:15:00" });
 });

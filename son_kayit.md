@@ -1,4 +1,12 @@
-﻿## 2026-11-19 (208) – v0.100.1: Jahr füllen — Zeiten je Wochentag Mo–Sa
+﻿## 2026-11-19 (209) – v0.100.2: Jahr füllen erneut → automatisch gefüllte Tage bekommen neue Zeiten
+
+Kullanıcı: "ben doldurmuştum önceden, şimdi onun üstüne düzeltmiyor".
+- Sebep: route mevcut hiçbir günün üzerine yazmıyordu (ignoreDuplicates).
+- Şimdi: `tags` içinde "autofill" olan günler yeni saatlerle güncellenir; elle girilen/düzeltilen günler (TimeEntryModal
+  `tags: []`) aynen kalır. Cevap `{ inserted, updated }`, kart mesajı "… neu eingetragen, … aktualisiert".
+- Test: route +1, E2E ikinci doldurma (07:15) → autofill gün güncellendi, elle girilen 09:00 korundu.
+
+## 2026-11-19 (208) – v0.100.1: Jahr füllen — Zeiten je Wochentag Mo–Sa
 
 Kullanıcı: "hangi saatleri ausfüllen yapacak, onları da yazmaya yeri olmalı, pazartesiden cumartesi dahil".
 - Kart "⚡ Jahr mit festen Zeiten füllen": Mo–Sa her gün için ✓ + Beginn/Ende/Pause; öneri = çalışanın standart

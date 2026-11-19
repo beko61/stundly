@@ -159,7 +159,7 @@ export default function ReportsPage() {
   // RQ hooks — time_entries + notdienst_entries + salary_settings
   const { data: entriesRaw = [], isLoading: lEntries } = useTimeEntriesRangeQuery(start, end);
   const { data: ndRaw      = [], isLoading: lNd }      = useNotdienstEntriesQuery(ndLoad.start, ndLoad.end);
-  const { data: salaryData }                            = useSalarySettingsQuery();
+  const { data: salaryData }                            = useSalarySettingsQuery(year);
 
   const loading = lEntries || lNd;
   const entries = entriesRaw as TimeEntry[];

@@ -4,6 +4,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { rowsForYearByUser } from "@/lib/salary/byYear";
 import type { TimeEntry } from "@workly/shared";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstLoadRange } from "@/lib/utils/weekMonth";
@@ -81,13 +82,15 @@ export async function loadLohnMonth(admin: SupabaseClient, companyId: string, ye
     admin.from("time_entries").select("user_id, date, day_type, start_time, end_time, break_minutes").in("user_id", ids).gte("date", first).lte("date", last),
     admin.from("notdienst_entries").select("user_id, date, start_time, end_time, erledigt").in("user_id", ids).gte("date", range.start).lte("date", range.end),
     admin.from("month_closings").select("user_id, status").in("user_id", ids).eq("year", year).eq("month", month),
-    admin.from("salary_settings").select("user_id, monthly_target_hours, created_at").in("user_id", ids).order("created_at", { ascending: false }),
+    admin.from("salary_settings").select("user_id, monthly_target_hours, valid_from, created_at").in("user_id", ids),
     admin.from("profiles").select("user_id, contract_weekly_hours").in("user_id", ids),
   ]);
 
   const target = new Map<string, number>();
-  for (const s of (ss ?? []) as { user_id: string; monthly_target_hours: number | null }[]) {
-    if (!target.has(s.user_id) && Number(s.monthly_target_hours) > 0) target.set(s.user_id, Number(s.monthly_target_hours));
+  // Lohn-Einstellung des Mitarbeiters für dieses Jahr (lib/salary/byYear)
+  type SsRow = { user_id: string; monthly_target_hours: number | null; valid_from: string | null; created_at: string | null };
+  for (const [u, s] of rowsForYearByUser((ss ?? []) as SsRow[], year)) {
+    if (Number(s.monthly_target_hours) > 0) target.set(u, Number(s.monthly_target_hours));
   }
   if (!contractRes.error) {
     for (const c of (contractRes.data ?? []) as { user_id: string; contract_weekly_hours: number | null }[]) {

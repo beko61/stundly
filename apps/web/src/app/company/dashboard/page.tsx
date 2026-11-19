@@ -14,6 +14,7 @@ import { contractFromProfile, type Contract } from "@/lib/company/contract";
 import { checkMonth, type CheckEntry } from "@/lib/company/monthCheck";
 import { addDays, berlinNowLocal, restUntil } from "@/lib/company/notdienstZentrale";
 import { loadMemberAccess, visibleFn } from "@/lib/company/membership";
+import { rowsForYearByUser } from "@/lib/salary/byYear";
 
 // v0.33.0: dashboard komple redesign — patronun günlük iş akışına odaklı.
 // HEUTE-Ansicht + Compliance-Warnings + Mitarbeiter-Übersicht eklendi.
@@ -120,7 +121,7 @@ export default async function CompanyDashboardPage() {
   const { data: salarySettings } = userIds.length > 0
     ? await admin
         .from("salary_settings")
-        .select("user_id, urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over")
+        .select("user_id, urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over, valid_from, created_at")
         .in("user_id", userIds)
     : { data: [] };
 
@@ -143,7 +144,8 @@ export default async function CompanyDashboardPage() {
     employment_end_date: string | null;
     urlaub_carry_over: number;
   }>();
-  for (const s of salarySettings ?? []) {
+  // Lohn-Einstellung je Mitarbeiter für das laufende Jahr (lib/salary/byYear)
+  for (const s of rowsForYearByUser(salarySettings ?? [], now.getFullYear()).values()) {
     if (!salaryMap.has(s.user_id)) {
       salaryMap.set(s.user_id, {
         urlaub_anspruch:        Number(s.urlaub_anspruch ?? 30),

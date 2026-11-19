@@ -7,6 +7,7 @@ import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMon
 import { calcMonthStats, type NdEntry as NdEntryHelper } from "@/lib/utils/monthStats";
 import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
+import { SALARY_LS_KEY, localSettingsForYear } from "@/lib/salary/byYear";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { findWeeklyCapViolations } from "@workly/shared";
 import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
@@ -30,7 +31,7 @@ interface MonthlySummaryProps {
 export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   const { year, month } = useTrackerStore();
   const { data: entries = [] } = useTimeEntriesQuery(year, month);
-  const { data: salarySettings } = useSalarySettingsQuery();
+  const { data: salarySettings } = useSalarySettingsQuery(year);
   const { data: membership } = useCompanyMembership();
   const ndRange = notdienstLoadRange(year, month);
   const { data: ndRaw = [] } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);
@@ -42,20 +43,17 @@ export function MonthlySummary({ feiertage }: MonthlySummaryProps = {}) {
   // salary/page.tsx localStorage set ediyor (workly_salary_settings_v2 key).
   const [localOverride, setLocalOverride] = useState<{ monthly_target_hours?: number; urlaub_anspruch?: number }>({});
   useEffect(() => {
+    // Nur der Stand für das angezeigte Jahr (Einstellungen gelten je Jahr, lib/salary/byYear)
     const applyLocal = (raw: string | null) => {
-      if (!raw) return;
-      try {
-        const parsed = JSON.parse(raw) as { monthly_target_hours?: number; urlaub_anspruch?: number };
-        setLocalOverride(parsed);
-      } catch {}
+      setLocalOverride(localSettingsForYear<{ monthly_target_hours?: number; urlaub_anspruch?: number }>(raw, year) ?? {});
     };
     const handler = (e: StorageEvent) => {
-      if (e.key === "workly_salary_settings_v2") applyLocal(e.newValue);
+      if (e.key === SALARY_LS_KEY) applyLocal(e.newValue);
     };
     window.addEventListener("storage", handler);
-    try { applyLocal(localStorage.getItem("workly_salary_settings_v2")); } catch {}
+    try { applyLocal(localStorage.getItem(SALARY_LS_KEY)); } catch {}
     return () => window.removeEventListener("storage", handler);
-  }, []);
+  }, [year]);
 
   // Priority: localStorage override > RQ salary_settings > default
   const targetHours = localOverride.monthly_target_hours

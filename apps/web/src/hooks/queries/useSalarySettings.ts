@@ -1,51 +1,51 @@
 "use client";
 
 /**
- * React Query wrapper for salary_settings — kullanıcının en güncel satırı.
+ * React Query wrapper for salary_settings — je Jahr (lib/salary/byYear).
  *
- * Query key: ["salary_settings", user_id]
+ * Query key: ["salary_settings", user_id] — lädt alle Zeilen des Nutzers (wenige), `select` wählt
+ * die Zeile für das gewünschte Jahr (Standard: aktuelles Jahr).
  *
  * Public API:
- *   useSalarySettingsQuery()  → { data, isLoading, error }
- *   useUpsertSalarySettings() → mutate(payload)
- *
- * NOT: salary_settings tablosunda user başına birden fazla satır olabilir
- * (historic versions). Bu hook `.order("created_at", desc).limit(1)` ile
- * SADECE en güncel satırı çeker. Historic view için ayrı sorgu gerekir.
- *
- * Mutation: upsert değil INSERT strategy — her değişiklik yeni satır yaratır
- * (audit trail için). onSuccess'te invalidate → yeni satır fetch edilir.
+ *   useSalarySettingsQuery(year?) → { data: Zeile für das Jahr | null, … }
+ *   useUpsertSalarySettings()     → mutate({ year, values }) — speichert in die Zeile dieses Jahres,
+ *                                    fehlt sie: neue Zeile ab 01.01. (andere Jahre bleiben unverändert)
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useSessionUserId } from "@/hooks/useSessionUserId";
 import type { SalarySettings } from "@workly/shared";
-
+import { ownRowForYear, rowForYear } from "@/lib/salary/byYear";
 
 export function salarySettingsKey(userId: string | null | undefined) {
   return ["salary_settings", userId ?? "anon"] as const;
 }
 
-export function useSalarySettingsQuery() {
+/** Älterer gespeicherter Cache (Offline-Persistenz) enthielt nur eine Zeile statt einer Liste */
+function asRows(v: unknown): SalarySettings[] {
+  if (Array.isArray(v)) return v as SalarySettings[];
+  return v ? [v as SalarySettings] : [];
+}
+
+export function useSalarySettingsQuery(year: number = new Date().getFullYear()) {
   const userId = useSessionUserId();
 
   return useQuery({
     queryKey: salarySettingsKey(userId),
     enabled:  typeof userId === "string",
-    queryFn:  async (): Promise<SalarySettings | null> => {
-      if (!userId) return null;
+    queryFn:  async (): Promise<SalarySettings[]> => {
+      if (!userId) return [];
       const supabase = createClient();
       const { data, error } = await supabase
         .from("salary_settings")
         .select("*")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("valid_from", { ascending: true });
       if (error) throw new Error(error.message);
-      return (data ?? null) as SalarySettings | null;
+      return (data ?? []) as SalarySettings[];
     },
+    select: (rows: SalarySettings[]) => rowForYear(asRows(rows), year),
   });
 }
 
@@ -56,41 +56,28 @@ export function useUpsertSalarySettings() {
   const userId = useSessionUserId();
 
   return useMutation({
-    mutationFn: async (payload: UpsertPayload) => {
+    mutationFn: async ({ year, values }: { year: number; values: UpsertPayload }) => {
       if (!userId) throw new Error("Not authenticated");
       const supabase = createClient();
 
-      // Mevcut latest row var mı?
-      const { data: existing } = await supabase
+      const { data: rows } = await supabase
         .from("salary_settings")
-        .select("id")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .select("id, valid_from, created_at")
+        .eq("user_id", userId);
+      const own = ownRowForYear((rows ?? []) as { id: string; valid_from: string | null; created_at: string | null }[], year);
 
-      if (existing?.id) {
-        // Update existing
+      if (own) {
         const { data, error } = await supabase
-          .from("salary_settings")
-          .update(payload)
-          .eq("id", existing.id)
-          .select()
-          .single();
+          .from("salary_settings").update(values).eq("id", own.id).select().single();
         if (error) throw new Error(error.message);
         return data as SalarySettings;
       }
 
-      // Insert new
+      // Neue Zeile für dieses Jahr — gilt ab 01.01., frühere Jahre behalten ihre Werte
       const { data, error } = await supabase
         .from("salary_settings")
-        .insert({
-          ...payload,
-          user_id: userId,
-          valid_from: new Date().toISOString().split("T")[0],
-        })
-        .select()
-        .single();
+        .insert({ ...values, user_id: userId, valid_from: `${year}-01-01` })
+        .select().single();
       if (error) throw new Error(error.message);
       return data as SalarySettings;
     },

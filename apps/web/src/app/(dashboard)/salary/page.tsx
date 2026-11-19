@@ -29,11 +29,12 @@ import { applyContract } from "@/lib/company/contract";
 import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { salarySettingsFromRow, notdienstDaysForBilling as ndBilling } from "@/lib/salary/settings";
 import { usePlan } from "@/hooks/usePlan";
+import { SALARY_LS_KEY } from "@/lib/salary/byYear";
 import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_S   = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-const LS_KEY     = "workly_salary_settings_v2";
+const LS_KEY     = SALARY_LS_KEY; // Browser-Kopie mit _year (lib/salary/byYear)
 
 interface MonthRecord {
   id:        string;
@@ -83,7 +84,7 @@ export default function SalaryPage() {
   // (Query deaktiviert → isLoading wäre false), isFetching einen veralteten Cache-Stand (z. B. "noch keine
   // Einstellungen" aus localStorage vor der Einrichtung). Sonst wurden Standardwerte (15 €/h, 174 h)
   // geladen und per Auto-Save gespeichert.
-  const { data: salaryData, isPending: lSalaryPending, isFetching: lSalaryFetching } = useSalarySettingsQuery();
+  const { data: salaryData, isPending: lSalaryPending, isFetching: lSalaryFetching } = useSalarySettingsQuery(year);
   const lSalarySettings = lSalaryPending || lSalaryFetching;
   const upsertSalarySettings = useUpsertSalarySettings();
 
@@ -95,6 +96,10 @@ export default function SalaryPage() {
   const [settingsSaved,  setSettingsSaved]  = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Einstellungen gelten je Jahr: geladen wird für das angezeigte Jahr; gespeichert wird nur,
+  // was der Nutzer ändert — in das Jahr, in dem er es geändert hat (pending.year).
+  const hydratedYear = useRef<number | null>(null);
+  const pending = useRef<{ year: number; settings: SalarySettings } | null>(null);
 
   // Modal state
   const [recordModal, setRecordModal] = useState(false);
@@ -103,19 +108,59 @@ export default function SalaryPage() {
   const [mNote,   setMNote]   = useState("");
   const [mSaving, setMSaving] = useState(false);
 
-  // RQ salaryData hydrate → local settings state (bir kere, initial load'ta)
+  function saveSettings(p: { year: number; settings: SalarySettings }) {
+    const st = p.settings;
+    localStorage.setItem(LS_KEY, JSON.stringify({ ...st, _year: p.year }));
+    const values = {
+      hourly_rate:              st.hourly_rate,
+      overtime_rate_multiplier: st.overtime_rate_multiplier,
+      night_shift_bonus:        st.night_shift_bonus,
+      notdienst_bonus:          st.notdienst_bonus,
+      monthly_target_hours:     st.monthly_target_hours,
+      steuerklasse:             st.steuerklasse ?? "I",
+      kirchensteuer:            st.kirchensteuer ?? 0,
+      hat_kinder:               st.hat_kinder ?? false,
+      tax_mode:                 st.tax_mode ?? "auto",
+      manuell_abzug:            st.manuell_abzug ?? 0,
+      urlaub_anspruch:          st.urlaub_anspruch ?? 30,
+      sfn_enabled:              st.sfn_enabled ?? false,
+      employment_start_date:    st.employment_start_date ?? null,
+      employment_end_date:      st.employment_end_date ?? null,
+      urlaub_carry_over:        st.urlaub_carry_over ?? 0,
+    };
+    upsertSalarySettings.mutate({ year: p.year, values }, {
+      onSuccess: () => {
+        setSettingsSaved(true);
+        setTimeout(() => setSettingsSaved(false), 1500);
+      },
+    });
+  }
+
+  /** Änderung durch den Nutzer (Karten) — wird für das angezeigte Jahr gespeichert */
+  function editSettings(next: SalarySettings | ((s: SalarySettings) => SalarySettings)) {
+    setSettings((s) => {
+      const n = typeof next === "function" ? next(s) : next;
+      pending.current = { year, settings: n };
+      return n;
+    });
+  }
+
+  // Einstellungen des angezeigten Jahres laden (erneut beim Jahreswechsel; offene Änderung vorher speichern)
   useEffect(() => {
-    if (settingsLoaded) return;
     if (lSalarySettings) return; // hâlâ fetching
-    if (salaryData) {
-      const loaded = salarySettingsFromRow(salaryData);
-      setSettings(loaded);
-      localStorage.setItem(LS_KEY, JSON.stringify(loaded));
-    } else {
-      setSettings(loadLocalSettings());
+    if (hydratedYear.current === year) return;
+    if (pending.current && pending.current.year !== year) {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveSettings(pending.current);
+      pending.current = null;
     }
+    const loaded = salaryData ? salarySettingsFromRow(salaryData) : loadLocalSettings();
+    setSettings(loaded);
+    if (salaryData) localStorage.setItem(LS_KEY, JSON.stringify({ ...loaded, _year: year }));
+    hydratedYear.current = year;
     setSettingsLoaded(true);
-  }, [salaryData, lSalarySettings, settingsLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salaryData, lSalarySettings, year]);
 
   // Vertragsdaten der Firma haben Vorrang (Soll-Stunden, Urlaubsanspruch, Beschäftigt seit)
   const { data: membership } = useCompanyMembership();
@@ -129,39 +174,16 @@ export default function SalaryPage() {
         && n.employment_start_date === s.employment_start_date
         && n.notdienst_bonus === s.notdienst_bonus ? s : n;
     });
-  }, [settingsLoaded, contract]);
+  }, [settingsLoaded, contract, year]);
 
-  // Auto-save settings: localStorage + Supabase (debounced via RQ mutation)
+  // Auto-save: nur Nutzeränderungen (pending), entprellt, in ihr Jahr
   useEffect(() => {
-    if (!settingsLoaded) return;
+    if (!settingsLoaded || !pending.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      localStorage.setItem(LS_KEY, JSON.stringify(settings));
-
-      const payload = {
-        hourly_rate:              settings.hourly_rate,
-        overtime_rate_multiplier: settings.overtime_rate_multiplier,
-        night_shift_bonus:        settings.night_shift_bonus,
-        notdienst_bonus:          settings.notdienst_bonus,
-        monthly_target_hours:     settings.monthly_target_hours,
-        steuerklasse:             settings.steuerklasse ?? "I",
-        kirchensteuer:            settings.kirchensteuer ?? 0,
-        hat_kinder:               settings.hat_kinder ?? false,
-        tax_mode:                 settings.tax_mode ?? "auto",
-        manuell_abzug:            settings.manuell_abzug ?? 0,
-        urlaub_anspruch:          settings.urlaub_anspruch ?? 30,
-        sfn_enabled:              settings.sfn_enabled ?? false,
-        employment_start_date:    settings.employment_start_date ?? null,
-        employment_end_date:      settings.employment_end_date ?? null,
-        urlaub_carry_over:        settings.urlaub_carry_over ?? 0,
-      };
-      // RQ mutation — internally update-or-insert; onSuccess invalidate
-      upsertSalarySettings.mutate(payload, {
-        onSuccess: () => {
-          setSettingsSaved(true);
-          setTimeout(() => setSettingsSaved(false), 1500);
-        },
-      });
+      if (!pending.current) return;
+      saveSettings(pending.current);
+      pending.current = null;
     }, 600);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -404,7 +426,7 @@ export default function SalaryPage() {
 
         <SettingsCard
           settings={settings}
-          onChange={setSettings}
+          onChange={editSettings}
           loading={loading}
           settingsSaved={settingsSaved}
           month={month}
@@ -422,7 +444,7 @@ export default function SalaryPage() {
           }}
         />
 
-        {detail ? <TaxSettingsCard settings={settings} onChange={setSettings} /> : (
+        {detail ? <TaxSettingsCard settings={settings} onChange={editSettings} /> : (
           <button type="button" className="card" onClick={() => setPlusOpen(true)} style={{
             textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: 6, color: "var(--text)",
           }}>

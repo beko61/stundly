@@ -33,6 +33,8 @@ function makeAdmin(opts: {
           order: () => chain,
           limit: () => Promise.resolve({ data: opts.salaryRows ?? [] }),
           maybeSingle: () => Promise.resolve({ data: opts.nd ?? null }),
+          // Lohn-Einstellungen aller Jahre (select("id").eq(user_id) ohne limit)
+          then: (res: (v: unknown) => unknown) => Promise.resolve({ data: opts.salaryRows ?? [] }).then(res),
         };
         return chain;
       },
@@ -88,7 +90,7 @@ describe("PATCH /api/company/employees/[userId]/contract", () => {
     expect(res.status).toBe(404);
   });
 
-  it("setzt Vertrag und übernimmt Soll (40 h → 173,33) + Urlaub in die neueste Lohn-Einstellung", async () => {
+  it("setzt Vertrag und übernimmt Soll (40 h → 173,33) + Urlaub in alle Lohn-Einstellungen (alle Jahre)", async () => {
     const { admin, calls } = makeAdmin({ salaryRows: [{ id: "s1" }] });
     mockGetContext.mockResolvedValue(ctx(admin));
     const res = await PATCH_CONTRACT(req({ weekly_hours: 40, vacation_days: 30, start_date: "2026-01-15" }), contractParams);

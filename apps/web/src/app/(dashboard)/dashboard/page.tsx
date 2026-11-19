@@ -12,6 +12,7 @@ import { usePrivacyMode } from "@/lib/privacy";
 import { useTimeEntriesQuery, useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
+import { SALARY_LS_KEY, localSettingsForYear } from "@/lib/salary/byYear";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { applyContract } from "@/lib/company/contract";
 import { salarySettingsFromRow, hasHourlyRate, notdienstDaysForBilling } from "@/lib/salary/settings";
@@ -22,7 +23,7 @@ import { STANDARD_TIMES_LS_KEY } from "@/lib/utils/standardTimes";
 const MONTHS       = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const MONTHS_SHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const TARGET_HOURS_DEFAULT = 174;
-const SALARY_LS_KEY = "workly_salary_settings_v2";
+// Browser-Kopie der Gehalt-Seite gilt nur für ihr Jahr (lib/salary/byYear)
 
 // Mo-Fr = 8h, Sa/So = 0. Urlaub/Krank/Feiertag immer 8h auf Werktagen.
 function getDayStdMins(dateStr: string): number {
@@ -86,11 +87,9 @@ const DEFAULT_SETTINGS: SalarySettings = {
   urlaub_anspruch: 30,
 };
 
-function readLocalSalarySettings(): Partial<SalarySettings> | null {
+function readLocalSalarySettings(year: number): Partial<SalarySettings> | null {
   try {
-    const raw = localStorage.getItem(SALARY_LS_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as Partial<SalarySettings>;
+    return localSettingsForYear<SalarySettings>(localStorage.getItem(SALARY_LS_KEY), year);
   } catch {
     return null;
   }
@@ -140,7 +139,7 @@ export default function DashboardPage() {
   const { data: yearEntriesRaw = [], isLoading: lYearEntry, status: yearStatus } = useTimeEntriesRangeQuery(yearStart, yearEnd);
   const { data: yearNdRaw      = [], isLoading: lYearNd    } = useNotdienstEntriesQuery(`${selectedYear - 1}-12-01`, yearNdEnd);
   const { data: last7Raw       = [], isLoading: lLast7     } = useTimeEntriesRangeQuery(last7Start, todayStr);
-  const { data: salaryData }                                  = useSalarySettingsQuery();
+  const { data: salaryData }                                  = useSalarySettingsQuery(selectedYear);
   const { data: membership }                                  = useCompanyMembership();
 
   const loading = lMonth || lNd || lYearEntry || lYearNd || lLast7;
@@ -161,7 +160,7 @@ export default function DashboardPage() {
 
   // Salary settings — RQ + localStorage merge (live sync)
   const [localPatch, setLocalPatch] = useState<Partial<SalarySettings> | null>(() =>
-    typeof window !== "undefined" ? readLocalSalarySettings() : null,
+    typeof window !== "undefined" ? readLocalSalarySettings(todayYear) : null,
   );
   const settings: SalarySettings = useMemo(() => {
     const base: SalarySettings = salaryData ? {
@@ -213,7 +212,8 @@ export default function DashboardPage() {
 
   // Live-sync salary settings from Salary page (localStorage cross-tab + focus)
   useEffect(() => {
-    function applyLocal() { setLocalPatch(readLocalSalarySettings()); }
+    function applyLocal() { setLocalPatch(readLocalSalarySettings(selectedYear)); }
+    applyLocal();
     function onStorage(e: StorageEvent) {
       if (e.key === SALARY_LS_KEY && e.newValue) applyLocal();
     }
@@ -226,7 +226,7 @@ export default function DashboardPage() {
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [selectedYear]);
 
   // ── Feiertage (Yıllık — selected year için bir kez hesapla) ──
   const yearFeiertage = useMemo(

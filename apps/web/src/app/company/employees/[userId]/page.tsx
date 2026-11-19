@@ -10,6 +10,7 @@ import { VacationDecisionButtons } from "./VacationDecisionButtons";
 import { TeamNotdienstList, type TeamNotdienst } from "./TeamNotdienstList";
 import { ContractCard } from "./ContractCard";
 import { YearFillCard } from "./YearFillCard";
+import { rowForYear } from "@/lib/salary/byYear";
 import { parseStandardTimes } from "@/lib/utils/standardTimesSync";
 import { DEFAULT_STANDARD_TIMES } from "@/lib/utils/standardTimes";
 import { weekFromStandard } from "@/lib/utils/yearFill";
@@ -231,12 +232,10 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       .lte("date", yearEndISO),
     admin
       .from("salary_settings")
-      .select("monthly_target_hours, urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1),
+      .select("monthly_target_hours, urlaub_anspruch, employment_start_date, employment_end_date, urlaub_carry_over, valid_from, created_at")
+      .eq("user_id", userId),
   ]);
-  const settings = (salarySettingsList ?? [])[0] ?? null;
+  const settings = rowForYear(salarySettingsList, year); // Einstellung für das angezeigte Jahr
   const yearEntries = (yearEntriesRaw ?? []).filter((e) => visible(e.date));
 
   // Monatsstatistik — gleiche Rechnung wie beim Mitarbeiter (Feiertage seines Bundeslands, Notdienst inkl.)

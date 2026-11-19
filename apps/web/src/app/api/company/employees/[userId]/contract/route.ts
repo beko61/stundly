@@ -51,16 +51,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ us
   if (vacation_days != null) patch["urlaub_anspruch"]       = vacation_days;
   if (start_date != null)    patch["employment_start_date"] = start_date;
 
+  // Vertrag gilt für alle Jahre → in alle Lohn-Einstellungs-Zeilen (je Jahr, lib/salary/byYear)
   if (Object.keys(patch).length > 0) {
-    const { data: latest } = await admin
-      .from("salary_settings")
-      .select("id")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const row = (latest ?? [])[0] as { id: string } | undefined;
-    const { error: sErr } = row
-      ? await admin.from("salary_settings").update(patch).eq("id", row.id)
+    const { data: rows } = await admin.from("salary_settings").select("id").eq("user_id", userId);
+    const { error: sErr } = (rows ?? []).length > 0
+      ? await admin.from("salary_settings").update(patch).eq("user_id", userId)
       : await admin.from("salary_settings").insert({ user_id: userId, ...patch });
     if (sErr) return NextResponse.json({ error: "Lohn-Einstellungen konnten nicht aktualisiert werden" }, { status: 500 });
   }

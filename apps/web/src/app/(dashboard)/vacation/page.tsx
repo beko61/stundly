@@ -206,7 +206,7 @@ export default function VacationPage() {
 
   // RQ hooks — year time_entries + year notdienst + salary_settings (dedup ile
   // dashboard + tracker ile paylaşımlı)
-  const { data: salarySettings, isLoading: lSalary } = useSalarySettingsQuery();
+  const { data: salarySettings, isLoading: lSalary } = useSalarySettingsQuery(year);
   const { data: yearTimeData  = [], isLoading: lTime } = useTimeEntriesRangeQuery(yearStartISO, yearEndISO);
   const ndRange = notdienstYearLoadRange(year);
   const { data: yearNdData    = [], isLoading: lNd   } = useNotdienstEntriesQuery(ndRange.start, ndRange.end);

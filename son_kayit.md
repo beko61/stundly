@@ -1,4 +1,21 @@
-﻿## 2026-11-19 (209) – v0.100.2: Jahr füllen erneut → automatisch gefüllte Tage bekommen neue Zeiten
+﻿## 2026-11-19 (210) – v0.101.0: Lohn-Einstellungen je Jahr
+
+Kullanıcı: "Gehalt'ta yılı 2027 yapıp saati 160 yapıyorum, 2026'ya dönünce aynı kalıyor" → "Evet, yıla göre".
+- Sebep: salary_settings tek ayar gibi kullanılıyordu (hep en yeni satır).
+- NEU `lib/salary/byYear.ts` (tek kaynak): bir yıl için `valid_from <= YYYY-12-31` olan en yeni satır, yoksa en eski;
+  kaydetme o yılda başlayan satıra, yoksa yeni satır `valid_from = YYYY-01-01`. `rowsForYearByUser`, tarayıcı kopyası
+  `_year` ile (`localSettingsForYear`).
+- Hook: `useSalarySettingsQuery(year)` tüm satırları çekip yılı seçer (eski persist cache tek obje → diziye); 
+  `useUpsertSalarySettings().mutate({ year, values })`.
+- Gehalt: yıl değişince o yılın ayarı yüklenir; sadece kullanıcı değişikliği, değiştirdiği yıla kaydedilir
+  (yıl değişirken bekleyen kayıt önce yazılır; sadece bakmak satır oluşturmaz).
+- Dashboard, Berichte, Urlaub, Tracker-Monatsübersicht: gösterilen yılın ayarı.
+- Firma: Lohn-Vorbereitung (lohnData), Übersicht, Mitarbeiter-Detail, Berichte-API yılın satırını kullanır;
+  Vertrag (contract route) tüm yılların satırlarına yazılır.
+- Test: byYear (5), workflowRoutes mock, E2E `lohn-jahr.e2e.ts` (2027'de 160 → 2026 174 kalır, yeniden yüklemede de).
+  Tam E2E: 29 ✓, tracker'daki 2 test yük altında düştü, tek başına 5/5 ✓.
+
+## 2026-11-19 (209) – v0.100.2: Jahr füllen erneut → automatisch gefüllte Tage bekommen neue Zeiten
 
 Kullanıcı: "ben doldurmuştum önceden, şimdi onun üstüne düzeltmiyor".
 - Sebep: route mevcut hiçbir günün üzerine yazmıyordu (ignoreDuplicates).

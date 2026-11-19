@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rowsForYearByUser } from "@/lib/salary/byYear";
 import { getCompanyAdminContext } from "@/lib/company/admin";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { notdienstBelongsToMonth, notdienstLoadRange } from "@/lib/utils/weekMonth";
@@ -108,13 +109,13 @@ export async function GET(req: NextRequest) {
   const { data: salarySettingsList } = userIds.length > 0
     ? await admin
         .from("salary_settings")
-        .select("user_id, hourly_rate, notdienst_bonus, monthly_target_hours, created_at")
+        .select("user_id, hourly_rate, notdienst_bonus, monthly_target_hours, valid_from, created_at")
         .in("user_id", userIds)
-        .order("created_at", { ascending: false })
     : { data: [] };
   // Her user için en yeni salary_settings satırı (birden fazla varsa)
   const salaryByUser = new Map<string, { hourly_rate: number; notdienst_bonus: number; monthly_target_hours: number }>();
-  for (const s of salarySettingsList ?? []) {
+  // Lohn-Einstellung je Mitarbeiter für das Berichtsjahr (lib/salary/byYear)
+  for (const s of rowsForYearByUser(salarySettingsList ?? [], year).values()) {
     if (!salaryByUser.has(s.user_id)) {
       salaryByUser.set(s.user_id, {
         hourly_rate:          Number(s.hourly_rate ?? 0),

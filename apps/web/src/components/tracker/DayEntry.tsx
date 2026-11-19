@@ -385,8 +385,9 @@ export function DayEntry({ date, entry, previousEntry, isToday, dayOfWeek, feier
           </div>
         )}
 
-        {/* + Notdienst hinzufügen — auch an Wochenenden + Feiertagen (DB-Eintrag nicht nötig) */}
-        {(entry || isWeekend || isFeiertag) && ndEntries.length < 6 && !ndLocked && (
+        {/* + Notdienst hinzufügen — an jedem Tag, auch ohne Arbeitszeit-Eintrag (eigene Tabelle;
+            Nutzerwunsch 19.11.2026: Freitag ohne Stunden → Notdienst muss trotzdem gehen) */}
+        {ndEntries.length < 6 && !ndLocked && (
           <button onClick={e => { e.stopPropagation(); setNdModal("new"); }}
             style={{ width:"calc(100% - 28px)", margin:"0 14px 12px", padding:"7px",
               background:"transparent", border:"1px dashed var(--orange)", borderRadius:8,

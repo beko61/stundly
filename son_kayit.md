@@ -1,4 +1,11 @@
-﻿## 2026-11-19 (211) – v0.102.0: Takvim 2035'e kadar, tatil düzeltmeleri, Chef yıl silme
+﻿## 2026-11-19 (212) – v0.102.1: Notdienst her gün eklenebilir (saat kaydı olmadan da)
+
+Kullanıcı: "Cuma günü saati sildiğimde neden Notdienst giremiyorum".
+- Sebep: `DayEntry` "+ Notdienst hinzufügen" düğmesini sadece kayıt varsa / hafta sonu / tatilde gösteriyordu;
+  saatsiz hafta içi gün → düğme yok. Notdienst ayrı tablo (notdienst_entries), saat kaydı gerekmez.
+- Şimdi her gün (Notdienst ayı kilitli değilse, max 6). Test: DayEntry.test.tsx (2), tracker E2E 5/5.
+
+## 2026-11-19 (211) – v0.102.0: Takvim 2035'e kadar, tatil düzeltmeleri, Chef yıl silme
 
 Kullanıcı: "chef 2027 komple silme butonu da ekler misin, cuma girdim ama silemiyorum" ve
 "tüm programın takvimi 2035'e kadar olsun, hepsinde seçme ve resmi tatiller hepsini düzenle".

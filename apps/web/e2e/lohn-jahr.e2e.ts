@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
 import { loadE2eEnv } from "./env";
+import { formatDur } from "../src/lib/utils/formatDur";
 
 /**
  * Lohn-Einstellungen gelten je Jahr (Nutzerwunsch 19.11.2026): Sollstunden in 2027 ändern
@@ -113,4 +114,44 @@ test("Überstunden: Saldo des Jahres wird automatisch ins nächste Jahr übertra
   await expect(card).toContainText(`inkl. Übertrag aus ${thisYear}: ${saldo}`);
 
   await admin.from("time_entries").delete().eq("user_id", userId);
+});
+
+test("Überstunden-Übertrag im Gehalt korrigieren (Migration 044) und zurück auf automatisch", async ({ page }) => {
+  await admin.from("salary_settings").delete().eq("user_id", userId);
+  await admin.from("salary_settings").insert({ user_id: userId, valid_from: `${thisYear}-01-01`, monthly_target_hours: 174, hourly_rate: 20 });
+
+  await page.goto("/login");
+  const nur = page.getByRole("button", { name: "Nur notwendige" });
+  if (await nur.isVisible()) await nur.click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+
+  await page.goto("/salary");
+  await page.getByLabel("Jahr auswählen").selectOption(String(next));
+  const carry = page.getByLabel(`Überstunden aus ${thisYear} (Std.)`);
+  await expect(carry).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(`automatisch aus ${thisYear}`)).toBeVisible();
+  await carry.fill("12.5");
+
+  await expect.poll(async () => {
+    const { data } = await admin.from("salary_settings").select("valid_from, ueberstunden_uebertrag").eq("user_id", userId).eq("valid_from", `${next}-01-01`);
+    return data?.[0] ? Number(data[0].ueberstunden_uebertrag) : null;
+  }, { timeout: 15_000 }).toBe(12.5);
+
+  await page.goto("/reports");
+  await page.getByRole("tab", { name: /Jahr/ }).click();
+  await page.getByLabel("Jahr auswählen").selectOption(String(next));
+  await expect(page.locator(".card", { hasText: "Gesamt Überstunden" }))
+    .toContainText(`inkl. Übertrag aus ${thisYear}: ${formatDur(750, true)}`, { timeout: 30_000 });
+
+  // zurück auf automatisch
+  await page.goto("/salary");
+  await page.getByLabel("Jahr auswählen").selectOption(String(next));
+  await page.getByRole("button", { name: /automatisch/ }).click();
+  await expect.poll(async () => {
+    const { data } = await admin.from("salary_settings").select("ueberstunden_uebertrag").eq("user_id", userId).eq("valid_from", `${next}-01-01`);
+    return data?.[0]?.ueberstunden_uebertrag ?? "null";
+  }, { timeout: 15_000 }).toBe("null");
 });

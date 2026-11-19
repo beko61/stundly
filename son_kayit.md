@@ -1,4 +1,17 @@
-﻿## 2026-11-19 (210) – v0.101.0: Lohn-Einstellungen je Jahr
+﻿## 2026-11-19 (211) – v0.102.0: Takvim 2035'e kadar, tatil düzeltmeleri, Chef yıl silme
+
+Kullanıcı: "chef 2027 komple silme butonu da ekler misin, cuma girdim ama silemiyorum" ve
+"tüm programın takvimi 2035'e kadar olsun, hepsinde seçme ve resmi tatiller hepsini düzenle".
+- NEU `lib/utils/years.ts` (`CALENDAR_LAST_YEAR = 2035`, `calendarYears`): Tracker (MonthNav), YearPicker (Gehalt,
+  Berichte), Jahres-Befüllung (Profil), Chef-Karte, year-fill API, Stundenzettel-Vorlage/Excel.
+- Feiertage (formülle, her yıl): Buß- und Bettag hatası düzeltildi — 23.11 Çarşamba ise 16.11 (2022, 2033 yanlış
+  günü gösteriyordu). Fronleichnam artık SN/TH'de eyalet genelinde değil (sadece bazı belediyelerde).
+  Test: 2026–2035 Paskalya tabanlı tatiller, Buß- und Bettag 2022/2033/2035.
+- Chef kartı: "🗑 Automatisch gefüllte Tage in YYYY löschen" (DELETE year-fill?year=, sadece autofill, bugünden itibaren);
+  tekrar doldururken işareti kaldırılan gün (ör. Cuma) → o günlerin autofill kayıtları silinir. Yıl seçimi bu yıl–2035.
+- Test: route 9, feiertage +3, E2E jahresfuellung (Cuma kaldır → silindi, sil → sadece elle girilen kaldı, 2035 seçilebilir).
+
+## 2026-11-19 (210) – v0.101.0: Lohn-Einstellungen je Jahr
 
 Kullanıcı: "Gehalt'ta yılı 2027 yapıp saati 160 yapıyorum, 2026'ya dönünce aynı kalıyor" → "Evet, yıla göre".
 - Sebep: salary_settings tek ayar gibi kullanılıyordu (hep en yeni satır).

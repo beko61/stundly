@@ -1,12 +1,14 @@
 "use client";
 
+import { calendarYears } from "@/lib/utils/years";
+
 interface Props {
   value: number;
   onChange: (year: number) => void;
   years?: number[];
 }
 
-const DEFAULT_YEARS = [2025, 2026, 2027, 2028];
+const DEFAULT_YEARS = calendarYears();
 
 const CARET_BG =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")";

@@ -1,5 +1,6 @@
 "use client";
 
+import { calendarYears } from "@/lib/utils/years";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { jsPDF as JsPDF } from "jspdf";
@@ -40,7 +41,7 @@ export function StundenzettelVorlageForm() {
     }
   }
 
-  const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
+  const years = calendarYears(now.getFullYear() - 1);
 
   return (
     <div className="card" style={{ padding: "clamp(14px, 3vw, 22px)" }}>

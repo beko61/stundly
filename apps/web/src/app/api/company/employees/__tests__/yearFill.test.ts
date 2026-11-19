@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { POST } from "../[userId]/year-fill/route";
+import { POST, DELETE } from "../[userId]/year-fill/route";
 
 const mockGetContext = vi.fn();
 const mockMember = vi.fn();
@@ -22,16 +22,18 @@ const EMP = "11111111-2222-3333-4444-555555555555";
 /** Minimaler Supabase-Ersatz: jede Kette liefert die Daten der Tabelle; upsert wird mitgeschrieben. */
 function fakeAdmin(tables: Record<string, unknown>) {
   const upserts: unknown[][] = [];
+  const deletes: string[] = [];
   const from = (t: string) => {
     const result = { data: tables[t] ?? null, error: null };
     const q: Record<string, unknown> = {};
-    for (const m of ["select", "eq", "gte", "lte", "in"]) q[m] = () => q;
+    for (const m of ["select", "eq", "gte", "lte", "in", "contains"]) q[m] = () => q;
+    q.delete = () => { deletes.push(t); return q; };
     q.maybeSingle = () => Promise.resolve(result);
     q.then = (res: (v: unknown) => unknown) => Promise.resolve(result).then(res);
     q.upsert = (rows: unknown[]) => { upserts.push(rows); return Promise.resolve({ error: null }); };
     return q;
   };
-  return { admin: { from }, upserts };
+  return { admin: { from }, upserts, deletes };
 }
 
 const req = (body: unknown) => new NextRequest("http://l/api/company/employees/x/year-fill", {
@@ -59,7 +61,8 @@ describe("POST /api/company/employees/[userId]/year-fill", () => {
   it("400 für andere Jahre", async () => {
     mockGetContext.mockResolvedValue({ user: { id: "boss" }, companyId: "co", admin: fakeAdmin({}).admin });
     expect((await POST(req({ year: 2025, week: WEEK }), params)).status).toBe(400);
-    expect((await POST(req({ year: 2028, week: WEEK }), params)).status).toBe(400);
+    expect((await POST(req({ year: 2036, week: WEEK }), params)).status).toBe(400);
+    expect((await POST(req({ year: 2035, week: WEEK }), params)).status).not.toBe(400); // Kalender bis 2035
   });
 
   it("404 für Admin oder fremde Person", async () => {
@@ -109,6 +112,31 @@ describe("POST /api/company/employees/[userId]/year-fill", () => {
     expect(fresh.some((r) => r.date === "2027-01-04" || r.date === "2027-01-05")).toBe(false);
     expect(refill).toEqual([expect.objectContaining({ date: "2027-01-05", start_time: "06:30" })]);
     expect(json).toMatchObject({ updated: 1, inserted: fresh.length });
+  });
+
+  it("abgewählter Freitag: automatisch gefüllte Freitage werden entfernt", async () => {
+    const f = fakeAdmin({
+      profiles: { bundesland: "NI", contract_start: null },
+      time_entries: [{ date: "2027-01-08", tags: ["autofill"] }, { date: "2027-01-07", tags: ["autofill"] }],
+      vacation_requests: [],
+    });
+    mockGetContext.mockResolvedValue({ user: { id: "boss" }, companyId: "co", admin: f.admin });
+    const res = await POST(req({ year: 2027, week: { ...WEEK, 5: null } }), params);
+    expect(await res.json()).toMatchObject({ removed: 1 });
+    expect(f.deletes).toEqual(["time_entries"]);
+  });
+
+  it("DELETE: 400 falsches Jahr, 404 fremd, 200 löscht automatisch gefüllte Tage", async () => {
+    const del = (y: number) => new NextRequest(`http://l/x?year=${y}`, { method: "DELETE" });
+    const f = fakeAdmin({ time_entries: [{ date: "2027-01-04" }, { date: "2027-01-05" }] });
+    mockGetContext.mockResolvedValue({ user: { id: "boss" }, companyId: "co", admin: f.admin });
+    expect((await DELETE(del(2025), params)).status).toBe(400);
+    mockMember.mockResolvedValueOnce(null);
+    expect((await DELETE(del(2027), params)).status).toBe(404);
+    const res = await DELETE(del(2027), params);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ removed: 2 });
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "entries.year_fill_removed" }));
   });
 
   it("dieses Jahr erst ab heute, nichts in der Vergangenheit", async () => {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { WEEKDAYS, type DayTimes, type WeekPlan } from "@/lib/utils/yearFill";
+import { calendarYears } from "@/lib/utils/years";
 
 type Dow = 1 | 2 | 3 | 4 | 5 | 6;
 interface Row { on: boolean; start: string; end: string; pause: string }
@@ -61,14 +62,41 @@ export function YearFillCard({ userId, name, suggested }: { userId: string; name
       const res = await fetch(`/api/company/employees/${userId}/year-fill`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ year, week: b.week }),
       });
-      const json = await res.json().catch(() => ({})) as { error?: string; inserted?: number; updated?: number };
+      const json = await res.json().catch(() => ({})) as { error?: string; inserted?: number; updated?: number; removed?: number };
       if (!res.ok) { setMsg({ ok: false, text: json.error ?? "Fehlgeschlagen" }); return; }
-      const n = json.inserted ?? 0, u = json.updated ?? 0;
+      const n = json.inserted ?? 0, u = json.updated ?? 0, r = json.removed ?? 0;
+      const parts = [
+        n ? `${n} Tage neu eingetragen` : "",
+        u ? `${u} automatisch gefüllte Tage aktualisiert` : "",
+        r ? `${r} Tage an abgewählten Wochentagen entfernt` : "",
+      ].filter(Boolean);
       setMsg({
         ok: true,
-        text: n || u
-          ? `✅ ${year}: ${n} Tage neu eingetragen${u ? `, ${u} automatisch gefüllte Tage aktualisiert` : ""}.`
+        text: parts.length
+          ? `✅ ${year}: ${parts.join(", ")}.`
           : `${year}: keine freien Tage (alles selbst eingetragen, Urlaub oder Feiertag).`,
+      });
+      router.refresh();
+    } catch {
+      setMsg({ ok: false, text: "Netzwerkfehler" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeYear() {
+    if (!window.confirm(
+      `Alle automatisch gefüllten Tage in ${year} für ${name} löschen (ab heute)?\n\n` +
+      `Selbst eingetragene Tage bleiben erhalten.`,
+    )) return;
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch(`/api/company/employees/${userId}/year-fill?year=${year}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({})) as { error?: string; removed?: number };
+      if (!res.ok) { setMsg({ ok: false, text: json.error ?? "Fehlgeschlagen" }); return; }
+      setMsg({
+        ok: true,
+        text: json.removed ? `🗑 ${json.removed} automatisch gefüllte Tage in ${year} gelöscht.` : `${year}: keine automatisch gefüllten Tage.`,
       });
       router.refresh();
     } catch {
@@ -85,7 +113,7 @@ export function YearFillCard({ userId, name, suggested }: { userId: string; name
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>⚡ Jahr mit festen Zeiten füllen</div>
       <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5, margin: "0 0 12px" }}>
         Trägt alle freien Tage ab heute mit diesen Zeiten ein (ohne Feiertage und Urlaub).
-        Schon automatisch gefüllte Tage werden aktualisiert, selbst eingetragene bleiben.
+        Schon automatisch gefüllte Tage werden aktualisiert (abgewählte Tage entfernt), selbst eingetragene bleiben.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 1fr 64px", gap: 6, alignItems: "center", marginBottom: 12 }}>
@@ -118,14 +146,20 @@ export function YearFillCard({ userId, name, suggested }: { userId: string; name
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <select className="input" aria-label="Jahr" value={year} onChange={(e) => setYear(Number(e.target.value))}
           style={{ width: 110 }}>
-          <option value={thisYear}>{thisYear}</option>
-          <option value={thisYear + 1}>{thisYear + 1}</option>
+          {calendarYears(thisYear).map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
         <button type="button" className="btn btn-primary" onClick={() => void fill()} disabled={busy}
           style={{ flex: 1, minWidth: 160 }}>
-          {busy ? "Wird eingetragen…" : `${year} füllen`}
+          {busy ? "Bitte warten…" : `${year} füllen`}
         </button>
       </div>
+      <button type="button" onClick={() => void removeYear()} disabled={busy}
+        style={{
+          width: "100%", marginTop: 8, padding: 10, background: "transparent", borderRadius: 10, cursor: "pointer",
+          border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)", color: "var(--red)", fontSize: 13, fontWeight: 700,
+        }}>
+        🗑 Automatisch gefüllte Tage in {year} löschen
+      </button>
       {msg && (
         <div role={msg.ok ? "status" : "alert"} style={{ marginTop: 10, fontSize: 12, color: msg.ok ? "var(--green)" : "var(--red)" }}>
           {msg.text}

@@ -102,3 +102,40 @@ describe("BUNDESLAENDER constant", () => {
     expect(BUNDESLAENDER.BY).toBe("Bayern");
   });
 });
+
+describe("Kalender bis 2035 (Nutzerwunsch 19.11.2026)", () => {
+  // Ostersonntag 2026–2035 → Karfreitag = −2, Ostermontag = +1, Pfingstmontag = +50
+  const EASTER: Record<number, string> = {
+    2026: "04-05", 2027: "03-28", 2028: "04-16", 2029: "04-01", 2030: "04-21",
+    2031: "04-13", 2032: "03-28", 2033: "04-17", 2034: "04-09", 2035: "03-25",
+  };
+  const shift = (iso: string, d: number) => {
+    const t = new Date(`${iso}T12:00:00`); t.setDate(t.getDate() + d);
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  };
+
+  it("bewegliche Feiertage stimmen für jedes Jahr bis 2035", () => {
+    for (const [y, md] of Object.entries(EASTER)) {
+      const easter = `${y}-${md}`;
+      const f = getFeiertage(Number(y), "NI");
+      expect(f[shift(easter, -2)]).toBe("Karfreitag");
+      expect(f[shift(easter, 1)]).toBe("Ostermontag");
+      expect(f[shift(easter, 39)]).toBe("Christi Himmelfahrt");
+      expect(f[shift(easter, 50)]).toBe("Pfingstmontag");
+      expect(f[`${y}-10-31`]).toBe("Reformationstag");
+    }
+  });
+
+  it("Buß- und Bettag: Mittwoch VOR dem 23.11. — auch wenn der 23.11. ein Mittwoch ist", () => {
+    expect(getFeiertage(2022, "SN")["2022-11-16"]).toBe("Buß- und Bettag");
+    expect(getFeiertage(2022, "SN")["2022-11-23"]).toBeUndefined();
+    expect(getFeiertage(2033, "SN")["2033-11-16"]).toBe("Buß- und Bettag");
+    expect(getFeiertage(2035, "SN")["2035-11-21"]).toBe("Buß- und Bettag");
+  });
+
+  it("Fronleichnam nicht landesweit in Sachsen und Thüringen", () => {
+    expect(getFeiertage(2026, "SN")["2026-06-04"]).toBeUndefined();
+    expect(getFeiertage(2026, "TH")["2026-06-04"]).toBeUndefined();
+    expect(getFeiertage(2026, "HE")["2026-06-04"]).toBe("Fronleichnam");
+  });
+});

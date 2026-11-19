@@ -30,12 +30,12 @@ function addDays(d: Date, days: number): Date {
   return r;
 }
 
-/** Wednesday before Nov 23 = Buß- und Bettag (Sachsen only) */
+/** Mittwoch VOR dem 23. November = Buß- und Bettag (nur Sachsen), also 16.–22.11.
+ *  Fällt der 23.11. selbst auf einen Mittwoch (z. B. 2022, 2033), ist es der 16.11. */
 function bussBettag(year: number): Date {
   const nov23 = new Date(year, 10, 23);
   const dow = nov23.getDay(); // 0=Sun
-  // Go back to the previous Wednesday (dow=3)
-  const diff = (dow >= 3) ? dow - 3 : dow + 4;
+  const diff = dow > 3 ? dow - 3 : dow + 4; // 1…7 Tage zurück bis Mittwoch
   return addDays(nov23, -diff);
 }
 
@@ -104,8 +104,9 @@ export function getFeiertage(year: number, bundesland = "NI"): Record<string, st
     holidays[fmt(addDays(easter, 49))] = "Pfingstsonntag";
   }
 
-  // Fronleichnam (Corpus Christi, 60 days after Easter): BW, BY, HE, NW, RP, SL + parts of SN/TH
-  if (["BW","BY","HE","NW","RP","SL","SN","TH"].includes(bl)) {
+  // Fronleichnam (60 Tage nach Ostern): landesweit nur BW, BY, HE, NW, RP, SL.
+  // In SN und TH nur in einzelnen Gemeinden — kein landesweiter Feiertag.
+  if (["BW","BY","HE","NW","RP","SL"].includes(bl)) {
     holidays[fmt(addDays(easter, 60))] = "Fronleichnam";
   }
 

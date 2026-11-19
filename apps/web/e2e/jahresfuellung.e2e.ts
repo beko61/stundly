@@ -81,4 +81,25 @@ test("Chef füllt das nächste Jahr mit den Standardzeiten des Mitarbeiters", as
     .eq("user_id", emp.id).in("date", [KEEP, `${next}-01-11`]);
   expect(after?.find((r) => r.date === KEEP)).toMatchObject({ start_time: "09:00:00" });
   expect(after?.find((r) => r.date === `${next}-01-11`)).toMatchObject({ start_time: "07:15:00" });
+
+  // Freitag abwählen und nochmal füllen → automatisch gefüllte Freitage verschwinden
+  await page.getByLabel("Fr arbeitet").uncheck();
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: `${next} füllen` }).click();
+  await expect(page.getByRole("status")).toContainText("abgewählten Wochentagen entfernt", { timeout: 30_000 });
+  const fridays = async () => ((await admin.from("time_entries").select("date").eq("user_id", emp.id)
+    .gte("date", `${next}-01-01`).lte("date", `${next}-12-31`)).data ?? [])
+    .filter((r) => new Date(`${r.date}T12:00:00`).getDay() === 5);
+  expect(await fridays()).toEqual([]);
+
+  // Alles löschen: nur automatisch gefüllte Tage, der selbst eingetragene bleibt
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: `Automatisch gefüllte Tage in ${next} löschen` }).click();
+  await expect(page.getByRole("status")).toContainText("gelöscht", { timeout: 30_000 });
+  const { data: left } = await admin.from("time_entries").select("date")
+    .eq("user_id", emp.id).gte("date", `${next}-01-01`).lte("date", `${next}-12-31`);
+  expect((left ?? []).map((r) => r.date)).toEqual([KEEP]);
+
+  // Jahresauswahl bis 2035
+  await expect(page.getByLabel("Jahr", { exact: true }).locator("option", { hasText: "2035" })).toHaveCount(1);
 });

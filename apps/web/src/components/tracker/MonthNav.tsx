@@ -2,9 +2,10 @@
 
 import type React from "react";
 import { useTrackerStore } from "@/store/trackerStore";
+import { calendarYears } from "@/lib/utils/years";
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-const YEARS  = [2025, 2026, 2027, 2028];
+const YEARS  = calendarYears();
 
 export function MonthNav() {
   const { year, month, setMonth } = useTrackerStore();

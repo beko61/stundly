@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit/logger";
 import { getFeiertage } from "@/lib/utils/feiertage";
 import { planYearFill, type WeekPlan } from "@/lib/utils/yearFill";
 import { AUTOFILL_TAG } from "@/lib/company/monthCheck";
+import { CALENDAR_LAST_YEAR } from "@/lib/utils/years";
 
 /**
  * POST /api/company/employees/[userId]/year-fill
@@ -14,8 +15,10 @@ import { AUTOFILL_TAG } from "@/lib/company/monthCheck";
  * Chef füllt das Jahr eines Mitarbeiters mit den Zeiten, die er je Wochentag eingibt (Mo–Sa;
  * ohne Feiertage des Bundeslands des Mitarbeiters). Nur ab heute — vergangene Tage bleiben echte Einträge. Übersprungen: vorhandene
  * Einträge, Urlaubsanträge (offen/genehmigt), Tage vor Vertragsbeginn/Firmeneintritt.
- * Schon automatisch gefüllte Tage (Markierung "autofill") bekommen die neuen Zeiten; selbst eingetragene
- * oder geänderte Tage (ohne Markierung) bleiben unverändert.
+ * Schon automatisch gefüllte Tage (Markierung "autofill") bekommen die neuen Zeiten — an abgewählten
+ * Wochentagen werden sie entfernt; selbst eingetragene oder geänderte Tage (ohne Markierung) bleiben.
+ *
+ * DELETE …/year-fill?year=  entfernt alle automatisch gefüllten Tage des Jahres ab heute.
  */
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const daySchema = z.object({
@@ -44,8 +47,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
   if (!parsed.success) {
     return NextResponse.json({ error: "Bitte Zeiten prüfen: Ende nach Beginn, mindestens ein Arbeitstag." }, { status: 400 });
   }
-  if (parsed.data.year < thisYear || parsed.data.year > thisYear + 1) {
-    return NextResponse.json({ error: `Nur ${thisYear} oder ${thisYear + 1}.` }, { status: 400 });
+  if (parsed.data.year < thisYear || parsed.data.year > CALENDAR_LAST_YEAR) {
+    return NextResponse.json({ error: `Nur ${thisYear} bis ${CALENDAR_LAST_YEAR}.` }, { status: 400 });
   }
   const { year } = parsed.data;
   const week = parsed.data.week as WeekPlan;
@@ -78,7 +81,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
       || (!!access && !inRanges(d, access.ranges)),
   }).map((r) => ({ ...r, user_id: userId }));
 
-  if (rows.length === 0) return NextResponse.json({ ok: true, inserted: 0, updated: 0 });
+  // Automatisch gefüllte Tage an jetzt abgewählten Wochentagen entfernen (z. B. Freitag versehentlich gefüllt)
+  const offDays = [...auto].filter((d) => {
+    if (d < from || !d.startsWith(`${year}-`)) return false;
+    const dow = new Date(`${d}T12:00:00`).getDay();
+    return dow === 0 || !week[dow as 1 | 2 | 3 | 4 | 5 | 6];
+  });
+  if (offDays.length) {
+    const { error } = await admin.from("time_entries").delete()
+      .eq("user_id", userId).in("date", offDays).contains("tags", [AUTOFILL_TAG]);
+    if (error) return NextResponse.json({ error: "Speichern fehlgeschlagen" }, { status: 500 });
+  }
+
+  if (rows.length === 0) return NextResponse.json({ ok: true, inserted: 0, updated: 0, removed: offDays.length });
 
   const fresh = rows.filter((r) => !auto.has(r.date));
   const refill = rows.filter((r) => auto.has(r.date));
@@ -94,8 +109,41 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
   await logAudit({
     admin, actorUserId: user.id, companyId,
     action: "entries.year_filled", resourceType: "time_entry", resourceId: userId,
-    payload: { year, inserted: fresh.length, updated: refill.length, from, week },
+    payload: { year, inserted: fresh.length, updated: refill.length, removed: offDays.length, from, week },
   });
 
-  return NextResponse.json({ ok: true, inserted: fresh.length, updated: refill.length, from });
+  return NextResponse.json({ ok: true, inserted: fresh.length, updated: refill.length, removed: offDays.length, from });
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+  const ctx = await getCompanyAdminContext();
+  if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { admin, companyId, user } = ctx;
+  const { userId } = await params;
+
+  const today = iso(new Date());
+  const thisYear = Number(today.slice(0, 4));
+  const year = Number(req.nextUrl.searchParams.get("year"));
+  if (!Number.isInteger(year) || year < thisYear || year > CALENDAR_LAST_YEAR) {
+    return NextResponse.json({ error: `Nur ${thisYear} bis ${CALENDAR_LAST_YEAR}.` }, { status: 400 });
+  }
+  const member = await getTeamMember(admin, companyId, userId);
+  if (!member || member.role !== "employee") {
+    return NextResponse.json({ error: "Mitarbeiter nicht gefunden" }, { status: 404 });
+  }
+
+  // Nur automatisch gefüllte Tage ab heute — selbst eingetragene und vergangene bleiben
+  const from = year === thisYear ? today : `${year}-01-01`;
+  const { data, error } = await admin.from("time_entries").delete()
+    .eq("user_id", userId).gte("date", from).lte("date", `${year}-12-31`)
+    .contains("tags", [AUTOFILL_TAG]).select("date");
+  if (error) return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
+  const removed = (data ?? []).length;
+
+  await logAudit({
+    admin, actorUserId: user.id, companyId,
+    action: "entries.year_fill_removed", resourceType: "time_entry", resourceId: userId,
+    payload: { year, removed, from },
+  });
+  return NextResponse.json({ ok: true, removed });
 }

@@ -9,6 +9,7 @@ import type { TimeEntry } from "@workly/shared";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
 import { planYearFill, weekFromStandard } from "@/lib/utils/yearFill";
+import { calendarYears } from "@/lib/utils/years";
 import {
   DEFAULT_STANDARD_TIMES,
   getStandardTimes,
@@ -136,8 +137,7 @@ export function AutoFillReports() {
     }
   }
 
-  const yearOptions: number[] = [];
-  for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) yearOptions.push(y);
+  const yearOptions = calendarYears(now.getFullYear() - 2);
 
   return (
     <div className="card">

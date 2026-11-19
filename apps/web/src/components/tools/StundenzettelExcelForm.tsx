@@ -1,5 +1,6 @@
 "use client";
 
+import { calendarYears } from "@/lib/utils/years";
 import { useState } from "react";
 import Link from "next/link";
 import { BUNDESLAENDER } from "@/lib/utils/feiertage";
@@ -39,7 +40,7 @@ export function StundenzettelExcelForm() {
     }
   }
 
-  const years = [now.getFullYear(), now.getFullYear() + 1];
+  const years = calendarYears(now.getFullYear());
 
   return (
     <div className="card" style={{ padding: "clamp(14px, 3vw, 22px)" }}>

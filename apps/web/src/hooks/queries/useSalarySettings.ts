@@ -28,24 +28,37 @@ function asRows(v: unknown): SalarySettings[] {
   return v ? [v as SalarySettings] : [];
 }
 
+async function fetchRows(userId: string | null | undefined): Promise<SalarySettings[]> {
+  if (!userId) return [];
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("salary_settings")
+    .select("*")
+    .eq("user_id", userId)
+    .order("valid_from", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SalarySettings[];
+}
+
 export function useSalarySettingsQuery(year: number = new Date().getFullYear()) {
   const userId = useSessionUserId();
 
   return useQuery({
     queryKey: salarySettingsKey(userId),
     enabled:  typeof userId === "string",
-    queryFn:  async (): Promise<SalarySettings[]> => {
-      if (!userId) return [];
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("salary_settings")
-        .select("*")
-        .eq("user_id", userId)
-        .order("valid_from", { ascending: true });
-      if (error) throw new Error(error.message);
-      return (data ?? []) as SalarySettings[];
-    },
+    queryFn:  () => fetchRows(userId),
     select: (rows: SalarySettings[]) => rowForYear(asRows(rows), year),
+  });
+}
+
+/** Alle Zeilen (alle Jahre) — z. B. Überstunden-Übertrag (Vorjahr + dieses Jahr) */
+export function useSalarySettingsRows() {
+  const userId = useSessionUserId();
+  return useQuery({
+    queryKey: salarySettingsKey(userId),
+    enabled:  typeof userId === "string",
+    queryFn:  () => fetchRows(userId),
+    select: (rows: SalarySettings[]) => asRows(rows),
   });
 }
 

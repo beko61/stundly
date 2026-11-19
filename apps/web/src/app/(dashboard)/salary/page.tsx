@@ -30,6 +30,7 @@ import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { salarySettingsFromRow, notdienstDaysForBilling as ndBilling } from "@/lib/salary/settings";
 import { usePlan } from "@/hooks/usePlan";
 import { SALARY_LS_KEY } from "@/lib/salary/byYear";
+import { useOvertimeCarry } from "@/hooks/queries/useOvertimeCarry";
 import { PlusBadge, PlusSheet } from "@/components/plan/PlusSheet";
 
 const MONTHS     = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -127,6 +128,8 @@ export default function SalaryPage() {
       employment_start_date:    st.employment_start_date ?? null,
       employment_end_date:      st.employment_end_date ?? null,
       urlaub_carry_over:        st.urlaub_carry_over ?? 0,
+      // nur wenn die Spalte existiert (Migration 044) — sonst schlüge das Speichern fehl
+      ...(st.ueberstunden_uebertrag !== undefined ? { ueberstunden_uebertrag: st.ueberstunden_uebertrag } : {}),
     };
     upsertSalarySettings.mutate({ year: p.year, values }, {
       onSuccess: () => {
@@ -155,6 +158,10 @@ export default function SalaryPage() {
       pending.current = null;
     }
     const loaded = salaryData ? salarySettingsFromRow(salaryData) : loadLocalSettings();
+    // Überstunden-Übertrag gilt nur für das Jahr seiner Zeile — Zeile eines Vorjahres → automatisch
+    if (salaryData && loaded.ueberstunden_uebertrag !== undefined && !String(salaryData.valid_from ?? "").startsWith(`${year}-`)) {
+      loaded.ueberstunden_uebertrag = null;
+    }
     setSettings(loaded);
     if (salaryData) localStorage.setItem(LS_KEY, JSON.stringify({ ...loaded, _year: year }));
     hydratedYear.current = year;
@@ -207,6 +214,7 @@ export default function SalaryPage() {
   }, []);
 
   const feiertage = useMemo(() => getFeiertage(year, bundesland), [year, bundesland]);
+  const otCarry = useOvertimeCarry(year, bundesland);
 
   // ── RQ hooks: time_entries (month + year) + notdienst (year, önceki Aralık dahil) ──
   const yearStart = `${year}-01-01`;
@@ -436,6 +444,7 @@ export default function SalaryPage() {
           fmtEur={fmtEur}
           whatIfNettoDelta={whatIfPlusOne.nettoDelta}
           simple={!detail}
+          overtimeCarry={{ year, autoHours: Math.round(otCarry.autoMin / 60 * 100) / 100 }}
           locked={{
             monthly_target_hours:  contract?.weekly_hours  != null,
             urlaub_anspruch:       contract?.vacation_days != null,

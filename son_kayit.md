@@ -1,4 +1,17 @@
-﻿## 2026-11-19 (213) – v0.102.2: Urlaub sayfasında yıl seçimi
+﻿## 2026-11-19 (214) – v0.103.0: Überstunden-Übertrag ins neue Jahr (otomatik + düzeltilebilir)
+
+Kullanıcı: "programda benim Überstundem var, onu 2027'ye ekleyebiliyor muyum" → "Otomatik + düzeltilebilir".
+- NEU Migration 044: `salary_settings.ueberstunden_uebertrag numeric(7,2)` (saat; null = otomatik). **Kullanıcı çalıştıracak.**
+- NEU `lib/vacation/overtimeCarry.ts`: yılın kendi satırında elle girilen değer varsa o; yoksa önceki yılın bakiyesi
+  (calcOvertimeToDate, tüm yıl) + önceki yılın elle girilen Übertrag'ı. Eksi saat de taşınır.
+- NEU `hooks/queries/useOvertimeCarry(year, bundesland)`, `useSalarySettingsRows()`.
+- Urlaub ("aus Überstunden", Überstundenabbau) ve Berichte ("Gesamt Überstunden" + "inkl. Übertrag aus …") Übertrag'ı sayar.
+- Gehalt → Beschäftigung & Urlaub: "Überstunden aus YYYY (Std.)" — öneri otomatik, değiştirilebilir, "↺ automatisch".
+  Alan sadece sütun varsa görünür ve kaydedilir (migration'dan önce Gehalt kaydı bozulmaz).
+- Berichte Monat-Ansicht yıl listesi de 2035'e kadar (gözden kaçmıştı).
+- Test: overtimeCarry (5), E2E lohn-jahr +1 (2026 bakiyesi 2027'de "inkl. Übertrag" olarak aynen).
+
+## 2026-11-19 (213) – v0.102.2: Urlaub sayfasında yıl seçimi
 
 Kullanıcı: "2027 30 Urlaub giriyorum, sistemde görünmüyor".
 - Sebep: Urlaub sayfası yılı sabit (bu yıl) kullanıyordu; Gehalt'ta 2027 için girilen Urlaubsanspruch (v0.101.0 yıla göre)

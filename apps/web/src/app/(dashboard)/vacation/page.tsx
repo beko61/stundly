@@ -26,6 +26,7 @@ import { useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
 import { YearPicker } from "@/components/ui/YearPicker";
+import { useOvertimeCarry } from "@/hooks/queries/useOvertimeCarry";
 import { useQueryClient } from "@tanstack/react-query";
 import { makePdfTextSafe } from "@/lib/pdf/pdfSafe";
 import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
@@ -252,9 +253,11 @@ export default function VacationPage() {
   const VAC_TOTAL    = urlaubskonto.konto.totalEntitlement;
   const yearUsedDays = urlaubskonto.usedThisYear;
 
+  // Überstunden-Übertrag aus dem Vorjahr (automatisch oder im Gehalt korrigiert)
+  const otCarry = useOvertimeCarry(year, profile?.bundesland ?? "NI");
   const { overtimeMin, allUrlaubDates } = useMemo(() => {
     if (yearTimeData.length === 0) {
-      return { overtimeMin: 0, allUrlaubDates: new Set<string>() };
+      return { overtimeMin: Math.max(0, otCarry.carryMin), allUrlaubDates: new Set<string>() };
     }
     // Aynı hesap Berichte "Gesamt Überstunden" kartında — iki sayfa hep aynı rakamı gösterir.
     const { diffMin } = calcOvertimeToDate({
@@ -272,8 +275,8 @@ export default function VacationPage() {
     for (const e of yearTimeData) {
       if (e.day_type === "urlaub") s.add(e.date);
     }
-    return { overtimeMin: Math.max(0, diffMin), allUrlaubDates: s };
-  }, [salarySettings, yearTimeData, yearNdData, holidays, year, todayISO]);
+    return { overtimeMin: Math.max(0, diffMin + otCarry.carryMin), allUrlaubDates: s };
+  }, [salarySettings, yearTimeData, yearNdData, holidays, year, todayISO, otCarry.carryMin]);
 
   // Profile — direct supabase (single fetch, no hook), auto-loads on mount
   const loadProfile = useCallback(async () => {

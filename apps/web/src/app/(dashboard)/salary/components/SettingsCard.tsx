@@ -57,6 +57,8 @@ type Props = {
   simple?:         boolean;
   /** Von der Firma im Vertrag festgelegte Felder — nur Anzeige (Migration 033) */
   locked?:         Partial<Record<"monthly_target_hours" | "urlaub_anspruch" | "employment_start_date" | "notdienst_bonus", boolean>>;
+  /** Überstunden-Übertrag: angezeigtes Jahr + automatischer Vorschlag (Saldo des Vorjahres, Stunden) */
+  overtimeCarry?:  { year: number; autoHours: number };
 };
 
 const lockedStyle = { opacity: 0.75, cursor: "not-allowed" } as const;
@@ -67,7 +69,7 @@ function LockNote() {
 
 export function SettingsCard({
   settings, onChange, loading, settingsSaved, month,
-  entriesCount, totalGross, netto, fmtEur, whatIfNettoDelta, locked = {}, simple = false,
+  entriesCount, totalGross, netto, fmtEur, whatIfNettoDelta, locked = {}, simple = false, overtimeCarry,
 }: Props) {
   return (
     <>
@@ -200,6 +202,37 @@ export function SettingsCard({
               onChange={(e) => onChange(s => ({ ...s, urlaub_carry_over: parseFloat(e.target.value) || 0 }))}
             />
           </div>
+          {/* Überstunden-Übertrag (Migration 044) — leer = automatisch aus dem Vorjahr, korrigierbar */}
+          {overtimeCarry && settings.ueberstunden_uebertrag !== undefined && (
+            <div>
+              <label className="label" htmlFor="ot-carry" style={{ display: "inline-flex", alignItems: "center" }}>
+                Überstunden aus {overtimeCarry.year - 1} (Std.)
+                <InfoTooltip title="Überstunden-Übertrag">
+                  Dein Überstunden-Saldo vom Ende des Vorjahres wird automatisch ins
+                  neue Jahr übernommen.{"\n\n"}
+                  Hat deine Firma einen Teil ausgezahlt oder gilt eine andere Regel
+                  (Arbeitszeitkonto, Vertrag), trag hier den richtigen Wert ein.
+                  Minusstunden mit „-“.
+                </InfoTooltip>
+              </label>
+              <input
+                id="ot-carry" className="input" type="number" step="0.25"
+                value={settings.ueberstunden_uebertrag ?? overtimeCarry.autoHours}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value.replace(",", "."));
+                  onChange(s => ({ ...s, ueberstunden_uebertrag: Number.isFinite(v) ? v : 0 }));
+                }}
+              />
+              {settings.ueberstunden_uebertrag === null ? (
+                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>automatisch aus {overtimeCarry.year - 1}</div>
+              ) : (
+                <button type="button" onClick={() => onChange(s => ({ ...s, ueberstunden_uebertrag: null }))}
+                  style={{ marginTop: 4, padding: 0, background: "none", border: "none", color: "var(--accent2)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                  ↺ automatisch ({overtimeCarry.autoHours} Std.)
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>

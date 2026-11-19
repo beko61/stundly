@@ -86,3 +86,31 @@ test("Urlaub: Jahr wählbar, Anspruch je Jahr (2027 → 30 Tage)", async ({ page
   await page.getByLabel("Jahr auswählen").selectOption(String(next));
   await expect(page.getByText("30 Tage Jahresanspruch")).toBeVisible();
 });
+
+test("Überstunden: Saldo des Jahres wird automatisch ins nächste Jahr übertragen", async ({ page }) => {
+  await admin.from("salary_settings").delete().eq("user_id", userId);
+  await admin.from("salary_settings").insert({ user_id: userId, valid_from: `${thisYear}-01-01`, monthly_target_hours: 174, hourly_rate: 20 });
+  await admin.from("time_entries").insert(["05", "06", "07"].map((d) => ({
+    user_id: userId, date: `${thisYear}-01-${d}`, day_type: "arbeiten", start_time: "07:00", end_time: "17:00", break_minutes: 0,
+  })));
+
+  await page.goto("/login");
+  const nur = page.getByRole("button", { name: "Nur notwendige" });
+  if (await nur.isVisible()) await nur.click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+
+  await page.goto("/reports");
+  await page.getByRole("tab", { name: /Jahr/ }).click();
+  const card = page.locator(".card", { hasText: "Gesamt Überstunden" });
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  const saldo = (await card.locator("div").nth(1).textContent())!.trim();
+  expect(saldo).not.toBe("");
+
+  await page.getByLabel("Jahr auswählen").selectOption(String(next));
+  await expect(card).toContainText(`inkl. Übertrag aus ${thisYear}: ${saldo}`);
+
+  await admin.from("time_entries").delete().eq("user_id", userId);
+});

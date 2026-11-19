@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
+import { useOvertimeCarry } from "@/hooks/queries/useOvertimeCarry";
+import { calendarYears } from "@/lib/utils/years";
 import { calculateWorkDuration, DAY_TYPES } from "@workly/shared";
 import { formatDur, formatDayMonth } from "@/lib/utils/formatDur";
 import type { TimeEntry } from "@workly/shared";
@@ -230,6 +232,9 @@ export default function ReportsPage() {
       notdienst:      r.ndCount,
     };
   }, [entries, ndEntries, year, month, mode, feiertage, targetHours]);
+
+  // Überstunden-Übertrag aus dem Vorjahr — zählt zu "Gesamt Überstunden" (wie Urlaub-Seite)
+  const otCarry = useOvertimeCarry(year, bundesland);
 
   // "Gesamt Überstunden" — bis heute, identisch mit der Urlaub-Seite (calcOvertimeToDate).
   // Der restliche Jahresbericht (Soll, Differenz, Tabelle) bleibt das ganze Jahr.
@@ -483,7 +488,7 @@ export default function ReportsPage() {
           {mode==="month" ? (
             <>
               <select className="input" aria-label="Jahr" value={year} onChange={e=>setYear(+e.target.value)} style={{ width:"auto", minWidth:110 }}>
-                {[2025,2026,2027,2028].map(y=><option key={y} value={y}>{y}</option>)}
+                {calendarYears().map(y=><option key={y} value={y}>{y}</option>)}
               </select>
               <select className="input" aria-label="Monat" value={month} onChange={e=>setMonth(+e.target.value)} style={{ width:"auto", minWidth:150 }}>
                 {MONTHS.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
@@ -513,9 +518,10 @@ export default function ReportsPage() {
             {mode === "year" && (() => {
               // Zukünftiges Jahr: "bis heute" wäre immer 0 → ganzes Jahr wie in "Differenz" (Planung)
               const futureYear = year > Number(todayISO.slice(0, 4));
-              const gesamtUeber = futureYear
+              const gesamtUeber = (futureYear
                 ? stats.diffMin
-                : overtimeToDate?.diffMin ?? 0;  // bis heute: (worked + nd) − soll
+                : overtimeToDate?.diffMin ?? 0)  // bis heute: (worked + nd) − soll
+                + otCarry.carryMin;              // + Übertrag aus dem Vorjahr
               const ueberTage = gesamtUeber / 60 / 8;
               const bisLabel = todayISO.startsWith(`${year}-`)
                 ? `bis heute (${todayISO.slice(8, 10)}.${todayISO.slice(5, 7)}.)`
@@ -543,6 +549,11 @@ export default function ReportsPage() {
                     <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>
                       {bisLabel} · ≈ {gesamtUeber >= 0 ? "+" : ""}{ueberTage.toFixed(1)} Tage à 8 Std/Tag
                     </div>
+                    {otCarry.carryMin !== 0 && (
+                      <div style={{ fontSize:11, color:"var(--muted)", marginTop:2 }}>
+                        inkl. Übertrag aus {year - 1}: {minsToHM(otCarry.carryMin)}
+                      </div>
+                    )}
                   </div>
 
                   {/* Notdienst */}

@@ -181,6 +181,8 @@ export interface SalarySettings {
   employment_end_date?: string | null;
   /** §7 III BUrlG Übertrag aus Vorjahr (Tage). Muss bis 31.03 genommen werden. */
   urlaub_carry_over?: number;
+  /** Überstunden-Übertrag aus dem Vorjahr (Stunden); null = automatisch (Migration 044). */
+  ueberstunden_uebertrag?: number | null;
 }
 
 export interface DailyLog {

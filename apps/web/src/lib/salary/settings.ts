@@ -25,6 +25,10 @@ export function salarySettingsFromRow(row: SalarySettings): SalarySettings {
     employment_start_date:    row.employment_start_date ?? null,
     employment_end_date:      row.employment_end_date   ?? null,
     urlaub_carry_over:        Number(row.urlaub_carry_over ?? 0),
+    // Spalte erst ab Migration 044 — fehlt sie, bleibt das Feld weg (Gehalt blendet es dann aus)
+    ...("ueberstunden_uebertrag" in row
+      ? { ueberstunden_uebertrag: row.ueberstunden_uebertrag == null ? null : Number(row.ueberstunden_uebertrag) }
+      : {}),
   };
 }
 

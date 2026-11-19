@@ -1,4 +1,12 @@
-﻿## 2026-11-19 (212) – v0.102.1: Notdienst her gün eklenebilir (saat kaydı olmadan da)
+﻿## 2026-11-19 (213) – v0.102.2: Urlaub sayfasında yıl seçimi
+
+Kullanıcı: "2027 30 Urlaub giriyorum, sistemde görünmüyor".
+- Sebep: Urlaub sayfası yılı sabit (bu yıl) kullanıyordu; Gehalt'ta 2027 için girilen Urlaubsanspruch (v0.101.0 yıla göre)
+  orada hiç gösterilemiyordu.
+- Şimdi başlıkta YearPicker (2025–2035): Anspruch, genommen, Rest, Überstunden, ay çubukları seçilen yıla göre.
+- Test: E2E lohn-jahr +1 (2026 → 25 Tage, 2027 seçilince 30 Tage Jahresanspruch).
+
+## 2026-11-19 (212) – v0.102.1: Notdienst her gün eklenebilir (saat kaydı olmadan da)
 
 Kullanıcı: "Cuma günü saati sildiğimde neden Notdienst giremiyorum".
 - Sebep: `DayEntry` "+ Notdienst hinzufügen" düğmesini sadece kayıt varsa / hafta sonu / tatilde gösteriyordu;

@@ -25,6 +25,7 @@ import {
 import { useTimeEntriesRangeQuery } from "@/hooks/queries/useTimeEntries";
 import { useNotdienstEntriesQuery } from "@/hooks/queries/useNotdienstEntries";
 import { useSalarySettingsQuery } from "@/hooks/queries/useSalarySettings";
+import { YearPicker } from "@/components/ui/YearPicker";
 import { useQueryClient } from "@tanstack/react-query";
 import { makePdfTextSafe } from "@/lib/pdf/pdfSafe";
 import { applyBriefkopf, loadMyBriefkopf } from "@/lib/company/briefkopf";
@@ -199,7 +200,8 @@ export default function VacationPage() {
   const createReqMut = useCreateVacationRequest();
   const deleteReqMut = useDeleteVacationRequest();
 
-  const year = new Date().getFullYear();
+  // Jahr wählbar (bis 2035) — Anspruch je Jahr aus den Lohn-Einstellungen (Nutzerwunsch 19.11.2026)
+  const [year, setYear] = useState(new Date().getFullYear());
   const todayISO = new Date().toISOString().slice(0, 10);
   const yearStartISO = `${year}-01-01`;
   const yearEndISO   = `${year}-12-31`;
@@ -729,8 +731,8 @@ export default function VacationPage() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <div>
-            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", fontFamily: "var(--font-syne),sans-serif" }}>
-              URLAUB · {year}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.08em", fontFamily: "var(--font-syne),sans-serif" }}>
+              URLAUB · <YearPicker value={year} onChange={setYear} />
             </div>
             <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 2, fontFamily: "var(--font-syne),sans-serif" }}>
               Deine freie Zeit

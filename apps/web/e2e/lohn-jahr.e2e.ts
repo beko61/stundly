@@ -66,3 +66,23 @@ test("Sollstunden 2027 ändern lässt 2026 unverändert", async ({ page }) => {
   await page.reload();
   await expect(soll).toHaveValue("174", { timeout: 30_000 });
 });
+
+test("Urlaub: Jahr wählbar, Anspruch je Jahr (2027 → 30 Tage)", async ({ page }) => {
+  await admin.from("salary_settings").delete().eq("user_id", userId);
+  await admin.from("salary_settings").insert([
+    { user_id: userId, valid_from: `${thisYear}-06-10`, monthly_target_hours: 174, hourly_rate: 20, urlaub_anspruch: 25 },
+    { user_id: userId, valid_from: `${next}-01-01`, monthly_target_hours: 160, hourly_rate: 20, urlaub_anspruch: 30 },
+  ]);
+  await page.goto("/login");
+  const nur = page.getByRole("button", { name: "Nur notwendige" });
+  if (await nur.isVisible()) await nur.click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+
+  await page.goto("/vacation");
+  await expect(page.getByText("25 Tage Jahresanspruch")).toBeVisible({ timeout: 30_000 });
+  await page.getByLabel("Jahr auswählen").selectOption(String(next));
+  await expect(page.getByText("30 Tage Jahresanspruch")).toBeVisible();
+});

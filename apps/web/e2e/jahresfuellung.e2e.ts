@@ -52,6 +52,11 @@ async function loginAs(page: Page, u: { email: string; password: string }) {
 test("Chef füllt das nächste Jahr mit den Standardzeiten des Mitarbeiters", async ({ page }) => {
   await loginAs(page, boss);
   await page.goto(`/company/employees/${emp.id}`);
+  // Vorschlag = Standardzeiten des Mitarbeiters; Samstag dazu
+  await expect(page.getByLabel("Mo Beginn")).toHaveValue("06:30");
+  await page.getByLabel("Sa arbeitet").check();
+  await page.getByLabel("Sa Beginn").fill("08:00");
+  await page.getByLabel("Sa Ende").fill("12:00");
   page.once("dialog", (d) => void d.accept());
   await page.getByRole("button", { name: `${next} füllen` }).click();
   await expect(page.getByRole("status")).toContainText(`Tage in ${next} eingetragen`, { timeout: 30_000 });
@@ -59,8 +64,11 @@ test("Chef füllt das nächste Jahr mit den Standardzeiten des Mitarbeiters", as
   const { data } = await admin.from("time_entries").select("date, start_time, end_time, tags")
     .eq("user_id", emp.id).gte("date", `${next}-01-01`).lte("date", `${next}-12-31`).order("date");
   const rows = data ?? [];
-  expect(rows.length).toBeGreaterThan(240);
+  expect(rows.length).toBeGreaterThan(280);
   expect(rows.find((r) => r.date === KEEP)).toMatchObject({ start_time: "09:00:00" });           // unverändert
   expect(rows.find((r) => r.date === `${next}-01-05`)).toMatchObject({ start_time: "06:30:00", end_time: "15:00:00", tags: ["autofill"] });
   expect(rows.some((r) => r.date === `${next}-01-01`)).toBe(false);                               // Neujahr
+  const sat = rows.find((r) => new Date(`${r.date}T12:00:00`).getDay() === 6);
+  expect(sat).toMatchObject({ start_time: "08:00:00", end_time: "12:00:00" });
+  expect(rows.some((r) => new Date(`${r.date}T12:00:00`).getDay() === 0)).toBe(false);          // Sonntag
 });

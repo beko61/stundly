@@ -1,4 +1,13 @@
-﻿## 2026-11-19 (207) – v0.100.0: Chef füllt das Jahr eines Mitarbeiters mit Standardzeiten
+﻿## 2026-11-19 (208) – v0.100.1: Jahr füllen — Zeiten je Wochentag Mo–Sa
+
+Kullanıcı: "hangi saatleri ausfüllen yapacak, onları da yazmaya yeri olmalı, pazartesiden cumartesi dahil".
+- Kart "⚡ Jahr mit festen Zeiten füllen": Mo–Sa her gün için ✓ + Beginn/Ende/Pause; öneri = çalışanın standart
+  saatleri (Sa kapalı). Pazar her zaman boş. Kontrol: Ende > Beginn + Pause, en az bir gün.
+- `lib/utils/yearFill`: `WeekPlan` (1=Mo…6=Sa), `weekFromStandard`, `WEEKDAYS`; AutoFillReports aynı davranış.
+- API body `{ year, week }` (zod), artık çalışanın standard_times'ını değil Chef'in girdiği saatleri kullanır.
+- Test: yearFill 3, route 6, E2E (Sa 08–12 dahil, Pazar yok).
+
+## 2026-11-19 (207) – v0.100.0: Chef füllt das Jahr eines Mitarbeiters mit Standardzeiten
 
 Kullanıcı: çalışan olarak 2027'yi dolduramıyor (bilerek kapalı, v0.73.0 — "kapalı kalsın"), sonra
 "2027 komple ausfüllü Chef yapabilsin, standart saatler gelsin".

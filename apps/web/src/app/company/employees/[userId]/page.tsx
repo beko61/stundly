@@ -10,6 +10,9 @@ import { VacationDecisionButtons } from "./VacationDecisionButtons";
 import { TeamNotdienstList, type TeamNotdienst } from "./TeamNotdienstList";
 import { ContractCard } from "./ContractCard";
 import { YearFillCard } from "./YearFillCard";
+import { parseStandardTimes } from "@/lib/utils/standardTimesSync";
+import { DEFAULT_STANDARD_TIMES } from "@/lib/utils/standardTimes";
+import { weekFromStandard } from "@/lib/utils/yearFill";
 import { contractFromProfile, monthlyTargetFromWeekly } from "@/lib/company/contract";
 import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { calcMonthStats, DEFAULT_TARGET_HOURS_PER_MONTH } from "@/lib/utils/monthStats";
@@ -89,6 +92,11 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
   const access = await getMemberAccess(admin, companyId, userId);
   if (!access || (!access.former && employee.company_id !== companyId)) notFound();
   const readOnly = access.former;
+  // Vorschlag für "Jahr füllen": Standardzeiten des Mitarbeiters (Migration 040), sonst Standard
+  const { data: stdRow } = await admin.from("profiles").select("standard_times").eq("user_id", userId).maybeSingle();
+  const suggestedWeek = weekFromStandard(
+    parseStandardTimes((stdRow as { standard_times?: unknown } | null)?.standard_times) ?? DEFAULT_STANDARD_TIMES,
+  );
   const visible = (d: string) => inRanges(d, access.ranges);
 
   // Vertragsdaten (Migration 033) — getrennt abfragen: fehlt die Spalte noch, läuft die Seite trotzdem
@@ -381,7 +389,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Vertrag</h2>
       {!readOnly && <ContractCard userId={userId} contract={contract} supported={contractSupported} />}
       {!readOnly && employee.role === "employee" && (
-        <YearFillCard userId={userId} name={employee.full_name ?? employee.email ?? "Mitarbeiter"} />
+        <YearFillCard userId={userId} name={employee.full_name ?? employee.email ?? "Mitarbeiter"} suggested={suggestedWeek} />
       )}
 
       {/* Zeitkonto (Urlaub + Krankheit) — YIL bazlı */}

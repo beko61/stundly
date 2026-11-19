@@ -8,7 +8,7 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 import type { TimeEntry } from "@workly/shared";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
-import { planYearFill } from "@/lib/utils/yearFill";
+import { planYearFill, weekFromStandard } from "@/lib/utils/yearFill";
 import {
   DEFAULT_STANDARD_TIMES,
   getStandardTimes,
@@ -82,7 +82,9 @@ export function AutoFillReports() {
   // Boş Mo-Fr Werktage sayısı (Feiertag + mevcut entry hariç)
   function plan() {
     const existingDates = new Set(yearEntries.map(e => e.date));
-    return planYearFill({ year, feiertage: getFeiertage(year, bundesland), std, skip: (d) => existingDates.has(d) });
+    return planYearFill({
+      year, feiertage: getFeiertage(year, bundesland), week: weekFromStandard(std), skip: (d) => existingDates.has(d),
+    });
   }
   function computeRemainingWorkdays(): number {
     return plan().length;

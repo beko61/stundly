@@ -8,7 +8,7 @@ import { getFeiertage } from "@/lib/utils/feiertage";
 import type { TimeEntry } from "@workly/shared";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { useCompanyMembership } from "@/hooks/queries/useCompanyMembership";
-import { AUTOFILL_TAG } from "@/lib/company/monthCheck";
+import { planYearFill } from "@/lib/utils/yearFill";
 import {
   DEFAULT_STANDARD_TIMES,
   getStandardTimes,
@@ -80,22 +80,12 @@ export function AutoFillReports() {
   }, [year, yearFillResult]); // refresh after auto-fill
 
   // Boş Mo-Fr Werktage sayısı (Feiertag + mevcut entry hariç)
-  function computeRemainingWorkdays(): number {
-    const feiertage = getFeiertage(year, bundesland);
+  function plan() {
     const existingDates = new Set(yearEntries.map(e => e.date));
-    let remaining = 0;
-    for (let m = 1; m <= 12; m++) {
-      const daysInMonth = new Date(year, m, 0).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-        const dow = new Date(year, m - 1, d).getDay();
-        if (dow === 0 || dow === 6) continue;
-        if (feiertage[dateStr]) continue;
-        if (existingDates.has(dateStr)) continue;
-        remaining++;
-      }
-    }
-    return remaining;
+    return planYearFill({ year, feiertage: getFeiertage(year, bundesland), std, skip: (d) => existingDates.has(d) });
+  }
+  function computeRemainingWorkdays(): number {
+    return plan().length;
   }
 
   const remaining = loadingYear ? null : computeRemainingWorkdays();
@@ -118,37 +108,8 @@ export function AutoFillReports() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) { setError("Nicht angemeldet."); setYearFilling(false); return; }
       const userId = session.user.id;
-      const feiertage = getFeiertage(year, bundesland);
-      const existingDates = new Set(yearEntries.map(e => e.date));
-
-      const toInsert: Array<{
-        user_id: string; date: string; day_type: string;
-        start_time: string; end_time: string; break_minutes: number;
-        is_night_shift: boolean; note: string | null; tags: string[];
-      }> = [];
-      for (let m = 1; m <= 12; m++) {
-        const daysInMonth = new Date(year, m, 0).getDate();
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dateStr = `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-          const dow = new Date(year, m - 1, d).getDay();
-          if (dow === 0 || dow === 6) continue;
-          if (feiertage[dateStr]) continue;
-          if (existingDates.has(dateStr)) continue;
-          const isFriday = dow === 5;
-          toInsert.push({
-            user_id: userId,
-            date: dateStr,
-            day_type: "arbeiten",
-            start_time:    isFriday ? std.friStart : std.monThuStart,
-            end_time:      isFriday ? std.friEnd   : std.monThuEnd,
-            break_minutes: isFriday ? std.friPause : std.monThuPause,
-            is_night_shift: false,
-            note: null,
-            // Markierung: Firma sieht, dass diese Tage automatisch befüllt wurden (lib/company/monthCheck)
-            tags: [AUTOFILL_TAG],
-          });
-        }
-      }
+      // Markierung "autofill": Firma sieht, dass diese Tage automatisch befüllt wurden (lib/utils/yearFill)
+      const toInsert = plan().map((r) => ({ ...r, user_id: userId }));
 
       // Batch insert (300'lük gruplar)
       let inserted = 0;

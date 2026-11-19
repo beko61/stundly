@@ -9,6 +9,7 @@ import type { TimeEntry } from "@workly/shared";
 import { VacationDecisionButtons } from "./VacationDecisionButtons";
 import { TeamNotdienstList, type TeamNotdienst } from "./TeamNotdienstList";
 import { ContractCard } from "./ContractCard";
+import { YearFillCard } from "./YearFillCard";
 import { contractFromProfile, monthlyTargetFromWeekly } from "@/lib/company/contract";
 import { urlaubskontoFor } from "@/lib/vacation/urlaubskonto";
 import { calcMonthStats, DEFAULT_TARGET_HOURS_PER_MONTH } from "@/lib/utils/monthStats";
@@ -379,6 +380,9 @@ export default async function EmployeeDetailPage({ params, searchParams }: Props
       {/* Vertrag — Soll-Stunden, Urlaubsanspruch, Beschäftigungsbeginn (Migration 033) */}
       <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Vertrag</h2>
       {!readOnly && <ContractCard userId={userId} contract={contract} supported={contractSupported} />}
+      {!readOnly && employee.role === "employee" && (
+        <YearFillCard userId={userId} name={employee.full_name ?? employee.email ?? "Mitarbeiter"} />
+      )}
 
       {/* Zeitkonto (Urlaub + Krankheit) — YIL bazlı */}
       <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>

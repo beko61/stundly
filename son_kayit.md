@@ -1,4 +1,18 @@
-﻿## 2026-11-17 (206) – v0.99.4: Reklam kaynağı (utm) kayıtta ölçülüyor
+﻿## 2026-11-19 (207) – v0.100.0: Chef füllt das Jahr eines Mitarbeiters mit Standardzeiten
+
+Kullanıcı: çalışan olarak 2027'yi dolduramıyor (bilerek kapalı, v0.73.0 — "kapalı kalsın"), sonra
+"2027 komple ausfüllü Chef yapabilsin, standart saatler gelsin".
+- NEU `lib/utils/yearFill.ts → planYearFill` (tek kaynak): Mo–Fr, Feiertage hariç, `tags:["autofill"]`.
+  `AutoFillReports` (çalışan/tek kullanıcı) artık bunu kullanıyor — davranış aynı.
+- NEU API `POST /api/company/employees/[userId]/year-fill` {year}: sadece bu yıl/gelecek yıl, sadece rol "employee",
+  çalışanın kendi `profiles.standard_times` (yoksa varsayılan) + kendi Bundesland'ı. **Bugünden itibaren** (geçmiş günler
+  gerçek kalır), Vertragsbeginn/Firmeneintritt öncesi, mevcut kayıtlar ve açık/onaylı izin günleri atlanır;
+  `ignoreDuplicates` → hiçbir şey üzerine yazılmaz. Audit `entries.year_filled`.
+- Firma → Mitarbeiter detayı: "⚡ Jahr mit Standardzeiten füllen" kartı (Vertrag altında; eski çalışanlarda yok).
+- Çalışan tarafında Jahres-Befüllung kilidi aynen duruyor.
+- Test: yearFill (2), route (5), E2E `jahresfuellung.e2e.ts` (2027 dolar, mevcut gün korunur, Neujahr boş).
+
+## 2026-11-17 (206) – v0.99.4: Reklam kaynağı (utm) kayıtta ölçülüyor
 
 Kullanıcı: "bizim reklama ihtiyacımız var düşün bakalım" → plan (Google arama reklamı + kısa video), sonra "tamam şimdi diğerine geçelim".
 - Sorun: reklamdan gelenin kaynağı kaydedilmiyordu (sadece isteğe bağlı "Wie hast du von Stundly erfahren?").

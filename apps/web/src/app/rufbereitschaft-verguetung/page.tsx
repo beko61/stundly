@@ -130,6 +130,8 @@ export default function RufbereitschaftPage() {
           <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted)" }}>
             <Link href="/notdienst-verwaltung" style={{ color: "var(--accent2)" }}>Notdienst-Verwaltung</Link>
             {" · "}
+            <Link href="/notdienstpauschale-rechner" style={{ color: "var(--accent2)" }}>Notdienstpauschale netto</Link>
+            {" · "}
             <Link href="/zuschlagsrechner" style={{ color: "var(--accent2)" }}>Zuschlagsrechner</Link>
             {" · "}
             <Link href="/ueberstundenrechner" style={{ color: "var(--accent2)" }}>Überstundenrechner</Link>

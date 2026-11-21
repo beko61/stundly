@@ -134,6 +134,8 @@ export default function ZuschlagsrechnerPage() {
             {" · "}
             <Link href="/rufbereitschaft-verguetung" style={{ color: "var(--accent2)" }}>Rufbereitschaft</Link>
             {" · "}
+            <Link href="/notdienstpauschale-rechner" style={{ color: "var(--accent2)" }}>Notdienstpauschale netto</Link>
+            {" · "}
             <Link href="/stundenzettel-vorlage" style={{ color: "var(--accent2)" }}>Stundenzettel-Vorlage</Link>
           </div>
         </div>

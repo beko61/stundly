@@ -1,3 +1,15 @@
+## 2026-11-21 (218) – v0.103.4: Neues SEO-Tool „Notdienstpauschale netto"
+
+Kullanıcı: "Notdienst-Pauschale-Rechner: bunu yap başla". Rufbereitschaft sayfası brüt hesaplıyor; bu sayfa farklı soru:
+"Pauschale'den netto ne kalır?" (çakışan arama niyeti yok).
+- NEU `lib/tools/notdienstNetto.ts`: netto(Gehalt + Pauschale×Wochen) − netto(Gehalt), `calcNettoFromBrutto` (@workly/shared, ±2 %).
+- NEU `components/tools/NotdienstNettoRechner.tsx` (Gehalt, Pauschale/Woche, Wochen, Steuerklasse, Kirchensteuer, Kinder) +
+  sonucun altında kayıt kutusu; linkler `/register?utm_source=tool&utm_campaign=notdienstpauschale` (Kokpit).
+- NEU `/notdienstpauschale-rechner`: Metadata/canonical, FAQPage JSON-LD (steuerpflichtig — BFH VI R 61/14, SV-pflichtig,
+  Grenzsteuersatz, Steuerklasse, Höhe), "Näherung" notu. middleware PUBLIC_PATHS, sitemap; Rufbereitschaft + Zuschlagsrechner'dan link.
+- Örnek: 3.200 € StKl I, 150 € → 83,71 € netto (%44 kesinti).
+- Test: notdienstNetto (3), NotdienstNettoRechner (2); vitest 854 ✓, tsc, lint; tarayıcı 320px taşma yok.
+
 ## 2026-11-21 (217) – v0.103.3: Rufbereitschaft-Rechner → kayıt geçişi + ölçüm
 
 Vercel Analytics (7 gün): /rufbereitschaft-verguetung 15 ziyaretçi (çoğu Bing), ana sayfadan fazla; /register listede yok.

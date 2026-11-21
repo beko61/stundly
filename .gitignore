@@ -11,6 +11,7 @@ test-results/
 # next.js
 .next/
 .next-e2e/
+.next-dev2/
 out/
 build/
 dist/

@@ -101,6 +101,7 @@ export default async function FirmaPage({ searchParams }: { searchParams: Promis
           <div style={{ marginTop: 12, fontSize: 11, color: "var(--muted)" }}>
             <Link href="/pricing" style={{ color: "var(--accent2)" }}>Preise</Link>{" · "}
             <Link href="/notdienst-verwaltung" style={{ color: "var(--accent2)" }}>Notdienst-Details</Link>{" · "}
+            <Link href="/stundenzettel-genehmigen" style={{ color: "var(--accent2)" }}>Stundenzettel genehmigen</Link>{" · "}
             <Link href="/kontakt" style={{ color: "var(--accent2)" }}>Fragen? Kontakt</Link>
           </div>
         </div>

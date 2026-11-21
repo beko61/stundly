@@ -125,6 +125,8 @@ export default function StundenzettelVorlagePage() {
             {" · "}
             <Link href="/handwerker" style={{ color: "var(--accent2)" }}>Für Handwerker</Link>
             {" · "}
+            <Link href="/stundenzettel-genehmigen" style={{ color: "var(--accent2)" }}>Stundenzettel genehmigen</Link>
+            {" · "}
             <Link href="/demo" style={{ color: "var(--accent2)" }}>Live-Demo</Link>
           </div>
         </div>

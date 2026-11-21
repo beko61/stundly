@@ -203,7 +203,7 @@ export function SettingsCard({
             />
           </div>
           {/* Überstunden-Übertrag (Migration 044) — leer = automatisch aus dem Vorjahr, korrigierbar */}
-          {overtimeCarry && settings.ueberstunden_uebertrag !== undefined && (
+          {overtimeCarry && (
             <div>
               <label className="label" htmlFor="ot-carry" style={{ display: "inline-flex", alignItems: "center" }}>
                 Überstunden aus {overtimeCarry.year - 1} (Std.)
@@ -223,7 +223,7 @@ export function SettingsCard({
                   onChange(s => ({ ...s, ueberstunden_uebertrag: Number.isFinite(v) ? v : 0 }));
                 }}
               />
-              {settings.ueberstunden_uebertrag === null ? (
+              {settings.ueberstunden_uebertrag == null ? (
                 <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>automatisch aus {overtimeCarry.year - 1}</div>
               ) : (
                 <button type="button" onClick={() => onChange(s => ({ ...s, ueberstunden_uebertrag: null }))}

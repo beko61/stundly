@@ -64,6 +64,7 @@ const DEFAULT_SETTINGS: SalarySettings = {
   employment_start_date:    null,
   employment_end_date:      null,
   urlaub_carry_over:        0,
+  ueberstunden_uebertrag:   null,
 };
 
 function loadLocalSettings(): SalarySettings {
@@ -128,8 +129,7 @@ export default function SalaryPage() {
       employment_start_date:    st.employment_start_date ?? null,
       employment_end_date:      st.employment_end_date ?? null,
       urlaub_carry_over:        st.urlaub_carry_over ?? 0,
-      // nur wenn die Spalte existiert (Migration 044) — sonst schlüge das Speichern fehl
-      ...(st.ueberstunden_uebertrag !== undefined ? { ueberstunden_uebertrag: st.ueberstunden_uebertrag } : {}),
+      ueberstunden_uebertrag:   st.ueberstunden_uebertrag ?? null,
     };
     upsertSalarySettings.mutate({ year: p.year, values }, {
       onSuccess: () => {
@@ -159,7 +159,7 @@ export default function SalaryPage() {
     }
     const loaded = salaryData ? salarySettingsFromRow(salaryData) : loadLocalSettings();
     // Überstunden-Übertrag gilt nur für das Jahr seiner Zeile — Zeile eines Vorjahres → automatisch
-    if (salaryData && loaded.ueberstunden_uebertrag !== undefined && !String(salaryData.valid_from ?? "").startsWith(`${year}-`)) {
+    if (salaryData && !String(salaryData.valid_from ?? "").startsWith(`${year}-`)) {
       loaded.ueberstunden_uebertrag = null;
     }
     setSettings(loaded);

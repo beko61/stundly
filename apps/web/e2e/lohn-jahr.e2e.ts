@@ -155,3 +155,19 @@ test("Überstunden-Übertrag im Gehalt korrigieren (Migration 044) und zurück a
     return data?.[0]?.ueberstunden_uebertrag ?? "null";
   }, { timeout: 15_000 }).toBe("null");
 });
+
+test("Überstunden-Übertrag-Feld auch ohne gespeicherte Lohn-Einstellungen sichtbar", async ({ page }) => {
+  await admin.from("salary_settings").delete().eq("user_id", userId);
+  await page.goto("/login");
+  const nur = page.getByRole("button", { name: "Nur notwendige" });
+  if (await nur.isVisible()) await nur.click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+
+  await page.goto("/salary");
+  await page.getByLabel("Jahr auswählen").selectOption(String(next));
+  await expect(page.getByLabel(`Überstunden aus ${thisYear} (Std.)`)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(`automatisch aus ${thisYear}`)).toBeVisible();
+});

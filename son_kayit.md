@@ -1,3 +1,11 @@
+﻿## 2026-11-21 (215) – v0.103.1: Überstunden-Übertrag alanı her zaman görünür
+
+Kullanıcı: Gehalt 2027'de "Überstunden aus 2026" alanını bulamadı ("bunu yapamadım").
+- Sebep: alan sadece kayıtta sütun varsa gösteriliyordu (migration öncesi koruma). Çevrimdışı önbellekteki eski kayıt
+  (sütunsuz) veya hiç maaş kaydı olmayan hesap → alan gizli.
+- Migration 044 test+canlıda olduğu için koruma kaldırıldı: alan her zaman, değer null = otomatik; kayıtta hep gönderilir.
+- Test: E2E lohn-jahr +1 (maaş kaydı yokken alan görünür).
+
 ## 2026-11-21 (216) – v0.103.2: "DSGVO-konform" iddiası diğer sayfalardan da kaldırıldı
 
 Kullanıcı: "Evet, hepsini" (v0.103.1'de dokunulmayan yerler).

@@ -134,7 +134,10 @@ async function rapor() {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
 
   const { RESEND_API_KEY, SEO_RAPOR_EMAIL } = process.env;
-  if (RESEND_API_KEY && SEO_RAPOR_EMAIL) {
+  if (!RESEND_API_KEY || !SEO_RAPOR_EMAIL) {
+    const eksik = [!RESEND_API_KEY && "RESEND_API_KEY", !SEO_RAPOR_EMAIL && "SEO_RAPOR_EMAIL"].filter(Boolean);
+    console.log(`::warning::E-posta gönderilmedi — GitHub secret eksik: ${eksik.join(", ")}`);
+  } else {
     const tablo = (r, baslik) =>
       `<h3>${baslik}</h3><table cellpadding="4" style="border-collapse:collapse;font-size:14px">` +
       `<tr><th align="left"></th><th>Tıklama</th><th>Gösterim</th><th>Sıra</th></tr>` +

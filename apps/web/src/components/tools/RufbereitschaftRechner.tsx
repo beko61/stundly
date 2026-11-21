@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { calcRufbereitschaft, type RufModell } from "@/lib/tools/rufbereitschaft";
 import { MINDESTLOHN_CURRENT, formatMindestlohn } from "@/lib/mindestlohn";
 
 const euro = (v: number) => v.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 const num = (v: string) => Number(v.replace(",", "."));
+
+/** Herkunft im Super-Admin-Kokpit: "tool · rufbereitschaft" */
+export const RUF_REGISTER_HREF = "/register?utm_source=tool&utm_campaign=rufbereitschaft";
 
 export function RufbereitschaftRechner() {
   const [lohn, setLohn]       = useState("20");
@@ -97,6 +101,14 @@ export function RufbereitschaftRechner() {
           Unter dem gesetzlichen Mindestlohn ({formatMindestlohn()} pro Stunde) — Einsätze sind Arbeitszeit und mindestens so zu bezahlen.
         </p>
       )}
+
+      <div style={{ marginTop: 18, padding: "14px 16px", borderRadius: 12, background: "var(--surface2)", display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.5, flex: "1 1 240px" }}>
+          Nicht jede Woche neu rechnen: In <strong style={{ color: "var(--text)" }}>Stundly</strong> trägst du Notdienst und Einsätze am Handy ein —
+          Pauschale und Stunden landen automatisch in deiner Monatsübersicht.
+        </span>
+        <Link href={RUF_REGISTER_HREF} className="btn btn-primary" style={{ textDecoration: "none" }}>Kostenlos starten →</Link>
+      </div>
     </div>
   );
 }

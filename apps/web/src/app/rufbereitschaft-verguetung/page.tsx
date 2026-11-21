@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BETA_END_DATE_LABEL } from "@/lib/beta";
-import { RufbereitschaftRechner } from "@/components/tools/RufbereitschaftRechner";
+import { RufbereitschaftRechner, RUF_REGISTER_HREF } from "@/components/tools/RufbereitschaftRechner";
 
 export const metadata: Metadata = {
   title: "Rufbereitschaft Vergütung 2026 – Rechner, Pauschale & Regeln",
@@ -64,7 +64,7 @@ export default function RufbereitschaftPage() {
         <Link href="/" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 14, letterSpacing: 2, textDecoration: "none" }}>
           ← STUNDLY
         </Link>
-        <Link href="/register" className="btn btn-primary" style={{ padding: "8px 16px", fontSize: 13 }}>
+        <Link href={RUF_REGISTER_HREF} className="btn btn-primary" style={{ padding: "8px 16px", fontSize: 13 }}>
           Kostenlos starten
         </Link>
       </nav>
@@ -124,7 +124,7 @@ export default function RufbereitschaftPage() {
             mit Uhrzeit, Fotos und Kundenunterschrift, auch ohne Netz. Am Monatsende fertig als PDF.
             In der Beta kostenlos bis {BETA_END_DATE_LABEL}.
           </p>
-          <Link href="/register" className="btn btn-primary" style={{ fontSize: 15, padding: "12px 28px", display: "inline-block" }}>
+          <Link href={RUF_REGISTER_HREF} className="btn btn-primary" style={{ fontSize: 15, padding: "12px 28px", display: "inline-block" }}>
             Kostenlos starten →
           </Link>
           <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted)" }}>

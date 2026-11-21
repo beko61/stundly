@@ -1,4 +1,12 @@
-﻿## 2026-11-21 (215) – v0.103.1: Überstunden-Übertrag alanı her zaman görünür
+## 2026-11-21 (217) – v0.103.3: Rufbereitschaft-Rechner → kayıt geçişi + ölçüm
+
+Vercel Analytics (7 gün): /rufbereitschaft-verguetung 15 ziyaretçi (çoğu Bing), ana sayfadan fazla; /register listede yok.
+- Rechner'ın sonucunun hemen altında geçiş kutusu (Überstundenrechner'daki gibi): "Nicht jede Woche neu rechnen …" + Kostenlos starten.
+  Önce tek CTA 6 SSS kartının altındaydı.
+- Sayfadaki 3 kayıt linki `/register?utm_source=tool&utm_campaign=rufbereitschaft` → Kokpit "tool · rufbereitschaft".
+- Test: RufbereitschaftRechner.test.tsx (1), vitest 849 ✓, tsc, lint; mobil 375px kontrol.
+
+## 2026-11-21 (215) – v0.103.1: Überstunden-Übertrag alanı her zaman görünür
 
 Kullanıcı: Gehalt 2027'de "Überstunden aus 2026" alanını bulamadı ("bunu yapamadım").
 - Sebep: alan sadece kayıtta sütun varsa gösteriliyordu (migration öncesi koruma). Çevrimdışı önbellekteki eski kayıt

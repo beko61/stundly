@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BETA_END_DATE_LABEL } from "@/lib/beta";
+import { FREE_UNTIL_TEXT } from "@/lib/beta";
 import { StundenzettelVorlageForm } from "@/components/tools/StundenzettelVorlageForm";
 
 export const metadata: Metadata = {
@@ -115,7 +115,7 @@ export default function StundenzettelVorlagePage() {
           <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
             Mit Stundly erfasst du Arbeitszeit, Urlaub und Notdienste in Sekunden am Handy — der
             Stundenzettel entsteht automatisch als PDF, Überstunden sind immer ausgerechnet.
-            In der Beta kostenlos bis {BETA_END_DATE_LABEL}.
+            {FREE_UNTIL_TEXT}.
           </p>
           <Link href="/register" className="btn btn-primary" style={{ fontSize: 15, padding: "12px 28px", display: "inline-block" }}>
             Kostenlos starten →

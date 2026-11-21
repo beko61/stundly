@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { isBetaActive, BETA_END_DATE_LABEL } from "@/lib/beta";
+import { isBetaActive, FREE_UNTIL_TEXT } from "@/lib/beta";
 import { createClient } from "@/lib/supabase/client";
 import {
   hasDemoEdits,
@@ -149,7 +149,7 @@ function DoneContent() {
         fontSize: 13, color: "var(--accent2)", fontWeight: 600,
       }}>
         {isBetaActive()
-          ? `🎁 Beta-Phase: Alle Funktionen kostenlos bis ${BETA_END_DATE_LABEL}`
+          ? `🎁 ${FREE_UNTIL_TEXT}`
           : "✓ 30 Tage kostenlos testen – keine Kreditkarte erforderlich"}
       </div>
 

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   if (isBetaActive() && process.env.STRIPE_CHECKOUT_DURING_BETA !== "1") {
     return NextResponse.json(
       {
-        error: `Stundly ist während der Beta-Phase bis ${BETA_END_DATE_LABEL} komplett kostenlos. Eine Buchung ist erst ab dem Beta-Ende möglich.`,
+        error: `Stundly ist bis ${BETA_END_DATE_LABEL} komplett kostenlos. Eine Buchung ist erst danach möglich.`,
         beta: true,
       },
       { status: 403 }

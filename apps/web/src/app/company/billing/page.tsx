@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PLAN_PRICES, euro } from "@/lib/pricing";
 import { startCheckout } from "@/lib/stripe/checkoutClient";
+import { EARLY_NAME } from "@/lib/beta";
 
 // Preise aus lib/pricing (eine Quelle); nur, was es wirklich gibt
 const plans = [
@@ -105,7 +106,7 @@ export default function CompanyBillingPage() {
                 <div style={{ marginBottom: 16 }}>
                   <span style={{ fontSize: 28, fontWeight: 800, color: "var(--accent2)" }}>{euro(PLAN_PRICES[plan.id].monthly)}</span>
                   <span style={{ color: "var(--muted)", fontSize: 13 }}> / Monat</span>
-                  <div style={{ fontSize: 11, color: "var(--green)" }}>Beta-Tester: {euro(PLAN_PRICES[plan.id].beta)} / Monat</div>
+                  <div style={{ fontSize: 11, color: "var(--green)" }}>{EARLY_NAME}: {euro(PLAN_PRICES[plan.id].beta)} / Monat</div>
                 </div>
                 <ul style={{ listStyle: "none", marginBottom: 18 }}>
                   {plan.features.map(f => (

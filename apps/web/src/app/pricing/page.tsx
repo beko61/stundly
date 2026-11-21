@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining } from "@/lib/beta";
+import { BETA_MODE, BETA_END_DATE_LABEL, betaDaysRemaining, EARLY_NAME } from "@/lib/beta";
 import { BETA_DISCOUNT_PCT, PAID_START_LABEL, PLAN_PRICES, euro, type PaidPlanId } from "@/lib/pricing";
 import { ND_BASIC_PER_MONTH, PLUS_BENEFITS, TRIAL_DAYS } from "@/lib/plan/entitlements";
 import { startCheckout } from "@/lib/stripe/checkoutClient";
@@ -146,7 +146,7 @@ export default function PricingPage() {
                 textTransform: "uppercase",
                 marginBottom: 24,
               }}>
-                🎁 Beta-Phase
+                🎁 Startangebot
               </div>
               <h1 style={{ fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, marginBottom: 16, lineHeight: 1.15 }}>
                 Alle Funktionen <span style={{ color: "var(--accent2)" }}>100% kostenlos</span>
@@ -162,7 +162,7 @@ export default function PricingPage() {
 
             <div className="card" style={{ padding: "32px 28px", marginBottom: 28 }}>
               <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 18 }}>
-                Was du während der Beta bekommst:
+                Was du bis zum {BETA_END_DATE_LABEL} bekommst:
               </h2>
               <ul style={{ listStyle: "none", padding: 0, marginBottom: 24 }}>
                 {[
@@ -204,10 +204,10 @@ export default function PricingPage() {
               color: "var(--text)",
               lineHeight: 1.7,
             }}>
-              <strong style={{ color: "var(--accent2)" }}>💡 Was passiert nach der Beta?</strong>
+              <strong style={{ color: "var(--accent2)" }}>💡 Was passiert nach dem {BETA_END_DATE_LABEL}?</strong>
               <br />
-              Ab {PAID_START_LABEL} gelten die regulären Preise. Wer sich bis zum {BETA_END_DATE_LABEL}
-              registriert, zahlt als Beta-Tester <strong>dauerhaft {BETA_DISCOUNT_PCT} % weniger</strong>. Du entscheidest
+              Ab {PAID_START_LABEL} gelten die regulären Preise. Wer sich bis zum {BETA_END_DATE_LABEL}{" "}
+              registriert, zahlt als {EARLY_NAME} <strong>dauerhaft {BETA_DISCOUNT_PCT} % weniger</strong>. Du entscheidest
               dann selbst, ob du weitermachen möchtest — niemand bucht dir automatisch etwas ab.
             </div>
 
@@ -226,7 +226,7 @@ export default function PricingPage() {
                     <div style={{ fontSize: 13, color: "var(--muted)" }}>regulär</div>
                     <div style={{ fontSize: 22, fontWeight: 800 }}>{euro(p.monthly)}<span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}> / Monat</span></div>
                     <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8, background: "color-mix(in srgb, var(--accent2) 12%, transparent)" }}>
-                      <div style={{ fontSize: 12, color: "var(--accent2)", fontWeight: 700 }}>für Beta-Tester</div>
+                      <div style={{ fontSize: 12, color: "var(--accent2)", fontWeight: 700 }}>für {EARLY_NAME}</div>
                       <div style={{ fontSize: 20, fontWeight: 800, color: "var(--accent2)" }}>{euro(p.beta)}<span style={{ fontSize: 12, fontWeight: 500 }}> / Monat</span></div>
                     </div>
                   </div>
@@ -276,7 +276,7 @@ export default function PricingPage() {
           <div style={{ fontSize: 28 }}>🎁</div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", marginBottom: 2 }}>
-              Beta-Tester: dauerhaft {BETA_DISCOUNT_PCT} % Rabatt
+              {EARLY_NAME}: dauerhaft {BETA_DISCOUNT_PCT} % Rabatt
             </div>
             <div style={{ fontSize: 12, color: "var(--muted)" }}>
               Für alle, die sich bis zum {BETA_END_DATE_LABEL} registriert haben — wird beim Checkout automatisch abgezogen.

@@ -39,5 +39,5 @@ export const PAID_START_LABEL = (() => {
 
 /** Einheitlicher Satz für alle Seiten */
 export const BETA_PRICE_LINE =
-  `Danach für Beta-Tester dauerhaft ${BETA_DISCOUNT_PCT} % günstiger: ab ${euro(PLAN_PRICES.individual.beta)}/Monat ` +
+  `Danach für Frühstarter dauerhaft ${BETA_DISCOUNT_PCT} % günstiger: ab ${euro(PLAN_PRICES.individual.beta)}/Monat ` +
   `(regulär ab ${euro(PLAN_PRICES.individual.monthly)})`;

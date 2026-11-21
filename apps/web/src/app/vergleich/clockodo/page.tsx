@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BETA_END_DATE_LABEL } from "@/lib/beta";
+import { BETA_END_DATE_LABEL, FREE_UNTIL_TEXT } from "@/lib/beta";
 import { BETA_PRICE_LINE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
@@ -31,9 +31,9 @@ interface Row {
 }
 
 const rows: Row[] = [
-  { category: "Preis pro Monat (nach Beta)", stundly: "€5,99 pauschal",       clockodo: "ab €10/Nutzer",     advantage: "stundly" },
+  { category: "Preis pro Monat (regulär)", stundly: "€5,99 pauschal",       clockodo: "ab €10/Nutzer",     advantage: "stundly" },
   { category: "Team-Tarif",                  stundly: "€19,99 flat (bis 10 MA)", clockodo: "je Nutzer",       advantage: "stundly" },
-  { category: "Kostenlose Testphase",        stundly: `Beta bis ${BETA_END_DATE_LABEL} / 30 Tage regulär`, clockodo: "14 Tage", advantage: "stundly" },
+  { category: "Kostenlose Testphase",        stundly: `kostenlos bis ${BETA_END_DATE_LABEL} / danach 30 Tage`, clockodo: "14 Tage", advantage: "stundly" },
   { category: "Zielgruppe",                  stundly: "Handwerksbetriebe",     clockodo: "Alle Branchen",     advantage: "stundly" },
   { category: "Sprache",                     stundly: "Deutsch",               clockodo: "Deutsch",           advantage: "tie" },
   { category: "Server-Standort",             stundly: "EU (Frankfurt)",        clockodo: "EU (Deutschland)",  advantage: "tie" },
@@ -172,7 +172,7 @@ export default function VergleichClockodoPage() {
             Selber testen — kostenlos
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
-            Beta-Zugang gratis bis {BETA_END_DATE_LABEL}. Keine Kreditkarte. {BETA_PRICE_LINE}.
+            {FREE_UNTIL_TEXT}. Keine Kreditkarte. {BETA_PRICE_LINE}.
           </p>
           <Link href="/register" className="btn btn-primary" style={{ fontSize: 14, padding: "12px 28px", display: "inline-block" }}>
             Stundly starten →

@@ -101,7 +101,7 @@ export async function sendWelcomeEmail({
 
         ${isBeta ? `
         <div style="background: linear-gradient(135deg, rgba(124,106,247,0.18), rgba(192,132,252,0.18)); border: 1px solid rgba(192,132,252,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
-          <p style="font-size: 13px; font-weight: 800; color: #c084fc; letter-spacing: 1px; margin: 0 0 8px;">🎁 BETA-TESTER</p>
+          <p style="font-size: 13px; font-weight: 800; color: #c084fc; letter-spacing: 1px; margin: 0 0 8px;">🎁 FRÜHSTARTER</p>
           <p style="color: #e8e8f0; font-size: 14px; line-height: 1.7; margin: 0;">
             Du bekommst <strong>alle Funktionen komplett kostenlos</strong> — bis zum
             <strong>${BETA_END_DATE_LABEL}</strong> (noch ${daysLeft} Tage).
@@ -109,7 +109,7 @@ export async function sendWelcomeEmail({
           </p>
         </div>
         <p style="color: #6b6b80; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
-          Als Dankeschön für deinen Beta-Test zahlst du nach der Beta <strong style="color: #c084fc;">dauerhaft 50 % weniger</strong>
+          Als Dankeschön fürs frühe Mitmachen zahlst du nach dem ${BETA_END_DATE_LABEL} <strong style="color: #c084fc;">dauerhaft 50 % weniger</strong>
           für den Plan deiner Wahl.
         </p>
         ` : `

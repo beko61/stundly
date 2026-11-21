@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BETA_END_DATE_LABEL } from "@/lib/beta";
+import { FREE_UNTIL_TEXT } from "@/lib/beta";
 import { BETA_PRICE_LINE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
@@ -158,7 +158,7 @@ export default function HandwerkerLandingPage() {
             Kostenlos ausprobieren
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-            Bis {BETA_END_DATE_LABEL} komplett kostenlos während der Beta-Phase. Keine Kreditkarte,
+            {FREE_UNTIL_TEXT}. Keine Kreditkarte,
             keine Verpflichtung. {BETA_PRICE_LINE}.
           </p>
           <Link href="/register" className="btn btn-primary" style={{ fontSize: 15, padding: "12px 28px", display: "inline-block" }}>

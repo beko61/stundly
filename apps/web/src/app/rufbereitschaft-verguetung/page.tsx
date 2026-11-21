@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BETA_END_DATE_LABEL } from "@/lib/beta";
+import { FREE_UNTIL_TEXT } from "@/lib/beta";
 import { RufbereitschaftRechner, RUF_REGISTER_HREF } from "@/components/tools/RufbereitschaftRechner";
 
 export const metadata: Metadata = {
@@ -122,7 +122,7 @@ export default function RufbereitschaftPage() {
           <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
             Bezahlt wird, was du nachweisen kannst. Mit Stundly trägst du jeden Einsatz in Sekunden am Handy ein —
             mit Uhrzeit, Fotos und Kundenunterschrift, auch ohne Netz. Am Monatsende fertig als PDF.
-            In der Beta kostenlos bis {BETA_END_DATE_LABEL}.
+            {FREE_UNTIL_TEXT}.
           </p>
           <Link href={RUF_REGISTER_HREF} className="btn btn-primary" style={{ fontSize: 15, padding: "12px 28px", display: "inline-block" }}>
             Kostenlos starten →

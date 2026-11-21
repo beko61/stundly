@@ -26,7 +26,7 @@ export function inviteUrl(userId: string): string {
 
 export function inviteText(userId: string): string {
   return `Ich erfasse meine Arbeitszeit, Überstunden und Notdienste mit Stundly — ` +
-    `in der Beta komplett kostenlos. Probier's aus: ${inviteUrl(userId)}`;
+    `aktuell komplett kostenlos. Probier's aus: ${inviteUrl(userId)}`;
 }
 
 /** "Chef einladen": Landingpage für Betriebe mit deinem Code */

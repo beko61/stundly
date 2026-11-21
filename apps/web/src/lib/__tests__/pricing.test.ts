@@ -20,6 +20,6 @@ describe("pricing", () => {
 
   it("einheitlicher Satz ohne Streichpreis", () => {
     expect(euro(2.99)).toBe("2,99 €");
-    expect(BETA_PRICE_LINE).toBe("Danach für Beta-Tester dauerhaft 50 % günstiger: ab 2,99 €/Monat (regulär ab 5,99 €)");
+    expect(BETA_PRICE_LINE).toBe("Danach für Frühstarter dauerhaft 50 % günstiger: ab 2,99 €/Monat (regulär ab 5,99 €)");
   });
 });

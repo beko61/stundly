@@ -27,6 +27,14 @@ export const BETA_END_DATE = "2027-03-31";
 export const BETA_END_DATE_LABEL = new Date(BETA_END_DATE)
   .toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" });
 
+/**
+ * Öffentliche Texte sagen nicht "Beta" (wirkt wie "unfertig, nutzt keiner"), sondern Einführungsangebot.
+ * Datum und Zusage (kostenlos bis BETA_END_DATE, danach dauerhaft Rabatt) bleiben unverändert; AGB § 5 nennt es weiter Beta-Phase.
+ */
+export const FREE_UNTIL_TEXT = `Alle Funktionen kostenlos bis ${BETA_END_DATE_LABEL}`;
+/** Name für Nutzer mit Registrierung bis BETA_END_DATE (dauerhafter Rabatt) */
+export const EARLY_NAME = "Frühstarter";
+
 /** True, wenn die Beta-Phase tatsächlich aktiv ist (Datum berücksichtigt). */
 export function isBetaActive(): boolean {
   if (!BETA_MODE) return false;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FEATURE_INFO, PLUS_BENEFITS, type Feature } from "@/lib/plan/entitlements";
 import { PLAN_PRICES, euro } from "@/lib/pricing";
 import { startCheckout } from "@/lib/stripe/checkoutClient";
+import { EARLY_NAME } from "@/lib/beta";
 
 /**
  * Kurze, ruhige Erklärung: was Plus freischaltet und was es kostet. Kein Druck, kein Popup-Spam.
@@ -40,7 +41,7 @@ export function PlusSheet({ feature, onClose, preview }: { feature: Feature; onC
         </ul>
         <div style={{ fontSize: 13 }}>
           <strong>{euro(PLAN_PRICES.individual.monthly)}</strong>/Monat · monatlich kündbar
-          <span style={{ color: "var(--muted)" }}> · Beta-Tester {euro(PLAN_PRICES.individual.beta)}</span>
+          <span style={{ color: "var(--muted)" }}> · {EARLY_NAME} {euro(PLAN_PRICES.individual.beta)}</span>
         </div>
         {preview && (
           <div style={{ fontSize: 11, color: "var(--orange)" }}>Vorschau (Super-Admin): so sieht es ein Basic-Nutzer.</div>

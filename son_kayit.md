@@ -1,3 +1,15 @@
+## 2026-11-22 (220) – v0.103.6: Öffentliche Texte ohne „Beta" (Startangebot / Frühstarter)
+
+Kullanıcı: "Beta sanki hiç kullanılmamış algısı" → tarihi öne çekmek yerine kelime değişti. Tarih (31.03.2027) ve söz (sonra kalıcı %50) aynı.
+- NEU `lib/beta.ts`: `FREE_UNTIL_TEXT` ("Alle Funktionen kostenlos bis …"), `EARLY_NAME` ("Frühstarter") — tek kaynak.
+- Araç sayfaları (6), /handwerker, /notdienst-verwaltung, /demo, /vergleich/clockodo, /register metası, Onboarding-Ende:
+  "In der Beta / Beta-Zugang …" → FREE_UNTIL_TEXT. /pricing: rozet "Startangebot", "Was passiert nach dem 31. März 2027?",
+  "für Frühstarter"; meta "Bis … kostenlos". Firma-Abo, PlusSheet, BETA_PRICE_LINE: "Frühstarter". Willkommens-Mail "FRÜHSTARTER".
+  Davet metni + Kollegen-Karte: "aktuell kostenlos". Checkout-403-Meldung ohne "Beta".
+- Fix: /pricing "31. März 2027registriert" boşluk eksikti.
+- Bilerek dokunulmadı: AGB § 5 ("Beta-Phase", hukuki metin), kod/yorumlar, Kokpit.
+- Test: pricing.test güncel; vitest 854 ✓, tsc, lint; 15 herkese açık sayfa (meta dahil) "Beta" içermiyor.
+
 ## 2026-11-21 (218) – v0.103.4: Neues SEO-Tool „Notdienstpauschale netto"
 
 Kullanıcı: "Notdienst-Pauschale-Rechner: bunu yap başla". Rufbereitschaft sayfası brüt hesaplıyor; bu sayfa farklı soru:

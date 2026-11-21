@@ -40,7 +40,7 @@ export function InviteColleaguesCard() {
       <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>👥 Kollegen einladen</h2>
       <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 12 }}>
         Kennst du jemanden, der seine Stunden noch auf Zettel schreibt? Zeig ihm den QR-Code
-        oder schick deinen Link — in der Beta ist Stundly für alle kostenlos.
+        oder schick deinen Link — Stundly ist aktuell für alle kostenlos.
       </p>
       <div style={{
         fontFamily: "var(--font-dm-mono),monospace", fontSize: 13, padding: "10px 12px", borderRadius: 10,

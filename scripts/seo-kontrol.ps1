@@ -1,7 +1,7 @@
 ﻿# Stundly SEO kontrolü — SEARCH_CONSOLE_KURULUM.md
 #
 #   .\scripts\seo-kontrol.ps1              # sadece kontrol (robots, sitemap, her URL, DNS)
-#   .\scripts\seo-kontrol.ps1 -IndexNow    # kontrol + sitemap URL'lerini IndexNow'a gönder (Bing, Yandex, Seznam)
+#   .\scripts\seo-kontrol.ps1 -IndexNow    # kontrol + elle IndexNow gönderimi (normalde GitHub Actions yapar)
 #   .\scripts\seo-kontrol.ps1 -Tarayici    # kontrol + Search Console / Bing sayfalarını tarayıcıda aç
 #
 # Giriş, "Indexierung beantragen" tıklamaları ve DNS değişiklikleri elle yapılır.
@@ -81,29 +81,10 @@ if ($txt -match "^MS=|^msvalidate") { Yaz-Ok "Bing doğrulama kaydı var" } else
 
 # --- IndexNow ---
 if ($IndexNow) {
+  # Normalde her deploy sonrası GitHub Actions (.github/workflows/seo.yml) gönderir
   Write-Host "`nIndexNow" -ForegroundColor Cyan
-  $keyFile = Get-ChildItem (Join-Path $PSScriptRoot "..\apps\web\public") -Filter *.txt |
-             Where-Object { $_.BaseName -match "^[0-9a-f]{32}$" } | Select-Object -First 1
-  if (-not $keyFile) { Yaz-Hata "apps/web/public içinde IndexNow anahtar dosyası yok" }
-  elseif ($urls.Count -eq 0) { Yaz-Hata "Gönderilecek URL yok (sitemap okunamadı)" }
-  else {
-    $key = $keyFile.BaseName
-    $keyLoc = "$Site/$key.txt"
-    $k = Get-Sayfa $keyLoc
-    if ($k.Kod -ne 200 -or "$($k.Icerik)".Trim() -ne $key) {
-      Yaz-Hata "$keyLoc canlıda erişilemiyor ($($k.Kod)) — önce deploy et"
-    } else {
-      $body = @{ host = $Domain; key = $key; keyLocation = $keyLoc; urlList = $urls } | ConvertTo-Json
-      try {
-        $r = Invoke-WebRequest -Uri "https://api.indexnow.org/indexnow" -Method Post -UseBasicParsing `
-             -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($body))
-        Yaz-Ok "$($urls.Count) URL gönderildi -> $([int]$r.StatusCode)"
-      } catch {
-        $kod = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { $_.Exception.Message }
-        Yaz-Hata "IndexNow -> $kod"
-      }
-    }
-  }
+  node (Join-Path $PSScriptRoot "seo-otomatik.mjs") indexnow
+  if ($LASTEXITCODE -ne 0) { Yaz-Hata "IndexNow gönderilemedi" }
 }
 
 # --- Tarayıcı ---

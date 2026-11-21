@@ -24,10 +24,41 @@ En çok ziyaret alan SEO sayfası `/rufbereitschaft-verguetung` (15). Almanya'da
 2. **Bing Webmaster Tools** (https://www.bing.com/webmasters) → "Import from Google Search Console" (tek tık, doğrulama + sitemap aktarılır).
 3. 1–2 hafta sonra Search Console → **Leistung**: hangi aramalarla görünüyoruz, tıklama/gösterim.
 
-## Otomasyon — `scripts/seo-kontrol.ps1` (21.11, yapıldı)
+## Tam otomatik — GitHub Actions (`.github/workflows/seo.yml`, `scripts/seo-otomatik.mjs`)
+- **Her Production deploy'undan sonra:** IndexNow'a tüm sitemap URL'leri + Google'a sitemap gönderimi.
+- **Her pazartesi:** son 7 günün Google raporu (tıklama, gösterim, aramalar, sayfalar) e-postayla gelir;
+  GitHub → Actions → SEO → çalıştırmanın "Summary" sayfasında da görünür.
+- Elle tetiklemek: GitHub → Actions → SEO → "Run workflow".
+- Otomatikleşemeyen tek şey: Google'da yeni sayfa için "Indexierung beantragen" (Google buna API vermiyor).
+  Sitemap gönderildiği için Google yeni sayfaları kendi de bulur, bu adım sadece hızlandırır.
+
+### Tek seferlik kurulum (~15 dk)
+**A. Google Cloud — "robot" hesap oluştur**
+1. https://console.cloud.google.com → üstte proje seçici → **Neues Projekt** → ad: `stundly-seo` → Erstellen.
+2. Sol menü **APIs & Services → Library** → "Google Search Console API" ara → **Aktivieren**.
+3. Sol menü **IAM & Admin → Service Accounts** → **Create service account** → ad: `seo-bot` → Done (rol verme, atla).
+4. Oluşan hesaba tıkla → **Keys → Add key → Create new key → JSON** → bir `.json` dosyası iner.
+   E-posta adresini not et (`seo-bot@stundly-seo-….iam.gserviceaccount.com`).
+
+**B. Search Console — robota izin ver**
+5. Search Console → sol altta **Einstellungen → Nutzer und Berechtigungen → Nutzer hinzufügen**
+   → 4. adımdaki e-posta → Berechtigung **Uneingeschränkt** → Hinzufügen.
+
+**C. GitHub — anahtarları kaydet**
+6. https://github.com/beko61/stundly/settings/secrets/actions → **New repository secret**, üç tane:
+   - `GSC_SERVICE_ACCOUNT` → inen `.json` dosyasını Not Defteri'yle aç, **tüm içeriği** yapıştır
+   - `RESEND_API_KEY` → Vercel'deki ile aynı değer (Vercel → Settings → Environment Variables)
+   - `SEO_RAPOR_EMAIL` → raporun gideceği e-posta adresi
+7. İnen `.json` dosyasını bilgisayardan sil (artık GitHub'da duruyor).
+
+**D. Test**
+8. https://github.com/beko61/stundly/actions/workflows/seo.yml → **Run workflow** → birkaç dakika içinde e-posta gelir.
+   İlk haftalarda veri az olabilir; rapor boş gelirse normal.
+
+## Elle kontrol — `scripts/seo-kontrol.ps1` (21.11, yapıldı)
 `workly` klasöründe:
 - `.\scripts\seo-kontrol.ps1` → robots, sitemap, her URL (200 / noindex / canonical), DNS TXT
-- `.\scripts\seo-kontrol.ps1 -IndexNow` → ayrıca sitemap URL'lerini IndexNow'a gönderir (Bing/Yandex/Seznam). Her deploy sonrası çalıştırılabilir.
+- `.\scripts\seo-kontrol.ps1 -IndexNow` → ayrıca IndexNow'a elle gönderir (normalde GitHub Actions her deploy sonrası yapar).
 - `.\scripts\seo-kontrol.ps1 -Tarayici` → Search Console (Sitemaps, Indexierung, 9 önemli sayfa için URL-Prüfung) + Bing sekmelerini açar
 - IndexNow anahtarı: `apps/web/public/673d482b3e7a2319a90f72347d4f01cf.txt` (middleware matcher'da hariç tutuldu). Canlıda erişilebilir olması için deploy gerekli.
 - "Execution Policy" hatası olursa: `powershell -ExecutionPolicy Bypass -File .\scripts\seo-kontrol.ps1`

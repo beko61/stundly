@@ -1,0 +1,43 @@
+name: SEO
+
+# scripts/seo-otomatik.mjs — kurulum: SEARCH_CONSOLE_KURULUM.md
+on:
+  # Vercel her deploy'u GitHub'a bildirir; Production başarılı olunca çalışır
+  deployment_status:
+  # Her pazartesi 07:00 UTC haftalık Google raporu
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+jobs:
+  deploy-sonrasi:
+    name: IndexNow + Sitemap
+    if: github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: IndexNow (Bing, Yandex, Seznam)
+        run: node scripts/seo-otomatik.mjs indexnow
+      - name: Google sitemap
+        run: node scripts/seo-otomatik.mjs sitemap-varsa
+        env:
+          GSC_SERVICE_ACCOUNT: ${{ secrets.GSC_SERVICE_ACCOUNT }}
+
+  haftalik-rapor:
+    name: Haftalık Google raporu
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Rapor
+        run: node scripts/seo-otomatik.mjs rapor
+        env:
+          GSC_SERVICE_ACCOUNT: ${{ secrets.GSC_SERVICE_ACCOUNT }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SEO_RAPOR_EMAIL: ${{ secrets.SEO_RAPOR_EMAIL }}

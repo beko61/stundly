@@ -889,6 +889,11 @@ body:has(.floating-scan) .scroll-top-fab {
 @media (max-width: 380px) {
   .landing-nav-link { display: none !important; }
 }
+/* ≤ 350px (z. B. iPhone SE 1, 320px): Brand + CTA passten nicht nebeneinander */
+@media (max-width: 350px) {
+  .landing-nav-brand { font-size: 16px !important; letter-spacing: 1.5px !important; }
+  .landing-nav-cta { padding: 8px 12px !important; }
+}
 
 /* ═══════════════════════════════════════════════
    COOKIE BANNER — responsive (text inline desktop, stack mobile)

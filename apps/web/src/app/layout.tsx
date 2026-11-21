@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     default: "Stundly – Arbeitszeiterfassung für Deutschland",
     template: "%s · Stundly",
   },
-  description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform, ArbZG-ready, mobil nutzbar.",
+  description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. Server in Frankfurt (EU), mobil nutzbar.",
   manifest: "/manifest.json",
   applicationName: "Stundly",
   appleWebApp: {
@@ -63,13 +63,13 @@ export const metadata: Metadata = {
     url: APP_URL,
     siteName: "Stundly",
     title: "Stundly – Arbeitszeiterfassung für Deutschland",
-    description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform.",
+    description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. Server in Frankfurt (EU).",
     // images: dynamic opengraph-image.tsx (app/) tarafından sağlanır
   },
   twitter: {
     card: "summary_large_image",
     title: "Stundly – Arbeitszeiterfassung für Deutschland",
-    description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform, ArbZG-ready.",
+    description: "Arbeitszeit, Urlaub und Notdienst einfach erfassen. Server in Frankfurt (EU).",
     // images: opengraph-image.tsx fallback (large card için bu doğru davranış)
   },
 };

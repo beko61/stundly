@@ -1,4 +1,15 @@
-﻿## 2026-11-19 (214) – v0.103.0: Überstunden-Übertrag ins neue Jahr (otomatik + düzeltilebilir)
+## 2026-11-21 (215) – v0.103.1: Ana sayfa iddiaları (UWG) + mobil nav düğmesi
+
+Kullanıcı: ana sayfadaki "Die einzige App" ve "DSGVO-konform, ArbZG-ready" iddiaları + mobilde taşan "Kostenlos starten".
+- Hero: "Die einzige App, die …" → "Zeiterfassung, die …"; "DSGVO-konform, ArbZG-ready" → "Server in Frankfurt (EU),
+  Hinweise zu Pausen und Höchstarbeitszeit nach ArbZG". /handwerker: "die einzige" → "eine".
+- Meta/OG/Twitter description, JSON-LD, iki "DSGVO-konform" rozeti ve FAQ ("Ist Stundly DSGVO-konform? Ja … ausschließlich
+  auf EU-Servern") → doğrulanabilir ifade "Server/Datenbank in Frankfurt (EU)" (Resend/Anthropic AB dışı, "ausschließlich" yanlıştı).
+- Nav: 320px'te CTA ekrandan 23px taşıyordu → ≤350px'te marka harf aralığı + düğme padding küçük (globals.css).
+- Dokunulmadı: /pricing, /firma, /vergleich, e-posta altbilgileri, /handwerker metası hâlâ "DSGVO-konform" diyor.
+- Test: vitest 848 ✓, tsc, lint; tarayıcıda 320px CTA 161–309px, yatay kaydırma yok.
+
+## 2026-11-19 (214) – v0.103.0: Überstunden-Übertrag ins neue Jahr (otomatik + düzeltilebilir)
 
 Kullanıcı: "programda benim Überstundem var, onu 2027'ye ekleyebiliyor muyum" → "Otomatik + düzeltilebilir".
 - NEU Migration 044: `salary_settings.ueberstunden_uebertrag numeric(7,2)` (saat; null = otomatik). Test + canlıda çalıştırıldı (19.11, anon probe 200).

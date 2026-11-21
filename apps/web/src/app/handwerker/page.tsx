@@ -95,7 +95,7 @@ export default function HandwerkerLandingPage() {
           endlich richtig gedacht.
         </h1>
         <p style={{ fontSize: 17, color: "var(--muted)", lineHeight: 1.7, maxWidth: 640, margin: "0 auto 32px" }}>
-          Stundly ist die einzige Zeiterfassung, die deinen <strong style={{ color: "var(--text)" }}>Notdienst-Bonus</strong> richtig zuordnet
+          Stundly ist eine Zeiterfassung, die deinen <strong style={{ color: "var(--text)" }}>Notdienst-Bonus</strong> richtig zuordnet
           und deinen <strong style={{ color: "var(--text)" }}>Netto live</strong> berechnet.
           Für Solo-Handwerker, kleine Betriebe (5–30 MA) und Notdienst-Rotationen.
         </p>

@@ -20,7 +20,7 @@ const SCHEMA_JSON_LD = {
   "operatingSystem": "Web, iOS, Android",
   "url": APP_URL,
   "inLanguage": "de-DE",
-  "description": "Arbeitszeiterfassung, Urlaubsverwaltung und Notdienst-Tracking für deutsche Handwerk-Betriebe. DSGVO-konform, ArbZG-ready, mobil nutzbar.",
+  "description": "Arbeitszeiterfassung, Urlaubsverwaltung und Notdienst-Tracking für deutsche Handwerk-Betriebe. Server in Frankfurt (EU), mobil nutzbar.",
   "offers": [
     { "@type": "Offer", "name": PLAN_PRICES.individual.name, "price": PLAN_PRICES.individual.monthly.toFixed(2), "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
     { "@type": "Offer", "name": PLAN_PRICES.team.name, "price": PLAN_PRICES.team.monthly.toFixed(2), "priceCurrency": "EUR", "priceValidUntil": "2027-12-31" },
@@ -43,7 +43,7 @@ const SCHEMA_JSON_LD = {
     "Urlaubsantrag PDF",
     "Notdienst-Verwaltung",
     "Monatsbericht PDF Export",
-    "DSGVO-konforme EU-Speicherung",
+    "Datenspeicherung in der EU (Frankfurt)",
   ],
 };
 
@@ -166,7 +166,7 @@ const features = [
 ];
 
 const faqs = [
-  { q: "Ist Stundly DSGVO-konform?", a: "Ja. Alle Daten werden ausschließlich auf EU-Servern (Frankfurt) gespeichert. Wir bieten vollständige Datenportabilität und das Recht auf Löschung." },
+  { q: "Wo werden meine Daten gespeichert?", a: "Die Datenbank liegt auf Servern in Frankfurt (EU). Du kannst deine Daten jederzeit exportieren und dein Konto löschen." },
   { q: "Muss ich eine Kreditkarte angeben?", a: "Nein. Du startest kostenlos, ohne Zahlungsdaten und ohne Abo. Die Grundfunktionen – Zeiterfassung, Überstunden und Urlaub – bleiben kostenlos." },
   { q: "Kann ich Stundly in Deutschland nutzen?", a: "Ja. Stundly ist speziell für das deutsche Arbeitsrecht entwickelt – inklusive ArbZG-Warnungen und Mindestlohn-Kontrolle." },
   { q: "Gibt es eine mobile App?", a: "Ja. Stundly lässt sich auf iOS und Android wie eine App auf den Startbildschirm installieren (PWA). Zum Speichern von Einträgen wird eine Internetverbindung benötigt." },
@@ -219,13 +219,13 @@ export default async function LandingPage() {
         display: "flex", alignItems: "center", justifyContent: "space-between",
         gap: 8,
       }}>
-        <span style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3 }}>STUNDLY</span>
+        <span className="landing-nav-brand" style={{ color: "var(--accent2)", fontWeight: 800, fontSize: 18, letterSpacing: 3 }}>STUNDLY</span>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {!BETA_MODE && (
             <Link href="/pricing" className="landing-nav-link" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Preise</Link>
           )}
           <Link href="/login" className="landing-nav-link" style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Anmelden</Link>
-          <Link href="/register" className="btn btn-primary" style={{ padding: "8px 16px", fontSize: 13, whiteSpace: "nowrap" }}>
+          <Link href="/register" className="btn btn-primary landing-nav-cta" style={{ padding: "8px 16px", fontSize: 13, whiteSpace: "nowrap" }}>
             Kostenlos starten
           </Link>
         </div>
@@ -254,9 +254,9 @@ export default async function LandingPage() {
           </h1>
 
           <p style={{ fontSize: 18, color: "var(--muted)", lineHeight: 1.7, marginBottom: 32, maxWidth: 560, margin: "0 auto 32px" }}>
-            Die einzige App, die deinen <strong style={{ color: "var(--text)" }}>Notdienst-Bonus</strong> richtig zuordnet
+            Zeiterfassung, die deinen <strong style={{ color: "var(--text)" }}>Notdienst-Bonus</strong> richtig zuordnet
             und deinen <strong style={{ color: "var(--text)" }}>Netto live</strong> berechnet.
-            Für Solo-Handwerker und KMU-Betriebe. DSGVO-konform, ArbZG-ready.
+            Für Solo-Handwerker und KMU-Betriebe. Server in Frankfurt (EU), Hinweise zu Pausen und Höchstarbeitszeit nach ArbZG.
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -291,7 +291,7 @@ export default async function LandingPage() {
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
         }}>
           {[
-            { icon: "🔒", label: "DSGVO-konform",         hint: "EU-Server · Frankfurt" },
+            { icon: "🔒", label: "Server in Frankfurt",   hint: "Datenbank in der EU" },
             { icon: "⚖",  label: "Deutsches Arbeitsrecht", hint: "ArbZG · EntgFG · BUrlG" },
             { icon: "📊", label: "DATEV-Export",           hint: "Für deinen Steuerberater" },
             { icon: "🚨", label: "Notdienst-Verwaltung",   hint: "Wochen-Zuordnung, Bonus-Berechnung" },
@@ -555,7 +555,7 @@ export default async function LandingPage() {
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             {[
-              { icon: "🔒", label: "DSGVO-konform", sub: "Daten in EU (Frankfurt)" },
+              { icon: "🔒", label: "Daten in der EU", sub: "Server in Frankfurt" },
               { icon: "⚖️", label: "ArbZG-Warnungen", sub: "Max. 8h/Tag Kontrolle" },
               { icon: "💶", label: "Mindestlohn", sub: "Automatische Prüfung" },
               { icon: "🏖️", label: "BUrlG", sub: "Urlaubsanspruch korrekt" },

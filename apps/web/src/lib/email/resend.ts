@@ -142,7 +142,7 @@ export async function sendWelcomeEmail({
         ` : ""}
 
         <p style="color: #6b6b80; font-size: 11px; margin-top: 32px; border-top: 1px solid #2e2e3d; padding-top: 16px;">
-          Stundly · DSGVO-konform · Daten in Deutschland (EU) ·
+          Stundly · Daten in Deutschland (EU) ·
           <a href="${APP_URL}/datenschutz" style="color: #c084fc;">Datenschutz</a> ·
           <a href="${APP_URL}/impressum" style="color: #c084fc;">Impressum</a>
         </p>
@@ -229,7 +229,7 @@ export async function sendVacationDecisionEmail({
         </a>
 
         <p style="color: #6b6b80; font-size: 11px; margin-top: 32px; border-top: 1px solid #2e2e3d; padding-top: 16px;">
-          Stundly · DSGVO-konform · Daten in Deutschland (EU)
+          Stundly · Daten in Deutschland (EU)
         </p>
       </div>
     `,

@@ -28,7 +28,7 @@ const features = [
   { icon: "🔒", title: "Monat freigeben", desc: "Mitarbeiter reichen ihren Monat ein, du gibst frei. Danach ist er gesperrt — wichtig für Lohn und Betriebsprüfung." },
   { icon: "📄", title: "Verträge im Griff", desc: "Wochenstunden, Urlaubsanspruch und Beschäftigungsbeginn legst du fest — Soll und Urlaubskonto rechnen sich daraus." },
   { icon: "📬", title: "Montags-Überblick", desc: "Jeden Montag eine kurze Mail: Team-Stunden, wer Rufbereitschaft hat, was zu erledigen ist." },
-  { icon: "🛡", title: "Kein GPS, keine Überwachung", desc: "Stundly erfasst Zeiten, nicht Standorte. Server in Frankfurt, DSGVO-konform, AVV auf Anfrage." },
+  { icon: "🛡", title: "Kein GPS, keine Überwachung", desc: "Stundly erfasst Zeiten, nicht Standorte. Server in Frankfurt (EU), AVV auf Anfrage." },
 ];
 
 export default async function FirmaPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {

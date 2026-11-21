@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/handwerker" },
   openGraph: {
     title: "Zeiterfassung für Handwerker — Stundly",
-    description: "Für Solo-Handwerker und KMU-Betriebe. Notdienst, Brutto→Netto live, DSGVO-konform.",
+    description: "Für Solo-Handwerker und KMU-Betriebe. Notdienst, Brutto→Netto live, Server in Frankfurt (EU).",
     type: "website",
   },
 };

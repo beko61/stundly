@@ -1,7 +1,7 @@
 {
   "name": "Stundly — Arbeitszeiterfassung",
   "short_name": "Stundly",
-  "description": "Arbeitszeit, Urlaub und Notdienst einfach erfassen. DSGVO-konform, made in Germany.",
+  "description": "Arbeitszeit, Urlaub und Notdienst einfach erfassen. Server in Frankfurt (EU), made in Germany.",
   "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",

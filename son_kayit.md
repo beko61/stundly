@@ -1,3 +1,10 @@
+## 2026-11-21 (216) – v0.103.2: "DSGVO-konform" iddiası diğer sayfalardan da kaldırıldı
+
+Kullanıcı: "Evet, hepsini" (v0.103.1'de dokunulmayan yerler).
+- /pricing (2), /firma, /vergleich/clockodo (satır adı "Server in der EU"), /handwerker metası, manifest.json,
+  e-posta altbilgileri (resend.ts ×2) → "Server in Frankfurt (EU)" / "Daten in Deutschland (EU)". Kodda artık "DSGVO-konform" yok.
+- Test: vitest 848 ✓, tsc, lint.
+
 ## 2026-11-21 (215) – v0.103.1: Ana sayfa iddiaları (UWG) + mobil nav düğmesi
 
 Kullanıcı: ana sayfadaki "Die einzige App" ve "DSGVO-konform, ArbZG-ready" iddiaları + mobilde taşan "Kostenlos starten".

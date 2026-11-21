@@ -37,7 +37,7 @@ const rows: Row[] = [
   { category: "Zielgruppe",                  stundly: "Handwerksbetriebe",     clockodo: "Alle Branchen",     advantage: "stundly" },
   { category: "Sprache",                     stundly: "Deutsch",               clockodo: "Deutsch",           advantage: "tie" },
   { category: "Server-Standort",             stundly: "EU (Frankfurt)",        clockodo: "EU (Deutschland)",  advantage: "tie" },
-  { category: "DSGVO-konform",               stundly: "✅",                    clockodo: "✅",                advantage: "tie" },
+  { category: "Server in der EU",            stundly: "✅",                    clockodo: "✅",                advantage: "tie" },
   { category: "Notdienst-Verwaltung",        stundly: "✅ mit Wochen-Zuordnung", clockodo: "keine spezielle Funktion", advantage: "stundly" },
   { category: "Brutto→Netto live-Berechnung", stundly: "✅ alle 6 Steuerklassen", clockodo: "keine Netto-Berechnung", advantage: "stundly" },
   { category: "§3 ArbZG 10h-Warnung",        stundly: "✅ inline im Tracker",  clockodo: "nicht dokumentiert", advantage: "stundly" },

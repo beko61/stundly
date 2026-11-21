@@ -173,7 +173,7 @@ export default function PricingPage() {
                   "Urlaubsantrag mit Signatur & PDF",
                   "JSON / CSV Datenexport",
                   "Mobile App (PWA) — auf jedem Handy installierbar",
-                  "DSGVO-konform · EU-Server in Frankfurt",
+                  "EU-Server in Frankfurt",
                 ].map((f) => (
                   <li key={f} style={{ fontSize: 14, padding: "8px 0", display: "flex", gap: 10, color: "var(--text)" }}>
                     <span style={{ color: "var(--green)", fontWeight: 800, flexShrink: 0 }}>✓</span>
@@ -438,7 +438,7 @@ export default function PricingPage() {
         {/* Footer not */}
         <p style={{ textAlign: "center", marginTop: 48, color: "var(--muted)", fontSize: 13, lineHeight: 1.8 }}>
           Alle Preise gemäß § 19 UStG ohne Umsatzsteuer (Kleinunternehmer-Regelung).
-          Zahlung über Stripe (SEPA, Kreditkarte). DSGVO-konform · EU-Server in Frankfurt.
+          Zahlung über Stripe (SEPA, Kreditkarte). EU-Server in Frankfurt.
           <br />
           Mit der Buchung akzeptierst du unsere{" "}
           <Link href="/agb" style={{ color: "var(--accent2)" }}>AGB</Link> und{" "}

@@ -118,6 +118,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Static + metadata route'ları auth middleware'inden hariç tut
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icons|robots.txt|sitemap.xml|opengraph-image|twitter-image|apple-icon|icon).*)",
+    // 673d…01cf.txt: IndexNow-Schlüsseldatei (public/), muss ohne Login erreichbar sein — scripts/seo-kontrol.ps1
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icons|robots.txt|sitemap.xml|673d482b3e7a2319a90f72347d4f01cf.txt|opengraph-image|twitter-image|apple-icon|icon).*)",
   ],
 };

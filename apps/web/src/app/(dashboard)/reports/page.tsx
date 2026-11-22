@@ -354,7 +354,7 @@ export default function ReportsPage() {
 
       const [{ data: ndRaw }, { data: profRaw }, briefkopf] = await Promise.all([
         supabase.from("notdienst_entries")
-          .select("date, start_time, end_time, erledigt, kunde, note")
+          .select("date, start_time, end_time, erledigt, kunde, adresse, note")
           .eq("user_id", uid).gte("date", ndRange.start).lte("date", ndRange.end),
         supabase.from("profiles")
           .select("vorname, nachname, full_name, personal_nr, abteilung, vorgesetzter, email, company_name, firma_strasse, firma_plz, firma_ort, firma_telefon, logo_data, signature_data, bundesland")
@@ -371,6 +371,7 @@ export default function ReportsPage() {
         end_time:   n.end_time as string,
         erledigt:   Boolean((n as { erledigt?: boolean }).erledigt),
         kunde:      (n as { kunde?: string | null }).kunde ?? null,
+        adresse:    (n as { adresse?: string | null }).adresse ?? null,
         note:       (n as { note?: string | null }).note ?? null,
       }));
       const profile: ProfileInfo = {

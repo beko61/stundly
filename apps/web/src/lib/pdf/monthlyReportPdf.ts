@@ -33,6 +33,12 @@ export interface NotdienstEntry {
   bezahlt?:   boolean;     // alternatif isim
   note?:      string | null;
   kunde?:     string | null;
+  adresse?:   string | null;
+}
+
+/** Spalte "Kunde / Adresse": Kunde (sonst Notiz), dahinter die Einsatzadresse */
+export function notdienstKundeText(nd: Pick<NotdienstEntry, "kunde" | "note" | "adresse">): string {
+  return [nd.kunde || nd.note, nd.adresse].map((s) => (s ?? "").trim()).filter(Boolean).join(", ");
 }
 
 export interface ProfileInfo {
@@ -417,13 +423,13 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput, opts: 
     doc.setFillColor(235, 235, 235); doc.rect(L, y - 4, CW, 5.5, "F");
     doc.setFontSize(7.5); doc.setFont("helvetica", "bold"); doc.setTextColor(40);
     doc.text("Datum", nx[0]!, y); doc.text("Tag", nx[1]!, y); doc.text("Zeit", nx[2]!, y);
-    doc.text("Std", nx[3]!, y); doc.text("Bezahlt", nx[4]!, y); doc.text("Kunde / Notiz", nx[5]!, y);
+    doc.text("Std", nx[3]!, y); doc.text("Bezahlt", nx[4]!, y); doc.text("Kunde / Adresse", nx[5]!, y);
     doc.setTextColor(0); y += 5.5;
     doc.setFontSize(7.5);
 
     let ndSum = 0;
     for (const nd of input.notdienst) {
-      checkPage(6);
+      checkPage(9);
       const sMin = timeToMins(nd.start_time);
       let durMin = timeToMins(nd.end_time) - sMin;
       if (durMin < 0) durMin += 24 * 60;
@@ -443,9 +449,10 @@ export async function generateMonthlyReportPDF(input: MonthlyReportInput, opts: 
       if (paid) doc.setTextColor(20, 120, 40); else doc.setTextColor(200, 50, 40);
       doc.text(paid ? "JA" : "NEIN", nx[4]!, y);
       doc.setTextColor(0);
-      const kunde = (nd.kunde || nd.note || "").substring(0, 52);
-      doc.text(kunde, nx[5]!, y);
-      y += 4.8;
+      // lange Adressen umbrechen statt abschneiden (max. 2 Zeilen)
+      const kundeLines = (doc.splitTextToSize(notdienstKundeText(nd), R - nx[5]!) as string[]).slice(0, 2);
+      doc.text(kundeLines, nx[5]!, y);
+      y += 4.8 + (kundeLines.length - 1) * 3.4;
     }
     checkPage(8);
     doc.setDrawColor(80); doc.setLineWidth(0.3); doc.line(L, y - 1, R, y - 1); y += 3;

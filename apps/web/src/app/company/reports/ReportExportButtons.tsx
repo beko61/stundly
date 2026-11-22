@@ -12,7 +12,7 @@ interface EmployeeData {
   entries:   TimeEntry[];
   notdienst: Array<{
     date: string; start_time: string | null; end_time: string | null;
-    erledigt?: boolean | null; kunde?: string | null; note?: string | null;
+    erledigt?: boolean | null; kunde?: string | null; adresse?: string | null; note?: string | null;
   }>;
   salarySettings: {
     hourly_rate: number;
@@ -82,7 +82,7 @@ export function EmployeeExportButtons({
           notdienst: emp.notdienst.map(n => {
             const out: {
               date: string; start_time: string; end_time: string;
-              erledigt?: boolean; kunde?: string | null; note?: string | null;
+              erledigt?: boolean; kunde?: string | null; adresse?: string | null; note?: string | null;
             } = {
               date: n.date,
               start_time: n.start_time ?? "",
@@ -90,6 +90,7 @@ export function EmployeeExportButtons({
             };
             if (n.erledigt != null) out.erledigt = !!n.erledigt;
             if (n.kunde    != null) out.kunde    = n.kunde;
+            if (n.adresse  != null) out.adresse  = n.adresse;
             if (n.note     != null) out.note     = n.note;
             return out;
           }),

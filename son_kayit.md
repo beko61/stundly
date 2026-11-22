@@ -1,3 +1,11 @@
+## 2026-11-22 (221) – v0.103.7: Monatsbericht-PDF zeigt die Notdienst-Adresse
+
+Kullanıcı: "Monatsbericht'te adres neden yazmıyor" → Notdienst-Details tablosu (ekran görüntüsü).
+- Sebep: tablo sadece `kunde` (yoksa `note`) yazıyordu; `adresse` ne sorgulanıyor ne yazdırılıyordu.
+- Sütun "Kunde / Adresse": `notdienstKundeText` = Kunde (yoksa Notiz) + ", " + Adresse; uzun metin 2 satıra kayar (önce 52 karakterde kesiliyordu).
+- Adres çekiliyor: kendi Berichte (reports/page.tsx), Chef Berichte (api/company/reports/data + ReportExportButtons).
+- Test: notdienstKundeText (3); vitest 857 ✓, tsc, lint. PDF görsel olarak üretilip bakılmadı.
+
 ## 2026-11-22 (220) – v0.103.6: Öffentliche Texte ohne „Beta" (Startangebot / Frühstarter)
 
 Kullanıcı: "Beta sanki hiç kullanılmamış algısı" → tarihi öne çekmek yerine kelime değişti. Tarih (31.03.2027) ve söz (sonra kalıcı %50) aynı.

@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
   const { data: ndRaw } = userIds.length > 0
     ? await admin
         .from("notdienst_entries")
-        .select("user_id, date, start_time, end_time, erledigt, kunde, note")
+        .select("user_id, date, start_time, end_time, erledigt, kunde, adresse, note")
         .in("user_id", userIds)
         .gte("date", ndRange.start).lte("date", ndRange.end)
         .order("date", { ascending: true })
